@@ -7,4 +7,8 @@
         <UserSecretsId>4cf3f9ba-9590-456a-85a7-ac170a6f7d71</UserSecretsId>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
+    </ItemGroup>
+
 </Project>
