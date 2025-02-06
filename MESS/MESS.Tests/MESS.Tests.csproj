@@ -15,9 +15,17 @@
         <PackageReference Include="xunit" Version="2.5.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3"/>
     </ItemGroup>
+    
 
     <ItemGroup>
         <Using Include="Xunit"/>
+    </ItemGroup>
+    
+
+    <ItemGroup>
+      <ProjectReference Include="..\MESS.Blazor\MESS.Blazor.csproj" />
+      <ProjectReference Include="..\MESS.Data\MESS.Data.csproj" />
+      <ProjectReference Include="..\MESS.Services\MESS.Services.csproj" />
     </ItemGroup>
 
 </Project>

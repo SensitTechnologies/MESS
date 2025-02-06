@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\MESS.Data\MESS.Data.csproj" />
+    </ItemGroup>
+
 </Project>

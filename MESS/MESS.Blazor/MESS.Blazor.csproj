@@ -6,4 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\MESS.Services\MESS.Services.csproj" />
+    </ItemGroup>
+
 </Project>
