@@ -6,6 +6,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// User Secrets Setup
+var config = new ConfigurationBuilder()
+    .AddUserSecrets<Program>()
+    .Build();
+
+// Example user secrets usage
+// Console.WriteLine($"Hello, {config["Name"]}");
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

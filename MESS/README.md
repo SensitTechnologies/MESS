@@ -1,0 +1,30 @@
+# MESS - Reference Sheet
+
+### Secret Management 
+**NOTE:** *This should only be used for development purposes*
+
+Instead of using "appsettings.*.json" for managing environment variables or user secrets
+we have opted to utilize the .NET *Secret Manager* for development purposes.
+For more information see [.NET Secret Manager](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-9.0&tabs=linux)
+
+### Quick Start
+In terms of the MESS project you should not have to initial the Secret Manager since it will
+already be in each appropriate project. However, in the case that the Secret Manager is being
+redone use the following command:
+
+
+##### Instantiate User Manager (New Projects only)
+```shell
+dotnet user-secrets init
+```
+
+##### Set a secret
+```shell
+dotnet user-secrets set "Key" "Value"
+
+Example
+
+dotnet user-secrets set "DatabaseConnection" "Data Source = 123456.db"
+
+
+```
