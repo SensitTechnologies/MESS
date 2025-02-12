@@ -1,6 +1,23 @@
 using MESS.Blazor.Components;
+using MESS.Data.Context;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<ApplicationContext>(options =>
+{
+    var env = builder.Environment;
+
+    // Use SQLite3 server when in development
+    if (!env.IsDevelopment())
+    {
+        options.UseSqlServer();
+    }
+    else
+    {
+        options.UseSqlite("Data Source=mydatabase.db");
+    }
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
