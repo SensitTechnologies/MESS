@@ -19,7 +19,7 @@ public class AuditableEntityValidator : AbstractValidator<AuditableEntity>
             .NotEmpty()
             .Length(1, 512)
             .WithMessage("Created By character count must be between 1 and 512 characters.");
-        
+
         RuleFor(x => x.CreatedOn)
             .NotNull()
             .NotEmpty();
