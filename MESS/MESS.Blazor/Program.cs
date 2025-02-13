@@ -6,25 +6,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ApplicationContext>(options =>
 {
-    var env = builder.Environment;
     var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
     
-    // Use SQLite3 or postgresql server when in development
-    if (connectionString != null && env.IsDevelopment())
-    {
-        if (connectionString.Contains("sqlite", StringComparison.OrdinalIgnoreCase))
-        {
-            options.UseSqlite(connectionString);
-        }
-        else
-        {
-            options.UseNpgsql(connectionString);
-        }
-    }
-    else
-    {
-        options.UseSqlServer(connectionString);
-    }
+    options.UseSqlServer(connectionString);
+
 });
 
 // Add services to the container.
