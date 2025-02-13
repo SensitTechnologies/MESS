@@ -7,15 +7,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationContext>(options =>
 {
     var env = builder.Environment;
-
-    // Use SQLite3 server when in development
-    if (!env.IsDevelopment())
+    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
+    
+    // Use SQLite3 or postgresql server when in development
+    if (connectionString != null && env.IsDevelopment())
     {
-        options.UseSqlServer();
+        if (connectionString.Contains("sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            options.UseSqlite(connectionString);
+        }
+        else
+        {
+            options.UseNpgsql(connectionString);
+        }
     }
     else
     {
-        options.UseSqlite("Data Source=mydatabase.db");
+        options.UseSqlServer(connectionString);
     }
 });
 

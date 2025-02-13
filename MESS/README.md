@@ -26,5 +26,9 @@ Example
 
 dotnet user-secrets set "DatabaseConnection" "Data Source = 123456.db"
 
+```
 
+#### Setup Development Database connection
+```shell
+dotnet user-secrets set "ConnectionStrings:MESSConnection" "Data Source=developmentMESSDb.db"
 ```
