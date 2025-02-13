@@ -23,4 +23,39 @@ public class ApplicationContext : DbContext
     public virtual DbSet<LineOperator> LineOperators { get; set; } = null!;
     public virtual DbSet<Documentation> Documentations { get; set; } = null!;
     public virtual DbSet<Cell> Cells { get; set; } = null!;
+
+    public override int SaveChanges()
+    {
+        UpdateAuditFields();
+        return base.SaveChanges();
+    }
+    
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        UpdateAuditFields();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+    
+    private void UpdateAuditFields()
+    {
+        var entries = ChangeTracker.Entries<AuditableEntity>();
+
+        foreach (var entry in entries)
+        {
+            if (entry.State == EntityState.Added)
+            {
+                // To be modified when User logic is added
+                // entry.Entity.CreatedBy = "TheCreateUser";
+                entry.Entity.CreatedOn = DateTime.UtcNow;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                // To be modified when User logic is added
+                // entry.Entity.LastModifiedBy = "TheUpdateUser";
+                entry.Entity.LastModifiedOn = DateTime.UtcNow;
+            }
+        }
+    }
+
 }
