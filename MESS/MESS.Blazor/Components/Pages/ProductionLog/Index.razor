@@ -1,0 +1,17 @@
+﻿@page "/production-log"
+@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@inject IProductionLogService ProductionLogService
+
+<h3>Production Log Home</h3>
+
+
+@code {
+    private List<ProductionLog>? _productionLogs;
+
+    protected override void OnInitialized()
+    {
+        _productionLogs = ProductionLogService.GetAll().ToList();
+    }
+    
+}
