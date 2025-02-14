@@ -1,5 +1,6 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Services.WorkInstruction;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,8 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseSqlServer(connectionString);
 
 });
+
+builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
