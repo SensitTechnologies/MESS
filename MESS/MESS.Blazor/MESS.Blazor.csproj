@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\MESS.Data\MESS.Data.csproj" />
       <ProjectReference Include="..\MESS.Services\MESS.Services.csproj" />
     </ItemGroup>
 
