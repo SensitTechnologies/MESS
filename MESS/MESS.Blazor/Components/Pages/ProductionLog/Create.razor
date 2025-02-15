@@ -1,10 +1,67 @@
 ﻿@page "/production-log/new"
+@page "/production-log/edit/{logId:int}"
+@using System.Net
+@using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @inject IProductionLogService ProductionLogService
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
 
 
-<h3>Create</h3>
+<EditForm Model="@productionLog" OnValidSubmit="SaveUser">
+    <DataAnnotationsValidator />
+    <div class="mb-3">
+        <label for="Name" class="form-label">Product Name</label>
+        <div class="col-md-4">
+            @if (productionLog.Product != null)
+            {
+                <InputText class="form-control" @bind-Value="productionLog.Product.Name"/>
+                <ValidationMessage For="@(() => productionLog.Product.Name)" />
+            }
+        </div>
+        
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button class="btn btn-light" @onclick="Cancel">Cancel</button>
+    </div>
+</EditForm>
 
 @code {
-    
+    [Parameter]
+    public int logId { get; set; }
+    protected string Title = "Add";
+    protected ProductionLog productionLog = new()
+    {
+        CreatedBy = "",
+        CreatedOn = default,
+        LastModifiedBy = "",
+        LastModifiedOn = default
+    };
+    protected override async Task OnParametersSetAsync()
+    {
+        if (logId != 0)
+        {
+            Title = "Edit";
+            productionLog = (await Http.GetFromJsonAsync<ProductionLog>("api/User/" + logId))!;
+        }
+    }
+    protected void SaveUser()
+    {
+        if (productionLog.Id != 0)
+        {
+            // ProductionLogService.Edit();
+        }
+        else
+        {
+            ProductionLogService.Create(productionLog);
+        }
+        Cancel();
+    }
+    public void Cancel()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
 }

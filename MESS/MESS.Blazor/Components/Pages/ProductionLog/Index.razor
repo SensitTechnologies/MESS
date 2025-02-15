@@ -3,9 +3,35 @@
 @using MESS.Services.ProductionLog
 @inject IProductionLogService ProductionLogService
 
-<h3>Production Log Home</h3>
+@if (_productionLogs == null)
+{
+    <p>
+        Loading...
+    </p>
+}
+else
+{
+    @foreach (var log in _productionLogs)
+    {
 
-
+        <div>
+            <p>
+                @log.Id
+            </p>
+            <p>
+                @if (log.Product != null)
+                {
+                    @log.Product.Name
+                }
+            </p>
+            <p>
+                @log.Id
+            </p>
+        </div>
+    }
+}
+    
+    
 @code {
     private List<ProductionLog>? _productionLogs;
 
