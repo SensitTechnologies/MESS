@@ -1,39 +1,43 @@
-﻿namespace MESS.Services.ProductionLog;
+﻿using MESS.Data.Context;
+using Microsoft.EntityFrameworkCore;
+
+namespace MESS.Services.ProductionLog;
 using Data.Models;
 
 public class ProductionLogService : IProductionLogService
 {
-    public IEnumerable<Data.Models.ProductionLog> GetAll()
+    private readonly ApplicationContext _context;
+    public ProductionLogService(ApplicationContext context)
     {
-        return new List<Data.Models.ProductionLog>
+        _context = context;
+    }
+    public IEnumerable<ProductionLog> GetAll()
+    {
+        return _context.ProductionLogs
+            .Include(p => p.WorkInstruction)
+                .ThenInclude(w => w!.Steps)
+            .Include(p => p.LineOperator)
+            .ToList();
+    }
+
+    public ProductionLog Get(string id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool Create(ProductionLog productionLog)
+    {
+        try
         {
-            new ProductionLog
-            {
-                Id = 1,
-                CreatedBy = "",
-                CreatedOn = default,
-                LastModifiedBy = "",
-                LastModifiedOn = default,
-                Product = new Product
-                {
-                    Name = "Test Product 1",
-                    CreatedBy = "TestUser1",
-                    CreatedOn = default,
-                    LastModifiedBy = "TestUser1",
-                    LastModifiedOn = default
-                }
-            }
-        };
-    }
-
-    public Data.Models.ProductionLog Get(string id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Create(Data.Models.ProductionLog productionLog)
-    {
-        throw new NotImplementedException();
+            _context.ProductionLogs.Add(productionLog);
+            _context.SaveChanges();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
     }
 
     public bool Delete(string id)
@@ -41,7 +45,7 @@ public class ProductionLogService : IProductionLogService
         throw new NotImplementedException();
     }
 
-    public Data.Models.ProductionLog Edit(Data.Models.ProductionLog existing, Data.Models.ProductionLog updated)
+    public ProductionLog Edit(ProductionLog existing, ProductionLog updated)
     {
         throw new NotImplementedException();
     }

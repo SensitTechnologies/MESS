@@ -44,6 +44,7 @@
                         <p>
                             @step.Name
                         </p>
+                        <InputCheckbox class="form-control" @bind-Value="@step.Success"></InputCheckbox>
                     }
                 </div>
             }
@@ -110,11 +111,13 @@
         }
         else
         {
+            productionLog.WorkInstruction = ActiveWorkInstruction;
             ProductionLogService.Create(productionLog);
         }
         Cancel();
     }
-    public void Cancel()
+
+    private void Cancel()
     {
         NavigationManager.NavigateTo("/");
     }

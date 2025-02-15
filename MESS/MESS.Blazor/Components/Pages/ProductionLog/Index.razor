@@ -2,6 +2,7 @@
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @inject IProductionLogService ProductionLogService
+@inject NavigationManager NavigationManager
 
 @if (_productionLogs == null)
 {
@@ -11,13 +12,35 @@
 }
 else
 {
+    <div>
+        <button @onclick="ToNewPage">Create New Log</button>
+    </div>
     @foreach (var log in _productionLogs)
     {
-
         <div>
             <p>
                 @log.Id
             </p>
+            <p>
+                @log.SubmitTime
+            </p>
+            <p>
+                @if (log.WorkInstruction != null)
+                {
+                    @log.WorkInstruction.Title
+                }
+            </p>
+            <div>
+                @if (log.WorkInstruction != null)
+                {
+                    foreach (var step in log.WorkInstruction.Steps)
+                    {
+                        <p>
+                            @step.Success
+                        </p>
+                    }
+                }
+            </div>
             <p>
                 @if (log.Product != null)
                 {
@@ -25,7 +48,7 @@ else
                 }
             </p>
             <p>
-                @log.Id
+                @log.LineOperator
             </p>
         </div>
     }
@@ -38,6 +61,11 @@ else
     protected override void OnInitialized()
     {
         _productionLogs = ProductionLogService.GetAll().ToList();
+    }
+
+    private void ToNewPage()
+    {
+        NavigationManager.NavigateTo("/production-log/new");
     }
     
 }
