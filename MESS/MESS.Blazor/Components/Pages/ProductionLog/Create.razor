@@ -2,12 +2,14 @@
 @page "/production-log/edit/{logId:int}"
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
+@using MESS.Services.WorkInstruction
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IWorkInstructionService WorkInstructionService
+@rendermode InteractiveServer
 
-
-<EditForm Model="@productionLog" OnValidSubmit="SaveUser">
+<EditForm Model="@productionLog" OnValidSubmit="CreateProductionLog">
     <DataAnnotationsValidator />
     <div class="mb-3">
         <label for="Name" class="form-label">Product Name</label>
@@ -18,6 +20,50 @@
                 <ValidationMessage For="@(() => productionLog.Product.Name)" />
             }
         </div>
+        
+        <div>
+            @if (WorkInstructions != null)
+            {
+                <select @onchange="SetActiveWorkInstruction">
+                    
+                    @foreach (var instruction in WorkInstructions)
+                    {   
+                        <option>@instruction.Title</option>
+                    }
+                </select>
+                
+            }
+        </div>
+        
+        <div>
+            @if (ActiveWorkInstruction != null)
+            {
+                <div>
+                    @foreach (var step in ActiveWorkInstruction.Steps)
+                    {
+                        <p>
+                            @step.Name
+                        </p>
+                    }
+                </div>
+            }
+        </div>
+
+        @* <label for="WorkInstruction" class="form-label">Work Instructions</label> *@
+        @* <div class="col-md-4"> *@
+        @*     @if (productionLog.WorkInstruction != null) *@
+        @*     { *@
+        @*         @foreach (var step in productionLog.WorkInstruction.Steps) *@
+        @*         { *@
+        @*             <p> *@
+        @*                 @step.Name *@
+        @*             </p> *@
+        @*             <InputCheckbox class="form-check" @bind-Value="@step.Success"></InputCheckbox> *@
+        @* *@
+        @*         } *@
+        @*     <ValidationMessage For="@(() => productionLog.WorkInstruction.Steps)" /> *@
+        @*     } *@
+        @* </div> *@
         
     </div>
 
@@ -38,6 +84,16 @@
         LastModifiedBy = "",
         LastModifiedOn = default
     };
+
+    private List<WorkInstruction>? WorkInstructions { get; set; }
+    private WorkInstruction? ActiveWorkInstruction { get; set; }
+
+    protected override void OnInitialized()
+    {
+        WorkInstructions = WorkInstructionService.GetAll();
+        base.OnInitialized();
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (logId != 0)
@@ -46,7 +102,7 @@
             productionLog = (await Http.GetFromJsonAsync<ProductionLog>("api/User/" + logId))!;
         }
     }
-    protected void SaveUser()
+    protected void CreateProductionLog()
     {
         if (productionLog.Id != 0)
         {
@@ -61,6 +117,26 @@
     public void Cancel()
     {
         NavigationManager.NavigateTo("/");
+    }
+
+    private void SetActiveWorkInstruction(ChangeEventArgs e)
+    {
+        var title = e.Value?.ToString();
+        // find work instruction
+        if (title != null)
+        {
+            var workInstruction = WorkInstructionService.GetByTitle(title);
+            // display
+
+            if (workInstruction != null)
+            {
+                ActiveWorkInstruction = workInstruction;
+            }
+            else
+            {
+                Console.WriteLine("ERROR");
+            }
+        }
     }
 
 }
