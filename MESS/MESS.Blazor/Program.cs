@@ -1,5 +1,6 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Data.Seed;
 using MESS.Services.ProductionLog;
 using MESS.Services.WorkInstruction;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,11 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    SeedWorkInstructions.Seed(services);
+}
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
