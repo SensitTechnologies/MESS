@@ -40,15 +40,29 @@
                 <div>
                     @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
-                        var step = ActiveWorkInstruction.Steps[i];
-                        bool isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
+                    var step = ActiveWorkInstruction.Steps[i];
+                    bool isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
+                    var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+                    bool isChecked = logStep?.Success ?? false;
 
+                    <div class="mb-2">
                         <p>@step.Name</p>
-
                         <input type="checkbox"
+                               checked="@isChecked"
                                disabled="@isDisabled"
                                class="form-check"
                                @onchange="@(e => OnStepCompleted(step, e))" />
+                        @if (logStep != null)
+                        {
+                        <small class="text-muted">
+                            Started: @(logStep.StartTime?.ToString("g"))
+                            @if (logStep.EndTime.HasValue)
+                            {
+                            <span>| Completed: @(logStep.EndTime?.ToString("g"))</span>
+                            }
+                        </small>
+                        }
+                    </div>
                     }
                 </div>
             }
@@ -98,13 +112,42 @@
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
 
-        if (ActiveWorkInstruction != null && ActiveWorkInstruction.Steps.Any())
+        if (ActiveWorkInstruction != null)
         {
-            ActiveWorkInstruction.Steps.First().StartTime = DateTimeOffset.UtcNow;
+            // Initialize steps if needed
+            if (productionLog.LogSteps == null)
+            {
+                productionLog.LogSteps = new List<ProductionLogStep>();
+            }
+
+            // For each step in the work instruction
+            foreach (var step in ActiveWorkInstruction.Steps)
+            {
+                // Try to find existing log step
+                var existingLogStep = productionLog.LogSteps
+                    .FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+
+                if (existingLogStep != null)
+                {
+                    // Sync the step with existing log data
+                    step.Success = existingLogStep.Success;
+                    step.StartTime = existingLogStep.StartTime ?? step.StartTime;
+                    step.EndTime = existingLogStep.EndTime ?? step.EndTime;
+                }
+                else if (!productionLog.LogSteps.Any())
+                {
+                    // For new logs, initialize first step
+                    if (ActiveWorkInstruction.Steps.First() == step)
+                    {
+                        step.StartTime = DateTimeOffset.UtcNow;
+                    }
+                }
+            }
         }
 
         StateHasChanged();
     }
+
 
     
     protected override async Task OnInitializedAsync()
@@ -125,10 +168,9 @@
             Title = "Edit";
             productionLog = existingProductionLog;
 
-            // Ensure LogSteps are loaded
+            // Ensure LogSteps are initialized
             productionLog.LogSteps ??= new List<ProductionLogStep>();
 
-            // Preselect the correct Work Instruction
             if (productionLog.WorkInstruction != null)
             {
                 SelectedWorkInstructionId = productionLog.WorkInstruction.Id;
@@ -138,8 +180,6 @@
         {
             Console.WriteLine($"Production log with ID {id} not found.");
         }
-
-        StateHasChanged();
     }
 
     
@@ -171,17 +211,38 @@
     {
         if (ActiveWorkInstruction?.Steps == null) return;
 
-        if (bool.TryParse(e.Value?.ToString(), out bool isChecked) && isChecked)
+        var currentTime = DateTimeOffset.UtcNow;
+        
+        if (bool.TryParse(e.Value?.ToString(), out bool isChecked))
         {
-            step.Success = true;
-            step.EndTime = DateTimeOffset.UtcNow;
-
-            var steps = ActiveWorkInstruction.Steps;
-            int currentIndex = steps.IndexOf(step);
-            if (currentIndex + 1 < steps.Count)
+            step.Success = isChecked;
+            
+            if (isChecked)
             {
-                var nextStep = steps[currentIndex + 1];
-                nextStep.StartTime = DateTimeOffset.UtcNow;
+                step.EndTime = currentTime;
+
+                var steps = ActiveWorkInstruction.Steps;
+                int currentIndex = steps.IndexOf(step);
+                if (currentIndex + 1 < steps.Count)
+                {
+                    var nextStep = steps[currentIndex + 1];
+                    nextStep.StartTime = currentTime;
+                    nextStep.EndTime = currentTime; // Initialize with current time
+                }
+            }
+            else
+            {
+                step.EndTime = currentTime;
+                
+                // Reset subsequent steps
+                var steps = ActiveWorkInstruction.Steps;
+                int currentIndex = steps.IndexOf(step);
+                for (int i = currentIndex + 1; i < steps.Count; i++)
+                {
+                    steps[i].Success = false;
+                    steps[i].StartTime = currentTime;
+                    steps[i].EndTime = currentTime;
+                }
             }
         }
 
@@ -194,21 +255,4 @@
     {
         NavigationManager.NavigateTo("/");
     }
-
-    private async Task SetActiveWorkInstruction(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int id))
-        {
-            ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
-
-            if (ActiveWorkInstruction != null && ActiveWorkInstruction.Steps.Any())
-            {
-                var initialStep = ActiveWorkInstruction.Steps.First();
-                initialStep.StartTime = DateTimeOffset.UtcNow;
-            }
-        }
-    }
-
-
-
 }
