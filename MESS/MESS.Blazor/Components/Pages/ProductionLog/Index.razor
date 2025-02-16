@@ -24,29 +24,24 @@ else
             <p>
                 @log.SubmitTime
             </p>
-            <p>
-                @if (log.WorkInstruction != null)
-                {
-                    @log.WorkInstruction.Title
-                }
-            </p>
+            <p>Work Instruction: @(log.WorkInstruction?.Title ?? "N/A")</p>
+
             <div>
-                @if (log.LogSteps != null)
+                @if (log.LogSteps != null && log.LogSteps.Any())
                 {
-                    foreach (var step in log.LogSteps)
+                    <p>Steps:</p>
+                    @foreach (var step in log.LogSteps)
                     {
-                        <p>
-                            @step.Success
-                        </p>
+                        <p>Step Success: @step.Success</p>
                     }
                 }
-            </div>
-            <p>
-                @if (log.Product != null)
+                else
                 {
-                    @log.Product.Name
+                    <p>No Steps Logged</p>
                 }
-            </p>
+            </div>
+            <p>Product: @(log.Product?.Name ?? "N/A")</p>
+
             <p>
                 @log.LineOperator
             </p>
@@ -58,10 +53,11 @@ else
 @code {
     private List<ProductionLog>? _productionLogs;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _productionLogs = ProductionLogService.GetAll().ToList();
+        _productionLogs = await ProductionLogService.GetAllAsync();
     }
+    
 
     private void ToNewPage()
     {

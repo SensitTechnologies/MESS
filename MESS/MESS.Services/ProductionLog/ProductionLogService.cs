@@ -21,6 +21,24 @@ public class ProductionLogService : IProductionLogService
             .ToList();
     }
 
+    public async Task<List<ProductionLog>> GetAllAsync()
+    {
+        try
+        {
+            return await _context.ProductionLogs
+                .Include(p => p.WorkInstruction)
+                .ThenInclude(w => w!.Steps)
+                .Include(p => p.LineOperator)
+                .Include(p => p.LogSteps)
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
     public ProductionLog Get(string id)
     {
         throw new NotImplementedException();
