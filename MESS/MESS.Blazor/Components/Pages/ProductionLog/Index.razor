@@ -6,66 +6,81 @@
 
 @if (_productionLogs == null)
 {
-    <p>
-        Loading...
-    </p>
+<p>Loading...</p>
 }
 else
 {
-    <div>
-        <button @onclick="ToNewPage">Create New Log</button>
-    </div>
-    @foreach (var log in _productionLogs)
-    {
-        <div>
-            <p><strong>Log ID:</strong> @log.Id</p>
-            <p><strong>Submitted At:</strong> @log.SubmitTime</p>
-            <p><strong>Work Instruction:</strong> @(log.WorkInstruction?.Title ?? "N/A")</p>
-            <button @onclick="() => DeleteProductionLog(log.Id)">Delete Production Log @log.Id</button>
-            <button @onclick="() => EditProductionLog(log.Id)">Edit Production Log</button>
-            
-            <div>
-                <p><strong>Steps:</strong></p>
-                @if (log.LogSteps != null && log.LogSteps.Any())
-                {
-                    <ul>
-                        @foreach (var step in log.LogSteps)
-                        {
-                            <li>
-                                <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong>
-                                @if (step.Success)
-                                {
-                                    <p class="text-bg-success">Success</p>
-                                }
-                                else
-                                {
-                                    <p class="text-bg-danger">Failed</p>
-                                }
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ToNewPage">Create New Log</button>
+</div>
 
-                                <small>Started: @(step.StartTime?.ToString("g") ?? "N/A")</small>
-                                <br/>
-                                <small>Ended: @(step.EndTime?.ToString("g") ?? "N/A")</small>
-                                <br/>
-                                <strong>Duration: @(step.Duration?.ToString(@"hh\:mm\:ss") ?? "N/A")</strong>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p>No Steps Logged</p>
-                }
-            </div>
-            
-            <div>
-                <label>Total Time:</label>
-                @ProductionLogService.GetTotalTime(log)
-            </div>
+@foreach (var log in _productionLogs)
+{
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Log #@log.Id</h5>
+        <p class="card-subtitle mb-2 text-muted">Submitted At: @log.SubmitTime</p>
 
-            <p><strong>Product:</strong> @(log.Product?.Name ?? "N/A")</p>
-            <p><strong>Line Operator:</strong> @log.LineOperator</p>
+        <dl class="row">
+            <dt class="col-sm-3">Work Instruction:</dt>
+            <dd class="col-sm-9">@(log.WorkInstruction?.Title ?? "N/A")</dd>
+
+            <dt class="col-sm-3">Product:</dt>
+            <dd class="col-sm-9">@(log.Product?.Name ?? "N/A")</dd>
+
+            <dt class="col-sm-3">Line Operator:</dt>
+            <dd class="col-sm-9">@log.LineOperator</dd>
+
+            <dt class="col-sm-3">Total Time:</dt>
+            <dd class="col-sm-9">@ProductionLogService.GetTotalTime(log)</dd>
+        </dl>
+
+        <div class="mb-3">
+            <p class="font-weight-bold">Steps:</p>
+            @if (log.LogSteps != null && log.LogSteps.Any())
+            {
+            <ul class="list-group">
+                @foreach (var step in log.LogSteps)
+                {
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong>
+                            <br />
+                            <small>Started: @(step.StartTime?.ToString("g") ?? "N/A")</small>
+                            <br />
+                            <small>Ended: @(step.EndTime?.ToString("g") ?? "N/A")</small>
+                            <br />
+                            <strong>Duration: @(step.Duration?.ToString(@"hh\:mm\:ss") ?? "N/A")</strong>
+                        </div>
+                        <div>
+                            @if (step.Success)
+                            {
+                            <span class="badge bg-success">Success</span>
+                            }
+                            else
+                            {
+                            <span class="badge bg-danger">Failed</span>
+                            }
+                        </div>
+                    </div>
+                </li>
+                }
+            </ul>
+            }
+            else
+            {
+            <p>No Steps Logged</p>
+            }
         </div>
-    }
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" @onclick="() => EditProductionLog(log.Id)">Edit</button>
+            <button class="btn btn-danger btn-sm" @onclick="() => DeleteProductionLog(log.Id)">Delete</button>
+        </div>
+    </div>
+</div>
+}
 }
     
     
