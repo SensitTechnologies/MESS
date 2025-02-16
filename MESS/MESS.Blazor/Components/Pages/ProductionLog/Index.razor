@@ -21,6 +21,7 @@ else
             <p><strong>Log ID:</strong> @log.Id</p>
             <p><strong>Submitted At:</strong> @log.SubmitTime</p>
             <p><strong>Work Instruction:</strong> @(log.WorkInstruction?.Title ?? "N/A")</p>
+            <button @onclick="() => DeleteProductionLog(log.Id)">Delete Production Log @log.Id</button>
 
             <div>
                 <p><strong>Steps:</strong></p>
@@ -80,5 +81,15 @@ else
     {
         NavigationManager.NavigateTo("/production-log/new");
     }
-    
+
+    private void DeleteProductionLog(int id)
+    {
+        // Remove Production Log from database
+        ProductionLogService.Delete(id);
+
+        // Update Production Log list state
+        _productionLogs = _productionLogs?.Where(p => p.Id != id).ToList();
+        StateHasChanged();
+    }
+
 }
