@@ -7,5 +7,6 @@ public class Step : AuditableEntity
     public string? Body { get; set; }
     public bool Success { get; set; }
     public DateTimeOffset StartTime { get; set; }
+    public DateTimeOffset EndTime { get; set; }
     public List<Part>? PartsNeeded { get; set; }
 }
