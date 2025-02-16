@@ -39,6 +39,24 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
+    public TimeSpan? GetTotalTime(ProductionLog log)
+    {
+        try
+        {
+            if (log.LogSteps == null || log.LogSteps.Count == 0)
+                return TimeSpan.Zero;
+            
+            return TimeSpan.FromTicks(log.LogSteps
+                    .Where(l => l.Duration.HasValue)
+                    .Sum(l => l.Duration!.Value.Ticks));
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
+    }
+
     public ProductionLog Get(string id)
     {
         throw new NotImplementedException();

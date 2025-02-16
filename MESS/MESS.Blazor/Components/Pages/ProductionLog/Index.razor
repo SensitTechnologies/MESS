@@ -26,33 +26,38 @@ else
                 <p><strong>Steps:</strong></p>
                 @if (log.LogSteps != null && log.LogSteps.Any())
                 {
-                <ul>
-                    @foreach (var step in log.LogSteps)
-                    {
-                    <li>
-                        <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong>
-                        @if (step.Success)
+                    <ul>
+                        @foreach (var step in log.LogSteps)
                         {
-                            <p class="text-bg-success">Success</p>
-                        }
-                        else
-                        {
-                            <p class="text-bg-danger">Failed</p>
-                        }
+                            <li>
+                                <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong>
+                                @if (step.Success)
+                                {
+                                    <p class="text-bg-success">Success</p>
+                                }
+                                else
+                                {
+                                    <p class="text-bg-danger">Failed</p>
+                                }
 
-                        <small>Started: @(step.StartTime?.ToString("g") ?? "N/A")</small>
-                        <br/>
-                        <small>Ended: @(step.EndTime?.ToString("g") ?? "N/A")</small>
-                        <br/>
-                        <strong>Duration: @(step.Duration?.ToString(@"hh\:mm\:ss") ?? "N/A")</strong>
-                    </li>
-                    }
-                </ul>
+                                <small>Started: @(step.StartTime?.ToString("g") ?? "N/A")</small>
+                                <br/>
+                                <small>Ended: @(step.EndTime?.ToString("g") ?? "N/A")</small>
+                                <br/>
+                                <strong>Duration: @(step.Duration?.ToString(@"hh\:mm\:ss") ?? "N/A")</strong>
+                            </li>
+                        }
+                    </ul>
                 }
                 else
                 {
-                <p>No Steps Logged</p>
+                    <p>No Steps Logged</p>
                 }
+            </div>
+            
+            <div>
+                <label>Total Time:</label>
+                @ProductionLogService.GetTotalTime(log)
             </div>
 
             <p><strong>Product:</strong> @(log.Product?.Name ?? "N/A")</p>
