@@ -35,20 +35,27 @@
                 
             }
         </div>
-        
+
         <div>
             @if (ActiveWorkInstruction != null)
             {
                 <div>
-                    @foreach (var step in ActiveWorkInstruction.Steps)
+                    @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
-                        <p>@step.Name</p>
-                        <InputCheckbox class="form-check" @bind-Value="@step.Success" />
-                    }
+                        var step = ActiveWorkInstruction.Steps[i];
+                        bool isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
 
+                        <p>@step.Name</p>
+
+                        <input type="checkbox"
+                               disabled="@isDisabled"
+                               class="form-check"
+                               @onchange="@(e => OnStepCompleted(step, e))" />
+                    }
                 </div>
             }
         </div>
+
         
     </div>
 
@@ -99,12 +106,36 @@
         {
             ProductionLogId = productionLog.Id,
             WorkInstructionStepId = step.Id,
-            Success = step.Success
+            Success = step.Success,
+            StartTime = step.StartTime,
+            EndTime = DateTimeOffset.UtcNow
         }).ToList();
 
         ProductionLogService.Create(productionLog);
         Cancel();
     }
+    
+    private void OnStepCompleted(Step step, ChangeEventArgs e)
+    {
+        if (ActiveWorkInstruction?.Steps == null) return;
+
+        if (bool.TryParse(e.Value?.ToString(), out bool isChecked) && isChecked)
+        {
+            step.Success = true;
+            step.EndTime = DateTimeOffset.UtcNow;
+
+            var steps = ActiveWorkInstruction.Steps;
+            int currentIndex = steps.IndexOf(step);
+            if (currentIndex + 1 < steps.Count)
+            {
+                var nextStep = steps[currentIndex + 1];
+                nextStep.StartTime = DateTimeOffset.UtcNow;
+            }
+        }
+
+        StateHasChanged();
+    }
+
 
 
     private void Cancel()
@@ -117,6 +148,12 @@
         if (int.TryParse(e.Value?.ToString(), out int id))
         {
             ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
+
+            if (ActiveWorkInstruction != null)
+            {
+                var initialStep = ActiveWorkInstruction.Steps.First();
+                initialStep.StartTime = DateTimeOffset.UtcNow;
+            }
         }
     }
 
