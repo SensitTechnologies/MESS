@@ -99,7 +99,7 @@
         {
             ProductionLogId = productionLog.Id,
             WorkInstructionStepId = step.Id,
-            Success = false
+            Success = step.Success
         }).ToList();
 
         ProductionLogService.Create(productionLog);

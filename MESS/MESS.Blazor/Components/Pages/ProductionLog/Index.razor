@@ -31,9 +31,9 @@ else
                 }
             </p>
             <div>
-                @if (log.WorkInstruction != null)
+                @if (log.LogSteps != null)
                 {
-                    foreach (var step in log.WorkInstruction.Steps)
+                    foreach (var step in log.LogSteps)
                     {
                         <p>
                             @step.Success
