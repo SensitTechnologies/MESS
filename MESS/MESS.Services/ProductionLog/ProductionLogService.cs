@@ -139,7 +139,27 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public ProductionLog Edit(ProductionLog existing, ProductionLog updated)
+    public async Task<bool> UpdateAsync(ProductionLog existingProductionLog)
+    {
+        try
+        {
+            if (existingProductionLog == null)
+            {
+                return false;
+            }
+
+            _context.ProductionLogs.Update(existingProductionLog);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
+    }
+
+    public ProductionLog EditWithObject(ProductionLog existing, ProductionLog updated)
     {
         try
         {

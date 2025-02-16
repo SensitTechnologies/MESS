@@ -8,7 +8,7 @@
 @inject IWorkInstructionService WorkInstructionService
 @rendermode InteractiveServer
 
-<EditForm FormName="EditProductionLog" Model="@productionLog" OnValidSubmit="CreateProductionLog">
+<EditForm FormName="EditProductionLog" Model="@productionLog" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
     <div class="mb-3">
         <label for="Name" class="form-label">Product Name</label>
@@ -41,9 +41,9 @@
                     @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
                     var step = ActiveWorkInstruction.Steps[i];
-                    bool isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
+                    var isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
                     var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-                    bool isChecked = logStep?.Success ?? false;
+                    var isChecked = logStep?.Success ?? false;
 
                     <div class="mb-2">
                         <p>@step.Name</p>
@@ -97,13 +97,11 @@
         get => selectedWorkInstructionId;
         set
         {
-            if (selectedWorkInstructionId != value)
+            if (selectedWorkInstructionId == value) return;
+            selectedWorkInstructionId = value;
+            if (value.HasValue)
             {
-                selectedWorkInstructionId = value;
-                if (value.HasValue)
-                {
-                    _ = LoadActiveWorkInstruction(value.Value);
-                }
+                _ = LoadActiveWorkInstruction(value.Value);
             }
         }
     }
@@ -114,12 +112,6 @@
 
         if (ActiveWorkInstruction != null)
         {
-            // Initialize steps if needed
-            if (productionLog.LogSteps == null)
-            {
-                productionLog.LogSteps = new List<ProductionLogStep>();
-            }
-
             // For each step in the work instruction
             foreach (var step in ActiveWorkInstruction.Steps)
             {
@@ -168,9 +160,6 @@
             Title = "Edit";
             productionLog = existingProductionLog;
 
-            // Ensure LogSteps are initialized
-            productionLog.LogSteps ??= new List<ProductionLogStep>();
-
             if (productionLog.WorkInstruction != null)
             {
                 SelectedWorkInstructionId = productionLog.WorkInstruction.Id;
@@ -184,7 +173,7 @@
 
     
     
-    protected void CreateProductionLog()
+    protected void HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
         {
@@ -192,18 +181,33 @@
             return;
         }
 
-        productionLog.LogSteps = ActiveWorkInstruction.Steps.Select(step => new ProductionLogStep
+        var currentTime = DateTimeOffset.UtcNow;
+        var updatedLogSteps = ActiveWorkInstruction.Steps.Select(step => new ProductionLogStep
         {
             ProductionLogId = productionLog.Id,
             WorkInstructionStepId = step.Id,
             Success = step.Success,
             StartTime = step.StartTime,
-            EndTime = DateTimeOffset.UtcNow
+            EndTime = step.Success ? step.EndTime : currentTime
         }).ToList();
 
         productionLog.WorkInstruction = ActiveWorkInstruction;
+        productionLog.LogSteps = updatedLogSteps;
 
-        ProductionLogService.Create(productionLog);
+        if (logId.HasValue)
+        {
+            // Update existing log
+            productionLog.LastModifiedOn = currentTime;
+            ProductionLogService.UpdateAsync(productionLog);
+        }
+        else
+        {
+            // Create new log
+            productionLog.CreatedOn = currentTime;
+            productionLog.LastModifiedOn = currentTime;
+            ProductionLogService.Create(productionLog);
+        }
+
         Cancel();
     }
     
@@ -232,7 +236,7 @@
             }
             else
             {
-                step.EndTime = currentTime;
+                step.StartTime = currentTime;
                 
                 // Reset subsequent steps
                 var steps = ActiveWorkInstruction.Steps;
