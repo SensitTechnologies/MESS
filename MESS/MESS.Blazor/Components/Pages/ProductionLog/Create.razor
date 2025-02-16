@@ -55,7 +55,7 @@
                                    name="radioBtn{@step.Name}"
                                    id="radioFailureBtn{@step.Name}"
                                    @onchange="@(e => OnStepCompleted(step, e, "failure"))" />
-                            <label class="btn btn-outline-primary" for="radioFailureBtn{@step.Name}">Failure</label>
+                            <label class="btn btn-danger" for="radioFailureBtn{@step.Name}">Failure</label>
                             
                             <input type="radio"
                                    checked="@isChecked"
@@ -65,7 +65,7 @@
                                    name="radioBtn{@step.Name}"
                                    id="radioNeutralBtn{@step.Name}"
                                    @onchange="@(e => OnStepCompleted(step, e, "neutral"))" />
-                            <label class="btn btn-outline-primary" for="radioNeutralBtn{@step.Name}">Neutral</label>
+                            <label class="btn btn-secondary" for="radioNeutralBtn{@step.Name}">Neutral</label>
                             
                             <input type="radio"
                                    checked="@isChecked"
@@ -75,7 +75,7 @@
                                    name="radioBtn{@step.Name}"
                                    id="radioSuccessBtn{@step.Name}"
                                    @onchange="@(e => OnStepCompleted(step, e, "success"))" />
-                            <label class="btn btn-outline-primary" for="radioSuccessBtn{@step.Name}">Success</label>
+                            <label class="btn btn-success" for="radioSuccessBtn{@step.Name}">Success</label>
                             
                             @if (logStep != null)
                             {
