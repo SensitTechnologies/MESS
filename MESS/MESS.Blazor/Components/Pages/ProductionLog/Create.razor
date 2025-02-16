@@ -90,10 +90,17 @@
     {
         if (logId != 0)
         {
+            var existingProductionLog = await ProductionLogService.GetByIdAsync(logId);
+            if (existingProductionLog == null)
+            {
+                // Display error for non-existent production log with provided ID
+                return;
+            }
             Title = "Edit";
-            productionLog = (await Http.GetFromJsonAsync<ProductionLog>("api/User/" + logId))!;
+            productionLog = existingProductionLog;
         }
     }
+    
     protected void CreateProductionLog()
     {
         if (ActiveWorkInstruction == null)

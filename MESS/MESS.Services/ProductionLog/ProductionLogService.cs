@@ -66,11 +66,26 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public ProductionLog? Get(int id)
+    public ProductionLog? GetById(int id)
     {
         try
         {
             var productionLog = _context.ProductionLogs.Find(id);
+
+            return productionLog;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
+    }
+
+    public async Task<ProductionLog?> GetByIdAsync(int id)
+    {
+        try
+        {
+            var productionLog = await _context.ProductionLogs.FindAsync(id);
 
             return productionLog;
         }

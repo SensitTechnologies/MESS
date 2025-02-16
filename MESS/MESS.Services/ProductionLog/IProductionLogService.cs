@@ -24,8 +24,14 @@ public interface IProductionLogService
     /// Retrieves a single ProductionLog object
     /// </summary>
     /// <param name="id">integer ID value</param>
-    /// <returns>ProductionLog</returns>
-    public ProductionLog? Get(int id);
+    /// <returns>A nullable ProductionLog</returns>
+    public ProductionLog? GetById(int id);
+    /// <summary>
+    /// Retrieves a single ProductionLog object asynchronously
+    /// </summary>
+    /// <param name="id">integer ID value</param>
+    /// <returns>A nullable ProductionLog</returns>
+    public Task<ProductionLog?> GetByIdAsync(int id);
     /// <summary>
     /// Creates a new ProductionLog object and saves it to the database
     /// NOTE: Handles Audit related data
