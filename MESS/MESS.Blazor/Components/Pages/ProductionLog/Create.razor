@@ -40,29 +40,54 @@
                 <div>
                     @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
-                    var step = ActiveWorkInstruction.Steps[i];
-                    var isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
-                    var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-                    var isChecked = logStep?.Success ?? false;
+                        var step = ActiveWorkInstruction.Steps[i];
+                        var isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
+                        var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+                        var isChecked = logStep?.Success ?? false;
 
-                    <div class="mb-2">
-                        <p>@step.Name</p>
-                        <input type="checkbox"
-                               checked="@isChecked"
-                               disabled="@isDisabled"
-                               class="form-check"
-                               @onchange="@(e => OnStepCompleted(step, e))" />
-                        @if (logStep != null)
-                        {
-                        <small class="text-muted">
-                            Started: @(logStep.StartTime?.ToString("g"))
-                            @if (logStep.EndTime.HasValue)
+                        <div class="btn-group mb-2" role="group">
+                            <p>@step.Name</p>
+                            <input type="radio"
+                                   checked="@isChecked"
+                                   autocomplete="off"
+                                   disabled="@isDisabled"
+                                   class="btn-check"
+                                   name="radioBtn{@step.Name}"
+                                   id="radioFailureBtn{@step.Name}"
+                                   @onchange="@(e => OnStepCompleted(step, e, "failure"))" />
+                            <label class="btn btn-outline-primary" for="radioFailureBtn{@step.Name}">Failure</label>
+                            
+                            <input type="radio"
+                                   checked="@isChecked"
+                                   autocomplete="off"
+                                   disabled="@isDisabled"
+                                   class="btn-check"
+                                   name="radioBtn{@step.Name}"
+                                   id="radioNeutralBtn{@step.Name}"
+                                   @onchange="@(e => OnStepCompleted(step, e, "neutral"))" />
+                            <label class="btn btn-outline-primary" for="radioNeutralBtn{@step.Name}">Neutral</label>
+                            
+                            <input type="radio"
+                                   checked="@isChecked"
+                                   autocomplete="off"
+                                   disabled="@isDisabled"
+                                   class="btn-check"
+                                   name="radioBtn{@step.Name}"
+                                   id="radioSuccessBtn{@step.Name}"
+                                   @onchange="@(e => OnStepCompleted(step, e, "success"))" />
+                            <label class="btn btn-outline-primary" for="radioSuccessBtn{@step.Name}">Success</label>
+                            
+                            @if (logStep != null)
                             {
-                            <span>| Completed: @(logStep.EndTime?.ToString("g"))</span>
+                                <small class="text-muted">
+                                    Started: @(logStep.StartTime?.ToString("g"))
+                                    @if (logStep.EndTime.HasValue)
+                                    {
+                                        <span>| Completed: @(logStep.EndTime?.ToString("g"))</span>
+                                    }
+                                </small>
                             }
-                        </small>
-                        }
-                    </div>
+                        </div>
                     }
                 </div>
             }
@@ -211,44 +236,42 @@
         Cancel();
     }
     
-    private void OnStepCompleted(Step step, ChangeEventArgs e)
+    private void OnStepCompleted(Step step, ChangeEventArgs e, string status)
     {
         if (ActiveWorkInstruction?.Steps == null) return;
 
         var currentTime = DateTimeOffset.UtcNow;
         
-        if (bool.TryParse(e.Value?.ToString(), out bool isChecked))
+        if (status.ToLowerInvariant() == "success")
         {
-            step.Success = isChecked;
-            
-            if (isChecked)
-            {
-                step.EndTime = currentTime;
+            step.Success = true;
+            step.EndTime = currentTime;
 
-                var steps = ActiveWorkInstruction.Steps;
-                int currentIndex = steps.IndexOf(step);
-                if (currentIndex + 1 < steps.Count)
-                {
-                    var nextStep = steps[currentIndex + 1];
-                    nextStep.StartTime = currentTime;
-                    nextStep.EndTime = currentTime; // Initialize with current time
-                }
-            }
-            else
+            var steps = ActiveWorkInstruction.Steps;
+            int currentIndex = steps.IndexOf(step);
+            if (currentIndex + 1 < steps.Count)
             {
-                step.StartTime = currentTime;
-                
-                // Reset subsequent steps
-                var steps = ActiveWorkInstruction.Steps;
-                int currentIndex = steps.IndexOf(step);
-                for (int i = currentIndex + 1; i < steps.Count; i++)
-                {
-                    steps[i].Success = false;
-                    steps[i].StartTime = currentTime;
-                    steps[i].EndTime = currentTime;
-                }
+                var nextStep = steps[currentIndex + 1];
+                nextStep.StartTime = currentTime;
+                nextStep.EndTime = currentTime; // Initialize with current time
             }
         }
+        else
+        {
+            step.Success = false;
+            step.StartTime = currentTime;
+            
+            // Reset subsequent steps
+            var steps = ActiveWorkInstruction.Steps;
+            int currentIndex = steps.IndexOf(step);
+            for (int i = currentIndex + 1; i < steps.Count; i++)
+            {
+                steps[i].Success = false;
+                steps[i].StartTime = currentTime;
+                steps[i].EndTime = currentTime;
+            }
+        }
+        
 
         StateHasChanged();
     }
