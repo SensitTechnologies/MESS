@@ -11,17 +11,26 @@ public class ProductionLogService : IProductionLogService
     {
         _context = context;
     }
-    public IEnumerable<ProductionLog> GetAll()
+    public List<ProductionLog> GetAll()
     {
-        return _context.ProductionLogs
-            .Include(p => p.WorkInstruction)
+        try
+        {
+            return _context.ProductionLogs
+                .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Steps)
-            .Include(p => p.LineOperator)
-            .Include(p => p.LogSteps)
-            .ToList();
+                .Include(p => p.LineOperator)
+                .Include(p => p.LogSteps)
+                .ToList();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
+        }
+        
     }
 
-    public async Task<List<ProductionLog>> GetAllAsync()
+    public async Task<List<ProductionLog>?> GetAllAsync()
     {
         try
         {
@@ -35,7 +44,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw;
+            return new List<ProductionLog>();
         }
     }
 
@@ -57,9 +66,19 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public ProductionLog Get(string id)
+    public ProductionLog? Get(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var productionLog = _context.ProductionLogs.Find(id);
+
+            return productionLog;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
     }
 
     public bool Create(ProductionLog productionLog)
@@ -80,13 +99,50 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public bool Delete(string id)
+    public bool Delete(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var productionLogToDelete = _context.ProductionLogs.Find(id);
+            
+            if (productionLogToDelete == null)
+            {
+                return false;
+            }
+            
+            _context.ProductionLogs.Remove(productionLogToDelete);
+            _context.SaveChanges();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
     }
 
     public ProductionLog Edit(ProductionLog existing, ProductionLog updated)
     {
-        throw new NotImplementedException();
+        try
+        {
+            ArgumentNullException.ThrowIfNull(existing);
+            ArgumentNullException.ThrowIfNull(updated);
+
+            existing.LogSteps = updated.LogSteps;
+            existing.LineOperator = updated.LineOperator;
+            existing.SubmitTime = updated.SubmitTime;
+            existing.LastModifiedOn = DateTimeOffset.UtcNow;
+
+            _context.ProductionLogs.Update(existing);
+            _context.SaveChanges();
+            
+            return existing;
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 }

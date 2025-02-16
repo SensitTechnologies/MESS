@@ -2,11 +2,48 @@
 using Data.Models;
 public interface IProductionLogService
 {
-    public IEnumerable<ProductionLog> GetAll();
-    public Task<List<ProductionLog>> GetAllAsync();
+    /// <summary>
+    /// Retrieves a List of ProductionLog objects
+    /// </summary>
+    /// <returns>List of ProductionLog objects </returns>
+    /// <returns>OR an empty List if the operation failed</returns>
+    public List<ProductionLog> GetAll();
+    /// <summary>
+    ///  Retrieves a List of ProductionLog objects asynchronously
+    /// </summary>
+    /// <returns>List of ProductionLog objects</returns>
+    public Task<List<ProductionLog>?> GetAllAsync();
+    /// <summary>
+    /// Determines the Total Time for a given work instruction instance for a Production Log.
+    /// Calculates total time through the summation of its ProductionLogStep's duration.
+    /// </summary>
+    /// <param name="log">A ProductionLog object</param>
+    /// <returns>A nullable TimeSpan object</returns>
     public TimeSpan? GetTotalTime(ProductionLog log);
-    public ProductionLog Get(string id);
+    /// <summary>
+    /// Retrieves a single ProductionLog object
+    /// </summary>
+    /// <param name="id">integer ID value</param>
+    /// <returns>ProductionLog</returns>
+    public ProductionLog? Get(int id);
+    /// <summary>
+    /// Creates a new ProductionLog object and saves it to the database
+    /// NOTE: Handles Audit related data
+    /// </summary>
+    /// <param name="productionLog">ProductionLog</param>
+    /// <returns>bool value indicating if the operation was successful</returns>
     public bool Create(ProductionLog productionLog);
-    public bool Delete(string id);
+    /// <summary>
+    /// Deletes an existing ProductionLog object from the database
+    /// </summary>
+    /// <param name="id">integer ID value</param>
+    /// <returns>bool value indicating if the operation was successful</returns>
+    public bool Delete(int id);
+    /// <summary>
+    /// Edits/Updates an existing ProductionLog object stored in the database
+    /// </summary>
+    /// <param name="existing">The pre-existing ProductionLog object stored in the database</param>
+    /// <param name="updated">The new ProductionLog object to replace the 'existing' object</param>
+    /// <returns></returns>
     public ProductionLog Edit(ProductionLog existing, ProductionLog updated);
 }
