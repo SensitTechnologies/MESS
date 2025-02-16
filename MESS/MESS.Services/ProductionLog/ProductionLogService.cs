@@ -85,7 +85,10 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            var productionLog = await _context.ProductionLogs.FindAsync(id);
+            var productionLog = await _context.ProductionLogs
+                .Include(p => p.LogSteps)
+                .ThenInclude(p => p.WorkInstructionStep)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
             return productionLog;
         }
