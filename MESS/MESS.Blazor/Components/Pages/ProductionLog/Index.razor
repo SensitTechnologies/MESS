@@ -30,7 +30,15 @@ else
                     @foreach (var step in log.LogSteps)
                     {
                     <li>
-                        <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong> - Success: @step.Success
+                        <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong>
+                        @if (step.Success)
+                        {
+                            <p class="text-bg-success">Success</p>
+                        }
+                        else
+                        {
+                            <p class="text-bg-danger">Failed</p>
+                        }
                     </li>
                     }
                 </ul>
@@ -62,4 +70,4 @@ else
         NavigationManager.NavigateTo("/production-log/new");
     }
     
-}
+}}
