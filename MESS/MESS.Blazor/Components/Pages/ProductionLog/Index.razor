@@ -32,7 +32,9 @@ else
             <dd class="col-sm-9">@log.LineOperator</dd>
 
             <dt class="col-sm-3">Total Time:</dt>
-            <dd class="col-sm-9">@ProductionLogService.GetTotalTime(log)</dd>
+            <dd class="col-sm-9">
+                @(ProductionLogService.GetTotalTime(log)?.ToString(@"hh\:mm\:ss") ?? "N/A")
+            </dd>
         </dl>
 
         <div class="mb-3">
