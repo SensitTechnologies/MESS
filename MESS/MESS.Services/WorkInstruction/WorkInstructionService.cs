@@ -28,6 +28,23 @@ public class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    public Task<List<WorkInstruction>> GetAllAsync()
+    {
+        try
+        {
+            var workInstructions = _context.WorkInstructions
+                .Include(w => w.Steps)
+                .ToListAsync();
+
+            return workInstructions;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
     public WorkInstruction? GetByTitle(string title)
     {
         try
@@ -47,5 +64,19 @@ public class WorkInstructionService : IWorkInstructionService
     public Data.Models.WorkInstruction? GetById(int id)
     {
         throw new NotImplementedException();
+    }
+
+    public async Task<WorkInstruction?> GetByIdAsync(int id)
+    {
+        try
+        {
+            var workInstruction = await _context.WorkInstructions.FindAsync(id);
+            return workInstruction;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
     }
 }

@@ -25,12 +25,13 @@
             @if (WorkInstructions != null)
             {
                 <select @onchange="SetActiveWorkInstruction">
-                    
+                    <option value="">Select Work Instruction</option>
                     @foreach (var instruction in WorkInstructions)
                     {   
-                        <option>@instruction.Title</option>
+                        <option value="@instruction.Id">@instruction.Title</option>
                     }
                 </select>
+
                 
             }
         </div>
@@ -41,30 +42,13 @@
                 <div>
                     @foreach (var step in ActiveWorkInstruction.Steps)
                     {
-                        <p>
-                            @step.Name
-                        </p>
-                        <InputCheckbox class="form-control" @bind-Value="@step.Success"></InputCheckbox>
+                        <p>@step.Name</p>
+                        <InputCheckbox class="form-check" @bind-Value="@step.Success" />
                     }
+
                 </div>
             }
         </div>
-
-        @* <label for="WorkInstruction" class="form-label">Work Instructions</label> *@
-        @* <div class="col-md-4"> *@
-        @*     @if (productionLog.WorkInstruction != null) *@
-        @*     { *@
-        @*         @foreach (var step in productionLog.WorkInstruction.Steps) *@
-        @*         { *@
-        @*             <p> *@
-        @*                 @step.Name *@
-        @*             </p> *@
-        @*             <InputCheckbox class="form-check" @bind-Value="@step.Success"></InputCheckbox> *@
-        @* *@
-        @*         } *@
-        @*     <ValidationMessage For="@(() => productionLog.WorkInstruction.Steps)" /> *@
-        @*     } *@
-        @* </div> *@
         
     </div>
 
@@ -89,11 +73,11 @@
     private List<WorkInstruction>? WorkInstructions { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        WorkInstructions = WorkInstructionService.GetAll();
-        base.OnInitialized();
+        WorkInstructions = await WorkInstructionService.GetAllAsync();
     }
+
 
     protected override async Task OnParametersSetAsync()
     {
@@ -105,41 +89,36 @@
     }
     protected void CreateProductionLog()
     {
-        if (productionLog.Id != 0)
+        if (ActiveWorkInstruction == null)
         {
-            // ProductionLogService.Edit();
+            Console.WriteLine("No Work Instruction selected.");
+            return;
         }
-        else
+
+        productionLog.LogSteps = ActiveWorkInstruction.Steps.Select(step => new ProductionLogStep
         {
-            productionLog.WorkInstruction = ActiveWorkInstruction;
-            ProductionLogService.Create(productionLog);
-        }
+            ProductionLogId = productionLog.Id,
+            WorkInstructionStepId = step.Id,
+            Success = false
+        }).ToList();
+
+        ProductionLogService.Create(productionLog);
         Cancel();
     }
+
 
     private void Cancel()
     {
         NavigationManager.NavigateTo("/");
     }
 
-    private void SetActiveWorkInstruction(ChangeEventArgs e)
+    private async Task SetActiveWorkInstruction(ChangeEventArgs e)
     {
-        var title = e.Value?.ToString();
-        // find work instruction
-        if (title != null)
+        if (int.TryParse(e.Value?.ToString(), out int id))
         {
-            var workInstruction = WorkInstructionService.GetByTitle(title);
-            // display
-
-            if (workInstruction != null)
-            {
-                ActiveWorkInstruction = workInstruction;
-            }
-            else
-            {
-                Console.WriteLine("ERROR");
-            }
+            ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
         }
     }
+
 
 }

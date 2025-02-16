@@ -5,6 +5,7 @@ public class ProductionLog : AuditableEntity
     public int Id { get; set; }
     
     public DateTimeOffset SubmitTime { get; set; }
+    public List<ProductionLogStep> LogSteps { get; set; } = [];
     
     // Navigation Fields
     public LineOperator? LineOperator { get; set; }
