@@ -29,7 +29,7 @@ public class ProductionLogService : IProductionLogService
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Steps)
                 .Include(p => p.LineOperator)
-                .Include(p => p.LogSteps)
+                .Include(p => p.LogSteps).ThenInclude(p => p.WorkInstructionStep)
                 .ToListAsync();
         }
         catch (Exception e)

@@ -18,33 +18,31 @@ else
     @foreach (var log in _productionLogs)
     {
         <div>
-            <p>
-                @log.Id
-            </p>
-            <p>
-                @log.SubmitTime
-            </p>
-            <p>Work Instruction: @(log.WorkInstruction?.Title ?? "N/A")</p>
+            <p><strong>Log ID:</strong> @log.Id</p>
+            <p><strong>Submitted At:</strong> @log.SubmitTime</p>
+            <p><strong>Work Instruction:</strong> @(log.WorkInstruction?.Title ?? "N/A")</p>
 
             <div>
+                <p><strong>Steps:</strong></p>
                 @if (log.LogSteps != null && log.LogSteps.Any())
                 {
-                    <p>Steps:</p>
+                <ul>
                     @foreach (var step in log.LogSteps)
                     {
-                        <p>Step Success: @step.Success</p>
+                    <li>
+                        <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong> - Success: @step.Success
+                    </li>
                     }
+                </ul>
                 }
                 else
                 {
-                    <p>No Steps Logged</p>
+                <p>No Steps Logged</p>
                 }
             </div>
-            <p>Product: @(log.Product?.Name ?? "N/A")</p>
 
-            <p>
-                @log.LineOperator
-            </p>
+            <p><strong>Product:</strong> @(log.Product?.Name ?? "N/A")</p>
+            <p><strong>Line Operator:</strong> @log.LineOperator</p>
         </div>
     }
 }
