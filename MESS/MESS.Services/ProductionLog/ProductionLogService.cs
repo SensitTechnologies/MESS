@@ -48,6 +48,9 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
+            productionLog.CreatedOn = DateTimeOffset.UtcNow;
+            productionLog.SubmitTime = DateTimeOffset.UtcNow;
+            productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             _context.ProductionLogs.Add(productionLog);
             _context.SaveChanges();
             return true;

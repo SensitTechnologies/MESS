@@ -39,6 +39,12 @@ else
                         {
                             <p class="text-bg-danger">Failed</p>
                         }
+
+                        <small>Started: @(step.StartTime?.ToString("g") ?? "N/A")</small>
+                        <br/>
+                        <small>Ended: @(step.EndTime?.ToString("g") ?? "N/A")</small>
+                        <br/>
+                        <strong>Duration: @(step.Duration?.ToString(@"hh\:mm\:ss") ?? "N/A")</strong>
                     </li>
                     }
                 </ul>
@@ -70,4 +76,4 @@ else
         NavigationManager.NavigateTo("/production-log/new");
     }
     
-}}
+}
