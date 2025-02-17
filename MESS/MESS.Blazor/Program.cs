@@ -1,5 +1,6 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Services.Product;
 using MESS.Data.Seed;
 using MESS.Services.ProductionLog;
 using MESS.Services.WorkInstruction;
@@ -18,6 +19,9 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddHttpClient();
+
+// Register the ProductService
+builder.Services.AddTransient<IProductService, ProductService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
