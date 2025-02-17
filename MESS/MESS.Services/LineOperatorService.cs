@@ -49,7 +49,7 @@ public class LineOperatorService
         return operators;
     }
 
-    public async Task<LineOperator> AddLineOperator(LineOperator lineOperator)
+    public async Task<LineOperator> AddLineOperator(LineOperator lineOperator) // adds a line operator with parameters
     {
         using (var connection = new SqlConnection(_connectionString))
         {
@@ -89,7 +89,7 @@ public class LineOperatorService
         }
     }
 
-    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator)
+    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator) // updates a set line operator
     {
         using (var connection = new SqlConnection(_connectionString))
         {
@@ -113,7 +113,7 @@ public class LineOperatorService
         return lineOperator;
     }
 
-    public async Task DeleteLineOperator(int id)
+    public async Task DeleteLineOperator(int id) // deletes a line operator via id
     {
         using (var connection = new SqlConnection(_connectionString))
         {
