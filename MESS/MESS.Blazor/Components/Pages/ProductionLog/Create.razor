@@ -58,7 +58,7 @@
                                        class="btn-check"
                                        name="radioBtn{@step.Name}"
                                        id="radioFailureBtn{@step.Name}"
-                                       @onchange="@(e => OnStepCompleted(step, e, "failure"))"/>
+                                       @onchange="@(e => OnStepCompleted(step, e))"/>
                                 <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
 
                                 <input type="radio"
@@ -68,7 +68,7 @@
                                        class="btn-check"
                                        name="radioBtn{@step.Name}"
                                        id="radioSuccessBtn{@step.Name}"
-                                       @onchange="@(e => OnStepCompleted(step, e, "success"))"/>
+                                       @onchange="@(e => OnStepCompleted(step, e))"/>
                                 <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                             </span>
 
@@ -231,13 +231,18 @@
         Cancel();
     }
     
-    private void OnStepCompleted(Step step, ChangeEventArgs e, string status)
+    private void OnStepCompleted(Step step, ChangeEventArgs e)
     {
         if (ActiveWorkInstruction?.Steps == null) return;
 
         var currentTime = DateTimeOffset.UtcNow;
-        
-        if (status.ToLowerInvariant() == "success")
+
+        if (e.Value is not bool success)
+        {
+            return;
+        }
+
+        if (success)
         {
             step.Success = true;
             step.EndTime = currentTime;
@@ -264,14 +269,11 @@
                 steps[i].Success = false;
                 steps[i].StartTime = currentTime;
                 steps[i].EndTime = currentTime;
-            }
+            } 
         }
-        
 
         StateHasChanged();
     }
-
-
 
     private void Cancel()
     {
