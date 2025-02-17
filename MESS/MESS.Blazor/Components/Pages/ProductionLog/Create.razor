@@ -37,7 +37,7 @@
         <div>
             @if (ActiveWorkInstruction != null)
             {
-                <div>
+                <ol class="list-group list-group-numbered container-fluid">
                     @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
                         var step = ActiveWorkInstruction.Steps[i];
@@ -45,38 +45,33 @@
                         var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
                         var isChecked = logStep?.Success ?? false;
 
-                        <div class="btn-group mb-2" role="group">
-                            <p>@step.Name</p>
-                            <input type="radio"
-                                   checked="@isChecked"
-                                   autocomplete="off"
-                                   disabled="@isDisabled"
-                                   class="btn-check"
-                                   name="radioBtn{@step.Name}"
-                                   id="radioFailureBtn{@step.Name}"
-                                   @onchange="@(e => OnStepCompleted(step, e, "failure"))" />
-                            <label class="btn btn-danger" for="radioFailureBtn{@step.Name}">Failure</label>
+                        <li class="list-group-item btn-group mb-2 row row-cols-2" role="group">
+                            <span class="col">
+                                @step.Name
+                            </span>
                             
-                            <input type="radio"
-                                   checked="@isChecked"
-                                   autocomplete="off"
-                                   disabled="@isDisabled"
-                                   class="btn-check"
-                                   name="radioBtn{@step.Name}"
-                                   id="radioNeutralBtn{@step.Name}"
-                                   @onchange="@(e => OnStepCompleted(step, e, "neutral"))" />
-                            <label class="btn btn-secondary" for="radioNeutralBtn{@step.Name}">Neutral</label>
-                            
-                            <input type="radio"
-                                   checked="@isChecked"
-                                   autocomplete="off"
-                                   disabled="@isDisabled"
-                                   class="btn-check"
-                                   name="radioBtn{@step.Name}"
-                                   id="radioSuccessBtn{@step.Name}"
-                                   @onchange="@(e => OnStepCompleted(step, e, "success"))" />
-                            <label class="btn btn-success" for="radioSuccessBtn{@step.Name}">Success</label>
-                            
+                            <span class="col">
+                                <input type="radio"
+                                       checked="@isChecked"
+                                       autocomplete="off"
+                                       disabled="@isDisabled"
+                                       class="btn-check"
+                                       name="radioBtn{@step.Name}"
+                                       id="radioFailureBtn{@step.Name}"
+                                       @onchange="@(e => OnStepCompleted(step, e))"/>
+                                <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
+
+                                <input type="radio"
+                                       checked="@isChecked"
+                                       autocomplete="off"
+                                       disabled="@isDisabled"
+                                       class="btn-check"
+                                       name="radioBtn{@step.Name}"
+                                       id="radioSuccessBtn{@step.Name}"
+                                       @onchange="@(e => OnStepCompleted(step, e))"/>
+                                <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
+                            </span>
+
                             @if (logStep != null)
                             {
                                 <small class="text-muted">
@@ -87,9 +82,9 @@
                                     }
                                 </small>
                             }
-                        </div>
+                        </li>
                     }
-                </div>
+                </ol>
             }
         </div>
 
@@ -236,13 +231,18 @@
         Cancel();
     }
     
-    private void OnStepCompleted(Step step, ChangeEventArgs e, string status)
+    private void OnStepCompleted(Step step, ChangeEventArgs e)
     {
         if (ActiveWorkInstruction?.Steps == null) return;
 
         var currentTime = DateTimeOffset.UtcNow;
-        
-        if (status.ToLowerInvariant() == "success")
+
+        if (e.Value is not bool success)
+        {
+            return;
+        }
+
+        if (success)
         {
             step.Success = true;
             step.EndTime = currentTime;
@@ -269,14 +269,11 @@
                 steps[i].Success = false;
                 steps[i].StartTime = currentTime;
                 steps[i].EndTime = currentTime;
-            }
+            } 
         }
-        
 
         StateHasChanged();
     }
-
-
 
     private void Cancel()
     {
