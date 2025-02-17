@@ -16,7 +16,9 @@ public class WorkInstructionService : IWorkInstructionService
         try
         {
             var workInstructions = _context.WorkInstructions
+                .Include(w => w.Operator)
                 .Include(w => w.Steps)
+                .Include(w => w.RelatedDocumentation)
                 .ToList();
 
             return workInstructions;
@@ -33,7 +35,9 @@ public class WorkInstructionService : IWorkInstructionService
         try
         {
             var workInstructions = _context.WorkInstructions
+                .Include(w => w.Operator)
                 .Include(w => w.Steps)
+                .Include(w => w.RelatedDocumentation)
                 .ToListAsync();
 
             return workInstructions;
@@ -61,9 +65,19 @@ public class WorkInstructionService : IWorkInstructionService
         }
     }
 
-    public Data.Models.WorkInstruction? GetById(int id)
+    public WorkInstruction? GetById(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var workInstruction = _context.WorkInstructions.Find(id);
+
+            return workInstruction;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
     }
 
     public async Task<WorkInstruction?> GetByIdAsync(int id)
@@ -77,6 +91,82 @@ public class WorkInstructionService : IWorkInstructionService
         {
             Console.WriteLine(e);
             return null;
+        }
+    }
+
+    public bool Create(WorkInstruction workInstruction)
+    {
+        try
+        {
+            // Validate WorkInstruction
+            var workInstructionValidator = new WorkInstructionValidator();
+            var validationResult = workInstructionValidator.Validate(workInstruction);
+
+            if (!validationResult.IsValid)
+            {
+                return false;
+            }
+
+            _context.WorkInstructions.Add(workInstruction);
+            _context.SaveChanges();
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteByIdAsync(int id)
+    {
+        try
+        {
+            var workInstruction = await _context.WorkInstructions.FindAsync(id);
+            
+            if (workInstruction == null)
+            {
+                return false;
+            }
+
+            _context.WorkInstructions.Remove(workInstruction);
+            await _context.SaveChangesAsync();
+            
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction)
+    {
+        // if ID is 0 that means it has NOT been saved to the database
+        if (workInstruction.Id == 0)
+        {
+            return false;
+        }
+        try
+        {
+            // verify that the WorkInstruction already exists in the database
+            var existingWorkInstruction = await _context.WorkInstructions.FindAsync(workInstruction.Id);
+
+            if (existingWorkInstruction == null)
+            {
+                return false;
+            }
+
+            _context.WorkInstructions.Update(workInstruction);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
         }
     }
 }
