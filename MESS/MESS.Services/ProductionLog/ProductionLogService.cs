@@ -55,9 +55,16 @@ public class ProductionLogService : IProductionLogService
             if (log.LogSteps == null || log.LogSteps.Count == 0)
                 return TimeSpan.Zero;
             
-            return TimeSpan.FromTicks(log.LogSteps
+            var totalTime = TimeSpan.FromTicks(log.LogSteps
                     .Where(l => l.Duration.HasValue)
                     .Sum(l => l.Duration!.Value.Ticks));
+
+            if (totalTime < TimeSpan.Zero)
+            {
+                return TimeSpan.Zero;
+            }
+
+            return totalTime;
         }
         catch (Exception e)
         {
