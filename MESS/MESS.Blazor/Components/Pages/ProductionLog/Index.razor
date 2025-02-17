@@ -19,7 +19,7 @@ else
 <div class="card mb-3">
     <div class="card-body">
         <h5 class="card-title">Log #@log.Id</h5>
-        <p class="card-subtitle mb-2 text-muted">Submitted At: @log.SubmitTime</p>
+        <p class="card-subtitle mb-2 text-muted">Submitted At: @log.SubmitTime.ToLocalTime()</p>
 
         <dl class="row">
             <dt class="col-sm-3">Work Instruction:</dt>
@@ -49,9 +49,9 @@ else
                         <div>
                             <strong>@(step.WorkInstructionStep?.Name ?? "Unnamed Step")</strong>
                             <br />
-                            <small>Started: @(step.StartTime?.ToString("g") ?? "N/A")</small>
+                            <small>Started: @(step.StartTime?.ToLocalTime().ToString("g") ?? "N/A")</small>
                             <br />
-                            <small>Ended: @(step.EndTime?.ToString("g") ?? "N/A")</small>
+                            <small>Ended: @(step.EndTime?.ToLocalTime().ToString("g") ?? "N/A")</small>
                             <br />
                             <strong>Duration: @(step.Duration?.ToString(@"hh\:mm\:ss") ?? "N/A")</strong>
                         </div>

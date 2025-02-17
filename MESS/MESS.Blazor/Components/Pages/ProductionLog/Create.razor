@@ -58,7 +58,7 @@
                                        class="btn-check"
                                        name="radioBtn{@step.Name}"
                                        id="radioFailureBtn{@step.Name}"
-                                       @onchange="@(e => OnStepCompleted(step, e))"/>
+                                       @onchange="@(e => OnStepCompleted(step, e, false))"/>
                                 <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
 
                                 <input type="radio"
@@ -68,7 +68,7 @@
                                        class="btn-check"
                                        name="radioBtn{@step.Name}"
                                        id="radioSuccessBtn{@step.Name}"
-                                       @onchange="@(e => OnStepCompleted(step, e))"/>
+                                       @onchange="@(e => OnStepCompleted(step, e, true))"/>
                                 <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                             </span>
 
@@ -101,24 +101,18 @@
     [Parameter]
     public int? logId { get; set; }
     protected string Title = "Add";
-    protected ProductionLog productionLog = new()
-    {
-        CreatedBy = "",
-        CreatedOn = default,
-        LastModifiedBy = "",
-        LastModifiedOn = default
-    };
+    protected ProductionLog productionLog = new();
 
     private List<WorkInstruction>? WorkInstructions { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
-    private int? selectedWorkInstructionId;
+    private int? _selectedWorkInstructionId;
     private int? SelectedWorkInstructionId
     {
-        get => selectedWorkInstructionId;
+        get => _selectedWorkInstructionId;
         set
         {
-            if (selectedWorkInstructionId == value) return;
-            selectedWorkInstructionId = value;
+            if (_selectedWorkInstructionId == value) return;
+            _selectedWorkInstructionId = value;
             if (value.HasValue)
             {
                 _ = LoadActiveWorkInstruction(value.Value);
@@ -193,7 +187,7 @@
 
     
     
-    protected void HandleSubmit()
+    protected async void HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
         {
@@ -218,7 +212,7 @@
         {
             // Update existing log
             productionLog.LastModifiedOn = currentTime;
-            ProductionLogService.UpdateAsync(productionLog);
+            await ProductionLogService.UpdateAsync(productionLog);
         }
         else
         {
@@ -231,16 +225,11 @@
         Cancel();
     }
     
-    private void OnStepCompleted(Step step, ChangeEventArgs e)
+    private void OnStepCompleted(Step step, ChangeEventArgs e, bool success)
     {
         if (ActiveWorkInstruction?.Steps == null) return;
 
         var currentTime = DateTimeOffset.UtcNow;
-
-        if (e.Value is not bool success)
-        {
-            return;
-        }
 
         if (success)
         {
@@ -253,7 +242,6 @@
             {
                 var nextStep = steps[currentIndex + 1];
                 nextStep.StartTime = currentTime;
-                nextStep.EndTime = currentTime; // Initialize with current time
             }
         }
         else
@@ -261,15 +249,6 @@
             step.Success = false;
             step.StartTime = currentTime;
             
-            // Reset subsequent steps
-            var steps = ActiveWorkInstruction.Steps;
-            int currentIndex = steps.IndexOf(step);
-            for (int i = currentIndex + 1; i < steps.Count; i++)
-            {
-                steps[i].Success = false;
-                steps[i].StartTime = currentTime;
-                steps[i].EndTime = currentTime;
-            } 
         }
 
         StateHasChanged();
