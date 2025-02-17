@@ -63,16 +63,6 @@
                                    disabled="@isDisabled"
                                    class="btn-check"
                                    name="radioBtn{@step.Name}"
-                                   id="radioNeutralBtn{@step.Name}"
-                                   @onchange="@(e => OnStepCompleted(step, e, "neutral"))" />
-                            <label class="btn btn-secondary" for="radioNeutralBtn{@step.Name}">Neutral</label>
-                            
-                            <input type="radio"
-                                   checked="@isChecked"
-                                   autocomplete="off"
-                                   disabled="@isDisabled"
-                                   class="btn-check"
-                                   name="radioBtn{@step.Name}"
                                    id="radioSuccessBtn{@step.Name}"
                                    @onchange="@(e => OnStepCompleted(step, e, "success"))" />
                             <label class="btn btn-success" for="radioSuccessBtn{@step.Name}">Success</label>
