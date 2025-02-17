@@ -37,7 +37,7 @@
         <div>
             @if (ActiveWorkInstruction != null)
             {
-                <div>
+                <ol class="list-group list-group-numbered">
                     @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
                         var step = ActiveWorkInstruction.Steps[i];
@@ -45,8 +45,8 @@
                         var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
                         var isChecked = logStep?.Success ?? false;
 
-                        <div class="btn-group mb-2" role="group">
-                            <p>@step.Name</p>
+                        <li class="list-group-item btn-group mb-2" role="group">
+                            @step.Name
                             <input type="radio"
                                    checked="@isChecked"
                                    autocomplete="off"
@@ -87,9 +87,9 @@
                                     }
                                 </small>
                             }
-                        </div>
+                        </li>
                     }
-                </div>
+                </ol>
             }
         </div>
 
