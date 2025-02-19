@@ -71,17 +71,6 @@
                                        @onchange="@(e => OnStepCompleted(step, e, true))"/>
                                 <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                             </span>
-
-                            @if (logStep != null)
-                            {
-                                <small class="text-muted">
-                                    Started: @(logStep.StartTime?.ToString("g"))
-                                    @if (logStep.EndTime.HasValue)
-                                    {
-                                        <span>| Completed: @(logStep.EndTime?.ToString("g"))</span>
-                                    }
-                                </small>
-                            }
                         </li>
                     }
                 </ol>
@@ -136,15 +125,14 @@
                 {
                     // Sync the step with existing log data
                     step.Success = existingLogStep.Success;
-                    step.StartTime = existingLogStep.StartTime ?? step.StartTime;
-                    step.EndTime = existingLogStep.EndTime ?? step.EndTime;
+                    step.SubmitTime = existingLogStep.SubmitTime;
                 }
                 else if (!productionLog.LogSteps.Any())
                 {
                     // For new logs, initialize first step
                     if (ActiveWorkInstruction.Steps.First() == step)
                     {
-                        step.StartTime = DateTimeOffset.UtcNow;
+                        step.SubmitTime = DateTimeOffset.UtcNow;
                     }
                 }
             }
@@ -200,8 +188,7 @@
             ProductionLogId = productionLog.Id,
             WorkInstructionStepId = step.Id,
             Success = step.Success,
-            StartTime = step.StartTime,
-            EndTime = step.Success ? step.EndTime : currentTime
+            SubmitTime = step.SubmitTime,
         }).ToList();
 
         productionLog.WorkInstruction = ActiveWorkInstruction;
@@ -233,20 +220,19 @@
         if (success)
         {
             step.Success = true;
-            step.EndTime = currentTime;
 
             var steps = ActiveWorkInstruction.Steps;
             int currentIndex = steps.IndexOf(step);
             if (currentIndex + 1 < steps.Count)
             {
                 var nextStep = steps[currentIndex + 1];
-                nextStep.StartTime = currentTime;
+                nextStep.SubmitTime = currentTime;
             }
         }
         else
         {
             step.Success = false;
-            step.StartTime = currentTime;
+            step.SubmitTime = currentTime;
             
         }
 

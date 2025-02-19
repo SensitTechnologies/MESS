@@ -26,8 +26,7 @@ public class ProductionLogServiceTests
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 00, 01, 39, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero),
                 }
             ]
         };
@@ -51,8 +50,7 @@ public class ProductionLogServiceTests
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 3, 01, 39, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 3, 01, 39, TimeSpan.Zero)
                 }
             ]
         };
@@ -76,26 +74,22 @@ public class ProductionLogServiceTests
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero),
                 },
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 00, 02, 22, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero),
                 },
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 02, 22, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 00, 03, 10, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 02, 22, TimeSpan.Zero),
                 },
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 03, 10, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 00, 03, 59, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 03, 10, TimeSpan.Zero),
                 }
             ]
         };
@@ -145,8 +139,7 @@ public class ProductionLogServiceTests
                 new ProductionLogStep
                 {
                     Success = true,
-                    StartTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero),
-                    EndTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero),
                 },
             ]
         };

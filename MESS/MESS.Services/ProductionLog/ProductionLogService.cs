@@ -55,16 +55,12 @@ public class ProductionLogService : IProductionLogService
             if (log.LogSteps == null || log.LogSteps.Count == 0)
                 return TimeSpan.Zero;
             
-            var totalTime = TimeSpan.FromTicks(log.LogSteps
-                    .Where(l => l.Duration.HasValue)
-                    .Sum(l => l.Duration!.Value.Ticks));
+            var orderedSteps = log.LogSteps.OrderBy(l => l.SubmitTime);
 
-            if (totalTime < TimeSpan.Zero)
-            {
-                return TimeSpan.Zero;
-            }
-
-            return totalTime;
+            var start = orderedSteps.FirstOrDefault()?.SubmitTime;
+            var end = orderedSteps.LastOrDefault()?.SubmitTime;
+            
+            return end - start;
         }
         catch (Exception e)
         {
