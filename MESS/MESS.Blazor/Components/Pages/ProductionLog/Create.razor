@@ -41,7 +41,6 @@
                     @for (var i = 0; i < ActiveWorkInstruction.Steps.Count; i++)
                     {
                         var step = ActiveWorkInstruction.Steps[i];
-                        var isDisabled = (i > 0 && !ActiveWorkInstruction.Steps[i - 1].Success);
                         var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
                         var isChecked = logStep?.Success ?? false;
 
@@ -54,7 +53,6 @@
                                 <input type="radio"
                                        checked="@isChecked"
                                        autocomplete="off"
-                                       disabled="@isDisabled"
                                        class="btn-check"
                                        name="radioBtn{@step.Name}"
                                        id="radioFailureBtn{@step.Name}"
@@ -64,7 +62,6 @@
                                 <input type="radio"
                                        checked="@isChecked"
                                        autocomplete="off"
-                                       disabled="@isDisabled"
                                        class="btn-check"
                                        name="radioBtn{@step.Name}"
                                        id="radioSuccessBtn{@step.Name}"
