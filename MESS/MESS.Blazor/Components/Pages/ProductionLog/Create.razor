@@ -3,20 +3,21 @@
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
+@using Microsoft.EntityFrameworkCore
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
 @rendermode InteractiveServer
 
-<EditForm FormName="EditProductionLog" Model="@productionLog" OnValidSubmit="HandleSubmit">
+<EditForm FormName="EditProductionLog" Model="@ProductionLog" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
     <div class="mb-3">
         <label for="Name" class="form-label">Product Name</label>
         <div class="col-md-4">
-            @if (productionLog.Product != null)
+            @if (ProductionLog.Product != null)
             {
-                <InputText class="form-control" @bind-Value="productionLog.Product.Name"/>
-                <ValidationMessage For="@(() => productionLog.Product.Name)" />
+                <InputText class="form-control" @bind-Value="ProductionLog.Product.Name"/>
+                <ValidationMessage For="@(() => ProductionLog.Product.Name)" />
             }
         </div>
         
@@ -40,10 +41,15 @@
                 <ul class="list-group list-group-numbered container">
                     @foreach (var step in ActiveWorkInstruction.Steps)
                     {
-                        var step1 = step;
-                        var logStep = productionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step1.Id);
+                        var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
                         var isChecked = logStep?.Success ?? false;
-
+                        
+                        if (logStep == null && ProductionLog.LogSteps != null)
+                        {
+                            logStep = new ProductionLogStep { WorkInstructionStepId = step.Id, ProductionLogId = ProductionLog.Id };
+                            ProductionLog.LogSteps.Add(logStep);
+                        }
+                        
                         <li class="list-group-item btn-group mb-2" role="group">
                             <div class="row">
                                 <div class="col-8">
@@ -54,6 +60,7 @@
                                     <input type="radio"
                                            checked="@isChecked"
                                            autocomplete="off"
+                                           @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
                                            class="btn-check"
                                            name="radioBtn{@step.Name}"
                                            id="radioFailureBtn{@step.Name}"
@@ -69,6 +76,21 @@
                                            @onchange="@(e => OnStepCompleted(step, e, true))"/>
                                     <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                                 </div>
+
+                                @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null)
+                                {
+                                    <div class="col-12">
+                                        @if (logStep != null)
+                                        {
+                                        <InputTextArea @bind-Value="logStep.Notes" />
+                                        }
+                                        else
+                                        {
+                                        <p>Loading...</p>
+                                        }
+                                    </div>
+                                }
+
                             </div>
                             
                         </li>
@@ -87,8 +109,10 @@
     [Parameter]
     public int? logId { get; set; }
     protected string Title = "Add";
-    protected ProductionLog productionLog = new();
-
+    protected ProductionLog ProductionLog = new();
+    private Dictionary<int, bool> showNotesForStep = new();
+    
+    private bool ShowOptionalNotesField { get; set; } = false;
     private List<WorkInstruction>? WorkInstructions { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     private int? _selectedWorkInstructionId;
@@ -116,7 +140,7 @@
             foreach (var step in ActiveWorkInstruction.Steps)
             {
                 // Try to find existing log step
-                var existingLogStep = productionLog.LogSteps
+                var existingLogStep = ProductionLog.LogSteps
                     .FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
 
                 if (existingLogStep != null)
@@ -125,7 +149,7 @@
                     step.Success = existingLogStep.Success;
                     step.SubmitTime = existingLogStep.SubmitTime;
                 }
-                else if (!productionLog.LogSteps.Any())
+                else if (!ProductionLog.LogSteps.Any())
                 {
                     // For new logs, initialize first step
                     if (ActiveWorkInstruction.Steps.First() == step)
@@ -149,6 +173,14 @@
         {
             await LoadExistingLog(logId.Value);
         }
+        
+        if (ActiveWorkInstruction != null)
+        {
+            foreach (var step in ActiveWorkInstruction.Steps)
+            {
+                showNotesForStep[step.Id] = false;
+            }
+        }
     }
     
     private async Task LoadExistingLog(int id)
@@ -157,11 +189,11 @@
         if (existingProductionLog != null)
         {
             Title = "Edit";
-            productionLog = existingProductionLog;
+            ProductionLog = existingProductionLog;
 
-            if (productionLog.WorkInstruction != null)
+            if (ProductionLog.WorkInstruction != null)
             {
-                SelectedWorkInstructionId = productionLog.WorkInstruction.Id;
+                SelectedWorkInstructionId = ProductionLog.WorkInstruction.Id;
             }
         }
         else
@@ -181,29 +213,29 @@
         }
 
         var currentTime = DateTimeOffset.UtcNow;
-        var updatedLogSteps = ActiveWorkInstruction.Steps.Select(step => new ProductionLogStep
+        foreach (var step in ActiveWorkInstruction.Steps)
         {
-            ProductionLogId = productionLog.Id,
-            WorkInstructionStepId = step.Id,
-            Success = step.Success,
-            SubmitTime = step.SubmitTime,
-        }).ToList();
+            var logStep = ProductionLog.LogSteps.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+            if (logStep == null) continue;
+            logStep.Success = step.Success;
+            logStep.SubmitTime = step.SubmitTime;
+        }
+        
 
-        productionLog.WorkInstruction = ActiveWorkInstruction;
-        productionLog.LogSteps = updatedLogSteps;
+        ProductionLog.WorkInstruction = ActiveWorkInstruction;
 
         if (logId.HasValue)
         {
             // Update existing log
-            productionLog.LastModifiedOn = currentTime;
-            await ProductionLogService.UpdateAsync(productionLog);
+            ProductionLog.LastModifiedOn = currentTime;
+            await ProductionLogService.UpdateAsync(ProductionLog);
         }
         else
         {
             // Create new log
-            productionLog.CreatedOn = currentTime;
-            productionLog.LastModifiedOn = currentTime;
-            ProductionLogService.Create(productionLog);
+            ProductionLog.CreatedOn = currentTime;
+            ProductionLog.LastModifiedOn = currentTime;
+            ProductionLogService.Create(ProductionLog);
         }
 
         Cancel();
@@ -231,12 +263,12 @@
         {
             step.Success = false;
             step.SubmitTime = currentTime;
-            
+            showNotesForStep[step.Id] = true;
         }
 
         StateHasChanged();
     }
-
+    
     private void Cancel()
     {
         NavigationManager.NavigateTo("/production-log");
