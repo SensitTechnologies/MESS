@@ -16,6 +16,7 @@ public class LineOperator : AuditableEntity
     public ProductionLog? ProductionLog { get; set; }
 }
 
+
 public class LineOperatorValidator : AbstractValidator<LineOperator>
 {
     public LineOperatorValidator()

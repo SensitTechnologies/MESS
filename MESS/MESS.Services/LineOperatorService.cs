@@ -1,5 +1,4 @@
 ﻿using MESS.Data.Context;
-
 namespace MESS.Services;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -15,12 +14,12 @@ public class LineOperatorService
         _context = context;
     }
 
-    public async Task<List<LineOperator>> GetLineOperatorsAsync() // spits out a list of all line operators
+    public async Task<List<LineOperator>> GetLineOperators() // spits out a list of all line operators
     {
        return await _context.LineOperators.ToListAsync();
     }
 
-    public async Task<LineOperator> AddLineOperatorAsync(LineOperator lineOperator) // adds a line operator with parameters
+    public async Task<LineOperator> AddLineOperator(LineOperator lineOperator) // adds a line operator with parameters
     {
        _context.LineOperators.Add(lineOperator);
        await _context.SaveChangesAsync();
