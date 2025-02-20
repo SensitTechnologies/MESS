@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
@@ -26,7 +27,8 @@ public class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw;
+            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAll Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
+            return [];
         }
     }
 
@@ -45,6 +47,7 @@ public class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
             throw;
         }
     }
@@ -61,6 +64,7 @@ public class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to GetByTitle with Title: {title}, in WorkInstructionService", e.GetBaseException().ToString(), title);
             return null;
         }
     }
@@ -76,6 +80,7 @@ public class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to GetById with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
             return null;
         }
     }
@@ -90,6 +95,7 @@ public class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
             return null;
         }
     }
@@ -109,12 +115,15 @@ public class WorkInstructionService : IWorkInstructionService
 
             _context.WorkInstructions.Add(workInstruction);
             _context.SaveChanges();
+            
+            Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
             return true;
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to Create a work instruction, in WorkInstructionService", e.GetBaseException().ToString());
             return false;
         }
     }
@@ -133,11 +142,14 @@ public class WorkInstructionService : IWorkInstructionService
             _context.WorkInstructions.Remove(workInstruction);
             await _context.SaveChangesAsync();
             
+            Log.Information("Successfully deleted WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+
             return true;
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to Delete a work instruction with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
             return false;
         }
     }
@@ -158,6 +170,8 @@ public class WorkInstructionService : IWorkInstructionService
             {
                 return false;
             }
+            
+            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
             _context.WorkInstructions.Update(workInstruction);
             await _context.SaveChangesAsync();
@@ -166,6 +180,7 @@ public class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception: {exceptionType} thrown when attempting to UpdateWorkInstructionAsync with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), workInstruction.Id);
             return false;
         }
     }
