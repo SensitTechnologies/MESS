@@ -1,0 +1,73 @@
+@page "/work-stations"
+@using MESS.Data.Models
+@using MESS.Services.WorkStation
+@inject IWorkStationService WorkStationService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Work Station List</PageTitle>
+
+<h3>Work Station List</h3>
+
+@if (WorkStations.Count == 0)
+{
+    <p>Loading... No work stations currently available.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Active</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var workStation in WorkStations)
+        {
+            <tr>
+                <td>@workStation.Id</td>
+                <td>@workStation.Name</td>
+                <td>@(workStation.IsActive ? "Yes" : "No")</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" @onclick="() => EditWorkStation(workStation.Id)">Edit</button>
+                    <button class="btn btn-danger btn-sm" @onclick="() => RemoveWorkStation(workStation.Id)">Delete</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-success" @onclick="GoToCreate">Create New Work Station</button>
+
+@code {
+    private List<WorkStation> WorkStations { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkStations();
+    }
+
+    private async Task LoadWorkStations()
+    {
+        WorkStations = (await WorkStationService.GetAllWorkStationsAsync()).ToList();
+    }
+
+    private void GoToCreate()
+    {
+        NavigationManager.NavigateTo("/work-stations/create");
+    }
+
+    private void EditWorkStation(int id)
+    {
+        NavigationManager.NavigateTo($"/work-stations/edit/{id}");
+    }
+
+    private async Task RemoveWorkStation(int id)
+    {
+        await WorkStationService.RemoveWorkStationAsync(id);
+        await LoadWorkStations(); // Refresh the list after deletion
+    }
+}

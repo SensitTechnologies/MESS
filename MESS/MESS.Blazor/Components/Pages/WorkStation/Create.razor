@@ -1,0 +1,92 @@
+@page "/work-stations/create"
+@page "/work-stations/edit/{LogId:int}"
+@using MESS.Data.Models
+@using MESS.Services.WorkStation
+@using Serilog
+@inject IWorkStationService WorkStationService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(IsEditMode ? "Edit Work Station" : "Create Work Station")</PageTitle>
+
+<h3>@(IsEditMode ? "Edit" : "Create")</h3>
+
+<h2>Work Station</h2>
+
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="WorkStation" OnValidSubmit="SaveWorkStation">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            
+            <div class="mb-3">
+                <label for="name" class="form-label">Name:</label> 
+                <InputText id="name" @bind-Value="WorkStation.Name" class="form-control" /> 
+                <ValidationMessage For="() => WorkStation.Name" class="text-danger" /> 
+            </div> 
+            <div class="mb-3 form-check">
+                <InputCheckbox id="isActive" @bind-Value="WorkStation.IsActive" class="form-check-input" />
+                <label for="isActive" class="form-check-label">Active</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">@(IsEditMode ? "Save Changes" : "Create")</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/work-stations">Back to List</a>
+</div>
+
+@code {
+    [Parameter]
+    public int? LogId { get; set; }
+
+    private bool IsEditMode => LogId.HasValue;
+    private WorkStation WorkStation { get; set; } = new()
+    {
+        Name = ""
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            // Fetch work station for editing
+            if (LogId != null)
+            {
+                var existingWorkStation = await WorkStationService.FindWorkStationByIdAsync(LogId.Value);
+                if (existingWorkStation != null)
+                {
+                    WorkStation = existingWorkStation;
+                }
+                else
+                {
+                    // Handle case where work station does not exist (e.g., navigate back)
+                    NavigationManager.NavigateTo("/work-stations");
+                }
+            }
+        }
+    }
+
+    private async Task SaveWorkStation()
+    {
+        try
+        {
+            if (IsEditMode)
+            {
+                await WorkStationService.ModifyWorkStationAsync(WorkStation);
+            }
+            else
+            {
+                await WorkStationService.AddWorkStationAsync(WorkStation);
+            }
+
+            NavigationManager.NavigateTo("/work-stations");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error saving work station.");
+        }
+    }
+}
