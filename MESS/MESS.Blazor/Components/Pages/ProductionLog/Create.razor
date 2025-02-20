@@ -4,6 +4,7 @@
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
 @using Microsoft.EntityFrameworkCore
+@using Serilog
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
@@ -159,7 +160,7 @@
                 }
             }
         }
-
+        
         StateHasChanged();
     }
 
@@ -250,14 +251,7 @@
         if (success)
         {
             step.Success = true;
-
-            var steps = ActiveWorkInstruction.Steps;
-            int currentIndex = steps.IndexOf(step);
-            if (currentIndex + 1 < steps.Count)
-            {
-                var nextStep = steps[currentIndex + 1];
-                nextStep.SubmitTime = currentTime;
-            }
+            step.SubmitTime = currentTime;
         }
         else
         {
