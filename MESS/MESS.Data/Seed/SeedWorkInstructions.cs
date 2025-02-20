@@ -31,7 +31,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Turn on the main power switch.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -40,7 +40,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Check all safety equipment.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "null",
@@ -49,7 +49,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Start the conveyor belt.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -92,7 +92,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Ensure the machine is powered off before calibration.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -101,7 +101,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Adjust the alignment screws.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -110,7 +110,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Power on and test calibration.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -153,7 +153,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Place the product in the designated box.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -162,7 +162,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Seal the box with the appropriate tape.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -171,7 +171,7 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Label the package correctly.",
-                            StartTime = default,
+                            SubmitTime = default,
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
