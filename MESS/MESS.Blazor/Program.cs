@@ -4,6 +4,9 @@ using MESS.Data.Seed;
 using MESS.Services.ProductionLog;
 using MESS.Services.WorkInstruction;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +25,19 @@ builder.Services.AddHttpClient();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
+
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File(new JsonFormatter(), "Logs/MESS_Blazor_Warning_Log.json", restrictedToMinimumLevel: LogEventLevel.Warning)
+    .WriteTo.File("Logs/MESS_Blazor_All.logs",
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}}",
+        rollingInterval: RollingInterval.Day)
+    .MinimumLevel.Is(logLevel)
+    .CreateLogger();
+
 
 // User Secrets Setup
 var config = new ConfigurationBuilder()
