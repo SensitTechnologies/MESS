@@ -1,5 +1,6 @@
 ﻿using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace MESS.Services.ProductionLog;
 using Data.Models;
@@ -25,6 +26,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to GetAll Production Logs, in ProductionLogService");
             return [];
         }
         
@@ -45,6 +47,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to GetAllAsync Production Logs, in ProductionLogService");
             return new List<ProductionLog>();
         }
     }
@@ -66,6 +69,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to GetTotalTime from a production log, in ProductionLogService");
             return null;
         }
     }
@@ -81,6 +85,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to GetById with ID: {productionLogId} in Production Logs, in ProductionLogService", id);
             return null;
         }
     }
@@ -99,6 +104,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {productionLogId} in Production Logs, in ProductionLogService", id);
             return null;
         }
     }
@@ -117,6 +123,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to Create ProductionLog, in ProductionLogService");
             return false;
         }
     }
@@ -139,6 +146,7 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to Delete by ID: {productionLogId} in Production Logs, in ProductionLogService", id);
             return false;
         }
     }
@@ -159,11 +167,12 @@ public class ProductionLogService : IProductionLogService
         catch (Exception e)
         {
             Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService", existingProductionLog.Id);
             return false;
         }
     }
 
-    public ProductionLog EditWithObject(ProductionLog existing, ProductionLog updated)
+    public bool UpdateWithObjectAsync(ProductionLog existing, ProductionLog updated)
     {
         try
         {
@@ -177,14 +186,15 @@ public class ProductionLogService : IProductionLogService
 
             _context.ProductionLogs.Update(existing);
             _context.SaveChanges();
-            
-            return existing;
+
+            return true;
 
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw;
+            Log.Warning("Exception thrown when attempting to UpdateWithObjectAsync, Existing ID: {existingID} in Production Logs, in ProductionLogService", existing.Id);
+            return false;
         }
     }
 }
