@@ -1,128 +1,46 @@
-﻿namespace MESS.Services;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
+﻿using MESS.Data.Context;
+
+namespace MESS.Services;
 using Data.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 public class LineOperatorService
 {
-    private readonly string _connectionString;
+    private readonly ApplicationContext _context;
 
-    public LineOperatorService(IConfiguration configuration)
+    public LineOperatorService(ApplicationContext context)
     {
-        _connectionString = configuration.GetConnectionString("DefaultConnection")!;
-
-        if (string.IsNullOrEmpty(_connectionString))
-        {
-            throw new InvalidOperationException("Connection string not found");
-        }
+        _context = context;
     }
 
-    public async Task<List<LineOperator>> GetAllLineOperators() // spits out a list of all line operators
+    public async Task<List<LineOperator>> GetLineOperatorsAsync() // spits out a list of all line operators
     {
-        var operators = new List<LineOperator>();
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            using (var command =
-                   new SqlCommand("SELECT Id, FirstName, LastName, IsActive, ProductionLogId FROM LineOperators",
-                       connection))
-            using (var reader = await command.ExecuteReaderAsync())
-            {
-                while (await reader.ReadAsync())
-                {
-                    operators.Add(new LineOperator
-                    {
-                        Id = reader.GetInt32(0),
-                        FirstName = reader.GetString(1),
-                        LastName = reader.GetString(2),
-                        IsActive = reader.GetBoolean(3),
-                        ProductionLogId = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-                        
-                        CreatedBy = "MESS",
-                        CreatedOn = DateTime.Now,
-                        LastModifiedBy = "MESS",
-                        LastModifiedOn = DateTime.Now,
-                    });
-                }
-            }
-        }
-        return operators;
+       return await _context.LineOperators.ToListAsync();
     }
 
-    public async Task<LineOperator> AddLineOperator(LineOperator lineOperator) // adds a line operator with parameters
+    public async Task<LineOperator> AddLineOperatorAsync(LineOperator lineOperator) // adds a line operator with parameters
     {
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            using (var command =
-                   new SqlCommand(
-                       "INSERT INTO LineOperators (FirstName, LastName, IsActive, ProductionLogId) OUTPUT INSERTED.Id VALUES (@FirstName, @LastName, @IsActive, @ProductionLogId)",
-                       connection))
-            {
-                command.Parameters.AddWithValue("@FirstName", lineOperator.FirstName);
-                command.Parameters.AddWithValue("@LastName", lineOperator.LastName);
-                command.Parameters.AddWithValue("@IsActive", lineOperator.IsActive);
-                command.Parameters.AddWithValue("@ProductionLogId", (object?)lineOperator.ProductionLogId ?? DBNull.Value);
-                
-                var result = await command.ExecuteScalarAsync();
-                int operatorId = 0;
-
-                if (result != null && result != DBNull.Value)
-                {
-                    operatorId = Convert.ToInt32(result);
-                }
-                
-                return new LineOperator()
-                {
-                    Id = operatorId,
-                    FirstName = lineOperator.FirstName,
-                    LastName = lineOperator.LastName,
-                    IsActive = lineOperator.IsActive,
-                    ProductionLogId = lineOperator.ProductionLogId,
-                    
-                    CreatedBy = "MESS",
-                    CreatedOn = DateTime.Now,
-                    LastModifiedBy = "MESS",
-                    LastModifiedOn = DateTime.Now,
-                };
-            }
-        }
+       _context.LineOperators.Add(lineOperator);
+       await _context.SaveChangesAsync();
+       return lineOperator;
     }
 
     public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator) // updates a set line operator
     {
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            using (var command =
-                   new SqlCommand(
-                       "UPDATE LineOperators SET Firstname = @FirstName, LastName = @LastName, IsActive = @IsActive, ProductionLogId = @ProductionLogId WHERE Id = @Id",
-                       connection))
-            {
-                command.Parameters.AddWithValue("@Id", lineOperator.Id);
-                command.Parameters.AddWithValue("@FirstName", lineOperator.FirstName);
-                command.Parameters.AddWithValue("@LastName", lineOperator.LastName);
-                command.Parameters.AddWithValue("@IsActive", lineOperator.IsActive);
-                command.Parameters.AddWithValue("@ProductionLogId", (object?) lineOperator.ProductionLogId ?? DBNull.Value);
-                
-                command.Parameters.AddWithValue("@LastModifiedOn", DateTime.Now);
-                command.Parameters.AddWithValue("@LastModifiedBy", "MESS");
-                await command.ExecuteNonQueryAsync();
-            }
-        }
+        _context.LineOperators.Update(lineOperator);
+        await _context.SaveChangesAsync();
         return lineOperator;
     }
 
     public async Task DeleteLineOperator(int id) // deletes a line operator via id
     {
-        using (var connection = new SqlConnection(_connectionString))
+        var lineOperator = await _context.LineOperators.FindAsync(id);
+        if (lineOperator != null)
         {
-            await connection.OpenAsync();
-            using (var command = new SqlCommand("DELETE FROM LineOperators WHERE Id = @Id", connection))
-            {
-                command.Parameters.AddWithValue("@Id", id);
-                await command.ExecuteNonQueryAsync();
-            }
+            _context.LineOperators.Remove(lineOperator);
+            await _context.SaveChangesAsync();
         }
     }
 }
