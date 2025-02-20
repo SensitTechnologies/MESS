@@ -1,5 +1,8 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Data.Seed;
+using MESS.Services.ProductionLog;
+using MESS.Services.WorkInstruction;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
@@ -14,6 +17,10 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseSqlServer(connectionString);
 
 });
+
+builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
+builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
+builder.Services.AddHttpClient();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -42,6 +49,11 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    SeedWorkInstructions.Seed(services);
+}
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
