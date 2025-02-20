@@ -17,8 +17,17 @@ public class WorkStationService : IWorkStationService
     
     public async Task AddWorkStationAsync(WorkStation workStation)
     {
-        await _context.WorkStations.AddAsync(workStation);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.WorkStations.AddAsync(workStation);
+            await _context.SaveChangesAsync();
+            Log.Information("Work Station successfully created. ID: {WorkStationId}", workStation.Id);
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "An error occured while adding WorkStation");
+        }
+        
     }
 
     public async Task<WorkStation?> FindWorkStationByIdAsync(int id)
@@ -28,12 +37,14 @@ public class WorkStationService : IWorkStationService
             var workStation = await _context.WorkStations
                 .Include(p => p.Products)
                 .FirstOrDefaultAsync(p => p.Id == id);
+            
+                Log.Information("Work Station Successfully Found. ID: {WorkStationId}", workStation?.Id);
 
-            return workStation;
+                return workStation;
         }
         catch (Exception e)
         {
-            Log.Error(e, "Exception occured while finding a work station by ID.");
+            Log.Warning(e, "Unable to find work station for ID. ID: {InputID}", id);
             return null;
         }
     }
@@ -74,6 +85,7 @@ public class WorkStationService : IWorkStationService
         {
             _context.WorkStations.Remove(workStation);
             await _context.SaveChangesAsync();
+            Log.Information("WorkStation successfully removed. ID: {WorkStationId}", workStation.Id);
         }
         else
         {
