@@ -1,5 +1,6 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Services.WorkStation;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
@@ -18,6 +19,8 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
