@@ -5,9 +5,10 @@ public class ProductionLog : AuditableEntity
     public int Id { get; set; }
     
     public DateTimeOffset SubmitTime { get; set; }
+    public List<ProductionLogStep> LogSteps { get; set; } = [];
     
     // Navigation Fields
-    public required LineOperator LineOperator { get; set; }
+    public LineOperator? LineOperator { get; set; }
     public Product? Product { get; set; }
     public WorkStation? WorkStation { get; set; }
     public WorkInstruction? WorkInstruction { get; set; }

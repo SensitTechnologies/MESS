@@ -5,9 +5,9 @@ namespace MESS.Data.Models;
 public abstract class AuditableEntity
 {
     public string CreatedBy { get; set; } = "";
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.Now;
+    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
     public string LastModifiedBy { get; set; } = "";
-    public DateTimeOffset LastModifiedOn { get; set; } = DateTimeOffset.Now;
+    public DateTimeOffset LastModifiedOn { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public class AuditableEntityValidator : AbstractValidator<AuditableEntity>
