@@ -118,6 +118,9 @@ public class ProductionLogService : IProductionLogService
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             _context.ProductionLogs.Add(productionLog);
             _context.SaveChanges();
+            
+            Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
+            
             return true;
         }
         catch (Exception e)
@@ -141,6 +144,7 @@ public class ProductionLogService : IProductionLogService
             
             _context.ProductionLogs.Remove(productionLogToDelete);
             _context.SaveChanges();
+            Log.Information("Production Log with ID: {productionLogId}, successfully deleted.", id);
             return true;
         }
         catch (Exception e)
@@ -162,6 +166,9 @@ public class ProductionLogService : IProductionLogService
 
             _context.ProductionLogs.Update(existingProductionLog);
             await _context.SaveChangesAsync();
+            
+            Log.Information("Production Log with ID: {productionLogId}, successfully updated.", existingProductionLog.Id);
+
             return true;
         }
         catch (Exception e)
@@ -186,6 +193,9 @@ public class ProductionLogService : IProductionLogService
 
             _context.ProductionLogs.Update(existing);
             _context.SaveChanges();
+            
+            Log.Information("Production Log with ID: {productionLogId}, successfully updated with another ProductionLog.", existing.Id);
+
 
             return true;
 
