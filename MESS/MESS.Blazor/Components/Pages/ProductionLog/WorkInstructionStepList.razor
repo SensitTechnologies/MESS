@@ -30,7 +30,7 @@
                        class="btn-check"
                        name="radioBtn{@step.Name}"
                        id="radioFailureBtn{@step.Name}"
-                       @onchange="@(e => OnStepCompleted.InvokeAsync((step, false)))"/>
+                       @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, false)))"/>
                 <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
 
                 <input type="radio"
@@ -39,7 +39,7 @@
                        class="btn-check"
                        name="radioBtn{@step.Name}"
                        id="radioSuccessBtn{@step.Name}"
-                       @onchange="@(e => OnStepCompleted.InvokeAsync((step, true)))"/>
+                       @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, true)))"/>
                 <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
             </div>
 

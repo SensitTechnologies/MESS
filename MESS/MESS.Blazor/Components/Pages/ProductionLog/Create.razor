@@ -9,7 +9,7 @@
 @inject IWorkInstructionService WorkInstructionService
 @rendermode InteractiveServer
 
-<EditForm FormName="EditProductionLog" Model="@ProductionLog" OnValidSubmit="HandleSubmit">
+<EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
     <div class="mb-3">
         <label for="Name" class="form-label">Product Name</label>
@@ -25,7 +25,7 @@
         <div>
             @if (WorkInstructions != null)
             {
-                <select @bind="SelectedWorkInstructionId">
+                <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
                     <option value="">Select Work Instruction</option>
                     @foreach (var instruction in WorkInstructions)
                     {
@@ -60,16 +60,20 @@
     private int? SelectedWorkInstructionId
     {
         get => _selectedWorkInstructionId;
-        set
+        set{}
+    }
+    
+    private async Task SetSelectedWorkInstructionId(int? value)
+    {
+        if (_selectedWorkInstructionId == value) return;
+        _selectedWorkInstructionId = value;
+
+        if (value.HasValue)
         {
-            if (_selectedWorkInstructionId == value) return;
-            _selectedWorkInstructionId = value;
-            if (value.HasValue)
-            {
-                _ = LoadActiveWorkInstruction(value.Value);
-            }
+            await LoadActiveWorkInstruction(value.Value);
         }
     }
+
 
     private async Task LoadActiveWorkInstruction(int id)
     {
