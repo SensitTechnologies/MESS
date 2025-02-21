@@ -1,20 +1,20 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 builder.Services.AddDbContext<ApplicationContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
-    
-    options.UseSqlServer(connectionString);
-
-});
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MESSConnection")
+    ));
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddScoped<LineOperatorService>();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 // User Secrets Setup
 var config = new ConfigurationBuilder()
