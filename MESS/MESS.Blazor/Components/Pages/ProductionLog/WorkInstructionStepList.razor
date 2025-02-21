@@ -11,7 +11,6 @@ else
         @foreach (var step in ActiveWorkInstruction.Steps)
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-            var isChecked = logStep?.Success ?? false;
 
             if (logStep == null && ProductionLog.LogSteps != null)
             {
@@ -27,7 +26,7 @@ else
 
                     <div class="col-4">
                         <input type="radio"
-                               checked="@isChecked"
+                               checked="@(!logStep?.Success)"
                                autocomplete="off"
                                @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
                                class="btn-check"
@@ -37,7 +36,7 @@ else
                         <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
 
                         <input type="radio"
-                               checked="@isChecked"
+                               checked="@(logStep?.Success)"
                                autocomplete="off"
                                class="btn-check"
                                name="radioBtn{@step.Name}"
