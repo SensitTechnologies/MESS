@@ -1,21 +1,23 @@
-@page "/line-operators"
+@page "/lineoperators"
 @using MESS.Services
 @using MESS.Data.Models
 @rendermode InteractiveServer
 @inject LineOperatorService LineOperatorService
+@inject NavigationManager NavigationManager
 
 
 <PageTitle>Operator Login</PageTitle>
 
-<h1>Operator Login</h1>
+<h2>Operator Login</h2>
+<br/>
 
 @if (Operators == null)
 {
-    <p>Loading...</p>
+    <p>ERROR: No operators found.</p>
 }
 else
 {
-    <select @bind="SelectedOperatorId" @onchange="OperatorChanged">
+    <select @bind="SelectedOperatorId" @bind:event="OperatorChanged">
         <option value=""> Select Operator </option>
         @foreach (var op in Operators)
         {
@@ -27,10 +29,9 @@ else
     {
         <p>Current Operator: @SelectedOperator.FirstName @SelectedOperator.LastName</p>
     }
-    
-    <h1>Operator Management</h1>
-    <input type="text" @bind="NewLineOperator.FirstName" placeholder="First Name" />
-    <input type="text" @bind="NewLineOperator.LastName" placeholder="Last Name" />
+
+    <h3>Operator Management</h3>
+    <br/>
     <button @onclick="AddOperator">Add Operator</button>
 }
 
@@ -38,21 +39,6 @@ else
     private List<LineOperator> Operators = new();
     private int? SelectedOperatorId;
     private LineOperator? SelectedOperator;
-
-    private LineOperator NewLineOperator = new()
-    {
-        FirstName = string.Empty,
-        LastName = string.Empty,
-        CreatedBy = "Admin",
-        LastModifiedBy = "Admin",
-        CreatedOn = DateTime.UtcNow,
-        LastModifiedOn = DateTime.UtcNow
-    };
-
-    protected async Task OnInitializationAsync()
-    {
-        await LoadOperators();
-    }
 
     private async Task LoadOperators()
     {
@@ -72,22 +58,9 @@ else
         }
     }
 
-    private async Task AddOperator()
+    private void AddOperator()
     {
-        if (!string.IsNullOrWhiteSpace(NewLineOperator.FirstName) && !string.IsNullOrWhiteSpace(NewLineOperator.LastName))
-        {
-            await LineOperatorService.AddLineOperator(NewLineOperator);
-            NewLineOperator = new()
-            {
-                FirstName = NewLineOperator.FirstName,
-                LastName = NewLineOperator.LastName,
-                CreatedBy = "Admin",
-                LastModifiedBy = "Admin",
-                CreatedOn = DateTime.UtcNow,
-                LastModifiedOn = DateTime.UtcNow
-            };
-            await LoadOperators();
-        }
+        NavigationManager.NavigateTo("/lineoperators/addoperator");
     }
 
     private async Task UpdateOperator(LineOperator op)
