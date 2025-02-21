@@ -14,10 +14,11 @@
     <div class="mb-3">
         <label for="Name" class="form-label">Product Name</label>
         <div class="col-md-4">
+            
             @if (ProductionLog.Product != null)
             {
                 <InputText class="form-control" @bind-Value="ProductionLog.Product.Name"/>
-                <ValidationMessage For="@(() => ProductionLog.Product.Name)" />
+                <ValidationMessage For="@(() => ProductionLog.Product.Name)"/>
             }
         </div>
         
@@ -64,7 +65,7 @@
                                            class="btn-check"
                                            name="radioBtn{@step.Name}"
                                            id="radioFailureBtn{@step.Name}"
-                                           @onchange="@(e => OnStepCompleted(step, e, false))"/>
+                                           @onchange="@(e => OnStepCompleted(step, false))"/>
                                     <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
 
                                     <input type="radio"
@@ -73,7 +74,7 @@
                                            class="btn-check"
                                            name="radioBtn{@step.Name}"
                                            id="radioSuccessBtn{@step.Name}"
-                                           @onchange="@(e => OnStepCompleted(step, e, true))"/>
+                                           @onchange="@(e => OnStepCompleted(step, true))"/>
                                     <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                                 </div>
 
@@ -241,7 +242,7 @@
         Cancel();
     }
     
-    private void OnStepCompleted(Step step, ChangeEventArgs e, bool success)
+    private void OnStepCompleted(Step step, bool success)
     {
         if (ActiveWorkInstruction?.Steps == null) return;
 
