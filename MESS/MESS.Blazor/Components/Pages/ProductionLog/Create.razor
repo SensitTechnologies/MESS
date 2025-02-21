@@ -40,7 +40,11 @@
                     }
                 </div>
                 
-                <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+                @if (showNotesForStep != null && showNotesForStep.Count > 0)
+                {
+                    <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+                    
+                }
                 
             </div>
 
@@ -170,8 +174,12 @@
             if (ProductionLog.WorkInstruction != null)
             {
                 await SetSelectedWorkInstructionId(ProductionLog.WorkInstruction.Id);
-                
+                foreach (var step in ProductionLog.LogSteps)
+                {
+                    showNotesForStep[step.Id] = !string.IsNullOrEmpty(step.Notes) && !step.Success;
+                }
             }
+            
         }
         else
         {

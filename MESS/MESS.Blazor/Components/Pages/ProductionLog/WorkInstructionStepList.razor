@@ -45,9 +45,10 @@ else
                         <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                     </div>
 
-                    @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null)
+                    @if (logStep != null && showNotesForStep.ContainsKey(logStep.Id) && showNotesForStep[logStep.Id] == true)
                     {
                         <div class="col-12">
+                            Notes:
                             @if (logStep != null)
                             {
                                 <InputTextArea @bind-Value="logStep.Notes"/>
