@@ -2,66 +2,70 @@
 
 @if (ActiveWorkInstruction == null || ProductionLog == null)
 {
-    return;
+    <p><em>Loading...</em></p>
 }
-<ul class="list-group list-group-numbered container">
-    @foreach (var step in ActiveWorkInstruction.Steps)
-    {
-        var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-        var isChecked = logStep?.Success ?? false;
+else
+{
 
-        if (logStep == null && ProductionLog.LogSteps != null)
+    <ul class="list-group list-group-numbered container">
+        @foreach (var step in ActiveWorkInstruction.Steps)
         {
-            logStep = new ProductionLogStep { WorkInstructionStepId = step.Id, ProductionLogId = ProductionLog.Id };
-            ProductionLog.LogSteps.Add(logStep);
-        }
+            var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+            var isChecked = logStep?.Success ?? false;
 
-    <li class="list-group-item btn-group mb-2" role="group">
-        <div class="row">
-            <div class="col-8">
-                @step.Name
-            </div>
-
-            <div class="col-4">
-                <input type="radio"
-                       checked="@isChecked"
-                       autocomplete="off"
-                       @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
-                       class="btn-check"
-                       name="radioBtn{@step.Name}"
-                       id="radioFailureBtn{@step.Name}"
-                       @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, false)))"/>
-                <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
-
-                <input type="radio"
-                       checked="@isChecked"
-                       autocomplete="off"
-                       class="btn-check"
-                       name="radioBtn{@step.Name}"
-                       id="radioSuccessBtn{@step.Name}"
-                       @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, true)))"/>
-                <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
-            </div>
-
-            @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null)
+            if (logStep == null && ProductionLog.LogSteps != null)
             {
-            <div class="col-12">
-                @if (logStep != null)
-                {
-                <InputTextArea @bind-Value="logStep.Notes" />
-                }
-                else
-                {
-                <p>Loading...</p>
-                }
-            </div>
+                logStep = new ProductionLogStep { WorkInstructionStepId = step.Id, ProductionLogId = ProductionLog.Id };
+                ProductionLog.LogSteps.Add(logStep);
             }
 
-        </div>
+            <li class="list-group-item btn-group mb-2" role="group">
+                <div class="row">
+                    <div class="col-8">
+                        @step.Name
+                    </div>
 
-    </li>
-    }
-</ul>
+                    <div class="col-4">
+                        <input type="radio"
+                               checked="@isChecked"
+                               autocomplete="off"
+                               @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
+                               class="btn-check"
+                               name="radioBtn{@step.Name}"
+                               id="radioFailureBtn{@step.Name}"
+                               @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, false)))"/>
+                        <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
+
+                        <input type="radio"
+                               checked="@isChecked"
+                               autocomplete="off"
+                               class="btn-check"
+                               name="radioBtn{@step.Name}"
+                               id="radioSuccessBtn{@step.Name}"
+                               @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, true)))"/>
+                        <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
+                    </div>
+
+                    @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null)
+                    {
+                        <div class="col-12">
+                            @if (logStep != null)
+                            {
+                                <InputTextArea @bind-Value="logStep.Notes"/>
+                            }
+                            else
+                            {
+                                <p>Loading...</p>
+                            }
+                        </div>
+                    }
+
+                </div>
+
+            </li>
+        }
+    </ul>
+}
 
 @code {
     [Parameter]
