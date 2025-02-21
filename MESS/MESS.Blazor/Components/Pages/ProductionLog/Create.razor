@@ -9,52 +9,54 @@
 @inject IWorkInstructionService WorkInstructionService
 @rendermode InteractiveServer
 
-<EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
-    <DataAnnotationsValidator />
-    <div class="mb-3">
-        <label for="Name" class="form-label">Product Name</label>
-        <div class="col-md-4">
-            
-            @if (ProductionLog.Product != null)
-            {
-                <InputText class="form-control" @bind-Value="ProductionLog.Product.Name"/>
-                <ValidationMessage For="@(() => ProductionLog.Product.Name)"/>
-            }
-        </div>
-        
-        <div>
-            @if (WorkInstructions != null)
-            {
-                <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
-                    <option value="">Select Work Instruction</option>
-                    @foreach (var instruction in WorkInstructions)
+<ErrorBoundary>
+    
+    <ChildContent>
+        <EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="mb-3">
+                <label for="Name" class="form-label">Product Name</label>
+                <div class="col-md-4">
+                    
+                    @if (ProductionLog.Product != null)
                     {
-                        <option value="@instruction.Id">@instruction.Title</option>
+                        <InputText class="form-control" @bind-Value="ProductionLog.Product.Name"/>
+                        <ValidationMessage For="@(() => ProductionLog.Product.Name)"/>
                     }
-                </select>
+                </div>
                 
-            }
+                <div>
+                    @if (WorkInstructions != null)
+                    {
+                        <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
+                            <option value="">Select Work Instruction</option>
+                            @foreach (var instruction in WorkInstructions)
+                            {
+                                <option value="@instruction.Id">@instruction.Title</option>
+                            }
+                        </select>
+                        
+                    }
+                </div>
+                
+                <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+                
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+            
+            
+        </EditForm>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div class="alert alert-danger" role="alert">
+            An error occurred: @ex.Message
         </div>
-        
-        <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
-        
-    </div>
-
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Save</button>
-    </div>
-    
-    @if (ErrorMessage is { Length: > 0 })
-    {
-        <div>
-            <strong>
-                @ErrorMessage
-            </strong>    
-        </div>    
-    }
-    
-</EditForm>
-
+    </ErrorContent>
+</ErrorBoundary>
 @code {
     [Parameter]
     public int? logId { get; set; }
@@ -66,23 +68,39 @@
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     private int? _selectedWorkInstructionId;
     
-    private string? ErrorMessage { get; set; }
-    
     protected override async Task OnInitializedAsync()
     {
-        WorkInstructions = await WorkInstructionService.GetAllAsync();
-        
+        await LoadWorkInstructions();
+        await LoadProductionLog();
+        InitializeShowNotesForStep();
+    }
+    
+    private async Task LoadWorkInstructions()
+    {
+        try
+        {
+            WorkInstructions = await WorkInstructionService.GetAllAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Error("Error loading work instructions: {Message}", e.Message);
+        }
+    }
+
+    private async Task LoadProductionLog()
+    {
         if (logId.HasValue && logId.Value != 0)
         {
             await LoadExistingLog(logId.Value);
         }
-        
-        if (ActiveWorkInstruction != null)
+    }
+    
+    private void InitializeShowNotesForStep()
+    {
+        if (ActiveWorkInstruction == null) return;
+        foreach (var step in ActiveWorkInstruction.Steps)
         {
-            foreach (var step in ActiveWorkInstruction.Steps)
-            {
-                showNotesForStep[step.Id] = false;
-            }
+            showNotesForStep[step.Id] = false;
         }
     }
     
@@ -96,12 +114,12 @@
             if (value.HasValue)
             {
                 await LoadActiveWorkInstruction(value.Value);
+                StateHasChanged();
             }
         }
         catch (Exception e)
         {
             Log.Error("Error Setting selected work instruction ID: Exception: {e}", e.Message);
-            ErrorMessage = "Error Retrieving work instruction ID";
         }
 
     }
