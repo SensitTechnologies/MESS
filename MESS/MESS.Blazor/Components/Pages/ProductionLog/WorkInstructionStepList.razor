@@ -26,6 +26,7 @@
                 <input type="radio"
                        checked="@isChecked"
                        autocomplete="off"
+                       @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
                        class="btn-check"
                        name="radioBtn{@step.Name}"
                        id="radioFailureBtn{@step.Name}"
@@ -42,19 +43,19 @@
                 <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
             </div>
 
-            @* @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null) *@
-            @* { *@
-            @* <div class="col-12"> *@
-            @*     @if (logStep != null) *@
-            @*     { *@
-            @*     <InputTextArea @bind-Value="logStep.Notes" /> *@
-            @*     } *@
-            @*     else *@
-            @*     { *@
-            @*     <p>Loading...</p> *@
-            @*     } *@
-            @* </div> *@
-            @* } *@
+            @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null)
+            {
+            <div class="col-12">
+                @if (logStep != null)
+                {
+                <InputTextArea @bind-Value="logStep.Notes" />
+                }
+                else
+                {
+                <p>Loading...</p>
+                }
+            </div>
+            }
 
         </div>
 
@@ -64,11 +65,17 @@
 
 @code {
     [Parameter]
-    public WorkInstruction? ActiveWorkInstruction { get; set; }
+    public required WorkInstruction ActiveWorkInstruction { get; set; }
     
     [Parameter]
-    public ProductionLog? ProductionLog { get; set; }
+    public required ProductionLog ProductionLog { get; set; }
     
     [Parameter]
     public EventCallback<(Step, bool)> OnStepCompleted { get; set; }
+
+    [Parameter]
+    public required Dictionary<int, bool> showNotesForStep { get; set; }
+    
+    private bool ShowOptionalNotesField { get; set; } = false;
+
 }

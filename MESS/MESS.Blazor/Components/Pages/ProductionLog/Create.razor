@@ -36,7 +36,7 @@
             }
         </div>
         
-        <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+        <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
         
     </div>
 
@@ -52,7 +52,8 @@
     protected ProductionLog ProductionLog = new();
     private Dictionary<int, bool> showNotesForStep = new();
     
-    private bool ShowOptionalNotesField { get; set; } = false;
+    // private bool ShowOptionalNotesField { get; set; } = false;
+
     private List<WorkInstruction>? WorkInstructions { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     private int? _selectedWorkInstructionId;
