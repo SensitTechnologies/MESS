@@ -35,70 +35,9 @@
                 
             }
         </div>
-
-        <div>
-            @if (ActiveWorkInstruction != null)
-            {
-                <ul class="list-group list-group-numbered container">
-                    @foreach (var step in ActiveWorkInstruction.Steps)
-                    {
-                        var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-                        var isChecked = logStep?.Success ?? false;
-                        
-                        if (logStep == null && ProductionLog.LogSteps != null)
-                        {
-                            logStep = new ProductionLogStep { WorkInstructionStepId = step.Id, ProductionLogId = ProductionLog.Id };
-                            ProductionLog.LogSteps.Add(logStep);
-                        }
-                        
-                        <li class="list-group-item btn-group mb-2" role="group">
-                            <div class="row">
-                                <div class="col-8">
-                                    @step.Name
-                                </div>
-
-                                <div class="col-4">
-                                    <input type="radio"
-                                           checked="@isChecked"
-                                           autocomplete="off"
-                                           @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
-                                           class="btn-check"
-                                           name="radioBtn{@step.Name}"
-                                           id="radioFailureBtn{@step.Name}"
-                                           @onchange="@(e => OnStepCompleted(step, false))"/>
-                                    <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
-
-                                    <input type="radio"
-                                           checked="@isChecked"
-                                           autocomplete="off"
-                                           class="btn-check"
-                                           name="radioBtn{@step.Name}"
-                                           id="radioSuccessBtn{@step.Name}"
-                                           @onchange="@(e => OnStepCompleted(step, true))"/>
-                                    <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
-                                </div>
-
-                                @if (showNotesForStep.ContainsKey(step.Id) && showNotesForStep[step.Id] && logStep != null)
-                                {
-                                    <div class="col-12">
-                                        @if (logStep != null)
-                                        {
-                                        <InputTextArea @bind-Value="logStep.Notes" />
-                                        }
-                                        else
-                                        {
-                                        <p>Loading...</p>
-                                        }
-                                    </div>
-                                }
-
-                            </div>
-                            
-                        </li>
-                    }
-                </ul>
-            }
-        </div>
+        
+        <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+        
     </div>
 
     <div class="form-group">
