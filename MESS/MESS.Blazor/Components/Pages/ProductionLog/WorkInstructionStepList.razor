@@ -68,18 +68,13 @@ else
 }
 
 @code {
-    [Parameter]
-    public required WorkInstruction ActiveWorkInstruction { get; set; }
-    
-    [Parameter]
-    public required ProductionLog ProductionLog { get; set; }
-    
-    [Parameter]
-    public EventCallback<(Step, bool)> OnStepCompleted { get; set; }
+    [Parameter] public required WorkInstruction ActiveWorkInstruction { get; set; }
 
-    [Parameter]
-    public required Dictionary<int, bool> showNotesForStep { get; set; }
-    
+    [Parameter] public required ProductionLog ProductionLog { get; set; }
+
+    [Parameter] public EventCallback<(Step, bool)> OnStepCompleted { get; set; }
+
+    [Parameter] public required Dictionary<int, bool> showNotesForStep { get; set; }
+
     private bool ShowOptionalNotesField { get; set; } = false;
-
 }
