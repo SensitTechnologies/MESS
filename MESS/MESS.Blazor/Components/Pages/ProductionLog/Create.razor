@@ -9,8 +9,8 @@
 @inject IWorkInstructionService WorkInstructionService
 @rendermode InteractiveServer
 
+<PageTitle>@Title</PageTitle>
 <ErrorBoundary>
-    
     <ChildContent>
         <EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
@@ -157,11 +157,8 @@
         
         StateHasChanged();
     }
-
-
     
-
-    
+    /// Loads a Production Log from the database
     private async Task LoadExistingLog(int id)
     {
         var existingProductionLog = await ProductionLogService.GetByIdAsync(id);
