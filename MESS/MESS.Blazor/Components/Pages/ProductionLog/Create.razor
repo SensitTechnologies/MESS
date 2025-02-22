@@ -128,33 +128,6 @@
     private async Task LoadActiveWorkInstruction(int id)
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
-
-        if (ActiveWorkInstruction != null)
-        {
-            // For each step in the work instruction
-            foreach (var step in ActiveWorkInstruction.Steps)
-            {
-                // Try to find existing log step
-                var existingLogStep = ProductionLog.LogSteps
-                    .FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-
-                if (existingLogStep != null)
-                {
-                    // Sync the step with existing log data
-                    step.Success = existingLogStep.Success;
-                    step.SubmitTime = existingLogStep.SubmitTime;
-                }
-                else if (!ProductionLog.LogSteps.Any())
-                {
-                    // For new logs, initialize first step
-                    if (ActiveWorkInstruction.Steps.First() == step)
-                    {
-                        step.SubmitTime = DateTimeOffset.UtcNow;
-                    }
-                }
-            }
-        }
-        
         StateHasChanged();
     }
     
