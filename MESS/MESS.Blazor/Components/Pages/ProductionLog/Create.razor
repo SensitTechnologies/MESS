@@ -228,17 +228,13 @@
 
         var currentTime = DateTimeOffset.UtcNow;
 
-        if (success)
+        if (!success)
         {
-            step.Success = true;
-            step.SubmitTime = currentTime;
-        }
-        else
-        {
-            step.Success = false;
-            step.SubmitTime = currentTime;
             showNotesForStep[step.Id] = true;
         }
+
+        step.Success = success;
+        step.SubmitTime = currentTime;
 
         StateHasChanged();
     }
