@@ -45,7 +45,7 @@ else
                         <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                     </div>
 
-                    @if (logStep != null && showNotesForStep.ContainsKey(logStep.Id) && showNotesForStep[logStep.Id] == true)
+                    @if (logStep != null && showNotesForStep.ContainsKey(logStep.WorkInstructionStepId) && showNotesForStep[logStep.WorkInstructionStepId] == true)
                     {
                         <div class="col-12">
                             Notes:
