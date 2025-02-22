@@ -7,9 +7,9 @@ public class WorkInstruction : AuditableEntity
     public int Id { get; set; }
     public required string Title { get; set; }
     public string? Version { get; set; }
-    public required LineOperator Operator { get; set; }
+    public LineOperator? Operator { get; set; }
     public required List<Step> Steps { get; set; }
-    public required List<Documentation> RelatedDocumentation { get; set; }
+    public List<Documentation>? RelatedDocumentation { get; set; }
 }
 
 public class WorkInstructionValidator : AbstractValidator<WorkInstruction>

@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250216011141_Production_Step_Added_TimeStatistics")]
+    partial class Production_Step_Added_TimeStatistics
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -361,6 +364,9 @@ namespace MESS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTimeOffset?>("EndTime")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -368,7 +374,7 @@ namespace MESS.Data.Migrations
                     b.Property<int>("ProductionLogId")
                         .HasColumnType("int");
 
-                    b.Property<DateTimeOffset>("SubmitTime")
+                    b.Property<DateTimeOffset?>("StartTime")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<bool>("Success")
@@ -488,7 +494,7 @@ namespace MESS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTimeOffset>("SubmitTime")
+                    b.Property<DateTimeOffset>("StartTime")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<bool>("Success")

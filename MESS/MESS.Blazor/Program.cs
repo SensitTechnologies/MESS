@@ -1,20 +1,43 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
-using MESS.Services;
+using MESS.Data.Seed;
+using MESS.Services.ProductionLog;
+using MESS.Services.WorkInstruction;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 builder.Services.AddDbContext<ApplicationContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MESSConnection")
-    ));
+{
+    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
+    
+    options.UseSqlServer(connectionString);
+
+});
+
+builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
+builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
+builder.Services.AddHttpClient();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddScoped<LineOperatorService>();
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
+var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
+
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File(new JsonFormatter(), "Logs/MESS_Blazor_Warning_Log.json", restrictedToMinimumLevel: LogEventLevel.Warning)
+    .WriteTo.File("Logs/MESS_Blazor_All.logs",
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}}",
+        rollingInterval: RollingInterval.Day)
+    .MinimumLevel.Is(logLevel)
+    .CreateLogger();
+
 
 // User Secrets Setup
 var config = new ConfigurationBuilder()
@@ -26,6 +49,11 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    SeedWorkInstructions.Seed(services);
+}
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
