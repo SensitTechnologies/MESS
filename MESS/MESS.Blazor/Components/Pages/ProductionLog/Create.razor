@@ -194,14 +194,6 @@
         }
 
         var currentTime = DateTimeOffset.UtcNow;
-        foreach (var step in ActiveWorkInstruction.Steps)
-        {
-            var logStep = ProductionLog.LogSteps.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
-            if (logStep == null) continue;
-            logStep.Success = step.Success;
-            logStep.SubmitTime = step.SubmitTime;
-        }
-        
 
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
 
@@ -222,10 +214,8 @@
         Cancel();
     }
     
-    private void OnStepCompleted(Step step, bool success)
+    private void OnStepCompleted(ProductionLogStep step, bool success)
     {
-        if (ActiveWorkInstruction?.Steps == null) return;
-
         var currentTime = DateTimeOffset.UtcNow;
 
         if (!success)

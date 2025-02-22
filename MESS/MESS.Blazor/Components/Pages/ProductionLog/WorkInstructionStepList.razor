@@ -32,7 +32,7 @@ else
                                class="btn-check"
                                name="radioBtn{@step.Name}"
                                id="radioFailureBtn{@step.Name}"
-                               @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, false)))"/>
+                               @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
                         <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
 
                         <input type="radio"
@@ -41,7 +41,7 @@ else
                                class="btn-check"
                                name="radioBtn{@step.Name}"
                                id="radioSuccessBtn{@step.Name}"
-                               @onchange="@(async e => await OnStepCompleted.InvokeAsync((step, true)))"/>
+                               @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
                         <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                     </div>
 
@@ -72,7 +72,7 @@ else
 
     [Parameter] public required ProductionLog ProductionLog { get; set; }
 
-    [Parameter] public EventCallback<(Step, bool)> OnStepCompleted { get; set; }
+    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
 
     [Parameter] public required Dictionary<int, bool> showNotesForStep { get; set; }
 
