@@ -39,12 +39,8 @@
                         
                     }
                 </div>
-                
-                @if (showNotesForStep != null && showNotesForStep.Count > 0)
-                {
-                    <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
-                    
-                }
+
+                <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
                 
             </div>
 
