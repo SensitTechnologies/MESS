@@ -14,7 +14,12 @@ else
 
             if (logStep == null && ProductionLog.LogSteps != null)
             {
-                logStep = new ProductionLogStep { WorkInstructionStepId = step.Id, ProductionLogId = ProductionLog.Id };
+                logStep = new ProductionLogStep
+                {
+                    WorkInstructionStepId = step.Id,
+                    ProductionLogId = ProductionLog.Id,
+                    SubmitTime = DateTimeOffset.UtcNow
+                };
                 ProductionLog.LogSteps.Add(logStep);
             }
 

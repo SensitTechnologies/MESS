@@ -60,7 +60,7 @@
 @code {
     [Parameter]
     public int? logId { get; set; }
-    protected string Title = "Add";
+    private string Title = "Add";
     protected ProductionLog ProductionLog = new();
     private Dictionary<int, bool> showNotesForStep = new();
     
@@ -181,6 +181,7 @@
             // Create new log
             ProductionLog.CreatedOn = currentTime;
             ProductionLog.LastModifiedOn = currentTime;
+            ProductionLog.SubmitTime = currentTime;
             ProductionLogService.Create(ProductionLog);
         }
 

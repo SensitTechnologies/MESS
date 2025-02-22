@@ -63,8 +63,9 @@ public class ProductionLogService : IProductionLogService
 
             var start = orderedSteps.FirstOrDefault()?.SubmitTime;
             var end = orderedSteps.LastOrDefault()?.SubmitTime;
+            var logSubmitTime = log.SubmitTime;
             
-            return end - start;
+            return logSubmitTime - start;
         }
         catch (Exception e)
         {
