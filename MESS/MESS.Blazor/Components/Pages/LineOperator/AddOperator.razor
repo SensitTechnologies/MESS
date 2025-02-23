@@ -1,6 +1,6 @@
 @page "/lineoperators/addoperator"
 @using MESS.Data.Models
-@using MESS.Services
+@using MESS.Services.LineOperator
 @rendermode InteractiveServer
 @inject LineOperatorService LineOperatorService
 @inject NavigationManager NavigationManager
@@ -9,9 +9,14 @@
 
 <input type="text" @bind="NewLineOperator.FirstName" placeholder="First Name"/>
 <input type="text" @bind="NewLineOperator.LastName" placeholder="Last Name"/>
-<button @onclick="AddOperatorAsync">Add Operator</button>
+<button @onclick="AddLineOperator">Add Operator</button>
 <br/>
 <button @onclick="LineOperatorNavigate">Back</button>
+
+@if (OperatorAdded)
+{
+    <p>Operator successfully added.</p>
+}
 
 @code {
     private List<LineOperator> Operators = new();
@@ -19,30 +24,38 @@
     {
         FirstName = string.Empty,
         LastName = string.Empty,
-        CreatedBy = "Admin",
-        LastModifiedBy = "Admin",
+        CreatedBy = "MESS",
+        LastModifiedBy = "MESS",
         CreatedOn = DateTime.UtcNow,
         LastModifiedOn = DateTime.UtcNow
     };
     
-    private async Task LoadOperators()
+    private List<LineOperator> LoadOperators()
     {
-        Operators = await LineOperatorService.GetLineOperators();
+        Operators = LineOperatorService.GetLineOperators();
+        return Operators;
     }
+
+    private bool OperatorAdded;
     
-    private async Task AddOperatorAsync()
+    private async Task AddLineOperator()
     {
         if (!string.IsNullOrWhiteSpace(NewLineOperator.FirstName) && !string.IsNullOrWhiteSpace(NewLineOperator.LastName))
         {
-            await LineOperatorService.AddLineOperator(NewLineOperator);
-            
-            NewLineOperator.FirstName = string.Empty;
-            NewLineOperator.LastName = string.Empty;
-            NewLineOperator.CreatedOn = DateTime.UtcNow;
-            NewLineOperator.LastModifiedOn = DateTime.UtcNow;
-            
-            <p>Operator successfully added.</p>
-            await LoadOperators();
+            bool succeeded = await LineOperatorService.AddLineOperator(NewLineOperator);
+            if (succeeded)
+            {
+                OperatorAdded = true;
+            }
+
+            NewLineOperator = new LineOperator
+            {
+                FirstName = string.Empty,
+                LastName = string.Empty,
+                CreatedOn = DateTime.UtcNow,
+                LastModifiedOn = DateTime.UtcNow
+            };
+            LoadOperators();
         }
     }
 
