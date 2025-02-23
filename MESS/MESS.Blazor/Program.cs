@@ -22,7 +22,7 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
-builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
+builder.Services.AddScoped<ILineOperatorService, LineOperatorService>();
 builder.Services.AddHttpClient();
 
 // Add services to the container.

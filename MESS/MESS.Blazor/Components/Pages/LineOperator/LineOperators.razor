@@ -2,16 +2,15 @@
 @using MESS.Services.LineOperator
 @using MESS.Data.Models
 @rendermode InteractiveServer
-@inject LineOperatorService LineOperatorService
+@inject ILineOperatorService LineOperatorService
 @inject NavigationManager NavigationManager
-
 
 <PageTitle>Operator Login</PageTitle>
 
 <h2>Operator Login</h2>
 <br/>
 
-@if (Operators == null)
+@if (Operators == null || Operators.Count == 0)
 {
     <p>ERROR: No operators found.</p>
 }
@@ -40,15 +39,21 @@ else
     private int? SelectedOperatorId;
     private LineOperator? SelectedOperator;
 
-    private List<LineOperator> LoadOperators()
+    protected override async Task OnInitializedAsync()
     {
-        Operators = LineOperatorService.GetLineOperators();
-        return Operators;
+        await LoadOperators();
     }
 
-    private void OperatorChanged(ChangeEventArgs x)
+    private Task LoadOperators()
     {
-        if (int.TryParse(x.Value?.ToString(), out int selectedId))
+        Operators = LineOperatorService.GetLineOperators(); 
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void OperatorChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int selectedId))
         {
             SelectedOperatorId = selectedId;
             SelectedOperator = Operators.FirstOrDefault(op => op.Id == selectedId);
@@ -67,13 +72,12 @@ else
     private async Task UpdateOperator(LineOperator op)
     {
         await LineOperatorService.UpdateLineOperator(op);
-        LoadOperators();
+        await LoadOperators();  
     }
 
     private async Task DeleteOperator(int id)
     {
         await LineOperatorService.DeleteLineOperator(id);
-        LoadOperators();
+        await LoadOperators();  
     }
-    
 }

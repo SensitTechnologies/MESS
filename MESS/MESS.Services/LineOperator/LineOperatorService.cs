@@ -16,12 +16,7 @@ public class LineOperatorService : ILineOperatorService
 
     public List<LineOperator> GetLineOperators()
     {
-        var LineOperators = _context.LineOperators
-            .Include(l => l.FirstName)
-            .Include(l => l.LastName)
-            .Include(l => l.Id)
-            .ToList();
-        return LineOperators;
+        return _context.LineOperators.ToList();
     }
 
     public LineOperator? GetLineOperatorById(int id)
