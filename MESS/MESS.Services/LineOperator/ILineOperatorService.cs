@@ -31,7 +31,7 @@ public interface ILineOperatorService
     // Updates a LineOperator currently in the database
     //</summary>
     //<returns>Updated LineOperator object</returns>
-    public Task<bool> UpdateLineOperator(LineOperator lineOperator);
+    public Task<LineOperator> UpdateLineOperator(LineOperator lineOperator);
     
     //<summary>
     // Deletes a LineOperator currently in the database

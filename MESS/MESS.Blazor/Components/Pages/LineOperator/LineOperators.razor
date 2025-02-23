@@ -2,28 +2,29 @@
 @using MESS.Services.LineOperator
 @using MESS.Data.Models
 @rendermode InteractiveServer
-@inject ILineOperatorService LineOperatorService
+@inject LineOperatorService LineOperatorService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Operator Select</PageTitle>
 
-<h2>Operator Select</h2>
+<PageTitle>Operator Login</PageTitle>
+
+<h2>Operator Login</h2>
 <br/>
 
-@if (Operators == null || Operators.Count == 0)
+@if (Operators == null)
 {
     <p>ERROR: No operators found.</p>
 }
 else
 {
-    <select @bind="SelectedOperatorId">
+    <select @bind="SelectedOperatorId" @bind:event="OperatorChanged">
         <option value=""> Select Operator </option>
         @foreach (var op in Operators)
         {
             <option value="@op.Id">@op.FirstName @op.LastName</option>
         }
     </select>
-
+    
     @if (SelectedOperator != null)
     {
         <p>Current Operator: @SelectedOperator.FirstName @SelectedOperator.LastName</p>
@@ -32,35 +33,30 @@ else
     <h3>Operator Management</h3>
     <br/>
     <button @onclick="AddOperator">Add Operator</button>
-    <button @onclick="UpdateOperator">Update Operator</button>
-    <button @onclick="DeleteOperator">Delete Operator</button>
 }
 
 @code {
     private List<LineOperator> Operators = new();
-    private int? _selectedOperatorId;
+    private int? SelectedOperatorId;
     private LineOperator? SelectedOperator;
 
-    private int? SelectedOperatorId
-    {
-        get => _selectedOperatorId;
-        set
-        {
-            _selectedOperatorId = value;
-            SelectedOperator = Operators.FirstOrDefault(op => op.Id == value);
-        }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadOperators();
-    }
-
-    private Task LoadOperators()
+    private List<LineOperator> LoadOperators()
     {
         Operators = LineOperatorService.GetLineOperators();
-        StateHasChanged();
-        return Task.CompletedTask;
+        return Operators;
+    }
+
+    private void OperatorChanged(ChangeEventArgs x)
+    {
+        if (int.TryParse(x.Value?.ToString(), out int selectedId))
+        {
+            SelectedOperatorId = selectedId;
+            SelectedOperator = Operators.FirstOrDefault(op => op.Id == selectedId);
+        }
+        else
+        {
+            SelectedOperator = null;
+        }
     }
 
     private void AddOperator()
@@ -68,13 +64,16 @@ else
         NavigationManager.NavigateTo("/lineoperators/addoperator");
     }
 
-    private void DeleteOperator()
+    private async Task UpdateOperator(LineOperator op)
     {
-        NavigationManager.NavigateTo("/lineoperators/deleteoperator");
+        await LineOperatorService.UpdateLineOperator(op);
+        LoadOperators();
     }
 
-    private void UpdateOperator()
+    private async Task DeleteOperator(int id)
     {
-        NavigationManager.NavigateTo($"/lineoperators/updateoperator/{SelectedOperatorId}");
+        await LineOperatorService.DeleteLineOperator(id);
+        LoadOperators();
     }
+    
 }

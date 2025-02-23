@@ -16,7 +16,12 @@ public class LineOperatorService : ILineOperatorService
 
     public List<LineOperator> GetLineOperators()
     {
-        return _context.LineOperators.ToList();
+        var LineOperators = _context.LineOperators
+            .Include(l => l.FirstName)
+            .Include(l => l.LastName)
+            .Include(l => l.Id)
+            .ToList();
+        return LineOperators;
     }
 
     public LineOperator? GetLineOperatorById(int id)
@@ -55,48 +60,23 @@ public class LineOperatorService : ILineOperatorService
         }
     }
 
-    public async Task<bool> UpdateLineOperator(LineOperator lineOperator)
+    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator) 
     {
-        var existingOperator = await _context.LineOperators.FindAsync(lineOperator.Id);
-        if (existingOperator == null)
-        {
-            Log.Error("Could not find LineOperator with ID {id}", lineOperator.Id);
-            return false;
-        }
-
-        existingOperator.FirstName = lineOperator.FirstName;
-        existingOperator.LastName = lineOperator.LastName;
-
+        _context.LineOperators.Update(lineOperator);
         await _context.SaveChangesAsync();
         Log.Information("Updated LineOperator with ID {id}", lineOperator.Id);
-        return true;
+        return lineOperator;
     }
 
-    public async Task<bool> DeleteLineOperator(int id)
+    public async Task<bool> DeleteLineOperator(int id) 
     {
         var lineOperator = await _context.LineOperators.FindAsync(id);
-        
         if (lineOperator == null)
         {
-            return false; 
-        }
-        
-        var relatedInstructions = await _context.WorkInstructions
-            .Where(w => w.Operator != null && w.Operator.Id == id)  
-            .ToListAsync();
-        
-        if (relatedInstructions != null && relatedInstructions.Any())
-        {
-            foreach (var instruction in relatedInstructions)
-            {
-                instruction.Operator = null;  
-            }
-        }
-        await _context.SaveChangesAsync(); 
-
+            return false;
+        } 
         _context.LineOperators.Remove(lineOperator);
-        await _context.SaveChangesAsync(); 
-
+        await _context.SaveChangesAsync();
         Log.Information("Successfully deleted LineOperator with ID {id}", lineOperator.Id);
         return true;
         }
