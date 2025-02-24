@@ -18,7 +18,6 @@
             <div class="mb-3">
                 <label for="Name" class="form-label">Product Name</label>
                 <div class="col-md-4">
-                    
                     @if (ProductionLog.Product != null)
                     {
                         <InputText class="form-control" @bind-Value="ProductionLog.Product.Name"/>
@@ -114,7 +113,6 @@
             if (value.HasValue)
             {
                 await LoadActiveWorkInstruction(value.Value);
-                StateHasChanged();
             }
         }
         catch (Exception e)
@@ -128,7 +126,6 @@
     private async Task LoadActiveWorkInstruction(int id)
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
-        StateHasChanged();
     }
     
     /// Loads a Production Log from the database
@@ -145,7 +142,7 @@
                 await SetSelectedWorkInstructionId(ProductionLog.WorkInstruction.Id);
                 foreach (var step in ProductionLog.LogSteps)
                 {
-                    showNotesForStep[step.Id] = !string.IsNullOrEmpty(step.Notes) && !step.Success;
+                    showNotesForStep[step.WorkInstructionStepId] = !string.IsNullOrEmpty(step.Notes) && !step.Success;
                 }
             }
             

@@ -21,6 +21,7 @@ else
                     SubmitTime = DateTimeOffset.UtcNow
                 };
                 ProductionLog.LogSteps.Add(logStep);
+                StateHasChanged();
             }
 
             <li class="list-group-item btn-group mb-2" role="group">
@@ -50,18 +51,12 @@ else
                         <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
                     </div>
 
-                    @if (logStep != null && showNotesForStep.ContainsKey(logStep.WorkInstructionStepId) && showNotesForStep[logStep.WorkInstructionStepId] == true)
+                    @if (logStep != null && showNotesForStep.ContainsKey(logStep.WorkInstructionStepId) && showNotesForStep[logStep.WorkInstructionStepId])
                     {
                         <div class="col-12">
                             Notes:
-                            @if (logStep != null)
-                            {
-                                <InputTextArea @bind-Value="logStep.Notes"/>
-                            }
-                            else
-                            {
-                                <p>Loading...</p>
-                            }
+                            @logStep.Notes
+                            <InputTextArea @bind-Value="logStep.Notes"/>
                         </div>
                     }
 
