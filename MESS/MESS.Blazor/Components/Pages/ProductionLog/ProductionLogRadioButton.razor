@@ -1,5 +1,76 @@
-<h3>ProductionLogRadioButton</h3>
+@using MESS.Data.Models
+<li class="list-group-item btn-group mb-2" role="group">
+    <div class="row">
+        <div class="col-8">
+            @step.Name
+        </div>
+
+        <div class="col-4">
+            <input type="radio"
+                   checked="@(!logStep?.Success)"
+                   autocomplete="off"
+                   @onclick="@(() => { ShowOptionalNotesField = !ShowOptionalNotesField; SetSelectedButton("Failure"); } )"
+                   class="btn-check"
+                   name="radioBtn{@step.Name}"
+                   id="radioFailureBtn{@step.Name}"
+                   @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
+            <label class="btn btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
+
+            <input type="radio"
+                   checked="@(logStep?.Success)"
+                   autocomplete="off"
+                   class="btn-check"
+                   name="radioBtn{@step.Name}"
+                   id="radioSuccessBtn{@step.Name}"
+                   @onclick="@(() => SetSelectedButton("Success"))"
+                   @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
+            <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
+
+            <p>Selected Button: @(string.IsNullOrEmpty(SelectedButton) ? "None" : SelectedButton)</p>
+
+        </div>
+        
+        @if (logStep != null && ShowOptionalNotesField)
+        {
+            <div class="col-12">
+                Notes:
+                @logStep.Notes
+                <InputTextArea @bind-Value="logStep.Notes"/>
+            </div>
+        }
+
+        @* @if (logStep != null && showNotesForStep.ContainsKey(logStep.WorkInstructionStepId) && showNotesForStep[logStep.WorkInstructionStepId]) *@
+        @* { *@
+        @* <div class="col-12"> *@
+        @*     Notes: *@
+        @*     @logStep.Notes *@
+        @*     <InputTextArea @bind-Value="logStep.Notes"/> *@
+        @* </div> *@
+        @* } *@
+
+    </div>
+
+</li>
+
+<p>Selected Button: @(string.IsNullOrEmpty(SelectedButton) ? "None" : SelectedButton)</p>
 
 @code {
+    [Parameter]
+    public required Step step { get; set; }
+    [Parameter]
+    public required ProductionLogStep logStep { get; set; }
+    
+    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
+
+    
+    private bool ShowOptionalNotesField { get; set; } = false;
+
+    
+    private string? SelectedButton { get; set; } = "";
+
+    private void SetSelectedButton(string buttonName)
+    {
+        SelectedButton = SelectedButton == buttonName ? null : buttonName;
+    }
     
 }

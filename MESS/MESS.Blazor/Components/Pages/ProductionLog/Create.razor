@@ -26,7 +26,7 @@
                 </div>
                 
                 <div>
-                    @if (WorkInstructions != null)
+                    @if (WorkInstructions != null && logId == null)
                     {
                         <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
                             <option value="">Select Work Instruction</option>

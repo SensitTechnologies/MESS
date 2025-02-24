@@ -23,46 +23,8 @@ else
                 ProductionLog.LogSteps.Add(logStep);
                 StateHasChanged();
             }
-
-            <li class="list-group-item btn-group mb-2" role="group">
-                <div class="row">
-                    <div class="col-8">
-                        @step.Name
-                    </div>
-
-                    <div class="col-4">
-                        <input type="radio"
-                               checked="@(!logStep?.Success)"
-                               autocomplete="off"
-                               @onclick="() => ShowOptionalNotesField = !ShowOptionalNotesField"
-                               class="btn-check"
-                               name="radioBtn{@step.Name}"
-                               id="radioFailureBtn{@step.Name}"
-                               @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
-                        <label class="btn btn-outline-danger" for="radioFailureBtn{@step.Name}">Failure</label>
-
-                        <input type="radio"
-                               checked="@(logStep?.Success)"
-                               autocomplete="off"
-                               class="btn-check"
-                               name="radioBtn{@step.Name}"
-                               id="radioSuccessBtn{@step.Name}"
-                               @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
-                        <label class="btn btn-outline-success" for="radioSuccessBtn{@step.Name}">Success</label>
-                    </div>
-
-                    @if (logStep != null && showNotesForStep.ContainsKey(logStep.WorkInstructionStepId) && showNotesForStep[logStep.WorkInstructionStepId])
-                    {
-                        <div class="col-12">
-                            Notes:
-                            @logStep.Notes
-                            <InputTextArea @bind-Value="logStep.Notes"/>
-                        </div>
-                    }
-
-                </div>
-
-            </li>
+            
+            <ProductionLogRadioButton step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
         }
     </ul>
 }
@@ -76,5 +38,35 @@ else
 
     [Parameter] public required Dictionary<int, bool> showNotesForStep { get; set; }
 
-    private bool ShowOptionalNotesField { get; set; } = false;
+    private string? SelectedButton { get; set; } = "";
+    
+    private void SetSelectedButton(string buttonName)
+    {
+        if (SelectedButton == buttonName)
+        {
+            SelectedButton = null;
+        }
+        else
+        {
+            SelectedButton = buttonName;
+        }
+    }
+
+    private void ClearSelectedButton()
+    {
+        SelectedButton = null;
+    }
+    
+    private string GetButtonClass(string buttonName)
+    {
+        string baseClass = "btn";
+
+        if (buttonName == "Clear")
+        {
+            return string.IsNullOrEmpty(SelectedButton) ? $"{baseClass} btn-secondary" : $"{baseClass} btn-danger";
+        }
+
+        return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-secondary";
+    }
+
 }
