@@ -39,20 +39,9 @@
             </div>
         }
 
-        @* @if (logStep != null && showNotesForStep.ContainsKey(logStep.WorkInstructionStepId) && showNotesForStep[logStep.WorkInstructionStepId]) *@
-        @* { *@
-        @* <div class="col-12"> *@
-        @*     Notes: *@
-        @*     @logStep.Notes *@
-        @*     <InputTextArea @bind-Value="logStep.Notes"/> *@
-        @* </div> *@
-        @* } *@
-
     </div>
 
 </li>
-
-<p>Selected Button: @(string.IsNullOrEmpty(SelectedButton) ? "None" : SelectedButton)</p>
 
 @code {
     [Parameter]
@@ -61,16 +50,30 @@
     public required ProductionLogStep logStep { get; set; }
     
     [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
+    protected override void OnInitialized()
+    {
+        // If logStep.ID is 0 that indicates it is being created for the first time
+        if (logStep.Id == 0) return;
+        
+        SetSelectedButton(logStep.Success ? "Success" : "Failure");
+        SetOptionalNotes();
+    } 
 
-    
     private bool ShowOptionalNotesField { get; set; } = false;
-
     
     private string? SelectedButton { get; set; } = "";
 
     private void SetSelectedButton(string buttonName)
     {
         SelectedButton = SelectedButton == buttonName ? null : buttonName;
+    }
+
+    private void SetOptionalNotes()
+    {
+        if (!string.IsNullOrWhiteSpace(logStep.Notes))
+        {
+            ShowOptionalNotesField = true;
+        }
     }
     
 }
