@@ -55,7 +55,7 @@ public class LineOperatorService : ILineOperatorService
         }
     }
 
-    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator) 
+    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator)
     {
         _context.LineOperators.Update(lineOperator);
         await _context.SaveChangesAsync();
@@ -63,15 +63,31 @@ public class LineOperatorService : ILineOperatorService
         return lineOperator;
     }
 
-    public async Task<bool> DeleteLineOperator(int id) 
+    public async Task<bool> DeleteLineOperator(int id)
     {
         var lineOperator = await _context.LineOperators.FindAsync(id);
+        
         if (lineOperator == null)
         {
-            return false;
-        } 
+            return false; 
+        }
+        
+        var relatedInstructions = await _context.WorkInstructions
+            .Where(w => w.Operator != null && w.Operator.Id == id)  
+            .ToListAsync();
+        
+        if (relatedInstructions != null && relatedInstructions.Any())
+        {
+            foreach (var instruction in relatedInstructions)
+            {
+                instruction.Operator = null;  
+            }
+        }
+        await _context.SaveChangesAsync(); 
+
         _context.LineOperators.Remove(lineOperator);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(); 
+
         Log.Information("Successfully deleted LineOperator with ID {id}", lineOperator.Id);
         return true;
         }

@@ -1,9 +1,11 @@
-@page "/lineoperators/deleteperator"
+@page "/lineoperators/deleteoperator"
 @using MESS.Data.Models
 @using MESS.Services.LineOperator
 @rendermode InteractiveServer
 @inject ILineOperatorService LineOperatorService
+@inject NavigationManager NavigationManager
 
+<h2>Delete Operator</h2>
 
 @if (Operators == null || Operators.Count == 0)
 {
@@ -11,27 +13,40 @@
 }
 else
 {
-    <select @bind="SelectedOperatorId" @bind:event="OperatorChanged">
+    <select @bind="SelectedOperatorId">
         <option value=""> Select Operator </option>
         @foreach (var op in Operators)
         {
             <option value="@op.Id">@op.FirstName @op.LastName</option>
         }
     </select>
-    
+
     @if (SelectedOperator != null)
     {
-        <p>Selected Operator: @SelectedOperator.FirstName @SelectedOperator.LastName</p>
-        <button @onclick="DeleteLineOperator">Delete Operator</button>
+        <p>Current Operator: @SelectedOperator.FirstName @SelectedOperator.LastName</p>
     }
+    
+    <br/>
+    <button @onclick="DeleteLineOperator">Delete Operator</button>
+    <br/>
+    <button @onclick="NavigateBack">Back</button>
 }
-
 
 @code {
     private List<LineOperator> Operators = new();
-    private int? SelectedOperatorId;
+    private int? _selectedOperatorId;
     private LineOperator? SelectedOperator;
-    
+
+    private int? SelectedOperatorId
+    {
+        get => _selectedOperatorId;
+        set
+        {
+            _selectedOperatorId = value;
+            SelectedOperator = Operators.FirstOrDefault(op => op.Id == value);
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadOperators();
@@ -39,20 +54,27 @@ else
 
     private Task LoadOperators()
     {
-        Operators = LineOperatorService.GetLineOperators(); 
+        Operators = LineOperatorService.GetLineOperators();
         StateHasChanged();
         return Task.CompletedTask;
     }
-    
-    private async Task<bool> DeleteLineOperator()
+
+    private async Task DeleteLineOperator()
     {
         if (SelectedOperatorId.HasValue)
         {
-            await LineOperatorService.DeleteLineOperator(SelectedOperatorId.Value);
-            await LoadOperators();
-            SelectedOperator = null;
-            SelectedOperatorId = null;
+            bool success = await LineOperatorService.DeleteLineOperator(SelectedOperatorId.Value);
+            if (success)
+            {
+                await LoadOperators();
+                SelectedOperator = null;
+                SelectedOperatorId = null;
+            }
         }
-        return true;
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/lineoperators");
     }
 }
