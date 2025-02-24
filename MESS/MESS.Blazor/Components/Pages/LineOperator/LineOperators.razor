@@ -5,9 +5,9 @@
 @inject ILineOperatorService LineOperatorService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Operator Login</PageTitle>
+<PageTitle>Operator Select</PageTitle>
 
-<h2>Operator Login</h2>
+<h2>Operator Select</h2>
 <br/>
 
 @if (Operators == null || Operators.Count == 0)
@@ -31,7 +31,7 @@ else
 
     <h3>Operator Management</h3>
     <br/>
-    <button @onclick="AddOperator">Add Operator</button>
+    <button @onclick="AddOperator">Add Operator</button><button @onclick="DeleteOperator">Delete Operator</button>
 }
 
 @code {
@@ -67,6 +67,11 @@ else
     private void AddOperator()
     {
         NavigationManager.NavigateTo("/lineoperators/addoperator");
+    }
+
+    private void DeleteOperator()
+    {
+        NavigationManager.NavigateTo("/lineoperators/deleteperator");
     }
 
     private async Task UpdateOperator(LineOperator op)
