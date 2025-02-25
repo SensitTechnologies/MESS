@@ -1,5 +1,5 @@
 @page "/work-stations/create"
-@page "/work-stations/edit/{LogId:int}"
+@page "/work-stations/edit/{WorkStationId:int}"
 @using MESS.Data.Models
 @using MESS.Services.WorkStation
 @using Serilog
@@ -40,9 +40,9 @@
 
 @code {
     [Parameter]
-    public int? LogId { get; set; }
+    public int? WorkStationId { get; set; }
 
-    private bool IsEditMode => LogId.HasValue;
+    private bool IsEditMode => WorkStationId.HasValue;
     private WorkStation WorkStation { get; set; } = new()
     {
         Name = ""
@@ -53,9 +53,9 @@
         if (IsEditMode)
         {
             // Fetch work station for editing
-            if (LogId != null)
+            if (WorkStationId != null)
             {
-                var existingWorkStation = await WorkStationService.FindWorkStationByIdAsync(LogId.Value);
+                var existingWorkStation = await WorkStationService.FindWorkStationByIdAsync(WorkStationId.Value);
                 if (existingWorkStation != null)
                 {
                     WorkStation = existingWorkStation;
