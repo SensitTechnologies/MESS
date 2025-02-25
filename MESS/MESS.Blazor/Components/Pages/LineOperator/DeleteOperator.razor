@@ -1,0 +1,80 @@
+@page "/lineoperators/deleteoperator"
+@using MESS.Data.Models
+@using MESS.Services.LineOperator
+@rendermode InteractiveServer
+@inject ILineOperatorService LineOperatorService
+@inject NavigationManager NavigationManager
+
+<h2>Delete Operator</h2>
+
+@if (Operators == null || Operators.Count == 0)
+{
+    <p>ERROR: No operators found.</p>
+}
+else
+{
+    <select @bind="SelectedOperatorId">
+        <option value=""> Select Operator </option>
+        @foreach (var op in Operators)
+        {
+            <option value="@op.Id">@op.FirstName @op.LastName</option>
+        }
+    </select>
+
+    @if (SelectedOperator != null)
+    {
+        <p>Current Operator: @SelectedOperator.FirstName @SelectedOperator.LastName</p>
+    }
+    
+    <br/>
+    <button @onclick="DeleteLineOperator">Delete Operator</button>
+    <br/>
+    <button @onclick="NavigateBack">Back</button>
+}
+
+@code {
+    private List<LineOperator> Operators = new();
+    private int? _selectedOperatorId;
+    private LineOperator? SelectedOperator;
+
+    private int? SelectedOperatorId
+    {
+        get => _selectedOperatorId;
+        set
+        {
+            _selectedOperatorId = value;
+            SelectedOperator = Operators.FirstOrDefault(op => op.Id == value);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOperators();
+    }
+
+    private Task LoadOperators()
+    {
+        Operators = LineOperatorService.GetLineOperators();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteLineOperator()
+    {
+        if (SelectedOperatorId.HasValue)
+        {
+            bool success = await LineOperatorService.DeleteLineOperator(SelectedOperatorId.Value);
+            if (success)
+            {
+                await LoadOperators();
+                SelectedOperator = null;
+                SelectedOperatorId = null;
+            }
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/lineoperators");
+    }
+}

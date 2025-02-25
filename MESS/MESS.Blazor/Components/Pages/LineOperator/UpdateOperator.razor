@@ -1,0 +1,59 @@
+@page "/lineoperators/updateoperator/{id:int}"
+@using MESS.Services.LineOperator
+@using MESS.Data.Models
+@rendermode InteractiveServer
+@inject ILineOperatorService LineOperatorService
+@inject NavigationManager NavigationManager
+
+<h3>Update Operator</h3>
+
+@if (Operator == null)
+{
+    <p>ERROR: No operators found.</p>
+}
+else
+{
+    <div>
+        <label>First Name:</label>
+        <input @bind="Operator.FirstName" />
+
+        <label>Last Name:</label>
+        <input @bind="Operator.LastName" />
+
+        <br/>
+        <button @onclick="UpdateLineOperator">Update</button>
+
+    <br/>
+    <button @onclick="NavigateBack">Back</button>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private LineOperator? Operator { get; set; }
+
+    private async Task UpdateLineOperator()
+    {
+        if (Operator != null)
+        {
+            var success = await LineOperatorService.UpdateLineOperator(Operator);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOperators();
+    }
+
+    private Task LoadOperators()
+    {
+        Operator = LineOperatorService.GetLineOperatorById(Id);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/lineoperators");
+    }
+}
