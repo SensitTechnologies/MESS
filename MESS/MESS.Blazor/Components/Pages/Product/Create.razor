@@ -2,6 +2,7 @@
 @page "/products/edit/{LogId:int}"
 @using MESS.Data.Models
 @using MESS.Services.Product
+@using Serilog
 @inject IProductService ProductService
 @inject NavigationManager NavigationManager
 
@@ -90,7 +91,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving product: {ex.Message}");
+            Log.Error(ex, "Error saving product.");
         }
     }
 }
