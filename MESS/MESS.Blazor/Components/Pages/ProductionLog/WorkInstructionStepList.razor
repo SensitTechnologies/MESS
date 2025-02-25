@@ -1,12 +1,8 @@
 @using MESS.Data.Models
 
-@if (ActiveWorkInstruction == null || ProductionLog == null)
+@if (ActiveWorkInstruction != null && ProductionLog != null)
 {
-    <p><em>Loading...</em></p>
-}
-else
-{
-
+    
     <ul class="list-group list-group-numbered container">
         @foreach (var step in ActiveWorkInstruction.Steps)
         {
