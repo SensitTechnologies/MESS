@@ -44,7 +44,7 @@ public class WorkStationService : IWorkStationService
         }
         catch (Exception e)
         {
-            Log.Warning(e, "Unable to find work station for ID. ID: {InputID}", id);
+            Log.Warning(e, "Unable to find work station for ID. ID: {InputId}", id);
             return null;
         }
     }
@@ -74,7 +74,8 @@ public class WorkStationService : IWorkStationService
         }
         catch (Exception e)
         {
-            Log.Error(e, "Exception occured while modifying a work station.");
+            Log.Error(e, "Exception occured while modifying a work station. ID: {InputId}", 
+                workStation.Id);
         }
     }
 
@@ -85,11 +86,11 @@ public class WorkStationService : IWorkStationService
         {
             _context.WorkStations.Remove(workStation);
             await _context.SaveChangesAsync();
-            Log.Information("WorkStation successfully removed. ID: {WorkStationId}", workStation.Id);
+            Log.Information("Work station successfully removed. ID: {WorkStationId}", workStation.Id);
         }
         else
         {
-            Log.Warning("Work station for removal not found.");
+            Log.Warning("Work station for removal not found. ID: {InputID}", id);
         }
     }
 }
