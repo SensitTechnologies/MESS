@@ -16,14 +16,14 @@
 }
 else
 {
-    <select @bind="SelectedOperatorId" @bind:event="OperatorChanged">
+    <select @bind="SelectedOperatorId">
         <option value=""> Select Operator </option>
         @foreach (var op in Operators)
         {
             <option value="@op.Id">@op.FirstName @op.LastName</option>
         }
     </select>
-    
+
     @if (SelectedOperator != null)
     {
         <p>Current Operator: @SelectedOperator.FirstName @SelectedOperator.LastName</p>
@@ -31,13 +31,25 @@ else
 
     <h3>Operator Management</h3>
     <br/>
-    <button @onclick="AddOperator">Add Operator</button><button @onclick="DeleteOperator">Delete Operator</button>
+    <button @onclick="AddOperator">Add Operator</button>
+    <button @onclick="UpdateOperator">Update Operator</button>
+    <button @onclick="DeleteOperator">Delete Operator</button>
 }
 
 @code {
     private List<LineOperator> Operators = new();
-    private int? SelectedOperatorId;
+    private int? _selectedOperatorId;
     private LineOperator? SelectedOperator;
+
+    private int? SelectedOperatorId
+    {
+        get => _selectedOperatorId;
+        set
+        {
+            _selectedOperatorId = value;
+            SelectedOperator = Operators.FirstOrDefault(op => op.Id == value);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -46,22 +58,9 @@ else
 
     private Task LoadOperators()
     {
-        Operators = LineOperatorService.GetLineOperators(); 
+        Operators = LineOperatorService.GetLineOperators();
         StateHasChanged();
         return Task.CompletedTask;
-    }
-
-    private void OperatorChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int selectedId))
-        {
-            SelectedOperatorId = selectedId;
-            SelectedOperator = Operators.FirstOrDefault(op => op.Id == selectedId);
-        }
-        else
-        {
-            SelectedOperator = null;
-        }
     }
 
     private void AddOperator()
@@ -71,18 +70,11 @@ else
 
     private void DeleteOperator()
     {
-        NavigationManager.NavigateTo("/lineoperators/deleteperator");
+        NavigationManager.NavigateTo("/lineoperators/deleteoperator");
     }
 
-    private async Task UpdateOperator(LineOperator op)
+    private void UpdateOperator()
     {
-        await LineOperatorService.UpdateLineOperator(op);
-        await LoadOperators();  
-    }
-
-    private async Task DeleteOperator(int id)
-    {
-        await LineOperatorService.DeleteLineOperator(id);
-        await LoadOperators();  
+        NavigationManager.NavigateTo($"/lineoperators/updateoperator/{SelectedOperatorId}");
     }
 }

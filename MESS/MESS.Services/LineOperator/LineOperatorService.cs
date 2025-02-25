@@ -55,23 +55,48 @@ public class LineOperatorService : ILineOperatorService
         }
     }
 
-    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator) 
+    public async Task<bool> UpdateLineOperator(LineOperator lineOperator)
     {
-        _context.LineOperators.Update(lineOperator);
+        var existingOperator = await _context.LineOperators.FindAsync(lineOperator.Id);
+        if (existingOperator == null)
+        {
+            Log.Error("Could not find LineOperator with ID {id}", lineOperator.Id);
+            return false;
+        }
+
+        existingOperator.FirstName = lineOperator.FirstName;
+        existingOperator.LastName = lineOperator.LastName;
+
         await _context.SaveChangesAsync();
         Log.Information("Updated LineOperator with ID {id}", lineOperator.Id);
-        return lineOperator;
+        return true;
     }
 
-    public async Task<bool> DeleteLineOperator(int id) 
+    public async Task<bool> DeleteLineOperator(int id)
     {
         var lineOperator = await _context.LineOperators.FindAsync(id);
+        
         if (lineOperator == null)
         {
-            return false;
-        } 
+            return false; 
+        }
+        
+        var relatedInstructions = await _context.WorkInstructions
+            .Where(w => w.Operator != null && w.Operator.Id == id)  
+            .ToListAsync();
+        
+        if (relatedInstructions != null && relatedInstructions.Any())
+        {
+            foreach (var instruction in relatedInstructions)
+            {
+                instruction.Operator = null;  
+            }
+        }
+        await _context.SaveChangesAsync(); 
+
         _context.LineOperators.Remove(lineOperator);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(); 
+
         Log.Information("Successfully deleted LineOperator with ID {id}", lineOperator.Id);
         return true;
         }
