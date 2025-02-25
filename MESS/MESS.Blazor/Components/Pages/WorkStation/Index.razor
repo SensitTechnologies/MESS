@@ -39,9 +39,9 @@ else
                 <td colspan="5">
                     <details>
                         <summary>View Products</summary>
-                        <div style="padding: 10px;">
+                        <div class="p-3">
                             <h5>Products</h5>
-                            @if (workStation.Products != null && workStation.Products.Any())
+                            @if (workStation.Products.Any())
                             {
                                 <ul>
                                     @foreach (var product in workStation.Products)
