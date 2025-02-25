@@ -9,7 +9,7 @@
             <input type="radio"
                    checked="@(!logStep?.Success)"
                    autocomplete="off"
-                   @onclick="@(() => { ShowOptionalNotesField = !ShowOptionalNotesField; SetSelectedButton("Failure"); } )"
+                   @onclick="@(() => HandleButtonPress(false))"
                    class="btn-check"
                    name="radioBtn{@step.Name}"
                    id="radioFailureBtn{@step.Name}"
@@ -22,7 +22,7 @@
                    class="btn-check"
                    name="radioBtn{@step.Name}"
                    id="radioSuccessBtn{@step.Name}"
-                   @onclick="@(() => SetSelectedButton("Success"))"
+                   @onclick="@(() => HandleButtonPress(true))"
                    @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
             <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
 
@@ -53,6 +53,7 @@
     protected override void OnInitialized()
     {
         // If logStep.ID is 0 that indicates it is being created for the first time
+        // if set to anything other than 0 it is being edited
         if (logStep.Id == 0) return;
         
         SetSelectedButton(logStep.Success ? "Success" : "Failure");
@@ -70,10 +71,23 @@
 
     private void SetOptionalNotes()
     {
-        if (!string.IsNullOrWhiteSpace(logStep.Notes))
+        if (!string.IsNullOrWhiteSpace(logStep.Notes) && !logStep.Success)
         {
             ShowOptionalNotesField = true;
         }
     }
-    
+
+    private void HandleButtonPress(bool result)
+    {
+        if (!result)
+        {
+            ShowOptionalNotesField = !ShowOptionalNotesField;
+        }
+        else
+        {
+            ShowOptionalNotesField = false;
+        }
+
+        SetSelectedButton(result ? "Success" : "Failure");
+    }
 }
