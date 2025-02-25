@@ -39,7 +39,7 @@
                     }
                 </div>
 
-                <WorkInstructionStepList showNotesForStep="showNotesForStep" ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
                 
             </div>
 
@@ -61,7 +61,6 @@
     public int? logId { get; set; }
     private string Title = "Add";
     protected ProductionLog ProductionLog = new();
-    private Dictionary<int, bool> showNotesForStep = new();
     
     private List<WorkInstruction>? WorkInstructions { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
@@ -71,7 +70,6 @@
     {
         await LoadWorkInstructions();
         await LoadProductionLog();
-        InitializeShowNotesForStep();
     }
     
     private async Task LoadWorkInstructions()
@@ -94,14 +92,6 @@
         }
     }
     
-    private void InitializeShowNotesForStep()
-    {
-        if (ActiveWorkInstruction == null) return;
-        foreach (var step in ActiveWorkInstruction.Steps)
-        {
-            showNotesForStep[step.Id] = false;
-        }
-    }
     
     private async Task SetSelectedWorkInstructionId(int? value)
     {
@@ -140,10 +130,6 @@
             if (ProductionLog.WorkInstruction != null)
             {
                 await SetSelectedWorkInstructionId(ProductionLog.WorkInstruction.Id);
-                foreach (var step in ProductionLog.LogSteps)
-                {
-                    showNotesForStep[step.WorkInstructionStepId] = !string.IsNullOrEmpty(step.Notes) && !step.Success;
-                }
             }
             
         }
@@ -188,11 +174,6 @@
     private void OnStepCompleted(ProductionLogStep step, bool success)
     {
         var currentTime = DateTimeOffset.UtcNow;
-
-        if (!success)
-        {
-            showNotesForStep[step.WorkInstructionStepId] = true;
-        }
 
         step.Success = success;
         step.SubmitTime = currentTime;
