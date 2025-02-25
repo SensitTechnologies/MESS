@@ -35,6 +35,29 @@ else
                     <button class="btn btn-danger btn-sm" @onclick="() => RemoveWorkStation(workStation.Id)">Delete</button>
                 </td>
             </tr>
+            <tr>
+                <td colspan="5">
+                    <details>
+                        <summary>View Products</summary>
+                        <div style="padding: 10px;">
+                            <h5>Products</h5>
+                            @if (workStation.Products != null && workStation.Products.Any())
+                            {
+                                <ul>
+                                    @foreach (var product in workStation.Products)
+                                    {
+                                        <li>@product.Name</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>No products available.</p>
+                            }
+                        </div>
+                    </details>
+                </td>
+            </tr>
         }
         </tbody>
     </table>
