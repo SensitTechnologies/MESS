@@ -62,7 +62,6 @@ public class ProductionLogService : IProductionLogService
             var orderedSteps = log.LogSteps.OrderBy(l => l.SubmitTime);
 
             var start = orderedSteps.FirstOrDefault()?.SubmitTime;
-            var end = orderedSteps.LastOrDefault()?.SubmitTime;
             var logSubmitTime = log.SubmitTime;
             
             return logSubmitTime - start;
@@ -150,8 +149,7 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to Delete by ID: {productionLogId} in Production Logs, in ProductionLogService", id);
+            Log.Warning("Exception thrown when attempting to Delete by ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {ExceptionMessage}", id, e.Message);
             return false;
         }
     }
@@ -174,8 +172,7 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService", existingProductionLog.Id);
+            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {exceptionMessage}", existingProductionLog.Id, e.Message);
             return false;
         }
     }
@@ -196,15 +193,12 @@ public class ProductionLogService : IProductionLogService
             _context.SaveChanges();
             
             Log.Information("Production Log with ID: {productionLogId}, successfully updated with another ProductionLog.", existing.Id);
-
-
+            
             return true;
-
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to UpdateWithObjectAsync, Existing ID: {existingID} in Production Logs, in ProductionLogService", existing.Id);
+            Log.Warning("Exception thrown when attempting to UpdateWithObjectAsync, Existing ID: {existingID} in Production Logs, in ProductionLogService. Exception: {ExceptionMessage}", existing.Id, e.Message);
             return false;
         }
     }
