@@ -1,5 +1,5 @@
 @page "/products/create"
-@page "/products/edit/{LogId:int}"
+@page "/products/edit/{ProductId:int}"
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using Serilog
@@ -45,9 +45,9 @@
 
 @code {
     [Parameter]
-    public int? LogId { get; set; }
+    public int? ProductId { get; set; }
 
-    private bool IsEditMode => LogId.HasValue;
+    private bool IsEditMode => ProductId.HasValue;
     private Product Product { get; set; } = new()
     {
         Name = ""
@@ -58,9 +58,9 @@
         if (IsEditMode)
         {
             // Fetch product for editing
-            if (LogId != null)
+            if (ProductId != null)
             {
-                var existingProduct = await ProductService.FindProductByIdAsync(LogId.Value);
+                var existingProduct = await ProductService.FindProductByIdAsync(ProductId.Value);
                 if (existingProduct != null)
                 {
                     Product = existingProduct;
