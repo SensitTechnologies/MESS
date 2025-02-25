@@ -55,12 +55,21 @@ public class LineOperatorService : ILineOperatorService
         }
     }
 
-    public async Task<LineOperator> UpdateLineOperator(LineOperator lineOperator)
+    public async Task<bool> UpdateLineOperator(LineOperator lineOperator)
     {
-        _context.LineOperators.Update(lineOperator);
+        var existingOperator = await _context.LineOperators.FindAsync(lineOperator.Id);
+        if (existingOperator == null)
+        {
+            Log.Error("Could not find LineOperator with ID {id}", lineOperator.Id);
+            return false;
+        }
+
+        existingOperator.FirstName = lineOperator.FirstName;
+        existingOperator.LastName = lineOperator.LastName;
+
         await _context.SaveChangesAsync();
         Log.Information("Updated LineOperator with ID {id}", lineOperator.Id);
-        return lineOperator;
+        return true;
     }
 
     public async Task<bool> DeleteLineOperator(int id)

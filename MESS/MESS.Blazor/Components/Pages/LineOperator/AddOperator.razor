@@ -30,10 +30,11 @@
         LastModifiedOn = DateTime.UtcNow
     };
     
-    private List<LineOperator> LoadOperators()
+    private Task LoadOperators()
     {
         Operators = LineOperatorService.GetLineOperators();
-        return Operators;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private bool OperatorAdded;
@@ -55,7 +56,7 @@
                 CreatedOn = DateTime.UtcNow,
                 LastModifiedOn = DateTime.UtcNow
             };
-            LoadOperators();
+            await LoadOperators();
         }
     }
 

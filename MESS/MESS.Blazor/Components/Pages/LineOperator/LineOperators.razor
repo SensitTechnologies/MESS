@@ -32,12 +32,12 @@ else
     <h3>Operator Management</h3>
     <br/>
     <button @onclick="AddOperator">Add Operator</button>
+    <button @onclick="UpdateOperator">Update Operator</button>
     <button @onclick="DeleteOperator">Delete Operator</button>
 }
 
 @code {
     private List<LineOperator> Operators = new();
-    
     private int? _selectedOperatorId;
     private LineOperator? SelectedOperator;
 
@@ -71,5 +71,10 @@ else
     private void DeleteOperator()
     {
         NavigationManager.NavigateTo("/lineoperators/deleteoperator");
+    }
+
+    private void UpdateOperator()
+    {
+        NavigationManager.NavigateTo($"/lineoperators/updateoperator/{SelectedOperatorId}");
     }
 }
