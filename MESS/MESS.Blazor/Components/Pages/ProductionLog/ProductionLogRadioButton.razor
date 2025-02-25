@@ -1,44 +1,40 @@
 @using MESS.Data.Models
 <li class="list-group-item btn-group mb-2" role="group">
     <div class="row">
-        <div class="col-8">
+        <div class="col">
             @step.Name
         </div>
 
-        <div class="col-4">
-            <input type="radio"
-                   checked="@(!logStep?.Success)"
-                   autocomplete="off"
-                   @onclick="@(() => HandleButtonPress(false))"
-                   class="btn-check"
-                   name="radioBtn{@step.Name}"
-                   id="radioFailureBtn{@step.Name}"
-                   @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
-            <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
+        <div class="col container">
+            <div class="d-flex align-items-center">
+                <div class="d-inline-flex align-items-center">
+                    <input type="radio"
+                           checked="@(!logStep?.Success)"
+                           autocomplete="off"
+                           @onclick="@(() => HandleButtonPress(false))"
+                           class="btn-check"
+                           name="radioBtn{@step.Name}"
+                           id="radioFailureBtn{@step.Name}"
+                           @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
+                    <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
 
-            <input type="radio"
-                   checked="@(logStep?.Success)"
-                   autocomplete="off"
-                   class="btn-check"
-                   name="radioBtn{@step.Name}"
-                   id="radioSuccessBtn{@step.Name}"
-                   @onclick="@(() => HandleButtonPress(true))"
-                   @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
-            <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
-            
-        </div>
-        
-        @if (logStep != null && ShowOptionalNotesField)
-        {
-            <div class="col-12">
-                Notes:
-                @logStep.Notes
-                <InputTextArea @bind-Value="logStep.Notes"/>
+                    <input type="radio"
+                           checked="@(logStep?.Success)"
+                           autocomplete="off"
+                           class="btn-check"
+                           name="radioBtn{@step.Name}"
+                           id="radioSuccessBtn{@step.Name}"
+                           @onclick="@(() => HandleButtonPress(true))"
+                           @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
+                    <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
+                </div>
+                @if (logStep != null && ShowOptionalNotesField)
+                {
+                <InputTextArea class="form-control w-50 mx-5 custom-textarea" @bind-Value="logStep.Notes" />
+                }
             </div>
-        }
-
+        </div>
     </div>
-
 </li>
 
 @code {
