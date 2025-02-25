@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace MESS.Services.Product;
 
@@ -16,8 +17,17 @@ public class ProductService : IProductService
     
     public async Task AddProductAsync(Product product)
     {
-        await _context.Products.AddAsync(product);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.Products.AddAsync(product);
+            await _context.SaveChangesAsync();
+            
+            Log.Information("Product successfully created. ID: {ProductID}", product.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occured while adding product");
+        }
     }
     
     public async Task<Product?> FindProductByIdAsync(int id)
@@ -29,11 +39,13 @@ public class ProductService : IProductService
                 .Include(p => p.WorkStations)
                 .FirstOrDefaultAsync(p => p.Id == id);
             
+            Log.Information("Product found. ID: {ProductId}", product?.Id);
+            
             return product;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning(e, "Unable to find product for ID. ID: {InputId}", id);
             return null;
         }
     }
@@ -49,7 +61,7 @@ public class ProductService : IProductService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning(e, "Exception occured while getting all products. Returning empty product list.");
             return new List<Product>();
         }
     }
@@ -63,7 +75,7 @@ public class ProductService : IProductService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Error(e, "Exception occured while modifying product. Product ID: {inputId}", product.Id);
         }
         
     }
@@ -75,6 +87,12 @@ public class ProductService : IProductService
         {
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
+            
+            Log.Information("Product successfully removed. ID: {ProductId}", product.Id);
+        }
+        else
+        {
+            Log.Warning("Product for removal not found. ID: {InputId}", id);
         }
     }
 }
