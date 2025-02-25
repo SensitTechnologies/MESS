@@ -56,13 +56,18 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            if (log.LogSteps == null || log.LogSteps.Count == 0)
+            if (log.LogSteps.Count == 0)
                 return TimeSpan.Zero;
             
             var orderedSteps = log.LogSteps.OrderBy(l => l.SubmitTime);
 
             var start = orderedSteps.FirstOrDefault()?.SubmitTime;
             var logSubmitTime = log.SubmitTime;
+
+            if (logSubmitTime < start)
+            {
+                return TimeSpan.Zero;
+            }
             
             return logSubmitTime - start;
         }
