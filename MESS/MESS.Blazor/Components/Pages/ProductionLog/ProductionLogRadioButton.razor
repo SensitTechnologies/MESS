@@ -14,7 +14,7 @@
                    name="radioBtn{@step.Name}"
                    id="radioFailureBtn{@step.Name}"
                    @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
-            <label class="btn btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
+            <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
 
             <input type="radio"
                    checked="@(logStep?.Success)"
@@ -25,9 +25,7 @@
                    @onclick="@(() => HandleButtonPress(true))"
                    @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
             <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
-
-            <p>Selected Button: @(string.IsNullOrEmpty(SelectedButton) ? "None" : SelectedButton)</p>
-
+            
         </div>
         
         @if (logStep != null && ShowOptionalNotesField)
