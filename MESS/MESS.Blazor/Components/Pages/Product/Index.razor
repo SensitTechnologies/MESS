@@ -4,6 +4,7 @@
 @inject IProductService ProductService
 @inject NavigationManager NavigationManager
 
+
 <PageTitle>Product List</PageTitle>
 
 <h3>Product List</h3>
@@ -35,6 +36,44 @@ else
                 <td>
                     <button class="btn btn-primary btn-sm" @onclick="() => EditProduct(product.Id)">Edit</button>
                     <button class="btn btn-danger btn-sm" @onclick="() => RemoveProduct(product.Id)">Delete</button>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="5">
+                    <details>
+                        <summary>View Work Instructions and Work Stations</summary>
+                        <div style="padding: 10px;">
+                            <h5>Work Instructions</h5>
+                            @if (product.WorkInstructions != null && product.WorkInstructions.Any())
+                            {
+                                <ul>
+                                    @foreach (var instruction in product.WorkInstructions)
+                                    {
+                                        <li>@instruction.Title</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>No work instructions available.</p>
+                            }
+
+                            <h5>Work Stations</h5>
+                            @if (product.WorkStations != null && product.WorkStations.Any())
+                            {
+                                <ul>
+                                    @foreach (var workStation in product.WorkStations)
+                                    {
+                                        <li>@workStation.Name</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>No work stations available.</p>
+                            }
+                        </div>
+                    </details>
                 </td>
             </tr>
         }
