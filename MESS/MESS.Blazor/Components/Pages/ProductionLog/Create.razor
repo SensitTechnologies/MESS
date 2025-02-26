@@ -76,7 +76,8 @@
     public int? logId { get; set; }
     private string Title = "Add";
     private bool InProgress { get; set; } = false;
-    private const string InProgressKey = "INPROGRESS";
+    private const string InProgressKey = "IN_PROGRESS";
+    private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     
     protected ProductionLog ProductionLog = new();
     
@@ -113,10 +114,42 @@
             if (result.Success)
             {
                 InProgress = result.Value;
+                if (InProgress)
+                {
+                    await GetCachedActiveWorkInstructionAsync();
+                }
                 return;
             }
 
             await SetInProgressAsync(false);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task GetCachedActiveWorkInstructionAsync()
+    {
+        try
+        {
+            var t = await ProtectedLocalStorage.GetAsync<int>(ActiveWorkInstructionKey);
+            if (t.Success)
+            {
+                await LoadActiveWorkInstruction(t.Value);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
+    {
+        try
+        {
+            await ProtectedLocalStorage.SetAsync(ActiveWorkInstructionKey, workInstructionId);
         }
         catch (Exception e)
         {
@@ -153,6 +186,7 @@
             if (value.HasValue)
             {
                 await LoadActiveWorkInstruction(value.Value);
+                await SetCachedActiveWorkInstructionIdAsync(value.Value);
                 await SetInProgressAsync(true);
             }
         }
