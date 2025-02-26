@@ -1,12 +1,14 @@
 ﻿@page "/production-log/new"
 @page "/production-log/edit/{logId:int}"
 @using MESS.Data.Models
+@using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
+@inject IProductService ProductService
 @rendermode InteractiveServer
 
 <PageTitle>@Title</PageTitle>
@@ -26,16 +28,20 @@
                 </div>
                 
                 <div>
-                    @if (WorkInstructions != null && logId == null)
+                    @if (Products != null && logId == null)
                     {
                         <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
                             <option value="">Select Work Instruction</option>
-                            @foreach (var instruction in WorkInstructions)
+                            @foreach (var product in Products)
                             {
-                                <option value="@instruction.Id">@instruction.Title</option>
+                                @if (product.WorkInstructions == null)
+                                {
+                                    continue;
+                                }
+
+                                <option value="@product.WorkInstructions.First().Id">@product.Name</option>
                             }
                         </select>
-                        
                     }
                 </div>
 
@@ -62,28 +68,30 @@
     private string Title = "Add";
     protected ProductionLog ProductionLog = new();
     
-    private List<WorkInstruction>? WorkInstructions { get; set; }
+    private List<Product>? Products { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     private int? _selectedWorkInstructionId;
     
     protected override async Task OnInitializedAsync()
     {
-        await LoadWorkInstructions();
+        await LoadProducts();
         await LoadProductionLog();
     }
     
-    private async Task LoadWorkInstructions()
+
+    private async Task LoadProducts()
     {
         try
         {
-            WorkInstructions = await WorkInstructionService.GetAllAsync();
+            var productsAsync = await ProductService.GetAllProductsAsync();
+            Products = productsAsync.ToList();
         }
         catch (Exception e)
         {
             Log.Error("Error loading work instructions: {Message}", e.Message);
         }
     }
-
+    
     private async Task LoadProductionLog()
     {
         if (logId.HasValue && logId.Value != 0)
