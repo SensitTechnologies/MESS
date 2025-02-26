@@ -4,11 +4,17 @@
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using Newtonsoft.Json
+@using JsonSerializer = System.Text.Json.JsonSerializer
 @using Serilog
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
+@inject IJSRuntime JS
+@inject ProtectedLocalStorage ProtectedLocalStorage
+
 @rendermode InteractiveServer
 
 <PageTitle>@Title</PageTitle>
@@ -27,23 +33,26 @@
                     }
                 </div>
                 
-                <div>
-                    @if (Products != null && logId == null)
-                    {
-                        <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
-                            <option value="">Select Work Instruction</option>
-                            @foreach (var product in Products)
-                            {
-                                @if (product.WorkInstructions == null)
+                @if (!InProgress)
+                {
+                    <div>
+                        @if (Products != null && logId == null)
+                        {
+                            <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
+                                <option value="">Select Product</option>
+                                @foreach (var product in Products)
                                 {
-                                    continue;
-                                }
+                                    @if (product.WorkInstructions == null)
+                                    {
+                                        continue;
+                                    }
 
-                                <option value="@product.WorkInstructions.First().Id">@product.Name</option>
-                            }
-                        </select>
-                    }
-                </div>
+                                    <option value="@product.WorkInstructions.First().Id">@product.Name</option>
+                                }
+                            </select>
+                        }
+                    </div>
+                }
 
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
                 
@@ -66,6 +75,9 @@
     [Parameter]
     public int? logId { get; set; }
     private string Title = "Add";
+    private bool InProgress { get; set; } = false;
+    private const string InProgressKey = "INPROGRESS";
+    
     protected ProductionLog ProductionLog = new();
     
     private List<Product>? Products { get; set; }
@@ -73,10 +85,44 @@
     
     protected override async Task OnInitializedAsync()
     {
+        await GetInProgressAsync();
         await LoadProducts();
         await LoadProductionLog();
     }
-    
+
+    /// Sets the local storage variable
+    private async Task SetInProgressAsync(bool inProgress)
+    {
+        try
+        {
+            await ProtectedLocalStorage.SetAsync(InProgressKey, inProgress);
+            InProgress = inProgress;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    /// If retrieval fails set in progress too false to allow user to restart workflow
+    private async Task GetInProgressAsync()
+    {
+        try
+        {
+            var result = await ProtectedLocalStorage.GetAsync<bool>(InProgressKey);
+            if (result.Success)
+            {
+                InProgress = result.Value;
+                return;
+            }
+
+            await SetInProgressAsync(false);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
 
     private async Task LoadProducts()
     {
@@ -107,6 +153,7 @@
             if (value.HasValue)
             {
                 await LoadActiveWorkInstruction(value.Value);
+                await SetInProgressAsync(true);
             }
         }
         catch (Exception e)
