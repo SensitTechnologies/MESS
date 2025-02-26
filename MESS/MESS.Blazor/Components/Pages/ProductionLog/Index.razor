@@ -102,10 +102,10 @@ else
         NavigationManager.NavigateTo($"/production-log/edit/{logId}");
     }
     
-    private void DeleteProductionLog(int id)
+    private async void DeleteProductionLog(int id)
     {
         // Remove Production Log from database
-        ProductionLogService.Delete(id);
+        await ProductionLogService.DeleteAsync(id);
 
         // Update Production Log list state
         _productionLogs = _productionLogs?.Where(p => p.Id != id).ToList();

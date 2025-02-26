@@ -165,7 +165,7 @@
             ProductionLog.CreatedOn = currentTime;
             ProductionLog.LastModifiedOn = currentTime;
             ProductionLog.SubmitTime = currentTime;
-            ProductionLogService.Create(ProductionLog);
+            await ProductionLogService.CreateAsync(ProductionLog);
         }
 
         Cancel();
