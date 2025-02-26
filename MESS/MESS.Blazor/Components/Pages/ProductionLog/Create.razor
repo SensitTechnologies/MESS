@@ -70,7 +70,6 @@
     
     private List<Product>? Products { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
-    private int? _selectedWorkInstructionId;
     
     protected override async Task OnInitializedAsync()
     {
@@ -105,9 +104,6 @@
     {
         try
         {
-            if (_selectedWorkInstructionId == value) return;
-            _selectedWorkInstructionId = value;
-
             if (value.HasValue)
             {
                 await LoadActiveWorkInstruction(value.Value);
@@ -149,7 +145,7 @@
 
     
     
-    protected async void HandleSubmit()
+    protected async Task HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
         {
@@ -173,10 +169,11 @@
             ProductionLog.CreatedOn = currentTime;
             ProductionLog.LastModifiedOn = currentTime;
             ProductionLog.SubmitTime = currentTime;
-            ProductionLogService.Create(ProductionLog);
+            await ProductionLogService.CreateAsync(ProductionLog);
         }
-
-        Cancel();
+        
+        ResetForm();
+        NavigationManager.Refresh(true);
     }
     
     private void OnStepCompleted(ProductionLogStep step, bool success)
@@ -188,9 +185,8 @@
 
         StateHasChanged();
     }
-    
-    private void Cancel()
+
+    private void ResetForm()
     {
-        NavigationManager.NavigateTo("/production-log");
     }
 }

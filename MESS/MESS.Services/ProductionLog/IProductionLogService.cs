@@ -38,7 +38,7 @@ public interface IProductionLogService
     /// </summary>
     /// <param name="productionLog">ProductionLog</param>
     /// <returns>bool value indicating if the operation was successful</returns>
-    public bool Create(ProductionLog productionLog);
+    public Task<bool> CreateAsync(ProductionLog productionLog);
     /// <summary>
     /// Deletes an existing ProductionLog object from the database
     /// </summary>

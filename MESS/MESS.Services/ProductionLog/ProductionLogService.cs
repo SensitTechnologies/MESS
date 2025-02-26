@@ -114,7 +114,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public bool Create(ProductionLog productionLog)
+    public async Task<bool> CreateAsync(ProductionLog productionLog)
     {
         try
         {
@@ -122,7 +122,7 @@ public class ProductionLogService : IProductionLogService
             productionLog.SubmitTime = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             _context.ProductionLogs.Add(productionLog);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             
             Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
             
