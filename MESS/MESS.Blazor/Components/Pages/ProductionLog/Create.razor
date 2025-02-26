@@ -10,7 +10,6 @@
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
-@inject IJSRuntime JS
 @inject ProtectedLocalStorage ProtectedLocalStorage
 
 @rendermode InteractiveServer
@@ -19,8 +18,8 @@
 <ErrorBoundary>
     <ChildContent>
         <EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+            <DataAnnotationsValidator/>
+            <ValidationSummary/>
             <div class="mb-3">
                 <label for="Name" class="form-label">Product Name</label>
                 <div class="col-md-4">
@@ -31,10 +30,18 @@
                     }
                 </div>
                 
+                @if (IsEditMode)
+                {
+                    <div>
+                        <button @onclick="async _ => await ResetCachedValues()">Reset Configuration</button>
+                    </div>    
+                }
+                
+
                 @if (!InProgress)
                 {
                     <div>
-                        @if (Products != null && logId == null)
+                        @if (Products != null && IsEditMode)
                         {
                             <select @onchange="async e => await SetActiveProduct(int.Parse(e.Value?.ToString() ?? string.Empty))">
                                 <option value="">Select Product</option>
@@ -69,14 +76,14 @@
                 }
 
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
-                
+
             </div>
 
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save</button>
             </div>
-            
-            
+
+
         </EditForm>
     </ChildContent>
     <ErrorContent Context="ex">
@@ -88,6 +95,7 @@
 @code {
     [Parameter]
     public int? logId { get; set; }
+    private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
     private bool InProgress { get; set; } = false;
     private string? ActiveProduct { get; set; }
@@ -298,7 +306,7 @@
 
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
 
-        if (logId.HasValue)
+        if (IsEditMode)
         {
             // Update existing log
             ProductionLog.LastModifiedOn = currentTime;
@@ -313,7 +321,6 @@
             await ProductionLogService.CreateAsync(ProductionLog);
         }
         
-        ResetForm();
         NavigationManager.Refresh(true);
     }
     
@@ -327,7 +334,20 @@
         StateHasChanged();
     }
 
-    private void ResetForm()
+    /// Removes the current 'state' from the browsers local storage since they are navigating to a page
+    /// which will allow the operator to change product, or workstation, or to view previous session logs
+    private async Task ResetCachedValues()
     {
+        try
+        {
+            await ProtectedLocalStorage.DeleteAsync(ActiveProductKey);
+            await ProtectedLocalStorage.DeleteAsync(ActiveWorkInstructionKey);
+            await ProtectedLocalStorage.DeleteAsync(InProgressKey);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
+
 }
