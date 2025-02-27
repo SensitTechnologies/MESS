@@ -46,19 +46,84 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    public async Task<int> GetActiveWorkInstructionIdAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<int>(ActiveWorkInstructionKey);
+
+            if (result.Success)
+            {
+                return result.Value;
+            }
+
+            return -1;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return -1;
+        }
+    }
+
+
     public async Task SetActiveWorkInstructionIdAsync(int workInstructionId)
     {
-        await Task.Delay(1);
+        try
+        {
+            await _protectedLocalStorage.SetAsync(ActiveWorkInstructionKey, workInstructionId);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
     
 
     public async Task SetInProgressAsync(bool inProgress)
     {
-        await Task.Delay(1);
+        try
+        {
+            await _protectedLocalStorage.SetAsync(InProgressKey, inProgress);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 
-    public async Task GetInProgressAsync()
+    public async Task<bool> GetInProgressAsync()
     {
-        await Task.Delay(1);
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<bool>(InProgressKey);
+
+            if (!result.Success)
+            {
+                await SetInProgressAsync(false);
+            }
+
+            return result.Value;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw new KeyNotFoundException("Unable to find InProgress key from local storage");
+        }
     }
+
+    public async Task ResetCachedValuesAsync()
+    {
+        try
+        {
+            await _protectedLocalStorage.DeleteAsync(ActiveProductKey);
+            await _protectedLocalStorage.DeleteAsync(ActiveWorkInstructionKey);
+            await _protectedLocalStorage.DeleteAsync(InProgressKey);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
 }

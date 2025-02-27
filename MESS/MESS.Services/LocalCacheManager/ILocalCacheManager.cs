@@ -10,7 +10,11 @@ public interface ILocalCacheManager
     /// negative value if it was not found.
     /// </returns>
     public Task<int> GetActiveProductIdAsync();
+
+    public Task<int> GetActiveWorkInstructionIdAsync();
     public Task SetActiveWorkInstructionIdAsync(int workInstructionId);
     public Task SetInProgressAsync(bool inProgress);
-    public Task GetInProgressAsync();
+    public Task<bool> GetInProgressAsync();
+
+    public Task ResetCachedValuesAsync();
 }
