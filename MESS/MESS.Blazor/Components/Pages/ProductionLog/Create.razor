@@ -37,7 +37,7 @@
                     <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@WorkStation" LineOperator="@LineOperator"/>
                 }
 
-                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
+                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
 
             </div>
 
@@ -256,6 +256,9 @@
             // Update existing log
             ProductionLog.LastModifiedOn = currentTime;
             await ProductionLogService.UpdateAsync(ProductionLog);
+            
+            // Navigate to the log list page since there is no need to stay on the edit page since the state is unsaved
+            NavigationManager.NavigateTo("/production-log");
         }
         else
         {
