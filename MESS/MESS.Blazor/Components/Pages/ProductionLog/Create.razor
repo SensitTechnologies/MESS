@@ -128,7 +128,7 @@
                 await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
                 ActiveProduct = product.Name;
 
-                await LocalCacheManager.SetActiveProductIdAsync(product.Id);
+                await LocalCacheManager.SetActiveProductAsync(product);
             }
         }
         catch (Exception e)
@@ -139,8 +139,8 @@
     
     private async Task GetCachedActiveProductAsync()
     {
-        var result = await LocalCacheManager.GetActiveProductIdAsync();
-        if (Products != null) ActiveProduct = Products.FirstOrDefault(p => p.Id == result)?.Name;
+        var result = await LocalCacheManager.GetActiveProductAsync();
+        ActiveProduct = result.Name;
     }
 
     /// Sets the local storage variable
@@ -196,7 +196,7 @@
 
     private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
     {
-        await LocalCacheManager.SetActiveProductIdAsync(workInstructionId);
+        await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstructionId);
     }
 
     private async Task LoadProducts()

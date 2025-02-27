@@ -1,7 +1,9 @@
-﻿namespace MESS.Services.BrowserCacheManager;
+﻿using MESS.Data.DTO;
+
+namespace MESS.Services.BrowserCacheManager;
 
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-
+using Data.Models;
 public class LocalCacheManager : ILocalCacheManager
 {
     private const string InProgressKey = "IN_PROGRESS";
@@ -14,11 +16,18 @@ public class LocalCacheManager : ILocalCacheManager
         _protectedLocalStorage = protectedLocalStorage;
     }
     
-    public async Task SetActiveProductIdAsync(int productId)
+    public async Task SetActiveProductAsync(Product product)
     {
         try
         {
-            await _protectedLocalStorage.SetAsync(ActiveProductKey, productId);
+            // map to DTO
+            var productCacheDto = new ProductCacheDTO
+            {
+                Id = product.Id,
+                Name = product.Name
+            };
+            
+            await _protectedLocalStorage.SetAsync(ActiveProductKey, productCacheDto);
         }
         catch (Exception e)
         {
@@ -27,22 +36,22 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task<int> GetActiveProductIdAsync()
+    public async Task<ProductCacheDTO> GetActiveProductAsync()
     {
         try
         {
-            var t = await _protectedLocalStorage.GetAsync<int>(ActiveProductKey);
-            if (t.Success)
+            var t = await _protectedLocalStorage.GetAsync<ProductCacheDTO>(ActiveProductKey);
+            if (t is { Success: true, Value: not null })
             {
                 return t.Value;
             }
 
-            return -1;
+            return new ProductCacheDTO();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            return -1;
+            return new ProductCacheDTO();
         }
     }
 
