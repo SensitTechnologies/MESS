@@ -1,7 +1,7 @@
 @using MESS.Data.Models
 
 <div>
-    @if (Products != null && !IsEditMode)
+    @if (Products != null)
     {
         <select @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
             <option value="">Select Product</option>
@@ -20,8 +20,6 @@
 @code {
     [Parameter]
     public List<Product>? Products { get; set; }
-    [Parameter]
-    public bool IsEditMode { get; set; }
     [Parameter]
     public EventCallback<int> OnProductSelected { get; set; }
 }

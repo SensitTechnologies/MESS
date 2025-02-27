@@ -20,14 +20,6 @@
             <DataAnnotationsValidator/>
             <ValidationSummary/>
             <div class="mb-3">
-                <label for="Name" class="form-label">Product Name</label>
-                <div class="col-md-4">
-                    @if (ProductionLog.Product != null)
-                    {
-                        <InputText class="form-control" @bind-Value="ProductionLog.Product.Name"/>
-                        <ValidationMessage For="@(() => ProductionLog.Product.Name)"/>
-                    }
-                </div>
                 
                 @if (!IsEditMode)
                 {
@@ -36,9 +28,9 @@
                     </div>
                 }
 
-                @if (!InProgress)
+                @if (!InProgress && !IsEditMode)
                 {
-                    <ProductSelect Products="@Products" IsEditMode="@IsEditMode" OnProductSelected="@SetActiveProduct"/>
+                    <ProductSelect Products="@Products" OnProductSelected="@SetActiveProduct"/>
                 }
                 else
                 {
