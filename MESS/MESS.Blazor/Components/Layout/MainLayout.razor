@@ -1,15 +1,26 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu/>
-    </div>
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="" Match="NavLinkMatch.All">
+                <span>Home</span>
+            </NavLink>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="workInstruction" Match="NavLinkMatch.All">
+                <span>Work Instruction</span>
+            </NavLink>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="products" Match="NavLinkMatch.All">
+                <span></span> Products
+            </NavLink>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="production-log" Match="NavLinkMatch.All">
+                <span></span> Production Logs
+            </NavLink>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="work-stations" Match="NavLinkMatch.All">
+                <span></span> Work Stations
+            </NavLink>
         </div>
-
+        
         <article class="content px-4">
             @Body
         </article>
