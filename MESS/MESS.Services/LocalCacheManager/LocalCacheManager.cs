@@ -8,7 +8,7 @@ public class LocalCacheManager : ILocalCacheManager
 {
     private const string InProgressKey = "IN_PROGRESS";
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
-    private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT_ID";
+    private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
     public LocalCacheManager(ProtectedLocalStorage protectedLocalStorage)
