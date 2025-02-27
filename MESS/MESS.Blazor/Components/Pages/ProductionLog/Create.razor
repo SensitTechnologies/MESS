@@ -65,10 +65,14 @@
                             </h2>
                         </div>
                         <div>
-                            <h2></h2>
+                            <h2>
+                                @WorkStation
+                            </h2>
                         </div>
                         <div>
-                            <h2></h2>
+                            <h2>
+                                @LineOperator
+                            </h2>
                         </div>
                     </div>
                 }
@@ -95,8 +99,11 @@
     public int? logId { get; set; }
     private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
-    private bool InProgress { get; set; } = false;
+    private bool InProgress { get; set; }
+    
     private string? ActiveProduct { get; set; }
+    private string? WorkStation { get; set; }
+    private string? LineOperator { get; set; }
     
     protected ProductionLog ProductionLog = new();
     
@@ -108,6 +115,10 @@
         await GetInProgressAsync();
         await LoadProducts();
         await LoadProductionLog();
+        
+        // TO BE REMOVED
+        WorkStation = "Primary ABV";
+        LineOperator = "John Doe";
     }
 
     private async Task SetActiveProduct(int productId)
