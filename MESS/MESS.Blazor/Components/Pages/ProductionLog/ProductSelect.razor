@@ -19,9 +19,9 @@
 
 @code {
     [Parameter]
-    private List<Product>? Products { get; set; }
+    public List<Product>? Products { get; set; }
     [Parameter]
-    private bool IsEditMode { get; set; }
+    public bool IsEditMode { get; set; }
     [Parameter]
-    private EventCallback<int> OnProductSelected { get; set; }
+    public EventCallback<int> OnProductSelected { get; set; }
 }
