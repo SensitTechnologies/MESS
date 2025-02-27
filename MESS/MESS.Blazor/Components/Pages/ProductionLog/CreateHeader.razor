@@ -1,0 +1,26 @@
+<div>
+    <div>
+        <h2>
+            @ActiveProduct
+        </h2>
+    </div>
+    <div>
+        <h2>
+            @WorkStation
+        </h2>
+    </div>
+    <div>
+        <h2>
+            @LineOperator
+        </h2>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    private string? ActiveProduct { get; set; }
+    [Parameter]
+    private string? WorkStation { get; set; }
+    [Parameter]
+    private string? LineOperator { get; set; }
+}

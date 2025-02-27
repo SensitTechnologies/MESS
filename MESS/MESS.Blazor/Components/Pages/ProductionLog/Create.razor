@@ -58,23 +58,7 @@
                 }
                 else
                 {
-                    <div>
-                        <div>
-                            <h2>
-                                @ActiveProduct
-                            </h2>
-                        </div>
-                        <div>
-                            <h2>
-                                @WorkStation
-                            </h2>
-                        </div>
-                        <div>
-                            <h2>
-                                @LineOperator
-                            </h2>
-                        </div>
-                    </div>
+                    <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@WorkStation" LineOperator="@LineOperator"/>
                 }
 
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
