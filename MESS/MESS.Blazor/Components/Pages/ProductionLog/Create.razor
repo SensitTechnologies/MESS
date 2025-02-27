@@ -1,20 +1,24 @@
 ﻿@page "/production-log/new"
 @page "/production-log/edit/{logId:int}"
 @using MESS.Data.Models
+@using MESS.Services.BrowserCacheManager
+@using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
-@rendermode InteractiveServer
+@inject IProductService ProductService
+@inject ILocalCacheManager LocalCacheManager
+
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
     <ChildContent>
         <EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+            <DataAnnotationsValidator/>
+            <ValidationSummary/>
             <div class="mb-3">
                 <label for="Name" class="form-label">Product Name</label>
                 <div class="col-md-4">
@@ -25,29 +29,63 @@
                     }
                 </div>
                 
-                <div>
-                    @if (WorkInstructions != null && logId == null)
-                    {
-                        <select @onchange="async e => await SetSelectedWorkInstructionId(int.Parse(e.Value?.ToString() ?? string.Empty))">
-                            <option value="">Select Work Instruction</option>
-                            @foreach (var instruction in WorkInstructions)
-                            {
-                                <option value="@instruction.Id">@instruction.Title</option>
-                            }
-                        </select>
-                        
-                    }
-                </div>
+                @if (!IsEditMode)
+                {
+                    <div>
+                        <button @onclick="async _ => await ResetCachedValues()">Reset Configuration</button>
+                    </div>
+                }
+
+                @if (!InProgress)
+                {
+                    <div>
+                        @if (Products != null && !IsEditMode)
+                        {
+                            <select @onchange="async e => await SetActiveProduct(int.Parse(e.Value?.ToString() ?? string.Empty))">
+                                <option value="">Select Product</option>
+                                @foreach (var product in Products)
+                                {
+                                    @if (product.WorkInstructions == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    <option value="@product.Id">@product.Name</option>
+                                }
+                            </select>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <div>
+                            <h2>
+                                @ActiveProduct
+                            </h2>
+                        </div>
+                        <div>
+                            <h2>
+                                @WorkStation
+                            </h2>
+                        </div>
+                        <div>
+                            <h2>
+                                @LineOperator
+                            </h2>
+                        </div>
+                    </div>
+                }
 
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))"/>
-                
+
             </div>
 
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save</button>
             </div>
-            
-            
+
+
         </EditForm>
     </ChildContent>
     <ErrorContent Context="ex">
@@ -59,31 +97,132 @@
 @code {
     [Parameter]
     public int? logId { get; set; }
+    private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
+    private bool InProgress { get; set; }
+    
+    private string? ActiveProduct { get; set; }
+    private string? WorkStation { get; set; }
+    private string? LineOperator { get; set; }
+    
     protected ProductionLog ProductionLog = new();
     
-    private List<WorkInstruction>? WorkInstructions { get; set; }
+    private List<Product>? Products { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
-    private int? _selectedWorkInstructionId;
     
     protected override async Task OnInitializedAsync()
     {
-        await LoadWorkInstructions();
+        await GetInProgressAsync();
+        await LoadProducts();
         await LoadProductionLog();
+        
+        // TO BE REMOVED
+        WorkStation = "Primary ABV";
+        LineOperator = "John Doe";
     }
-    
-    private async Task LoadWorkInstructions()
+
+    private async Task SetActiveProduct(int productId)
     {
         try
         {
-            WorkInstructions = await WorkInstructionService.GetAllAsync();
+            if (Products != null)
+            {
+                var product = Products.FirstOrDefault(p => p.Id == productId);
+
+                if (product?.WorkInstructions == null)
+                {
+                    return;
+                }
+
+                // SETTING ACTIVE WORK INSTRUCTION TO THE FIRST IN THE LIST SINCE WE DO NOT YET KNOW IF THERE WILL BE 
+                // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
+                await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
+                ActiveProduct = product.Name;
+
+                await LocalCacheManager.SetActiveProductAsync(product);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+    
+    private async Task GetCachedActiveProductAsync()
+    {
+        var result = await LocalCacheManager.GetActiveProductAsync();
+        ActiveProduct = result.Name;
+    }
+
+    /// Sets the local storage variable
+    private async Task SetInProgressAsync(bool inProgress)
+    {
+        try
+        {
+            await LocalCacheManager.SetInProgressAsync(inProgress);
+            InProgress = inProgress;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    /// If retrieval fails set in progress too false to allow user to restart workflow
+    private async Task GetInProgressAsync()
+    {
+        try
+        {
+            var result = await LocalCacheManager.GetInProgressAsync();
+            
+            if (result)
+            {
+                InProgress = result;
+                await GetCachedActiveWorkInstructionAsync();
+                await GetCachedActiveProductAsync();
+                return;
+            }
+
+            await SetInProgressAsync(false);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+    
+
+    private async Task GetCachedActiveWorkInstructionAsync()
+    {
+        try
+        {
+            var result = await LocalCacheManager.GetActiveWorkInstructionIdAsync(); 
+            await LoadActiveWorkInstruction(result);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
+    {
+        await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstructionId);
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            var productsAsync = await ProductService.GetAllProductsAsync();
+            Products = productsAsync.ToList();
         }
         catch (Exception e)
         {
             Log.Error("Error loading work instructions: {Message}", e.Message);
         }
     }
-
+    
     private async Task LoadProductionLog()
     {
         if (logId.HasValue && logId.Value != 0)
@@ -97,12 +236,11 @@
     {
         try
         {
-            if (_selectedWorkInstructionId == value) return;
-            _selectedWorkInstructionId = value;
-
             if (value.HasValue)
             {
                 await LoadActiveWorkInstruction(value.Value);
+                await SetCachedActiveWorkInstructionIdAsync(value.Value);
+                await SetInProgressAsync(true);
             }
         }
         catch (Exception e)
@@ -141,7 +279,7 @@
 
     
     
-    protected async void HandleSubmit()
+    protected async Task HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
         {
@@ -153,7 +291,7 @@
 
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
 
-        if (logId.HasValue)
+        if (IsEditMode)
         {
             // Update existing log
             ProductionLog.LastModifiedOn = currentTime;
@@ -167,8 +305,8 @@
             ProductionLog.SubmitTime = currentTime;
             await ProductionLogService.CreateAsync(ProductionLog);
         }
-
-        Cancel();
+        
+        NavigationManager.Refresh(true);
     }
     
     private void OnStepCompleted(ProductionLogStep step, bool success)
@@ -180,9 +318,12 @@
 
         StateHasChanged();
     }
-    
-    private void Cancel()
+
+    /// Removes the current 'state' from the browsers local storage since they are navigating to a page
+    /// which will allow the operator to change product, or workstation, or to view previous session logs
+    private async Task ResetCachedValues()
     {
-        NavigationManager.NavigateTo("/production-log");
+        await LocalCacheManager.ResetCachedValuesAsync();
     }
+
 }

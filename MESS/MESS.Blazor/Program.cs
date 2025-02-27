@@ -2,8 +2,10 @@ using MESS.Blazor.Components;
 using MESS.Data.Context;
 using MESS.Services.Product;
 using MESS.Data.Seed;
+using MESS.Services.BrowserCacheManager;
 using MESS.Services.ProductionLog;
 using MESS.Services.WorkInstruction;
+using MESS.Services.WorkStation;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
@@ -29,6 +31,11 @@ builder.Services.AddTransient<IProductService, ProductService>();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
+builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
+builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
+builder.Services.AddHttpClient();
+builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
