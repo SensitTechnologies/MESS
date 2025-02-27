@@ -1,18 +1,17 @@
 ﻿@page "/production-log/new"
 @page "/production-log/edit/{logId:int}"
 @using MESS.Data.Models
+@using MESS.Services.BrowserCacheManager
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
-@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Serilog
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
-@inject ProtectedLocalStorage ProtectedLocalStorage
+@inject ILocalCacheManager LocalCacheManager
 
-@rendermode InteractiveServer
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -30,18 +29,17 @@
                     }
                 </div>
                 
-                @if (IsEditMode)
+                @if (!IsEditMode)
                 {
                     <div>
                         <button @onclick="async _ => await ResetCachedValues()">Reset Configuration</button>
-                    </div>    
+                    </div>
                 }
-                
 
                 @if (!InProgress)
                 {
                     <div>
-                        @if (Products != null && IsEditMode)
+                        @if (Products != null && !IsEditMode)
                         {
                             <select @onchange="async e => await SetActiveProduct(int.Parse(e.Value?.ToString() ?? string.Empty))">
                                 <option value="">Select Product</option>
@@ -100,10 +98,6 @@
     private bool InProgress { get; set; } = false;
     private string? ActiveProduct { get; set; }
     
-    private const string InProgressKey = "IN_PROGRESS";
-    private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
-    private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT_ID";
-    
     protected ProductionLog ProductionLog = new();
     
     private List<Product>? Products { get; set; }
@@ -134,7 +128,7 @@
                 await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
                 ActiveProduct = product.Name;
 
-                await ProtectedLocalStorage.SetAsync(ActiveProductKey, product.Id);
+                await LocalCacheManager.SetActiveProductIdAsync(product.Id);
             }
         }
         catch (Exception e)
@@ -143,13 +137,18 @@
         }
     }
     
+    private async Task GetCachedActiveProductAsync()
+    {
+        var result = await LocalCacheManager.GetActiveProductIdAsync();
+        if (Products != null) ActiveProduct = Products.FirstOrDefault(p => p.Id == result)?.Name;
+    }
 
     /// Sets the local storage variable
     private async Task SetInProgressAsync(bool inProgress)
     {
         try
         {
-            await ProtectedLocalStorage.SetAsync(InProgressKey, inProgress);
+            await LocalCacheManager.SetInProgressAsync(inProgress);
             InProgress = inProgress;
         }
         catch (Exception e)
@@ -163,11 +162,11 @@
     {
         try
         {
-            var result = await ProtectedLocalStorage.GetAsync<bool>(InProgressKey);
-            if (result.Success)
+            var result = await LocalCacheManager.GetInProgressAsync();
+            
+            if (result)
             {
-                InProgress = result.Value;
-                if (!InProgress) return;
+                InProgress = result;
                 await GetCachedActiveWorkInstructionAsync();
                 await GetCachedActiveProductAsync();
                 return;
@@ -181,31 +180,13 @@
         }
     }
     
-    private async Task GetCachedActiveProductAsync()
-    {
-        try
-        {
-            var t = await ProtectedLocalStorage.GetAsync<string>(ActiveProductKey);
-            if (t.Success)
-            {
-                ActiveProduct = t.Value;
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-    }
 
     private async Task GetCachedActiveWorkInstructionAsync()
     {
         try
         {
-            var t = await ProtectedLocalStorage.GetAsync<int>(ActiveWorkInstructionKey);
-            if (t.Success)
-            {
-                await LoadActiveWorkInstruction(t.Value);
-            }
+            var result = await LocalCacheManager.GetActiveWorkInstructionIdAsync(); 
+            await LoadActiveWorkInstruction(result);
         }
         catch (Exception e)
         {
@@ -215,14 +196,7 @@
 
     private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
     {
-        try
-        {
-            await ProtectedLocalStorage.SetAsync(ActiveWorkInstructionKey, workInstructionId);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        await LocalCacheManager.SetActiveProductIdAsync(workInstructionId);
     }
 
     private async Task LoadProducts()
@@ -338,16 +312,7 @@
     /// which will allow the operator to change product, or workstation, or to view previous session logs
     private async Task ResetCachedValues()
     {
-        try
-        {
-            await ProtectedLocalStorage.DeleteAsync(ActiveProductKey);
-            await ProtectedLocalStorage.DeleteAsync(ActiveWorkInstructionKey);
-            await ProtectedLocalStorage.DeleteAsync(InProgressKey);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        await LocalCacheManager.ResetCachedValuesAsync();
     }
 
 }
