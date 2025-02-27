@@ -1,0 +1,26 @@
+@attribute [StreamRendering]
+
+<div>
+    <input type="time" @bind-value="Time" />
+</div>
+
+@code {
+    private DateTimeOffset _time;
+    [Parameter]
+    public DateTimeOffset Time
+    {
+        get => _time;
+        set
+        {
+            if (_time != value)
+            {
+                _time = value;
+                BindingTimeChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<DateTimeOffset> BindingTimeChanged { get; set; }
+    
+}
