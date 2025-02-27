@@ -38,23 +38,7 @@
 
                 @if (!InProgress)
                 {
-                    <div>
-                        @if (Products != null && !IsEditMode)
-                        {
-                            <select @onchange="async e => await SetActiveProduct(int.Parse(e.Value?.ToString() ?? string.Empty))">
-                                <option value="">Select Product</option>
-                                @foreach (var product in Products)
-                                {
-                                    @if (product.WorkInstructions == null)
-                                    {
-                                        continue;
-                                    }
-
-                                    <option value="@product.Id">@product.Name</option>
-                                }
-                            </select>
-                        }
-                    </div>
+                    <ProductSelect Products="@Products" IsEditMode="@IsEditMode" OnProductSelected="@SetActiveProduct"/>
                 }
                 else
                 {
