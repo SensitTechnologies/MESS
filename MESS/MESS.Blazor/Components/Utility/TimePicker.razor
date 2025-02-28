@@ -1,7 +1,7 @@
 @attribute [StreamRendering]
 
 <div>
-    <input type="time" step="1" value="@Time.ToString("HH:mm:ss")" @onchange="ChangeTime"/>
+    <input type="time" class="custom-time-input" step="1" value="@Time.ToString("HH:mm:ss")" @onchange="ChangeTime"/>
 </div>
 
 @code {

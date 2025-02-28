@@ -1,0 +1,8 @@
+.custom-time-input {
+    border: 2px solid #4CAF50; /* Green border */
+    border-radius: 4px; /* Rounded corners */
+    padding: 5px; /* Padding inside the input */
+    font-size: 16px; /* Font size */
+    color: #333; /* Text color */
+    background-color: #f9f9f9; /* Background color */
+}
