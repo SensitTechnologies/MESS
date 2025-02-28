@@ -263,6 +263,11 @@
             Console.WriteLine("No Work Instruction selected.");
             return;
         }
+        
+        // Check if the current time is before the previous step's submit time
+        var _validator = new LogStepValidator();
+        var validationResult = await _validator.ValidateAsync(ProductionLog.LogSteps);
+        Console.WriteLine(validationResult);
 
         var currentTime = DateTimeOffset.UtcNow;
 
@@ -292,14 +297,6 @@
     private void OnStepCompleted(ProductionLogStep step, bool success)
     {
         var currentTime = DateTimeOffset.UtcNow;
-        var previousStep = ProductionLog.LogSteps
-            .Where(s => s.SubmitTime != default)
-            .MaxBy(s => s.SubmitTime);
-
-        if (previousStep != null && currentTime < previousStep.SubmitTime)
-        {
-            return;
-        }
         
         step.Success = success;
         step.SubmitTime = currentTime;

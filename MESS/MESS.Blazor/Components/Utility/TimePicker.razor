@@ -4,9 +4,9 @@
     <input type="time"
            class="custom-time-input"
            step="1"
-           value="@Time.ToString("HH:mm:ss")"
-           min="@Min?.ToString("HH:mm:ss")"
-           max="@Max?.ToString("HH:mm:ss")"
+           value="@Time.LocalDateTime.ToString("HH:mm:ss")"
+           min="@Min?.LocalDateTime.ToString("HH:mm:ss")"
+           max="@Max?.LocalDateTime.ToString("HH:mm:ss")"
            @onchange="ChangeTime"/>
 </div>
 
