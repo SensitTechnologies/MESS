@@ -32,14 +32,16 @@
                 @if (logStep != null)
                 {
                 
-                    @if (ShowOptionalNotesField)
-                    {
-                        <InputTextArea class="form-control w-50 mx-5 custom-textarea" @bind-Value="logStep.Notes" />
-                    }
-                    @if (IsEditMode)
-                    {
-                        <TimePicker @bind-Time="logStep.SubmitTime" CssClass="mx-4"/>
-                    }
+                    <div class="d-inline-flex ">
+                        @if (ShowOptionalNotesField)
+                        {
+                            <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value="logStep.Notes" />
+                        }
+                        @if (IsEditMode)
+                        {
+                            <TimePicker @bind-Time="logStep.SubmitTime" CssClass="ms-2 me-2"/>
+                        }
+                    </div>
                 }
             </div>
         </div>
