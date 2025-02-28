@@ -6,6 +6,7 @@
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
 @using Serilog
+@using MESS.Blazor.Components.Utility
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
@@ -40,6 +41,15 @@
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
 
             </div>
+
+            @if (IsEditMode)
+            {
+                <div>
+                    <label>Submit Time:</label>
+                    <TimePicker @bind-Time="ProductionLog.SubmitTime"
+                            Min="@GetLatestStepTime()" Max="null"/>
+                </div>
+            }
 
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save</button>
@@ -79,6 +89,13 @@
         // TO BE REMOVED
         WorkStation = "Primary ABV";
         LineOperator = "John Doe";
+    }
+    
+    private DateTimeOffset? GetLatestStepTime()
+    {
+        return ProductionLog.LogSteps
+            .Where(s => s.SubmitTime != default)
+            .Max(s => s.SubmitTime as DateTimeOffset?);
     }
 
     private async Task SetActiveProduct(int productId)
@@ -275,7 +292,15 @@
     private void OnStepCompleted(ProductionLogStep step, bool success)
     {
         var currentTime = DateTimeOffset.UtcNow;
+        var previousStep = ProductionLog.LogSteps
+            .Where(s => s.SubmitTime != default)
+            .MaxBy(s => s.SubmitTime);
 
+        if (previousStep != null && currentTime < previousStep.SubmitTime)
+        {
+            return;
+        }
+        
         step.Success = success;
         step.SubmitTime = currentTime;
 

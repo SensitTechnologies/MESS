@@ -1,20 +1,34 @@
 @attribute [StreamRendering]
 
 <div>
-    <input type="time" class="custom-time-input" step="1" value="@Time.ToString("HH:mm:ss")" @onchange="ChangeTime"/>
+    <input type="time"
+           class="custom-time-input"
+           step="1"
+           value="@Time.ToString("HH:mm:ss")"
+           min="@Min?.ToString("HH:mm:ss")"
+           max="@Max?.ToString("HH:mm:ss")"
+           @onchange="ChangeTime"/>
 </div>
 
 @code {
     [Parameter]
     public DateTimeOffset Time { get; set; }
+    [Parameter]
+    public DateTimeOffset? Min { get; set; }
 
+    [Parameter]
+    public DateTimeOffset? Max { get; set; }
     [Parameter]
     public EventCallback<DateTimeOffset> TimeChanged { get; set; }
     
-    private async void ChangeTime(ChangeEventArgs e)
+    private async Task ChangeTime(ChangeEventArgs e)
     {
         if (DateTimeOffset.TryParse(e.Value?.ToString(), out var time))
         {
+            if ((Min.HasValue && time < Min.Value) || (Max.HasValue && time > Max.Value))
+            {
+                return;
+            }
             await TimeChanged.InvokeAsync(time);
         }
     }
