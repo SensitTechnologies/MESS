@@ -42,18 +42,24 @@
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
 
             </div>
+            <div class="d-inline-flex justify-content-center gap-4">
 
-            @if (IsEditMode)
-            {
-                <div>
-                    <label>Submit Time:</label>
-                    <TimePicker @bind-Time="ProductionLog.SubmitTime"
-                            Min="@GetLatestStepTime()" Max="null" CssClass=""/>
+                @if (IsEditMode)
+                {
+                    <div class="d-flex align-items-center form-control">
+                        <label for="timePickerSubmit" class="me-2">Submit Time:</label>
+                        <div id="timePickerSubmit">
+                            <TimePicker @bind-Time="ProductionLog.SubmitTime"
+                                        Min="@GetLatestStepTime()" Max="null" CssClass="mb-0"/>
+                        </div>
+                        
+                    </div>
+                }
+
+                <div class="text-end align-content-center">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    
                 </div>
-            }
-
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save</button>
             </div>
 
 
