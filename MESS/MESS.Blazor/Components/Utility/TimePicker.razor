@@ -2,7 +2,7 @@
 
 <div>
     <input type="time"
-           class="custom-time-input"
+           class="btn btn-outline-secondary @CssClass"
            step="1"
            value="@Time.LocalDateTime.ToString("HH:mm:ss")"
            min="@Min?.LocalDateTime.ToString("HH:mm:ss")"
@@ -18,6 +18,8 @@
 
     [Parameter]
     public DateTimeOffset? Max { get; set; }
+    [Parameter]
+    public string? CssClass { get; set; }
     [Parameter]
     public EventCallback<DateTimeOffset> TimeChanged { get; set; }
     
