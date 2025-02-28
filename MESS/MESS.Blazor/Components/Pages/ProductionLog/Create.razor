@@ -20,6 +20,7 @@
         <EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator/>
             <ValidationSummary/>
+            <TimeFormValidator TModel="ProductionLog" Validator="_validator"></TimeFormValidator>
             <div class="mb-3">
                 
                 @if (!IsEditMode)
@@ -79,6 +80,7 @@
     
     private List<Product>? Products { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
+    private readonly ProductionLogValidator _validator = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -265,9 +267,9 @@
         }
         
         // Check if the current time is before the previous step's submit time
-        var _validator = new LogStepValidator();
-        var validationResult = await _validator.ValidateAsync(ProductionLog.LogSteps);
-        Console.WriteLine(validationResult);
+        // var _validator = new LogStepValidator();
+        // var validationResult = await _validator.ValidateAsync(ProductionLog.LogSteps);
+        // Console.WriteLine(validationResult);
 
         var currentTime = DateTimeOffset.UtcNow;
 
