@@ -38,8 +38,8 @@
                     }
                     @if (IsEditMode)
                     {
-                        @* <TimePicker @bind-Time="logStep.SubmitTime" /> *@
-                        <input type="time" @bind="logStep.SubmitTime" @bind:format="hh:mm:ss"/>
+                        <TimePicker @bind-Time="logStep.SubmitTime" />
+                        @* <input type="time" @bind="logStep.SubmitTime" @bind:format="hh:mm:ss"/> *@
                     }
                 }
             </div>

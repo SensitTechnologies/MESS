@@ -1,26 +1,22 @@
 @attribute [StreamRendering]
 
 <div>
-    <input type="time" @bind-value="Time" />
+    <input type="time" step="1" value="@Time.ToString("HH:mm:ss")" @onchange="ChangeTime"/>
 </div>
 
 @code {
-    private DateTimeOffset _time;
     [Parameter]
-    public DateTimeOffset Time
-    {
-        get => _time;
-        set
-        {
-            if (_time != value)
-            {
-                _time = value;
-                BindingTimeChanged.InvokeAsync(value);
-            }
-        }
-    }
+    public DateTimeOffset Time { get; set; }
 
     [Parameter]
-    public EventCallback<DateTimeOffset> BindingTimeChanged { get; set; }
+    public EventCallback<DateTimeOffset> TimeChanged { get; set; }
+    
+    private async void ChangeTime(ChangeEventArgs e)
+    {
+        if (DateTimeOffset.TryParse(e.Value?.ToString(), out var time))
+        {
+            await TimeChanged.InvokeAsync(time);
+        }
+    }
     
 }
