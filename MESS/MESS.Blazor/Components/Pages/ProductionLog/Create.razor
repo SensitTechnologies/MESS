@@ -17,28 +17,46 @@
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
     <ChildContent>
-        <EditForm FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
+        <EditForm class="container" FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator/>
             <ValidationSummary/>
             <TimeFormValidator TModel="ProductionLog" Validator="_validator"></TimeFormValidator>
             <div class="mb-3">
-                
-                @if (!IsEditMode)
-                {
-                    <div>
-                        <button @onclick="async _ => await ResetCachedValues()">Reset Configuration</button>
+                <div class="container ps-0 d-inline-flex justify-content-between gap-0">
+                    @if (!InProgress && !IsEditMode)
+                    {
+                        <ProductSelect Products="@Products" OnProductSelected="@SetActiveProduct"/>
+                    }
+                    else
+                    {
+                        <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@WorkStation" LineOperator="@LineOperator"/>
+                    }
+
+                    <div class="d-inline-flex gap-2">
+                        <div class="align-content-center">
+                            <p class="mb-2">
+                                @if (IsSaved)
+                                {
+                                    <span class="badge text-bg-success p-2">Saved</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-danger p-2">Unsaved</span>
+                                }
+                            </p>
+                        </div>
+                        @if (!IsEditMode)
+                        {
+                            <div>
+                                <button class="btn btn-warning" @onclick="async _ => await ResetCachedValues()">Reset Configuration</button>
+                            </div>
+                        }
                     </div>
-                }
 
-                @if (!InProgress && !IsEditMode)
-                {
-                    <ProductSelect Products="@Products" OnProductSelected="@SetActiveProduct"/>
-                }
-                else
-                {
-                    <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@WorkStation" LineOperator="@LineOperator"/>
-                }
 
+                    
+                </div>
+                
                 <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
 
             </div>
@@ -61,18 +79,7 @@
                     
                 </div>
                 
-                <div>
-                    <p>
-                        @if (IsSaved)
-                        {
-                            <span class="text-success">Saved</span>
-                        }
-                        else
-                        {
-                            <span class="text-danger">Unsaved</span>
-                        }
-                    </p>
-                </div>
+
                 
             </div>
 
@@ -272,7 +279,7 @@
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
     }
-    
+
     /// Loads a Production Log from the database
     private async Task LoadExistingLog(int id)
     {
@@ -286,7 +293,7 @@
             {
                 await SetSelectedWorkInstructionId(ProductionLog.WorkInstruction.Id);
             }
-            
+
         }
         else
         {
@@ -294,8 +301,6 @@
         }
     }
 
-    
-    
     protected async Task HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
