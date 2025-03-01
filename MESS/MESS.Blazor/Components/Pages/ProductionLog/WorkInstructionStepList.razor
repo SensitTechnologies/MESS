@@ -14,10 +14,8 @@
                 {
                     WorkInstructionStepId = step.Id,
                     ProductionLogId = ProductionLog.Id,
-                    SubmitTime = DateTimeOffset.UtcNow
                 };
                 ProductionLog.LogSteps.Add(logStep);
-                // StateHasChanged();
             }
             
             <ProductionLogRadioButton IsEditMode="@IsEditMode" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />

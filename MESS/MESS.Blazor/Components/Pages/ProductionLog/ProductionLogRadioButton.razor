@@ -1,5 +1,7 @@
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Utility
+@attribute [StreamRendering]
+
 <li class="list-group-item btn-group mb-2" role="group">
     <div class="row">
         <div class="col">
@@ -12,11 +14,10 @@
                     <input type="radio"
                            checked="@(!logStep?.Success)"
                            autocomplete="off"
-                           @onclick="@(() => HandleButtonPress(false))"
+                           @onclick="@(async (e) => await HandleButtonPress(false))"
                            class="btn-check"
                            name="radioBtn{@step.Name}"
-                           id="radioFailureBtn{@step.Name}"
-                           @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, false)); } })"/>
+                           id="radioFailureBtn{@step.Name}" />
                     <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
 
                     <input type="radio"
@@ -25,8 +26,7 @@
                            class="btn-check"
                            name="radioBtn{@step.Name}"
                            id="radioSuccessBtn{@step.Name}"
-                           @onclick="@(() => HandleButtonPress(true))"
-                           @onchange="@(async e => { if (logStep != null) { await OnStepCompleted.InvokeAsync((logStep, true)); } })"/>
+                           @onclick="@(async (e) => await HandleButtonPress(true))" />
                     <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
                 </div>
                 @if (logStep != null)
@@ -85,15 +85,18 @@
         }
     }
 
-    private void HandleButtonPress(bool result)
+    private async Task HandleButtonPress(bool result)
     {
         if (!result)
         {
             ShowOptionalNotesField = !ShowOptionalNotesField;
+            
+            await OnStepCompleted.InvokeAsync((logStep, false));
         }
         else
         {
             ShowOptionalNotesField = false;
+            await OnStepCompleted.InvokeAsync((logStep, true));
         }
 
         SetSelectedButton(result ? "Success" : "Failure");
