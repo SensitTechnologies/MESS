@@ -347,8 +347,13 @@
         {
             // Persist the changes to the local storage
             await LocalCacheManager.SetNewProductionLogFormAsync(ProductionLog);
-            IsSaved = true;
-        }, null, 5000, Timeout.Infinite); // 500ms delay
+            
+            await InvokeAsync(() =>
+            {
+                IsSaved = true;
+                StateHasChanged();
+            });
+        }, null, 2000, Timeout.Infinite); // 500ms delay
 
         StateHasChanged();
     }
