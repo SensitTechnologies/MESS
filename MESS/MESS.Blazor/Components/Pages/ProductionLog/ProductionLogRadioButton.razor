@@ -1,5 +1,7 @@
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Utility
+@using MESS.Services.BrowserCacheManager
+@inject ILocalCacheManager LocalCacheManager
 @attribute [StreamRendering]
 
 <li class="list-group-item btn-group mb-2" role="group">
@@ -60,9 +62,7 @@
     
     protected override void OnInitialized()
     {
-        // If logStep.ID is 0 that indicates it is being created for the first time
-        // if set to anything other than 0 it is being edited
-        if (logStep.Id == 0) return;
+        if (!IsEditMode) return;
         
         SetSelectedButton(logStep.Success ? "Success" : "Failure");
         SetOptionalNotes();
@@ -90,7 +90,6 @@
         if (!result)
         {
             ShowOptionalNotesField = !ShowOptionalNotesField;
-            
             await OnStepCompleted.InvokeAsync((logStep, false));
         }
         else

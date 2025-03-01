@@ -47,7 +47,8 @@ public class LocalCacheManager : ILocalCacheManager
                 ProductionLogId = step.ProductionLogId,
                 Success = step.Success,
                 SubmitTime = step.SubmitTime,
-                Notes = step.Notes
+                Notes = step.Notes,
+                ShowNotes = step.Notes.Length > 0
             });
         }
 
