@@ -62,7 +62,13 @@
     
     protected override void OnInitialized()
     {
-        if (!IsEditMode) return;
+        // if (!IsEditMode) return;
+        
+        // If the SubmitTime is equal to the default value, then the operator has not yet submitted the step
+        if (logStep.SubmitTime == DateTimeOffset.MinValue)
+        {
+            return;
+        }
         
         SetSelectedButton(logStep.Success ? "Success" : "Failure");
         SetOptionalNotes();
