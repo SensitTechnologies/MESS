@@ -9,13 +9,71 @@ public class LocalCacheManager : ILocalCacheManager
     private const string InProgressKey = "IN_PROGRESS";
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
+    private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
     public LocalCacheManager(ProtectedLocalStorage protectedLocalStorage)
     {
         _protectedLocalStorage = protectedLocalStorage;
     }
+
+    public async Task SetNewProductionLogFormAsync(ProductionLog? productionLog)
+    {
+        try
+        {
+            if (productionLog == null)
+            {
+                await _protectedLocalStorage.DeleteAsync(ProductionLogFormKey);
+                return;
+            }
+
+            var productionLogForm = MapProductionLogToDto(productionLog);
+            await _protectedLocalStorage.SetAsync(ProductionLogFormKey, productionLogForm);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
     
+    private static ProductionLogFormDTO MapProductionLogToDto(ProductionLog productionLog)
+    {
+        var productionLogFormDto = new ProductionLogFormDTO();
+        foreach (var step in productionLog.LogSteps)
+        {
+            productionLogFormDto.LogSteps.Add(new ProductionLogStepDTO
+            {
+                WorkInstructionStepId = step.WorkInstructionStepId,
+                ProductionLogId = step.ProductionLogId,
+                Success = step.Success,
+                SubmitTime = step.SubmitTime,
+                Notes = step.Notes
+            });
+        }
+
+        return productionLogFormDto;
+    }
+
+    public async Task<ProductionLogFormDTO> GetProductionLogFormAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<ProductionLogFormDTO>(ProductionLogFormKey);
+
+            if (result is { Success: true, Value: not null })
+            {
+                return result.Value;
+            }
+
+            return new ProductionLogFormDTO();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return new ProductionLogFormDTO();
+        }
+    }
+
     public async Task SetActiveProductAsync(Product product)
     {
         try

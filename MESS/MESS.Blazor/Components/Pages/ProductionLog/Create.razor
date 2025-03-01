@@ -298,13 +298,17 @@
             ProductionLog.SubmitTime = currentTime;
             await ProductionLogService.CreateAsync(ProductionLog);
         }
-        
+
+        // Reset the local storage values
+        await LocalCacheManager.SetNewProductionLogFormAsync(null);
         NavigationManager.Refresh(true);
     }
     
-    private void OnStepCompleted(ProductionLogStep step, bool success)
+    private async Task OnStepCompleted(ProductionLogStep step, bool success)
     {
         var currentTime = DateTimeOffset.UtcNow;
+
+        await LocalCacheManager.SetNewProductionLogFormAsync(ProductionLog);
         
         step.Success = success;
         step.SubmitTime = currentTime;
