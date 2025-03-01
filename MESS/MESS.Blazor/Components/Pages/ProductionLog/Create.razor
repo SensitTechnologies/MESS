@@ -22,7 +22,7 @@
             <ValidationSummary/>
             <TimeFormValidator TModel="ProductionLog" Validator="_validator"></TimeFormValidator>
             <div class="mb-3">
-                <div class="container ps-0 d-inline-flex justify-content-between gap-0">
+                <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                     @if (!InProgress && !IsEditMode)
                     {
                         <ProductSelect Products="@Products" OnProductSelected="@SetActiveProduct"/>
@@ -32,9 +32,9 @@
                         <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@WorkStation" LineOperator="@LineOperator"/>
                     }
 
-                    <div class="d-inline-flex gap-2">
-                        <div class="align-content-center">
-                            <p class="mb-2">
+                    <div class="d-inline-flex gap-2 align-items-center flex-sm-wrap">
+                        <div class="">
+                            <p class="mb-0">
                                 @if (IsSaved)
                                 {
                                     <span class="badge text-bg-success p-2">Saved</span>
