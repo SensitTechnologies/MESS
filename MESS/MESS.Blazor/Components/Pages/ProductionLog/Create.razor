@@ -27,7 +27,8 @@
                     @if (!IsWorkflowActive && !IsEditMode)
                     {
                         <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
-                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(ActiveWorkStation))" Products="@Products" OnProductSelected="@SetActiveProduct"/>
+                        var stationProducts = LoadAssociatedProductsFromStation();
+                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(ActiveWorkStation))" Products="@stationProducts" OnProductSelected="@SetActiveProduct"/>
                     }
                     else
                     {

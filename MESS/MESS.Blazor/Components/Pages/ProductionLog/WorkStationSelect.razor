@@ -5,7 +5,7 @@
     {
         <label for="product-select">Select Station</label>
         <select id="product-select" class="form-select" @onchange="async e => await OnWorkStationSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
-            <option value="">Select Station</option>
+            <option value="-1">Select Station</option>
             @foreach (var workStation in WorkStations)
             {
                 <option value="@workStation.Id">@workStation.Name</option>

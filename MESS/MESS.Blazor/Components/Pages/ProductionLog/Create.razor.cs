@@ -45,7 +45,7 @@ public partial class Create : ComponentBase
         await LoadWorkStations();
         await LoadProducts();
         await LoadProductionLog();
-
+        
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
 
@@ -400,6 +400,31 @@ public partial class Create : ComponentBase
             Console.WriteLine(e);
             Log.Error("Error checking work instruction status: {Message}", e.Message);
             return false;
+        }
+    }
+
+    private List<Product> LoadAssociatedProductsFromStation()
+    {
+        try
+        {
+            if (ActiveWorkStation == null || WorkStations == null)
+            {
+                return [];
+            }
+
+            var workStation = WorkStations.FirstOrDefault(w => w.Name == ActiveWorkStation);
+
+            if (workStation == null)
+            {
+                return [];
+            }
+
+            return workStation.Products;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
         }
     }
 
