@@ -57,7 +57,7 @@
                     
                 </div>
                 
-                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@((args) => OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
+                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
 
             </div>
             <div class="d-flex justify-content-center mt-4 gap-4">
@@ -74,7 +74,7 @@
                 }
 
                 <div class="mb-4">
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button disabled="@InProgress" type="submit" class="btn btn-primary">Save</button>
                 </div>
                 
             </div>

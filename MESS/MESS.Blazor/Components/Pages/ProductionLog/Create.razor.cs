@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
 
@@ -11,6 +12,7 @@ public partial class Create : ComponentBase
     private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
+    private bool InProgress { get; set; } = false;
     
     private string? ActiveProduct { get; set; }
     private string? ActiveWorkStation { get; set; }
@@ -279,6 +281,8 @@ public partial class Create : ComponentBase
             return;
         }
 
+        InProgress = false;
+
         var currentTime = DateTimeOffset.UtcNow;
 
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
@@ -306,7 +310,7 @@ public partial class Create : ComponentBase
         NavigationManager.Refresh(true);
     }
     
-    private void OnStepCompleted(ProductionLogStep step, bool success)
+    private async Task OnStepCompleted(ProductionLogStep step, bool success)
     {
         var currentTime = DateTimeOffset.UtcNow;
         
@@ -319,6 +323,11 @@ public partial class Create : ComponentBase
         step.Success = success;
 
         IsSaved = false;
+
+        var workInstructionStatus = await WorkInstructionStatus();
+
+        InProgress = !workInstructionStatus;
+        
         
         // Cancel current timer if it exists
         _debounceTimer?.DisposeAsync();
@@ -336,6 +345,36 @@ public partial class Create : ComponentBase
         }, null, DELAY_TIME, Timeout.Infinite); // 2 Second delay
 
         StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Determines if the operator has completed all steps in the work instruction
+    /// </summary>
+    /// <returns>Returns True if each step in the work instruction has been completed. False otherwise.</returns>
+    private async Task<bool> WorkInstructionStatus()
+    {
+        try
+        {
+            var result = false;
+            await Task.Run(() =>
+            {
+                var t = ProductionLog.LogSteps.Find(s => s.SubmitTime == default);
+
+                // If t is null then all steps have been completed
+                if (t == null)
+                {
+                    result = true;
+                }
+            });
+
+            return result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            Log.Error("Error checking work instruction status: {Message}", e.Message);
+            return false;
+        }
     }
 
     /// Removes the current 'state' from the browsers local storage since they are navigating to a page
