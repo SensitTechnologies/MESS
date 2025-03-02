@@ -5,14 +5,22 @@ namespace MESS.Blazor.Components.Pages.ProductionLog;
 
 using Data.Models;
 
+internal enum Status
+{
+    NotStarted,
+    InProgress,
+    Completed,
+    Edit
+}
 public partial class Create : ComponentBase
 {
+
     [Parameter]
     public int? logId { get; set; }
     private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
-    private bool InProgress { get; set; } = true;
+    private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
     
     private string? ActiveProduct { get; set; }
     private string? ActiveWorkStation { get; set; }
@@ -37,12 +45,11 @@ public partial class Create : ComponentBase
         await LoadWorkStations();
         await LoadProducts();
         await LoadProductionLog();
-        
-        InProgress = !IsEditMode;
-        
+
+        WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
         
         var cachedFormData = await LocalCacheManager.GetProductionLogFormAsync();
-        if (cachedFormData != null && cachedFormData.LogSteps.Any())
+        if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
         {
             ProductionLog = new ProductionLog
             {
@@ -58,6 +65,17 @@ public partial class Create : ComponentBase
         
         // TO BE REMOVED
         ActiveLineOperator = "John Doe";
+    }
+    
+    private async Task HandleResetConfiguration()
+    {
+        // Do not allow operator to reset configuration if work instruction is started or if it is deemed complete
+        if (WorkInstructionStatus is Status.InProgress or Status.Completed)
+        {
+            return;
+        }
+        
+        await ResetCachedValues();
     }
     
     private DateTimeOffset? GetLatestStepTime()
@@ -283,7 +301,6 @@ public partial class Create : ComponentBase
             return;
         }
 
-        InProgress = false;
 
         var currentTime = DateTimeOffset.UtcNow;
 
@@ -326,9 +343,9 @@ public partial class Create : ComponentBase
 
         IsSaved = false;
 
-        var workInstructionStatus = await WorkInstructionStatus();
+        var currentStatus = await GetWorkInstructionStatus();
 
-        InProgress = !workInstructionStatus;
+        WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
         
         
         // Cancel current timer if it exists
@@ -353,7 +370,7 @@ public partial class Create : ComponentBase
     /// Determines if the operator has completed all steps in the work instruction
     /// </summary>
     /// <returns>Returns True if each step in the work instruction has been completed. False otherwise.</returns>
-    private async Task<bool> WorkInstructionStatus()
+    private async Task<bool> GetWorkInstructionStatus()
     {
         try
         {

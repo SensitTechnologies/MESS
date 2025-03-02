@@ -50,7 +50,7 @@
                         @if (!IsEditMode)
                         {
                             <div>
-                                <button class="btn btn-warning" @onclick="async _ => await ResetCachedValues()">Reset Configuration</button>
+                                <button disabled="@(WorkInstructionStatus is Status.InProgress or Status.Completed)" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
                             </div>
                         }
                     </div>
@@ -74,7 +74,7 @@
                 }
 
                 <div class="mb-4">
-                    <button disabled="@InProgress" type="submit" class="btn btn-primary">Save</button>
+                    <button disabled="@(WorkInstructionStatus is Status.NotStarted or Status.InProgress)" type="submit" class="btn btn-primary">Save</button>
                 </div>
                 
             </div>
