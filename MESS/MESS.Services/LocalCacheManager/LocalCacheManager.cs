@@ -10,6 +10,7 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
+    private const string ActiveWorkStationKey = "LAST_KNOWN_WORK_STATION";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
     public LocalCacheManager(ProtectedLocalStorage protectedLocalStorage)
@@ -80,13 +81,13 @@ public class LocalCacheManager : ILocalCacheManager
         try
         {
             // map to DTO
-            var productCacheDto = new ProductCacheDTO
+            var CacheDTO = new CacheDTO
             {
                 Id = product.Id,
                 Name = product.Name
             };
             
-            await _protectedLocalStorage.SetAsync(ActiveProductKey, productCacheDto);
+            await _protectedLocalStorage.SetAsync(ActiveProductKey, CacheDTO);
         }
         catch (Exception e)
         {
@@ -95,22 +96,22 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task<ProductCacheDTO> GetActiveProductAsync()
+    public async Task<CacheDTO> GetActiveProductAsync()
     {
         try
         {
-            var t = await _protectedLocalStorage.GetAsync<ProductCacheDTO>(ActiveProductKey);
+            var t = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveProductKey);
             if (t is { Success: true, Value: not null })
             {
                 return t.Value;
             }
 
-            return new ProductCacheDTO();
+            return new CacheDTO();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            return new ProductCacheDTO();
+            return new CacheDTO();
         }
     }
 
@@ -131,6 +132,44 @@ public class LocalCacheManager : ILocalCacheManager
         {
             Console.WriteLine(e);
             return -1;
+        }
+    }
+
+    public async Task<CacheDTO> GetActiveWorkStationAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveWorkStationKey);
+
+            if (result is { Success: true, Value: not null })
+            {
+                return result.Value;
+            }
+
+            return new CacheDTO();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return new CacheDTO();
+        }
+    }
+
+    public async Task SetActiveWorkStationAsync(WorkStation workStation)
+    {
+        try
+        {
+            var CacheDTO = new CacheDTO
+            {
+                Id = workStation.Id,
+                Name = workStation.Name
+            };
+            
+            await _protectedLocalStorage.SetAsync(ActiveWorkStationKey, CacheDTO);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
         }
     }
 
