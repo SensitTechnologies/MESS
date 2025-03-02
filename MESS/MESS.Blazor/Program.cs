@@ -4,6 +4,7 @@ using MESS.Services.Product;
 using MESS.Data.Seed;
 using MESS.Services.BrowserCacheManager;
 using MESS.Services.ProductionLog;
+using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using MESS.Services.WorkStation;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
+builder.Services.AddTransient<ISessionManager, SessionManager>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 
