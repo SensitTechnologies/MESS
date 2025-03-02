@@ -12,7 +12,7 @@ public partial class Create : ComponentBase
     private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
-    private bool InProgress { get; set; } = false;
+    private bool InProgress { get; set; } = true;
     
     private string? ActiveProduct { get; set; }
     private string? ActiveWorkStation { get; set; }
@@ -37,6 +37,8 @@ public partial class Create : ComponentBase
         await LoadWorkStations();
         await LoadProducts();
         await LoadProductionLog();
+        
+        InProgress = !IsEditMode;
         
         
         var cachedFormData = await LocalCacheManager.GetProductionLogFormAsync();
