@@ -25,7 +25,8 @@
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                     @if (!InProgress && !IsEditMode)
                     {
-                        <ProductSelect Products="@Products" OnProductSelected="@SetActiveProduct"/>
+                        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
+                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(WorkStation))" Products="@Products" OnProductSelected="@SetActiveProduct"/>
                     }
                     else
                     {
@@ -99,14 +100,18 @@
     
     protected ProductionLog ProductionLog = new();
     
+    private List<WorkStation>? WorkStations { get; set; }
     private List<Product>? Products { get; set; }
+    
+    
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     private readonly ProductionLogValidator _validator = new();
+    
     private Timer? _debounceTimer;
     private bool IsSaved { get; set; }
-    
-    private int _delayTime = 2000;
-    
+
+    private const int DELAY_TIME = 2000;
+
     protected override async Task OnInitializedAsync()
     {
         await GetInProgressAsync();
@@ -139,6 +144,31 @@
         return ProductionLog.LogSteps
             .Where(s => s.SubmitTime != default)
             .Max(s => s.SubmitTime as DateTimeOffset?);
+    }
+    
+    private async Task SetActiveWorkStation(int workStationId)
+    {
+        try
+        {
+            if (WorkStations != null)
+            {
+                var workStation = WorkStations.FirstOrDefault(p => p.Id == workStationId);
+
+                if (workStation?.Products == null)
+                {
+                    return;
+                }
+
+                WorkStation = workStation.Name;
+                await Task.CompletedTask;
+
+                // await LocalCacheManager.SetActiveProductAsync(product);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 
     private async Task SetActiveProduct(int productId)
@@ -359,7 +389,7 @@
                 IsSaved = true;
                 StateHasChanged();
             });
-        }, null, _delayTime, Timeout.Infinite); // 2 Second delay
+        }, null, DELAY_TIME, Timeout.Infinite); // 2 Second delay
 
         StateHasChanged();
     }
