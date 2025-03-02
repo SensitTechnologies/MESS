@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Data.Models;
 public class LocalCacheManager : ILocalCacheManager
 {
-    private const string InProgressKey = "IN_PROGRESS";
+    private const string IsWorkflowActiveKey = "IS_WORKFLOW_ACTIVE";
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
@@ -187,11 +187,11 @@ public class LocalCacheManager : ILocalCacheManager
     }
     
 
-    public async Task SetInProgressAsync(bool inProgress)
+    public async Task SetIsWorkflowActiveAsync(bool inActive)
     {
         try
         {
-            await _protectedLocalStorage.SetAsync(InProgressKey, inProgress);
+            await _protectedLocalStorage.SetAsync(IsWorkflowActiveKey, inActive);
         }
         catch (Exception e)
         {
@@ -199,15 +199,15 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task<bool> GetInProgressAsync()
+    public async Task<bool> GetWorkflowActiveStatusAsync()
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<bool>(InProgressKey);
+            var result = await _protectedLocalStorage.GetAsync<bool>(IsWorkflowActiveKey);
 
             if (!result.Success)
             {
-                await SetInProgressAsync(false);
+                await SetIsWorkflowActiveAsync(false);
             }
 
             return result.Value;
@@ -215,7 +215,7 @@ public class LocalCacheManager : ILocalCacheManager
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw new KeyNotFoundException("Unable to find InProgress key from local storage");
+            throw new KeyNotFoundException("Unable to find IsWorkflowActive key from local storage");
         }
     }
 
@@ -223,9 +223,10 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
+            await _protectedLocalStorage.DeleteAsync(ActiveWorkStationKey);
             await _protectedLocalStorage.DeleteAsync(ActiveProductKey);
             await _protectedLocalStorage.DeleteAsync(ActiveWorkInstructionKey);
-            await _protectedLocalStorage.DeleteAsync(InProgressKey);
+            await _protectedLocalStorage.DeleteAsync(IsWorkflowActiveKey);
         }
         catch (Exception e)
         {

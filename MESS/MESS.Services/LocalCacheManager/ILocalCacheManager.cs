@@ -25,8 +25,8 @@ public interface ILocalCacheManager
     public Task<CacheDTO> GetActiveWorkStationAsync();
     public Task SetActiveWorkStationAsync(WorkStation workStation);
     public Task SetActiveWorkInstructionIdAsync(int workInstructionId);
-    public Task SetInProgressAsync(bool inProgress);
-    public Task<bool> GetInProgressAsync();
+    public Task SetIsWorkflowActiveAsync(bool isActive);
+    public Task<bool> GetWorkflowActiveStatusAsync();
 
     public Task ResetCachedValuesAsync();
 }

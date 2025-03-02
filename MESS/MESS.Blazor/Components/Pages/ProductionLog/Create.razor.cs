@@ -10,7 +10,7 @@ public partial class Create : ComponentBase
     public int? logId { get; set; }
     private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
-    private bool InProgress { get; set; }
+    private bool IsWorkflowActive { get; set; }
     
     private string? ActiveProduct { get; set; }
     private string? ActiveWorkStation { get; set; }
@@ -121,12 +121,12 @@ public partial class Create : ComponentBase
     }
 
     /// Sets the local storage variable
-    private async Task SetInProgressAsync(bool inProgress)
+    private async Task SetInProgressAsync(bool isActive)
     {
         try
         {
-            await LocalCacheManager.SetInProgressAsync(inProgress);
-            InProgress = inProgress;
+            await LocalCacheManager.SetIsWorkflowActiveAsync(isActive);
+            IsWorkflowActive = isActive;
         }
         catch (Exception e)
         {
@@ -139,12 +139,12 @@ public partial class Create : ComponentBase
     {
         try
         {
-            var result = await LocalCacheManager.GetInProgressAsync();
+            var result = await LocalCacheManager.GetWorkflowActiveStatusAsync();
             
             // If the result is true, then the operator was previously in the middle of a workflow
             if (result)
             {
-                InProgress = result;
+                IsWorkflowActive = result;
                 await GetCachedActiveWorkStationAsync();
                 await GetCachedActiveWorkInstructionAsync();
                 await GetCachedActiveProductAsync();

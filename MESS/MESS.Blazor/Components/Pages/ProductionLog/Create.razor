@@ -24,7 +24,7 @@
             <TimeFormValidator TModel="ProductionLog" Validator="_validator"></TimeFormValidator>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                    @if (!InProgress && !IsEditMode)
+                    @if (!IsWorkflowActive && !IsEditMode)
                     {
                         <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
                         <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(ActiveWorkStation))" Products="@Products" OnProductSelected="@SetActiveProduct"/>
@@ -54,8 +54,6 @@
                             </div>
                         }
                     </div>
-
-
                     
                 </div>
                 
