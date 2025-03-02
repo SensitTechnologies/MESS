@@ -70,7 +70,6 @@
                             <TimePicker @bind-Time="ProductionLog.SubmitTime"
                                         Min="@GetLatestStepTime()" Max="null" CssClass="mb-0"/>
                         </div>
-                        
                     </div>
                 }
 
@@ -105,6 +104,8 @@
     private readonly ProductionLogValidator _validator = new();
     private Timer? _debounceTimer;
     private bool IsSaved { get; set; }
+    
+    private int _delayTime = 2000;
     
     protected override async Task OnInitializedAsync()
     {
@@ -335,8 +336,13 @@
     {
         var currentTime = DateTimeOffset.UtcNow;
         
+        // Only changing the submit time if it is the default value as to avoid issues where the operator
+        // may have submitted the step and then changed their mind, which results in a negative time difference
+        if (step.SubmitTime == DateTimeOffset.MinValue)
+        {
+            step.SubmitTime = currentTime;
+        }
         step.Success = success;
-        step.SubmitTime = currentTime;
 
         IsSaved = false;
         
@@ -353,7 +359,7 @@
                 IsSaved = true;
                 StateHasChanged();
             });
-        }, null, 2000, Timeout.Infinite); // 500ms delay
+        }, null, _delayTime, Timeout.Infinite); // 2 Second delay
 
         StateHasChanged();
     }
