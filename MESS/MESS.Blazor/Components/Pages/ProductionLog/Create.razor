@@ -161,9 +161,8 @@
                 }
 
                 ActiveWorkStation = workStation.Name;
-                await Task.CompletedTask;
-
-                // await LocalCacheManager.SetActiveProductAsync(product);
+                
+                await LocalCacheManager.SetActiveWorkStationAsync(workStation);
             }
         }
         catch (Exception e)
@@ -226,11 +225,14 @@
         {
             var result = await LocalCacheManager.GetInProgressAsync();
             
+            // If the result is true, then the operator was previously in the middle of a workflow
             if (result)
             {
                 InProgress = result;
+                await GetCachedActiveWorkStationAsync();
                 await GetCachedActiveWorkInstructionAsync();
                 await GetCachedActiveProductAsync();
+                
                 return;
             }
 
@@ -241,7 +243,19 @@
             Console.WriteLine(e);
         }
     }
-    
+
+    private async Task GetCachedActiveWorkStationAsync()
+    {
+        try
+        {
+            var result = await LocalCacheManager.GetActiveWorkStationAsync();
+            ActiveWorkStation = result.Name;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
 
     private async Task GetCachedActiveWorkInstructionAsync()
     {
