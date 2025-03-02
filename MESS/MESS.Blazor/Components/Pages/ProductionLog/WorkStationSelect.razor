@@ -3,15 +3,11 @@
 <div>
     @if (WorkStations != null)
     {
-        <label for="product-select">Select Product</label>
+        <label for="product-select">Select Station</label>
         <select id="product-select" class="form-select" @onchange="async e => await OnWorkStationSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
-            <option value="">Select Product</option>
+            <option value="">Select Station</option>
             @foreach (var workStation in WorkStations)
             {
-                @if (workStation.Products.Count == 0)
-                {
-                    continue;
-                }
                 <option value="@workStation.Id">@workStation.Name</option>
             }
         </select>

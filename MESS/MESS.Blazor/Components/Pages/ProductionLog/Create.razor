@@ -7,11 +7,13 @@
 @using MESS.Services.WorkInstruction
 @using Serilog
 @using MESS.Blazor.Components.Utility
+@using MESS.Services.WorkStation
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject ILocalCacheManager LocalCacheManager
+@inject IWorkStationService WorkStationService
 @attribute [StreamRendering]
 
 <PageTitle>@Title</PageTitle>
@@ -103,7 +105,6 @@
     private List<WorkStation>? WorkStations { get; set; }
     private List<Product>? Products { get; set; }
     
-    
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     private readonly ProductionLogValidator _validator = new();
     
@@ -115,6 +116,7 @@
     protected override async Task OnInitializedAsync()
     {
         await GetInProgressAsync();
+        await LoadWorkStations();
         await LoadProducts();
         await LoadProductionLog();
         
@@ -269,7 +271,20 @@
         }
         catch (Exception e)
         {
-            Log.Error("Error loading work instructions: {Message}", e.Message);
+            Log.Error("Error loading products: {Message}", e.Message);
+        }
+    }
+    
+    private async Task LoadWorkStations()
+    {
+        try
+        {
+            var workStationsAsync = await WorkStationService.GetAllWorkStationsAsync();
+            WorkStations = workStationsAsync.ToList();
+        }
+        catch (Exception e)
+        {
+            Log.Error("Error loading work stations: {Message}", e.Message);
         }
     }
     
