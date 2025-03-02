@@ -28,11 +28,11 @@
                     @if (!InProgress && !IsEditMode)
                     {
                         <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
-                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(WorkStation))" Products="@Products" OnProductSelected="@SetActiveProduct"/>
+                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(ActiveWorkStation))" Products="@Products" OnProductSelected="@SetActiveProduct"/>
                     }
                     else
                     {
-                        <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@WorkStation" LineOperator="@LineOperator"/>
+                        <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@ActiveWorkStation" LineOperator="@ActiveLineOperator"/>
                     }
 
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
@@ -97,8 +97,8 @@
     private bool InProgress { get; set; }
     
     private string? ActiveProduct { get; set; }
-    private string? WorkStation { get; set; }
-    private string? LineOperator { get; set; }
+    private string? ActiveWorkStation { get; set; }
+    private string? ActiveLineOperator { get; set; }
     
     protected ProductionLog ProductionLog = new();
     
@@ -137,7 +137,7 @@
         }
         
         // TO BE REMOVED
-        LineOperator = "John Doe";
+        ActiveLineOperator = "John Doe";
     }
     
     private DateTimeOffset? GetLatestStepTime()
@@ -160,7 +160,7 @@
                     return;
                 }
 
-                WorkStation = workStation.Name;
+                ActiveWorkStation = workStation.Name;
                 await Task.CompletedTask;
 
                 // await LocalCacheManager.SetActiveProductAsync(product);
