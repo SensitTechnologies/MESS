@@ -46,11 +46,21 @@ public partial class Create : ComponentBase
         await LoadProducts();
         await LoadProductionLog();
 
+        // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
+
+        await LoadCachedForm();
         
+        // TO BE REMOVED
+        ActiveLineOperator = "John Doe";
+    }
+    
+    private async Task LoadCachedForm()
+    {
         var cachedFormData = await LocalCacheManager.GetProductionLogFormAsync();
         if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
         {
+            WorkInstructionStatus = Status.InProgress;
             ProductionLog = new ProductionLog
             {
                 LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
@@ -62,9 +72,6 @@ public partial class Create : ComponentBase
                 }).ToList()
             };
         }
-        
-        // TO BE REMOVED
-        ActiveLineOperator = "John Doe";
     }
     
     private async Task HandleResetConfiguration()
