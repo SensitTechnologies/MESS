@@ -82,6 +82,11 @@ public partial class Create : ComponentBase
                 }).ToList()
             };
         }
+
+        if (ProductionLog.LogSteps.TrueForAll(p => p.SubmitTime != DateTimeOffset.MinValue))
+        {
+            WorkInstructionStatus = Status.Completed;
+        }
     }
     
     private async Task HandleResetConfiguration()
