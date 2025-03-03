@@ -102,6 +102,9 @@ public class ProductionLogService : IProductionLogService
             var productionLog = await _context.ProductionLogs
                 .Include(p => p.LogSteps)
                 .ThenInclude(p => p.WorkInstructionStep)
+                .Include(w => w.WorkInstruction)
+                .Include(p => p.Product)
+                .Include(w => w.WorkStation)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             return productionLog;

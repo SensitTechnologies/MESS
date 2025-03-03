@@ -41,11 +41,17 @@ public partial class Create : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await GetInProgressAsync();
-        await LoadWorkStations();
-        await LoadProducts();
-        await LoadProductionLog();
-        
+        // While in edit mode operators cannot swap product/station. Do not load ALL products
+        if (!IsEditMode)
+        {
+            await GetInProgressAsync();
+            await LoadWorkStations();
+            await LoadProducts();
+        }
+        else
+        {
+            await LoadProductionLog();
+        }
         
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
@@ -82,6 +88,12 @@ public partial class Create : ComponentBase
         {
             return;
         }
+        
+        // Reset current form selection
+        ActiveProduct = null;
+        ActiveWorkStation = null;
+        WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
+        IsWorkflowActive = false;
         
         await ResetCachedValues();
     }
@@ -291,9 +303,20 @@ public partial class Create : ComponentBase
 
             if (ProductionLog.WorkInstruction != null)
             {
-                await SetSelectedWorkInstructionId(ProductionLog.WorkInstruction.Id);
+                ActiveWorkInstruction = ProductionLog.WorkInstruction;
             }
 
+            if (ProductionLog.Product != null)
+            {
+                ActiveProduct = ProductionLog.Product.Name;
+            }
+            
+            if (ProductionLog.WorkStation != null)
+            {
+                ActiveWorkStation = ProductionLog.WorkStation.Name;
+            }
+
+            StateHasChanged();
         }
         else
         {
@@ -329,6 +352,8 @@ public partial class Create : ComponentBase
             ProductionLog.CreatedOn = currentTime;
             ProductionLog.LastModifiedOn = currentTime;
             ProductionLog.SubmitTime = currentTime;
+            ProductionLog.Product = Products?.Find(w => w.Name == ActiveProduct);
+            ProductionLog.WorkStation = WorkStations?.Find(w => w.Name == ActiveWorkStation);
             await ProductionLogService.CreateAsync(ProductionLog);
         }
 
@@ -337,7 +362,14 @@ public partial class Create : ComponentBase
         
         // Add the new log to the session
         await SessionManager.AddProductionLogAsync(ProductionLog.Id);
-        NavigationManager.Refresh(true);
+        ResetFormState();
+    }
+
+    private void ResetFormState()
+    {
+        ProductionLog = new ProductionLog();
+        WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
+        StateHasChanged();
     }
     
     private async Task OnStepCompleted(ProductionLogStep step, bool success)

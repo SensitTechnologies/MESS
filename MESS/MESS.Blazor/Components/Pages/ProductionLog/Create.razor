@@ -15,7 +15,6 @@
 @inject ILocalCacheManager LocalCacheManager
 @inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
-@attribute [StreamRendering]
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -53,14 +52,17 @@
                         @if (!IsEditMode)
                         {
                             <div>
-                                <button disabled="@(WorkInstructionStatus is Status.InProgress or Status.Completed)" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
+                                <button type="button" disabled="@(WorkInstructionStatus is Status.InProgress or Status.Completed)" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
                             </div>
                         }
                     </div>
                     
                 </div>
                 
-                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
+                @if (ActiveWorkInstruction != null)
+                {
+                    <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
+                }
 
             </div>
             <div class="d-flex justify-content-center mt-4 gap-4">
