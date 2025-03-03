@@ -1,7 +1,6 @@
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
     <CreateHeaderCard Title="Product" Text="@ActiveProduct"></CreateHeaderCard>
     <CreateHeaderCard Title="Work Station" Text="@WorkStation"></CreateHeaderCard>
-    <CreateHeaderCard Title="Operator" Text="@LineOperator"></CreateHeaderCard>
 </div>
 
 @code {
@@ -9,6 +8,4 @@
     public string? ActiveProduct { get; set; }
     [Parameter]
     public string? WorkStation { get; set; }
-    [Parameter]
-    public string? LineOperator { get; set; }
 }
