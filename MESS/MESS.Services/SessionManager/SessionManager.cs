@@ -1,44 +1,55 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 namespace MESS.Services.SessionManager;
 using Data.Models;
 
 public class SessionManager : ISessionManager
 {
-    private IHttpContextAccessor HttpContextAccessor { get; set; }
-    private HttpClient HttpClient { get; set; }
-    private const string PRODUCTION_LOG_COOKIE_KEY = "CURRENT_PRODUCTION_LOGS";
+    private readonly ProtectedSessionStorage _protectedSessionStorage;
+    private const string PRODUCTION_LOG_SESSION_KEY = "CURRENT_PRODUCTION_LOGS";
 
-    public SessionManager(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
+    public SessionManager(ProtectedSessionStorage protectedSessionStorage)
     {
-        HttpClient = httpClient;
-        HttpContextAccessor = httpContextAccessor;
+        _protectedSessionStorage = protectedSessionStorage;
     }
 
-    public void AddProductionLog(int log)
+    public async Task AddProductionLogAsync(int log)
     {
-        var context = HttpContextAccessor.HttpContext;
-        var logs = GetProductionLogIds();
+        var logs = await GetProductionLogIdsAsync();
         logs?.Add(log);
-        var logsJson = JsonSerializer.Serialize(logs);
-        context?.Response.Cookies.Append(PRODUCTION_LOG_COOKIE_KEY, logsJson, new CookieOptions { HttpOnly = true, Secure = true });
-    }
-
-    public List<int>? GetProductionLogIds()
-    {
-        var context = HttpContextAccessor.HttpContext;
-        var logsJson = context?.Request.Cookies[PRODUCTION_LOG_COOKIE_KEY];
-        if (string.IsNullOrEmpty(logsJson))
+        if (logs == null)
         {
-            return new List<int>();
+            return;
         }
-        return JsonSerializer.Deserialize<List<int>>(logsJson);
+        await _protectedSessionStorage.SetAsync(PRODUCTION_LOG_SESSION_KEY, logs);
     }
 
-    public void ClearProductionLogs()
+    public async Task<List<int>?> GetProductionLogIdsAsync()
     {
-        var context = HttpContextAccessor.HttpContext;
-        context?.Response.Cookies.Delete(PRODUCTION_LOG_COOKIE_KEY);
+        try
+        {
+            var logList = await _protectedSessionStorage.GetAsync<List<int>>(PRODUCTION_LOG_SESSION_KEY);
+            return logList.Success ? logList.Value : [];
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
+        }
+
+    }
+
+    public async Task ClearProductionLogsAsync()
+    {
+        try
+        {
+            await _protectedSessionStorage.DeleteAsync(PRODUCTION_LOG_SESSION_KEY);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 }

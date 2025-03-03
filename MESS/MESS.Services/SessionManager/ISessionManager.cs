@@ -2,7 +2,7 @@
 using Data.Models;
 public interface ISessionManager
 {
-    public void AddProductionLog(int logId);
-    public List<int>? GetProductionLogIds();
-    public void ClearProductionLogs();
+    public Task AddProductionLogAsync(int logId);
+    public Task<List<int>?> GetProductionLogIdsAsync();
+    public Task ClearProductionLogsAsync();
 }
