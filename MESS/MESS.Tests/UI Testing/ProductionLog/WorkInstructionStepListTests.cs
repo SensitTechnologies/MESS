@@ -116,4 +116,68 @@ public class WorkInstructionStepListTests : TestContext
         Assert.Contains(1, completedSteps);
         Assert.Contains(2, completedSteps);
     }
+    
+    [Fact]
+    public void WorkInstructionStepListComponentHandlesCompletionWithExistingLogSteps()
+    {
+        // Arrange
+        var steps = new List<Step>
+        {
+            new Step { Id = 1, Name = "Step 1" },
+            new Step { Id = 2, Name = "Step 2" }
+        };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Steps = steps };
+        var productionLog = new ProductionLog
+        {
+            LogSteps = new List<ProductionLogStep>
+            {
+                new ProductionLogStep { WorkInstructionStepId = 1, ProductionLogId = 1 }
+            }
+        };
+        var stepCompleted = false;
+        
+        var mockLocalCacheManager = new Mock<ILocalCacheManager>();
+        Services.AddSingleton(mockLocalCacheManager.Object);
+
+        var cut = RenderComponent<WorkInstructionStepList>(parameters => parameters
+            .Add(p => p.ActiveWorkInstruction, activeWorkInstruction)
+            .Add(p => p.ProductionLog, productionLog)
+            .Add(p => p.OnStepCompleted, EventCallback.Factory.Create<(ProductionLogStep, bool)>(this, _ => stepCompleted = true)));
+
+        // Act
+        var radioButton = cut.Find("input[type='radio']");
+        radioButton.Click();
+
+        // Assert
+        Assert.True(stepCompleted);
+    }
+    
+    [Fact]
+    public void WorkInstructionStepListComponentHandlesStepCompletionInEditMode()
+    {
+        // Arrange
+        var steps = new List<Step>
+        {
+            new Step { Id = 1, Name = "Step 1" }
+        };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Steps = steps };
+        var productionLog = new ProductionLog { LogSteps = new List<ProductionLogStep>() };
+        var stepCompleted = false;
+        
+        var mockLocalCacheManager = new Mock<ILocalCacheManager>();
+        Services.AddSingleton(mockLocalCacheManager.Object);
+
+        var cut = RenderComponent<WorkInstructionStepList>(parameters => parameters
+            .Add(p => p.ActiveWorkInstruction, activeWorkInstruction)
+            .Add(p => p.ProductionLog, productionLog)
+            .Add(p => p.IsEditMode, true)
+            .Add(p => p.OnStepCompleted, EventCallback.Factory.Create<(ProductionLogStep, bool)>(this, _ => stepCompleted = true)));
+
+        // Act
+        var radioButton = cut.Find("input[type='radio']");
+        radioButton.Click();
+
+        // Assert
+        Assert.True(stepCompleted);
+    }
 }

@@ -4,10 +4,9 @@ using MESS.Data.Models;
 using Microsoft.AspNetCore.Components;
 
 namespace MESS.Tests.UI_Testing.ProductionLog;
-
 public class ProductSelectTests : TestContext
 {
-        [Fact]
+    [Fact]
     public void ProductSelectComponentFiresOnProductSelectedEvent()
     {
         // Arrange
