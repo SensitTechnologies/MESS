@@ -59,7 +59,7 @@
                     
                 </div>
                 
-                @if (ActiveWorkInstruction != null)
+                @if (ActiveWorkInstruction != null && ActiveProduct != null)
                 {
                     <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
                 }

@@ -56,7 +56,10 @@ public partial class Create : ComponentBase
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
 
-        await LoadCachedForm();
+        if (!IsEditMode)
+        {
+            await LoadCachedForm();
+        }
         
         // TO BE REMOVED
         ActiveLineOperator = "John Doe";
