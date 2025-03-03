@@ -15,7 +15,7 @@ public class WorkStationSelectTests : TestContext
             .Add(p => p.WorkStations, new List<WorkStation>()));
 
         // Assert
-        var selectElement = cut.Find("select#product-select");
+        var selectElement = cut.Find("select#workstation-select");
         Assert.Equal(1, selectElement.Children.Length);
     }
     
@@ -54,7 +54,7 @@ public class WorkStationSelectTests : TestContext
             }));
 
         // Act
-        var selectElement = cut.Find("select#product-select");
+        var selectElement = cut.Find("select#workstation-select");
         selectElement.Change("2");
 
         // Assert
