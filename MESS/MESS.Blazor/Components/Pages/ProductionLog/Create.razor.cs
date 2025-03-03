@@ -46,6 +46,7 @@ public partial class Create : ComponentBase
         await LoadProducts();
         await LoadProductionLog();
         
+        
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
 
@@ -333,6 +334,9 @@ public partial class Create : ComponentBase
 
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
+        
+        // Add the new log to the session
+        await SessionManager.AddProductionLogAsync(ProductionLog.Id);
         NavigationManager.Refresh(true);
     }
     

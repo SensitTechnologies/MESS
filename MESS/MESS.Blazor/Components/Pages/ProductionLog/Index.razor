@@ -1,8 +1,10 @@
 ﻿@page "/production-log"
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
+@using MESS.Services.SessionManager
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
+@inject ISessionManager SessionManager
 
 @if (_productionLogs == null)
 {
@@ -88,7 +90,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _productionLogs = await ProductionLogService.GetAllAsync();
+        var logIds = await SessionManager.GetProductionLogIdsAsync();
+        if (logIds != null)
+        {
+            _productionLogs = await ProductionLogService.GetProductionLogsByListOfIdsAsync(logIds);
+        }
     }
     
 

@@ -183,5 +183,27 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-
+    public async Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds)
+    {
+        try
+        {
+            if (logIds.Count <= 0)
+            {
+                return [];
+            }
+            
+            return await _context.ProductionLogs
+                .Include(p => p.WorkInstruction)
+                .ThenInclude(w => w!.Steps)
+                .Include(p => p.LineOperator)
+                .Include(p => p.LogSteps)
+                .Where(p => logIds.Contains(p.Id))
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
+        }
+    }
 }

@@ -40,4 +40,10 @@ public interface IProductionLogService
     /// <param name="existingProductionLog">The existing ProductionLog object</param>
     /// <returns>boolean success/failure value</returns>
     public Task<bool> UpdateAsync(ProductionLog existingProductionLog);
+    /// <summary>
+    /// Retrieves a List of ProductionLog objects asynchronously from a list of IDs
+    /// </summary>
+    /// <param name="logIds">A list of integer production log ids</param>
+    /// <returns>A List of Production Log object</returns>
+    public Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds);
 }

@@ -6,6 +6,7 @@
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
 @using MESS.Blazor.Components.Utility
+@using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
@@ -13,6 +14,7 @@
 @inject IProductService ProductService
 @inject ILocalCacheManager LocalCacheManager
 @inject IWorkStationService WorkStationService
+@inject ISessionManager SessionManager
 @attribute [StreamRendering]
 
 <PageTitle>@Title</PageTitle>
