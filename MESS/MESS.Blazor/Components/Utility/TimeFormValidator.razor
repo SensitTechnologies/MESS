@@ -1,0 +1,56 @@
+@using FluentValidation
+@using FluentValidation.Results
+@using MESS.Data.Models
+@implements IDisposable
+@typeparam TModel
+
+
+<div>
+    @foreach (var message in CurrentEditContext.GetValidationMessages())
+    {
+        <ValidationMessage For="@(() => message)" />
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private EditContext CurrentEditContext { get; set; } = default!;
+
+    [Parameter]
+    public IValidator<TModel> Validator { get; set; } = default!;
+
+    private ValidationMessageStore? MessageStore { get; set; }
+
+    protected override void OnInitialized()
+    {
+        MessageStore = new ValidationMessageStore(CurrentEditContext);
+        CurrentEditContext.OnValidationRequested += ValidationRequested;
+    }
+
+    private async void ValidationRequested(object? sender, ValidationRequestedEventArgs args)
+    {
+        if (CurrentEditContext.Model is TModel model)
+        {
+            MessageStore?.Clear();
+            var result = await Validator.ValidateAsync(model);
+
+            if (!result.IsValid)
+            {
+                foreach (var error in result.Errors)
+                {
+                    MessageStore?.Add(CurrentEditContext.Field(error.PropertyName), error.ErrorMessage);
+                }
+            }
+
+            CurrentEditContext.NotifyValidationStateChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (CurrentEditContext != null)
+        {
+            CurrentEditContext.OnValidationRequested -= ValidationRequested;
+        }
+    }
+}

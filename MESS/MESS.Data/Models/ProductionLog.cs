@@ -1,3 +1,5 @@
+using FluentValidation;
+
 namespace MESS.Data.Models;
 
 public class ProductionLog : AuditableEntity
@@ -16,4 +18,17 @@ public class ProductionLog : AuditableEntity
     public Problem? Problem { get; set; }
     public RootCause? RootCause { get; set; }
     public Cell? Cell { get; set; }
+}
+
+public class ProductionLogValidator : AbstractValidator<ProductionLog>
+{
+    public ProductionLogValidator()
+    {
+        RuleFor(x => x.SubmitTime)
+            .NotNull()
+            .WithMessage("SubmitTime cannot be null.");
+        
+        RuleFor(x => x.LogSteps)
+            .SetValidator(new LogStepValidator());
+    }
 }

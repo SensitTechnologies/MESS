@@ -1,0 +1,22 @@
+@using MESS.Data.Models
+
+<div>
+    @if (WorkStations != null)
+    {
+        <label for="workstation-select">Select Station</label>
+        <select id="workstation-select" class="form-select" @onchange="async e => await OnWorkStationSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
+            <option value="-1">Select Station</option>
+            @foreach (var workStation in WorkStations)
+            {
+                <option value="@workStation.Id">@workStation.Name</option>
+            }
+        </select>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<WorkStation>? WorkStations { get; set; }
+    [Parameter]
+    public EventCallback<int> OnWorkStationSelected { get; set; }
+}

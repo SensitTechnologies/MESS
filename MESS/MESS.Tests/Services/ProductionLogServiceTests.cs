@@ -28,7 +28,8 @@ public class ProductionLogServiceTests
                     Success = true,
                     SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 00, TimeSpan.Zero),
                 }
-            ]
+            ],
+            SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 01, 39, TimeSpan.Zero),
         };
 
         var expectedTimeSpan = new TimeSpan(0, 1, 39);
@@ -50,9 +51,10 @@ public class ProductionLogServiceTests
                 new ProductionLogStep
                 {
                     Success = true,
-                    SubmitTime = new DateTimeOffset(2025, 01, 01, 3, 01, 39, TimeSpan.Zero)
+                    SubmitTime = new DateTimeOffset(2025, 01, 01, 0, 00, 00, TimeSpan.Zero)
                 }
-            ]
+            ],
+            SubmitTime = new DateTimeOffset(2025, 01, 01, 3, 01, 39, TimeSpan.Zero)
         };
 
         var expectedTimeSpan = new TimeSpan(3, 1, 39);
@@ -91,7 +93,8 @@ public class ProductionLogServiceTests
                     Success = true,
                     SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 03, 10, TimeSpan.Zero),
                 }
-            ]
+            ],
+            SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 03, 59, TimeSpan.Zero),
         };
         
         var expectedTimeSpan = new TimeSpan(0, 3, 59);
@@ -138,10 +141,11 @@ public class ProductionLogServiceTests
             [
                 new ProductionLogStep
                 {
-                    Success = true,
-                    SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero),
+                    Success = true, 
+                    SubmitTime = DateTimeOffset.UtcNow
                 },
-            ]
+            ],
+            SubmitTime = new DateTimeOffset(2025, 01, 01, 00, 00, 30, TimeSpan.Zero),
         };
 
         var expectedTimeSpan = new TimeSpan(0);

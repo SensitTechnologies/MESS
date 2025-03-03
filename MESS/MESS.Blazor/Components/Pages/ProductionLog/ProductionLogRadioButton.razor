@@ -1,0 +1,109 @@
+@using MESS.Data.Models
+@using MESS.Blazor.Components.Utility
+@using MESS.Services.BrowserCacheManager
+@inject ILocalCacheManager LocalCacheManager
+@attribute [StreamRendering]
+
+<li class="list-group-item btn-group mb-2" role="group">
+    <div class="row">
+        <div class="col">
+            @step.Name
+        </div>
+
+        <div class="col container">
+            <div class="d-flex align-items-center">
+                <div class="d-inline-flex align-items-center">
+                    <input type="radio"
+                           checked="@(!logStep?.Success)"
+                           autocomplete="off"
+                           @onclick="@(async (e) => await HandleButtonPress(false))"
+                           class="btn-check"
+                           name="radioBtn{@step.Name}"
+                           id="radioFailureBtn{@step.Name}" />
+                    <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
+
+                    <input type="radio"
+                           checked="@(logStep?.Success)"
+                           autocomplete="off"
+                           class="btn-check"
+                           name="radioBtn{@step.Name}"
+                           id="radioSuccessBtn{@step.Name}"
+                           @onclick="@(async (e) => await HandleButtonPress(true))" />
+                    <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
+                </div>
+                @if (logStep != null)
+                {
+                
+                    <div class="d-inline-flex ">
+                        @if (ShowOptionalNotesField)
+                        {
+                            <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value="logStep.Notes" />
+                        }
+                        @if (IsEditMode)
+                        {
+                            <TimePicker @bind-Time="logStep.SubmitTime" CssClass="ms-2 me-2"/>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</li>
+
+@code {
+    [Parameter]
+    public required Step step { get; set; }
+    [Parameter]
+    public required ProductionLogStep logStep { get; set; }
+    
+    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
+    // Only allow operators to change Time directly while in edit mode 
+    [Parameter] public bool IsEditMode { get; set; }
+    
+    protected override void OnInitialized()
+    {
+        // if (!IsEditMode) return;
+        
+        // If the SubmitTime is equal to the default value, then the operator has not yet submitted the step
+        if (logStep.SubmitTime == DateTimeOffset.MinValue)
+        {
+            return;
+        }
+        
+        SetSelectedButton(logStep.Success ? "Success" : "Failure");
+        SetOptionalNotes();
+    } 
+
+    private bool ShowOptionalNotesField { get; set; } = false;
+    
+    private string? SelectedButton { get; set; } = "";
+
+    private void SetSelectedButton(string buttonName)
+    {
+        SelectedButton = SelectedButton == buttonName ? null : buttonName;
+    }
+
+    private void SetOptionalNotes()
+    {
+        if (!string.IsNullOrWhiteSpace(logStep.Notes) && !logStep.Success)
+        {
+            ShowOptionalNotesField = true;
+        }
+    }
+
+    private async Task HandleButtonPress(bool result)
+    {
+        if (!result)
+        {
+            ShowOptionalNotesField = !ShowOptionalNotesField;
+            await OnStepCompleted.InvokeAsync((logStep, false));
+        }
+        else
+        {
+            ShowOptionalNotesField = false;
+            await OnStepCompleted.InvokeAsync((logStep, true));
+        }
+
+        SetSelectedButton(result ? "Success" : "Failure");
+    }
+}

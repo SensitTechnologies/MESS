@@ -1,0 +1,66 @@
+@using MESS.Data.Models
+
+@if (ActiveWorkInstruction != null && ProductionLog != null)
+{
+    
+    <ul class="list-group list-group-numbered container">
+        @foreach (var step in ActiveWorkInstruction.Steps)
+        {
+            var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+
+            if (logStep == null && ProductionLog.LogSteps != null)
+            {
+                logStep = new ProductionLogStep
+                {
+                    WorkInstructionStepId = step.Id,
+                    ProductionLogId = ProductionLog.Id,
+                };
+                ProductionLog.LogSteps.Add(logStep);
+            }
+            
+            <ProductionLogRadioButton IsEditMode="@IsEditMode" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public required WorkInstruction ActiveWorkInstruction { get; set; }
+
+    [Parameter] public required ProductionLog ProductionLog { get; set; }
+
+    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+
+
+    private string? SelectedButton { get; set; } = "";
+    
+    private void SetSelectedButton(string buttonName)
+    {
+        if (SelectedButton == buttonName)
+        {
+            SelectedButton = null;
+        }
+        else
+        {
+            SelectedButton = buttonName;
+        }
+    }
+
+    private void ClearSelectedButton()
+    {
+        SelectedButton = null;
+    }
+    
+    private string GetButtonClass(string buttonName)
+    {
+        string baseClass = "btn";
+
+        if (buttonName == "Clear")
+        {
+            return string.IsNullOrEmpty(SelectedButton) ? $"{baseClass} btn-secondary" : $"{baseClass} btn-danger";
+        }
+
+        return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-secondary";
+    }
+
+}

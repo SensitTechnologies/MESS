@@ -58,3 +58,55 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+
+.header-container {
+    margin-bottom: 4px;
+}
+
+.info-card {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    border-left: 4px solid #0d6efd;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    min-width: 200px;
+    transition: all 0.2s ease;
+}
+
+.info-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+
+.info-card .card-body {
+    padding: 1.25rem;
+}
+
+.info-card .card-title {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.info-card .card-text {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0;
+}
+
+.product-card { border-left-color: #0d6efd; }
+.workstation-card { border-left-color: #77c315; }
+.operator-card { border-left-color: #eee00e; }
+
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+    }
+    .info-card {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+}
