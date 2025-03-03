@@ -96,5 +96,86 @@ public class ProductionLogViewTests : TestContext
         Assert.Equal("Product 2", options[2].TextContent);
     }
     
+    [Fact]
+    public void ProductSelectComponentHandlesEmptyProductName()
+    {
+        // Arrange
+        var products = new List<Product>
+        {
+            new Product { Id = 1, Name = "", WorkInstructions = new List<WorkInstruction>() }
+        };
+
+        // Act
+        var cut = RenderComponent<ProductSelect>(parameters => parameters
+            .Add(p => p.Products, products));
+
+        // Assert
+        var options = cut.FindAll("option");
+        Assert.Equal(2, options.Count); // Including the default "Select Product" option
+        Assert.Equal("", options[1].TextContent);
+    }
+    
+    [Fact]
+    public void ProductSelectComponentHandlesLongProductName()
+    {
+        // Arrange
+        var longName = new string('A', 1000);
+        var products = new List<Product>
+        {
+            new Product { Id = 1, Name = longName, WorkInstructions = new List<WorkInstruction>() }
+        };
+
+        // Act
+        var cut = RenderComponent<ProductSelect>(parameters => parameters
+            .Add(p => p.Products, products));
+
+        // Assert
+        var options = cut.FindAll("option");
+        Assert.Equal(2, options.Count); // Including the default "Select Product" option
+        Assert.Equal(longName, options[1].TextContent);
+    }
+    
+    [Fact]
+    public void ProductSelectComponentHandlesDuplicateProductIds()
+    {
+        // Arrange
+        var products = new List<Product>
+        {
+            new Product { Id = 1, Name = "Product 1", WorkInstructions = new List<WorkInstruction>() },
+            new Product { Id = 1, Name = "Product 2", WorkInstructions = new List<WorkInstruction>() }
+        };
+
+        // Act
+        var cut = RenderComponent<ProductSelect>(parameters => parameters
+            .Add(p => p.Products, products));
+
+        // Assert
+        var options = cut.FindAll("option");
+        Assert.Equal(3, options.Count); // Including the default "Select Product" option
+        Assert.Equal("Product 1", options[1].TextContent);
+        Assert.Equal("Product 2", options[2].TextContent);
+    }
+    
+    [Fact]
+    public void ProductSelectComponentHandlesLargeNumberOfProducts()
+    {
+        // Arrange
+        var products = Enumerable.Range(1, 1000).Select(i => new Product
+        {
+            Id = i,
+            Name = $"Product {i}",
+            WorkInstructions = new List<WorkInstruction>()
+        }).ToList();
+
+        // Act
+        var cut = RenderComponent<ProductSelect>(parameters => parameters
+            .Add(p => p.Products, products));
+
+        // Assert
+        var options = cut.FindAll("option");
+        Assert.Equal(1001, options.Count); // Including the default "Select Product" option
+        Assert.Equal("Product 1", options[1].TextContent);
+        Assert.Equal("Product 1000", options[1000].TextContent);
+    }
 
 }
