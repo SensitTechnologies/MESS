@@ -89,7 +89,10 @@ public class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var workInstruction = await _context.WorkInstructions.FindAsync(id);
+            var workInstruction = await _context.WorkInstructions
+                .Include(w => w.Steps)
+                .FirstAsync();
+            
             return workInstruction;
         }
         catch (Exception e)

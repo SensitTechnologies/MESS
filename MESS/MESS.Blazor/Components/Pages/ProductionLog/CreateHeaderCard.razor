@@ -1,0 +1,15 @@
+﻿<div class="card info-card workstation-card">
+    <div class="card-body">
+        <h5 class="card-title">@Title</h5>
+        <h3 class="card-text">@Text</h3>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public string? Title { get; set; }
+    
+    [Parameter]
+    public string? Text { get; set; }
+}

@@ -1,8 +1,10 @@
 ﻿@page "/production-log"
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
+@using MESS.Services.SessionManager
 @inject IProductionLogService ProductionLogService
 @inject NavigationManager NavigationManager
+@inject ISessionManager SessionManager
 
 @if (_productionLogs == null)
 {
@@ -88,7 +90,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _productionLogs = await ProductionLogService.GetAllAsync();
+        var logIds = await SessionManager.GetProductionLogIdsAsync();
+        if (logIds != null)
+        {
+            _productionLogs = await ProductionLogService.GetProductionLogsByListOfIdsAsync(logIds);
+        }
     }
     
 
@@ -102,10 +108,10 @@ else
         NavigationManager.NavigateTo($"/production-log/edit/{logId}");
     }
     
-    private void DeleteProductionLog(int id)
+    private async void DeleteProductionLog(int id)
     {
         // Remove Production Log from database
-        ProductionLogService.Delete(id);
+        await ProductionLogService.DeleteAsync(id);
 
         // Update Production Log list state
         _productionLogs = _productionLogs?.Where(p => p.Id != id).ToList();

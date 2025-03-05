@@ -56,15 +56,20 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            if (log.LogSteps == null || log.LogSteps.Count == 0)
+            if (log.LogSteps.Count == 0)
                 return TimeSpan.Zero;
             
             var orderedSteps = log.LogSteps.OrderBy(l => l.SubmitTime);
 
             var start = orderedSteps.FirstOrDefault()?.SubmitTime;
-            var end = orderedSteps.LastOrDefault()?.SubmitTime;
+            var logSubmitTime = log.SubmitTime;
+
+            if (logSubmitTime < start)
+            {
+                return TimeSpan.Zero;
+            }
             
-            return end - start;
+            return logSubmitTime - start;
         }
         catch (Exception e)
         {
@@ -97,6 +102,9 @@ public class ProductionLogService : IProductionLogService
             var productionLog = await _context.ProductionLogs
                 .Include(p => p.LogSteps)
                 .ThenInclude(p => p.WorkInstructionStep)
+                .Include(w => w.WorkInstruction)
+                .Include(p => p.Product)
+                .Include(w => w.WorkStation)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             return productionLog;
@@ -109,7 +117,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public bool Create(ProductionLog productionLog)
+    public async Task<bool> CreateAsync(ProductionLog productionLog)
     {
         try
         {
@@ -117,7 +125,7 @@ public class ProductionLogService : IProductionLogService
             productionLog.SubmitTime = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             _context.ProductionLogs.Add(productionLog);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             
             Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
             
@@ -131,7 +139,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
-    public bool Delete(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
         try
         {
@@ -143,14 +151,14 @@ public class ProductionLogService : IProductionLogService
             }
             
             _context.ProductionLogs.Remove(productionLogToDelete);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
+            
             Log.Information("Production Log with ID: {productionLogId}, successfully deleted.", id);
             return true;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to Delete by ID: {productionLogId} in Production Logs, in ProductionLogService", id);
+            Log.Warning("Exception thrown when attempting to Delete by ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {ExceptionMessage}", id, e.Message);
             return false;
         }
     }
@@ -173,38 +181,32 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService", existingProductionLog.Id);
+            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {exceptionMessage}", existingProductionLog.Id, e.Message);
             return false;
         }
     }
 
-    public bool UpdateWithObjectAsync(ProductionLog existing, ProductionLog updated)
+    public async Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds)
     {
         try
         {
-            ArgumentNullException.ThrowIfNull(existing);
-            ArgumentNullException.ThrowIfNull(updated);
-
-            existing.LogSteps = updated.LogSteps;
-            existing.LineOperator = updated.LineOperator;
-            existing.SubmitTime = updated.SubmitTime;
-            existing.LastModifiedOn = DateTimeOffset.UtcNow;
-
-            _context.ProductionLogs.Update(existing);
-            _context.SaveChanges();
+            if (logIds.Count <= 0)
+            {
+                return [];
+            }
             
-            Log.Information("Production Log with ID: {productionLogId}, successfully updated with another ProductionLog.", existing.Id);
-
-
-            return true;
-
+            return await _context.ProductionLogs
+                .Include(p => p.WorkInstruction)
+                .ThenInclude(w => w!.Steps)
+                .Include(p => p.LineOperator)
+                .Include(p => p.LogSteps)
+                .Where(p => logIds.Contains(p.Id))
+                .ToListAsync();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to UpdateWithObjectAsync, Existing ID: {existingID} in Production Logs, in ProductionLogService", existing.Id);
-            return false;
+            return [];
         }
     }
 }
