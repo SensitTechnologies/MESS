@@ -1,0 +1,28 @@
+@using MESS.Data.Models
+
+<div>
+    @if (Products != null)
+    {
+        <label for="product-select">Select Product</label>
+        <select disabled="@Disabled" id="product-select" class="form-select" @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
+            <option value="">Select Product</option>
+            @foreach (var product in Products)
+            {
+                @if (product.WorkInstructions == null)
+                {
+                    continue;
+                }
+                <option value="@product.Id">@product.Name</option>
+            }
+        </select>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<Product>? Products { get; set; }
+    [Parameter]
+    public EventCallback<int> OnProductSelected { get; set; }
+    [Parameter]
+    public bool Disabled { get; set; }
+}
