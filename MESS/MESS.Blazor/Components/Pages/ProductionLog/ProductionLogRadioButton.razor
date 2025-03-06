@@ -52,7 +52,7 @@
     [Parameter]
     public required ProductionLogStep logStep { get; set; }
     
-    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
+    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
     
     protected override void OnInitialized()
     {
@@ -98,9 +98,22 @@
         }
     }
 
-    private async Task HandleButtonPress(bool result)
+    private async Task HandleButtonPress(bool? result)
     {
-        if (!result)
+        if (SelectedButton == (result.HasValue ? (result.Value ? "Success" : "Failure") : ""))
+        {
+            result = null;
+        }
+        
+        if (!result.HasValue)
+        {
+            ShowOptionalNotesField = false;
+            await OnStepCompleted.InvokeAsync((logStep, null));
+            SetSelectedButton("");
+            return;
+        }
+        
+        if (!result.Value)
         {
             ShowOptionalNotesField = !ShowOptionalNotesField;
             await OnStepCompleted.InvokeAsync((logStep, false));
@@ -111,6 +124,6 @@
             await OnStepCompleted.InvokeAsync((logStep, true));
         }
 
-        SetSelectedButton(result ? "Success" : "Failure");
+        SetSelectedButton(result.Value ? "Success" : "Failure");
     }
 }

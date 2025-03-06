@@ -333,16 +333,12 @@ public partial class Create : ComponentBase
         StateHasChanged();
     }
     
-    private async Task OnStepCompleted(ProductionLogStep step, bool success)
+    private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
         var currentTime = DateTimeOffset.UtcNow;
         
-        // Only changing the submit time if it is the default value as to avoid issues where the operator
-        // may have submitted the step and then changed their mind, which results in a negative time difference
-        if (step.SubmitTime == DateTimeOffset.MinValue)
-        {
-            step.SubmitTime = currentTime;
-        }
+        step.SubmitTime = currentTime;
+        
         step.Success = success;
 
         IsSaved = false;

@@ -28,7 +28,7 @@
 
     [Parameter] public required ProductionLog ProductionLog { get; set; }
 
-    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
+    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
 
 
     private string? SelectedButton { get; set; } = "";
