@@ -359,7 +359,6 @@ public partial class Create : ComponentBase
             // Create new log
             ProductionLog.CreatedOn = currentTime;
             ProductionLog.LastModifiedOn = currentTime;
-            ProductionLog.SubmitTime = currentTime;
             ProductionLog.Product = Products?.Find(w => w.Name == ActiveProduct);
             ProductionLog.WorkStation = WorkStations?.Find(w => w.Name == ActiveWorkStation);
             await ProductionLogService.CreateAsync(ProductionLog);
