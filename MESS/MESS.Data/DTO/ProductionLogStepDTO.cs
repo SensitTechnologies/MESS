@@ -1,4 +1,6 @@
-﻿namespace MESS.Data.DTO;
+﻿using MESS.Data.Models;
+
+namespace MESS.Data.DTO;
 
 public class ProductionLogStepDTO
 {

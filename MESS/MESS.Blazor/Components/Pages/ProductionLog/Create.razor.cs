@@ -27,7 +27,6 @@ public partial class Create : ComponentBase
     private List<Product>? Products { get; set; }
     
     private WorkInstruction? ActiveWorkInstruction { get; set; }
-    private readonly ProductionLogValidator _validator = new();
     
     private Timer? _debounceTimer;
     private bool IsSaved { get; set; }
