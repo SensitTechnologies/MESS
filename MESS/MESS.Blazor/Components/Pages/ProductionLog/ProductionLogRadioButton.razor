@@ -11,7 +11,7 @@
 
         <div class="col container">
             <div class="d-flex align-items-center">
-                <div class="d-inline-flex align-items-center">
+                <div class="d-inline-flex align-items-center gap-4">
                     <input type="radio"
                            checked="@(!logStep?.Success)"
                            autocomplete="off"
@@ -19,7 +19,7 @@
                            class="btn-check"
                            name="radioBtn{@step.Name}"
                            id="radioFailureBtn{@step.Name}" />
-                    <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "btn-outline-danger" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
+                    <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
 
                     <input type="radio"
                            checked="@(logStep?.Success)"
@@ -28,7 +28,7 @@
                            name="radioBtn{@step.Name}"
                            id="radioSuccessBtn{@step.Name}"
                            @onclick="@(async (e) => await HandleButtonPress(true))" />
-                    <label class="btn @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "btn-outline-success" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
+                    <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
                 </div>
                 @if (logStep != null)
                 {
