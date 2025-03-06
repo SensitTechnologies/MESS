@@ -1,11 +1,9 @@
 ﻿@page "/production-log/new"
 @page "/production-log/edit/{logId:int}"
-@using MESS.Data.Models
 @using MESS.Services.BrowserCacheManager
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
-@using MESS.Blazor.Components.Utility
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
 @inject IProductionLogService ProductionLogService
@@ -22,7 +20,6 @@
         <EditForm class="container" FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator/>
             <ValidationSummary/>
-            <TimeFormValidator TModel="ProductionLog" Validator="_validator"></TimeFormValidator>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                     @if (!IsWorkflowActive && !IsEditMode)
