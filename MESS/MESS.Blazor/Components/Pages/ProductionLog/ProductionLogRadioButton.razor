@@ -63,8 +63,21 @@
         {
             return;
         }
+
+        if (!logStep.Success.HasValue)
+        {
+            SetSelectedButton("");
+            return;
+        }
+
+        if (logStep.Success.Value)
+        {
+            SetSelectedButton("Success");
+        } else if (!logStep.Success.Value)
+        {
+            SetSelectedButton("Failure");
+        }
         
-        SetSelectedButton(logStep.Success ? "Success" : "Failure");
         SetOptionalNotes();
     } 
 
@@ -79,7 +92,7 @@
 
     private void SetOptionalNotes()
     {
-        if (!string.IsNullOrWhiteSpace(logStep.Notes) && !logStep.Success)
+        if (!string.IsNullOrWhiteSpace(logStep.Notes) && (logStep.Success.HasValue && !logStep.Success.Value))
         {
             ShowOptionalNotesField = true;
         }

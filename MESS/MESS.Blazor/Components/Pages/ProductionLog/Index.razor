@@ -51,13 +51,17 @@ else
                             <p>Notes: @step.Notes</p>
                         </div>
                         <div>
-                            @if (step.Success)
+                            @if (!step.Success.HasValue)
                             {
-                            <span class="badge bg-success">Success</span>
+                                <span class="badge bg-warning">Step Not Completed</span>
+                            }
+                            else if (step.Success.Value)
+                            {
+                                <span class="badge bg-success">Success</span>
                             }
                             else
                             {
-                            <span class="badge bg-danger">Failed</span>
+                                <span class="badge bg-danger">Failure</span>
                             }
                         </div>
                     </div>
