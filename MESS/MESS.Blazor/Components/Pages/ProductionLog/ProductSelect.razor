@@ -3,7 +3,6 @@
 <div>
     @if (Products != null)
     {
-        <label for="product-select">Select Product</label>
         <select disabled="@Disabled" id="product-select" class="form-select" @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
             <option value="">Select Product</option>
             @foreach (var product in Products)

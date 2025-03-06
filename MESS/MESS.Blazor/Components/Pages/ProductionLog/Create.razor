@@ -20,17 +20,7 @@
             <ValidationSummary/>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                    @if (!IsWorkflowActive)
-                    {
-                        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
-                        var stationProducts = LoadAssociatedProductsFromStation();
-                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(ActiveWorkStation))" Products="@stationProducts" OnProductSelected="@SetActiveProduct"/>
-                    }
-                    else
-                    {
-                        <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@ActiveWorkStation" />
-                    }
-
+                    <CreateHeader WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation" Products="@LoadAssociatedProductsFromStation()" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">
                             <p class="mb-0">
@@ -43,10 +33,6 @@
                                     <span class="badge text-bg-danger p-2">Unsaved</span>
                                 }
                             </p>
-                        </div>
-
-                        <div>
-                            <button type="button" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
                         </div>
                     </div>
                 </div>

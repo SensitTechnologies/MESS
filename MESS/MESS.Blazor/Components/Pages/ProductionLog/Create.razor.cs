@@ -106,6 +106,7 @@ public partial class Create : ComponentBase
                 ActiveWorkStation = workStation.Name;
                 
                 await LocalCacheManager.SetActiveWorkStationAsync(workStation);
+                LoadAssociatedProductsFromStation();
             }
         }
         catch (Exception e)
