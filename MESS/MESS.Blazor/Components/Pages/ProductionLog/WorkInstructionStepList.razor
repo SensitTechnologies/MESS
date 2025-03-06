@@ -18,7 +18,7 @@
                 ProductionLog.LogSteps.Add(logStep);
             }
             
-            <ProductionLogRadioButton IsEditMode="@IsEditMode" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
+            <ProductionLogRadioButton step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
         }
     </ul>
 }
@@ -29,7 +29,6 @@
     [Parameter] public required ProductionLog ProductionLog { get; set; }
 
     [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
-    [Parameter] public bool IsEditMode { get; set; }
 
 
     private string? SelectedButton { get; set; } = "";

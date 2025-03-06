@@ -38,10 +38,7 @@
                         {
                             <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value="logStep.Notes" />
                         }
-                        @if (IsEditMode)
-                        {
-                            <TimePicker @bind-Time="logStep.SubmitTime" CssClass="ms-2 me-2"/>
-                        }
+       
                     </div>
                 }
             </div>
@@ -56,8 +53,6 @@
     public required ProductionLogStep logStep { get; set; }
     
     [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
-    // Only allow operators to change Time directly while in edit mode 
-    [Parameter] public bool IsEditMode { get; set; }
     
     protected override void OnInitialized()
     {

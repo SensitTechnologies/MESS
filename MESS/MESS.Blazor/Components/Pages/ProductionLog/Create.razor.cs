@@ -9,15 +9,10 @@ internal enum Status
 {
     NotStarted,
     InProgress,
-    Completed,
-    Edit
+    Completed
 }
 public partial class Create : ComponentBase
 {
-
-    [Parameter]
-    public int? logId { get; set; }
-    private bool IsEditMode => logId.HasValue;
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
@@ -41,25 +36,14 @@ public partial class Create : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        // While in edit mode operators cannot swap product/station. Do not load ALL products
-        if (!IsEditMode)
-        {
-            await GetInProgressAsync();
-            await LoadWorkStations();
-            await LoadProducts();
-        }
-        else
-        {
-            await LoadProductionLog();
-        }
+        await GetInProgressAsync();
+        await LoadWorkStations();
+        await LoadProducts();
         
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
-        WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
-
-        if (!IsEditMode)
-        {
-            await LoadCachedForm();
-        }
+        WorkInstructionStatus = Status.NotStarted;
+        
+        await LoadCachedForm();
         
         // TO BE REMOVED
         ActiveLineOperator = "John Doe";
@@ -100,17 +84,10 @@ public partial class Create : ComponentBase
         // Reset current form selection
         ActiveProduct = null;
         ActiveWorkStation = null;
-        WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
+        WorkInstructionStatus = Status.NotStarted;
         IsWorkflowActive = false;
         
         await ResetCachedValues();
-    }
-    
-    private DateTimeOffset? GetLatestStepTime()
-    {
-        return ProductionLog.LogSteps
-            .Where(s => s.SubmitTime != default)
-            .Max(s => s.SubmitTime as DateTimeOffset?);
     }
     
     private async Task SetActiveWorkStation(int workStationId)
@@ -267,15 +244,6 @@ public partial class Create : ComponentBase
         }
     }
     
-    private async Task LoadProductionLog()
-    {
-        if (logId.HasValue && logId.Value != 0)
-        {
-            await LoadExistingLog(logId.Value);
-        }
-    }
-    
-    
     private async Task SetSelectedWorkInstructionId(int? value)
     {
         try
@@ -339,31 +307,17 @@ public partial class Create : ComponentBase
             Console.WriteLine("No Work Instruction selected.");
             return;
         }
-
-
+        
         var currentTime = DateTimeOffset.UtcNow;
-
+        
+        // Create new log
+        ProductionLog.CreatedOn = currentTime;
+        ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
-
-        if (IsEditMode)
-        {
-            // Update existing log
-            ProductionLog.LastModifiedOn = currentTime;
-            await ProductionLogService.UpdateAsync(ProductionLog);
-            
-            // Navigate to the log list page since there is no need to stay on the edit page since the state is unsaved
-            NavigationManager.NavigateTo("/production-log");
-        }
-        else
-        {
-            // Create new log
-            ProductionLog.CreatedOn = currentTime;
-            ProductionLog.LastModifiedOn = currentTime;
-            ProductionLog.Product = Products?.Find(w => w.Name == ActiveProduct);
-            ProductionLog.WorkStation = WorkStations?.Find(w => w.Name == ActiveWorkStation);
-            await ProductionLogService.CreateAsync(ProductionLog);
-        }
-
+        ProductionLog.Product = Products?.Find(w => w.Name == ActiveProduct);
+        ProductionLog.WorkStation = WorkStations?.Find(w => w.Name == ActiveWorkStation);
+        await ProductionLogService.CreateAsync(ProductionLog);
+        
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
         
@@ -375,7 +329,7 @@ public partial class Create : ComponentBase
     private void ResetFormState()
     {
         ProductionLog = new ProductionLog();
-        WorkInstructionStatus = IsEditMode ? Status.Edit : Status.NotStarted;
+        WorkInstructionStatus = Status.NotStarted;
         StateHasChanged();
     }
     

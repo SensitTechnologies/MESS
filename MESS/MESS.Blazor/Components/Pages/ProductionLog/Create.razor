@@ -1,5 +1,4 @@
 ﻿@page "/production-log/new"
-@page "/production-log/edit/{logId:int}"
 @using MESS.Services.BrowserCacheManager
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
@@ -22,7 +21,7 @@
             <ValidationSummary/>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                    @if (!IsWorkflowActive && !IsEditMode)
+                    @if (!IsWorkflowActive)
                     {
                         <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
                         var stationProducts = LoadAssociatedProductsFromStation();
@@ -46,19 +45,16 @@
                                 }
                             </p>
                         </div>
-                        @if (!IsEditMode)
-                        {
-                            <div>
-                                <button type="button" disabled="@(WorkInstructionStatus is Status.InProgress or Status.Completed)" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
-                            </div>
-                        }
+
+                        <div>
+                            <button type="button" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
+                        </div>
                     </div>
-                    
                 </div>
                 
                 @if (ActiveWorkInstruction != null && ActiveProduct != null)
                 {
-                    <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
+                    <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
                 }
 
             </div>
