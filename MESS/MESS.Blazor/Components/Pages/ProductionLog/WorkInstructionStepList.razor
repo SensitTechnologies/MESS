@@ -3,7 +3,7 @@
 @if (ActiveWorkInstruction != null && ProductionLog != null)
 {
     
-    <ul class="list-group list-group-numbered container">
+    <ol class="list-group list-group-numbered container">
         @foreach (var step in ActiveWorkInstruction.Steps)
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
@@ -20,7 +20,7 @@
             
             <ProductionLogRadioButton step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
         }
-    </ul>
+    </ol>
 }
 
 @code {

@@ -3,10 +3,10 @@
 @inject ILocalCacheManager LocalCacheManager
 @attribute [StreamRendering]
 
-<li class="list-group-item btn-group mb-2" role="group">
+<li class="list-group-item mb-2" role="group">
     <div class="row">
         <div class="col">
-            @step.Name
+            <span>@step.Name</span>
         </div>
 
         <div class="col container">
@@ -18,7 +18,7 @@
                            @onclick="@(async (e) => await HandleButtonPress(false))"
                            class="btn-check"
                            name="radioBtn{@step.Name}"
-                           id="radioFailureBtn{@step.Name}" />
+                           id="radioFailureBtn{@step.Name}"/>
                     <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
 
                     <input type="radio"
@@ -27,18 +27,18 @@
                            class="btn-check"
                            name="radioBtn{@step.Name}"
                            id="radioSuccessBtn{@step.Name}"
-                           @onclick="@(async (e) => await HandleButtonPress(true))" />
+                           @onclick="@(async (e) => await HandleButtonPress(true))"/>
                     <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
                 </div>
                 @if (logStep != null)
                 {
-                
+
                     <div class="d-inline-flex ">
                         @if (ShowOptionalNotesField)
                         {
-                            <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value="logStep.Notes" />
+                            <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value="logStep.Notes"/>
                         }
-       
+
                     </div>
                 }
             </div>
@@ -56,14 +56,6 @@
     
     protected override void OnInitialized()
     {
-        // if (!IsEditMode) return;
-        
-        // If the SubmitTime is equal to the default value, then the operator has not yet submitted the step
-        if (logStep.SubmitTime == DateTimeOffset.MinValue)
-        {
-            return;
-        }
-
         if (!logStep.Success.HasValue)
         {
             SetSelectedButton("");
