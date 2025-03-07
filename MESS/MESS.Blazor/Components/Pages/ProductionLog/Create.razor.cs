@@ -55,9 +55,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        await GetInProgressAsync();
         await LoadWorkStations();
         await LoadProducts();
+        await GetInProgressAsync();
         
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = Status.NotStarted;
@@ -141,6 +141,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         var result = await LocalCacheManager.GetActiveProductAsync();
         ActiveProduct = Products?.FirstOrDefault(p => p.Name == result.Name);
+
+        if (ActiveProduct == null) 
+        {
+            return;
+        }
+        
+        ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
 
     /// Sets the local storage variable
@@ -173,6 +180,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         var result = await LocalCacheManager.GetActiveWorkStationAsync();
         ActiveWorkStation = WorkStations?.FirstOrDefault(w => w.Name == result.Name);
+        
+        if (ActiveWorkStation == null)
+        {
+            return;
+        }
+        
         ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
     }
 
