@@ -128,6 +128,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 }
 
                 ActiveWorkStation = workStation;
+                ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
                 
                 await LocalCacheManager.SetActiveWorkStationAsync(workStation);
                 LoadAssociatedProductsFromStation();
