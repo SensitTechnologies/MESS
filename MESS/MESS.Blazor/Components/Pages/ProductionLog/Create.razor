@@ -6,6 +6,7 @@
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
 @inject IProductionLogService ProductionLogService
+@inject IProductionLogEventService ProductionLogEventService
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject ILocalCacheManager LocalCacheManager
@@ -21,7 +22,7 @@
             <ValidationSummary/>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                    <CreateHeader ActiveProduct="ActiveProduct" ActiveWorkStation="ActiveWorkStation" WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation" Products="@LoadAssociatedProductsFromStation()" OnProductSelected="@SetActiveProduct" />
+                    <CreateHeader WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation" Products="@LoadAssociatedProductsFromStation()" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">
                             <p class="mb-0">

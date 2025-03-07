@@ -19,10 +19,10 @@ public interface ILocalCacheManager
     /// <returns>The integer ID value for the currently active Product OR a
     /// negative value if it was not found.
     /// </returns>
-    public Task<CacheDTO<Product>> GetActiveProductAsync();
+    public Task<CacheDTO> GetActiveProductAsync();
 
     public Task<int> GetActiveWorkInstructionIdAsync();
-    public Task<CacheDTO<WorkStation>> GetActiveWorkStationAsync();
+    public Task<CacheDTO> GetActiveWorkStationAsync();
     public Task SetActiveWorkStationAsync(WorkStation workStation);
     public Task SetActiveWorkInstructionIdAsync(int workInstructionId);
     public Task SetIsWorkflowActiveAsync(bool isActive);

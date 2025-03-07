@@ -156,6 +156,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
                 await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
                 ActiveProduct = product;
+                ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
 
                 await LocalCacheManager.SetActiveProductAsync(product);
             }
@@ -169,7 +170,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private async Task GetCachedActiveProductAsync()
     {
         var result = await LocalCacheManager.GetActiveProductAsync();
-        ActiveProduct = result.Value;
+        ActiveProduct = Products?.FirstOrDefault(p => p.Name == result.Name);
     }
 
     /// Sets the local storage variable
@@ -217,7 +218,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         try
         {
             var result = await LocalCacheManager.GetActiveWorkStationAsync();
-            ActiveWorkStation = result.Value;
+            ActiveWorkStation = WorkStations?.FirstOrDefault(w => w.Name == result.Name);
         }
         catch (Exception e)
         {

@@ -1,4 +1,6 @@
-﻿using MESS.Data.DTO;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using MESS.Data.DTO;
 
 namespace MESS.Services.BrowserCacheManager;
 
@@ -81,14 +83,13 @@ public class LocalCacheManager : ILocalCacheManager
         try
         {
             // map to DTO
-            var CacheDTO = new CacheDTO<Product>
+            var productDTO = new CacheDTO
             {
                 Id = product.Id,
-                Name = product.Name,
-                Value = product
+                Name = product.Name
             };
             
-            await _protectedLocalStorage.SetAsync(ActiveProductKey, CacheDTO);
+            await _protectedLocalStorage.SetAsync(ActiveProductKey, productDTO.Name);
         }
         catch (Exception e)
         {
@@ -97,22 +98,22 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task<CacheDTO<Product>> GetActiveProductAsync()
+    public async Task<CacheDTO> GetActiveProductAsync()
     {
         try
         {
-            var t = await _protectedLocalStorage.GetAsync<CacheDTO<Product>>(ActiveProductKey);
+            var t = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveProductKey);
             if (t is { Success: true, Value: not null })
             {
                 return t.Value;
             }
 
-            return new CacheDTO<Product>();
+            return new CacheDTO();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            return new CacheDTO<Product>();
+            return new CacheDTO();
         }
     }
 
@@ -136,23 +137,23 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task<CacheDTO<WorkStation>> GetActiveWorkStationAsync()
+    public async Task<CacheDTO> GetActiveWorkStationAsync()
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<CacheDTO<WorkStation>>(ActiveWorkStationKey);
+            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveWorkStationKey);
 
             if (result is { Success: true, Value: not null })
             {
                 return result.Value;
             }
 
-            return new CacheDTO<WorkStation>();
+            return new CacheDTO();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            return new CacheDTO<WorkStation>();
+            return new CacheDTO();
         }
     }
 
@@ -160,7 +161,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var CacheDTO = new CacheDTO<WorkStation>
+            var CacheDTO = new CacheDTO
             {
                 Id = workStation.Id,
                 Name = workStation.Name
