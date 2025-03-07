@@ -89,7 +89,7 @@ public class LocalCacheManager : ILocalCacheManager
                 Name = product.Name
             };
             
-            await _protectedLocalStorage.SetAsync(ActiveProductKey, productDTO.Name);
+            await _protectedLocalStorage.SetAsync(ActiveProductKey, productDTO);
         }
         catch (Exception e)
         {
