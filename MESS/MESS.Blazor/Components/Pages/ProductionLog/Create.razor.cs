@@ -11,15 +11,15 @@ internal enum Status
     InProgress,
     Completed
 }
-public partial class Create : ComponentBase
+public partial class Create : ComponentBase, IAsyncDisposable
 {
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
     
-    private string? ActiveProduct { get; set; }
-    private string? ActiveWorkStation { get; set; }
-    private string? ActiveLineOperator { get; set; }
+    private Product? ActiveProduct { get; set; }
+    private WorkStation? ActiveWorkStation { get; set; }
+    private LineOperator? ActiveLineOperator { get; set; }
     
     protected ProductionLog ProductionLog = new();
     
@@ -31,7 +31,27 @@ public partial class Create : ComponentBase
     private Timer? _debounceTimer;
     private bool IsSaved { get; set; }
 
-    private const int DELAY_TIME = 2000;
+    private const int DELAY_TIME = 3000;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Cancel current timer if it exists
+        _debounceTimer?.DisposeAsync();
+        
+        _debounceTimer = new Timer(async _ =>
+        {
+            // Persist the changes to the local storage
+            await LocalCacheManager.SetNewProductionLogFormAsync(ProductionLog);
+            
+            await InvokeAsync(() =>
+            {
+                IsSaved = true;
+                StateHasChanged();
+            });
+        }, null, DELAY_TIME, Timeout.Infinite); // 2 Second delay
+        
+        return base.OnAfterRenderAsync(firstRender);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -45,7 +65,12 @@ public partial class Create : ComponentBase
         await LoadCachedForm();
         
         // TO BE REMOVED
-        ActiveLineOperator = "John Doe";
+        ActiveLineOperator = new LineOperator
+        {
+            Id = 1,
+            FirstName = "John",
+            LastName = "Doe"
+        };
     }
     
     private async Task LoadCachedForm()
@@ -102,7 +127,7 @@ public partial class Create : ComponentBase
                     return;
                 }
 
-                ActiveWorkStation = workStation.Name;
+                ActiveWorkStation = workStation;
                 
                 await LocalCacheManager.SetActiveWorkStationAsync(workStation);
                 LoadAssociatedProductsFromStation();
@@ -130,7 +155,7 @@ public partial class Create : ComponentBase
                 // SETTING ACTIVE WORK INSTRUCTION TO THE FIRST IN THE LIST SINCE WE DO NOT YET KNOW IF THERE WILL BE 
                 // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
                 await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
-                ActiveProduct = product.Name;
+                ActiveProduct = product;
 
                 await LocalCacheManager.SetActiveProductAsync(product);
             }
@@ -144,7 +169,7 @@ public partial class Create : ComponentBase
     private async Task GetCachedActiveProductAsync()
     {
         var result = await LocalCacheManager.GetActiveProductAsync();
-        ActiveProduct = result.Name;
+        ActiveProduct = result.Value;
     }
 
     /// Sets the local storage variable
@@ -192,7 +217,7 @@ public partial class Create : ComponentBase
         try
         {
             var result = await LocalCacheManager.GetActiveWorkStationAsync();
-            ActiveWorkStation = result.Name;
+            ActiveWorkStation = result.Value;
         }
         catch (Exception e)
         {
@@ -284,12 +309,12 @@ public partial class Create : ComponentBase
 
             if (ProductionLog.Product != null)
             {
-                ActiveProduct = ProductionLog.Product.Name;
+                ActiveProduct = ProductionLog.Product;
             }
             
             if (ProductionLog.WorkStation != null)
             {
-                ActiveWorkStation = ProductionLog.WorkStation.Name;
+                ActiveWorkStation = ProductionLog.WorkStation;
             }
 
             StateHasChanged();
@@ -314,8 +339,8 @@ public partial class Create : ComponentBase
         ProductionLog.CreatedOn = currentTime;
         ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
-        ProductionLog.Product = Products?.Find(w => w.Name == ActiveProduct);
-        ProductionLog.WorkStation = WorkStations?.Find(w => w.Name == ActiveWorkStation);
+        ProductionLog.Product = ActiveProduct;
+        ProductionLog.WorkStation = ActiveWorkStation;
         await ProductionLogService.CreateAsync(ProductionLog);
         
         // Reset the local storage values
@@ -346,22 +371,6 @@ public partial class Create : ComponentBase
         var currentStatus = await GetWorkInstructionStatus();
 
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
-        
-        
-        // Cancel current timer if it exists
-        _debounceTimer?.DisposeAsync();
-        
-        _debounceTimer = new Timer(async _ =>
-        {
-            // Persist the changes to the local storage
-            await LocalCacheManager.SetNewProductionLogFormAsync(ProductionLog);
-            
-            await InvokeAsync(() =>
-            {
-                IsSaved = true;
-                StateHasChanged();
-            });
-        }, null, DELAY_TIME, Timeout.Infinite); // 2 Second delay
 
         StateHasChanged();
     }
@@ -405,14 +414,7 @@ public partial class Create : ComponentBase
                 return [];
             }
 
-            var workStation = WorkStations.FirstOrDefault(w => w.Name == ActiveWorkStation);
-
-            if (workStation == null)
-            {
-                return [];
-            }
-
-            return workStation.Products;
+            return ActiveWorkStation.Products;
         }
         catch (Exception e)
         {
@@ -426,5 +428,11 @@ public partial class Create : ComponentBase
     private async Task ResetCachedValues()
     {
         await LocalCacheManager.ResetCachedValuesAsync();
+    }
+    
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_debounceTimer != null) await _debounceTimer.DisposeAsync();
     }
 }
