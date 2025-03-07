@@ -97,74 +97,43 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
     }
     
-    private async Task HandleResetConfiguration()
-    {
-        // Do not allow operator to reset configuration if work instruction is started or if it is deemed complete
-        if (WorkInstructionStatus is Status.InProgress or Status.Completed)
-        {
-            return;
-        }
-        
-        // Reset current form selection
-        ActiveProduct = null;
-        ActiveWorkStation = null;
-        WorkInstructionStatus = Status.NotStarted;
-        IsWorkflowActive = false;
-        
-        await ResetCachedValues();
-    }
-    
     private async Task SetActiveWorkStation(int workStationId)
     {
-        try
+        if (WorkStations != null)
         {
-            if (WorkStations != null)
+            var workStation = WorkStations.FirstOrDefault(p => p.Id == workStationId);
+
+            if (workStation?.Products == null)
             {
-                var workStation = WorkStations.FirstOrDefault(p => p.Id == workStationId);
-
-                if (workStation?.Products == null)
-                {
-                    return;
-                }
-
-                ActiveWorkStation = workStation;
-                ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
-                
-                await LocalCacheManager.SetActiveWorkStationAsync(workStation);
-                LoadAssociatedProductsFromStation();
+                return;
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
+
+            ActiveWorkStation = workStation;
+            ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
+            
+            await LocalCacheManager.SetActiveWorkStationAsync(workStation);
+            LoadAssociatedProductsFromStation();
         }
     }
 
     private async Task SetActiveProduct(int productId)
     {
-        try
+        if (Products != null)
         {
-            if (Products != null)
+            var product = Products.FirstOrDefault(p => p.Id == productId);
+
+            if (product?.WorkInstructions == null)
             {
-                var product = Products.FirstOrDefault(p => p.Id == productId);
-
-                if (product?.WorkInstructions == null)
-                {
-                    return;
-                }
-
-                // SETTING ACTIVE WORK INSTRUCTION TO THE FIRST IN THE LIST SINCE WE DO NOT YET KNOW IF THERE WILL BE 
-                // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
-                await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
-                ActiveProduct = product;
-                ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
-
-                await LocalCacheManager.SetActiveProductAsync(product);
+                return;
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
+
+            // SETTING ACTIVE WORK INSTRUCTION TO THE FIRST IN THE LIST SINCE WE DO NOT YET KNOW IF THERE WILL BE 
+            // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
+            await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
+            ActiveProduct = product;
+            ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
+
+            await LocalCacheManager.SetActiveProductAsync(product);
         }
     }
     
@@ -177,67 +146,40 @@ public partial class Create : ComponentBase, IAsyncDisposable
     /// Sets the local storage variable
     private async Task SetInProgressAsync(bool isActive)
     {
-        try
-        {
-            await LocalCacheManager.SetIsWorkflowActiveAsync(isActive);
-            IsWorkflowActive = isActive;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        await LocalCacheManager.SetIsWorkflowActiveAsync(isActive);
+        IsWorkflowActive = isActive;
     }
 
-    /// If retrieval fails set in progress too false to allow user to restart workflow
     private async Task GetInProgressAsync()
     {
-        try
+        var result = await LocalCacheManager.GetWorkflowActiveStatusAsync();
+        
+        // If the result is true, then the operator was previously in the middle of a workflow
+        if (result)
         {
-            var result = await LocalCacheManager.GetWorkflowActiveStatusAsync();
+            IsWorkflowActive = result;
+            await GetCachedActiveWorkStationAsync();
+            await GetCachedActiveWorkInstructionAsync();
+            await GetCachedActiveProductAsync();
             
-            // If the result is true, then the operator was previously in the middle of a workflow
-            if (result)
-            {
-                IsWorkflowActive = result;
-                await GetCachedActiveWorkStationAsync();
-                await GetCachedActiveWorkInstructionAsync();
-                await GetCachedActiveProductAsync();
-                
-                return;
-            }
+            
+            return;
+        }
 
-            await SetInProgressAsync(false);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        await SetInProgressAsync(false);
     }
 
     private async Task GetCachedActiveWorkStationAsync()
     {
-        try
-        {
-            var result = await LocalCacheManager.GetActiveWorkStationAsync();
-            ActiveWorkStation = WorkStations?.FirstOrDefault(w => w.Name == result.Name);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        var result = await LocalCacheManager.GetActiveWorkStationAsync();
+        ActiveWorkStation = WorkStations?.FirstOrDefault(w => w.Name == result.Name);
+        ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
     }
 
     private async Task GetCachedActiveWorkInstructionAsync()
     {
-        try
-        {
-            var result = await LocalCacheManager.GetActiveWorkInstructionIdAsync(); 
-            await LoadActiveWorkInstruction(result);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        var result = await LocalCacheManager.GetActiveWorkInstructionIdAsync(); 
+        await LoadActiveWorkInstruction(result);
     }
 
     private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
@@ -273,20 +215,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private async Task SetSelectedWorkInstructionId(int? value)
     {
-        try
+        if (value.HasValue)
         {
-            if (value.HasValue)
-            {
-                await LoadActiveWorkInstruction(value.Value);
-                await SetCachedActiveWorkInstructionIdAsync(value.Value);
-                await SetInProgressAsync(true);
-            }
+            await LoadActiveWorkInstruction(value.Value);
+            await SetCachedActiveWorkInstructionIdAsync(value.Value);
+            await SetInProgressAsync(true);
         }
-        catch (Exception e)
-        {
-            Log.Error("Error Setting selected work instruction ID: Exception: {e}", e.Message);
-        }
-
     }
 
 
