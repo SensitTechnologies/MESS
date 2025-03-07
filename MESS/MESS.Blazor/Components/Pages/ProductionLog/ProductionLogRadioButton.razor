@@ -1,6 +1,8 @@
 @using MESS.Data.Models
 @using MESS.Services.BrowserCacheManager
+@using MESS.Services.ProductionLog
 @inject ILocalCacheManager LocalCacheManager
+@inject IProductionLogEventService ProductionLogEventService
 @attribute [StreamRendering]
 
 <li class="list-group-item mb-2" role="group">
@@ -36,7 +38,7 @@
                     <div class="d-inline-flex ">
                         @if (ShowOptionalNotesField)
                         {
-                            <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value="logStep.Notes"/>
+                            <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="logStep.Notes"/>
                         }
 
                     </div>

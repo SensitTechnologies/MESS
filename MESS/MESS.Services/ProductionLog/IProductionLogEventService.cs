@@ -4,6 +4,7 @@ public interface IProductionLogEventService
 {
     public string CurrentProductName { get; set; }
     public string CurrentWorkStationName { get; set; }
+    public bool IsSaved { get; set; }
     public event Action? ProductionLogEventChanged;
     public event Action? ProductDetailsChanged;
     // public event Action? WorkInstructionDetailsChanged;

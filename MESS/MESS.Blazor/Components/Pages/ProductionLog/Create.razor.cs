@@ -17,6 +17,7 @@ public partial class Create : ComponentBase, IDisposable
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
+    private bool IsSaved { get; set; }
     
     private Product? ActiveProduct { get; set; }
     private WorkStation? ActiveWorkStation { get; set; }
@@ -29,9 +30,7 @@ public partial class Create : ComponentBase, IDisposable
     
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     
-    private bool IsSaved { get; set; }
-    
-
+    private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
     {
         await LoadWorkStations();
@@ -48,13 +47,18 @@ public partial class Create : ComponentBase, IDisposable
             await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         }
      
-        // AutoSave
-        ProductionLogEventService.AutoSaveTriggered += async (log) =>
+        // AutoSave Trigger
+        _autoSaveHandler = async log =>
         {
             await LocalCacheManager.SetNewProductionLogFormAsync(log);
-            IsSaved = true;
-            StateHasChanged();
+            await InvokeAsync((() =>
+            {
+                IsSaved = true;
+                StateHasChanged();
+            }));
         };
+        
+        ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         
         // TO BE REMOVED
         ActiveLineOperator = new LineOperator
@@ -254,6 +258,8 @@ public partial class Create : ComponentBase, IDisposable
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
+        await ProductionLogEventService.SetCurrentProductionLog(new ProductionLog());
+
         
         // Add the new log to the session
         await SessionManager.AddProductionLogAsync(ProductionLog.Id);
@@ -276,7 +282,6 @@ public partial class Create : ComponentBase, IDisposable
         await ProductionLogEventService.ChangeMadeToProductionLog();
 
         var currentStatus = await GetWorkInstructionStatus();
-
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
 
         StateHasChanged();
@@ -331,11 +336,6 @@ public partial class Create : ComponentBase, IDisposable
     }
     public void Dispose()
     {
-        ProductionLogEventService.AutoSaveTriggered -= async (log) =>
-        {
-            await LocalCacheManager.SetNewProductionLogFormAsync(log);
-            IsSaved = true;
-            StateHasChanged();
-        };
+        ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
     }
 }

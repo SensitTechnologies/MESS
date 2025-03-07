@@ -5,7 +5,7 @@ using Data.Models;
 public class ProductionLogEventService : IProductionLogEventService
 {
     private ProductionLog? _currentProductionLog = null;
-    private const int DEFAULT_AUTOSAVE_DELAY = 4000; // 4 seconds
+    private const int DEFAULT_AUTOSAVE_DELAY = 2000; // 4 seconds
     private Timer? _autoSaveTimer;
     
     public event Action? ProductionLogEventChanged;
@@ -19,7 +19,7 @@ public class ProductionLogEventService : IProductionLogEventService
 
     public string CurrentProductName { get; set; } = "";
     public string CurrentWorkStationName { get; set; } = "";
-
+    public bool IsSaved { get; set; } = false;
 
     public async Task ChangeMadeToProductionLog()
     {
@@ -40,10 +40,11 @@ public class ProductionLogEventService : IProductionLogEventService
             await _autoSaveTimer.DisposeAsync();
         }
 
-
+        IsSaved = false;
         _autoSaveTimer = new Timer(_ =>
         {
             AutoSaveTriggered?.Invoke(_currentProductionLog);
+            IsSaved = true;
         }, null, DEFAULT_AUTOSAVE_DELAY, Timeout.Infinite);
     }
 
