@@ -1,18 +1,52 @@
-﻿namespace MESS.Services.ProductionLog;
+﻿using System.Diagnostics;
+
+namespace MESS.Services.ProductionLog;
 using Data.Models;
 public class ProductionLogEventService : IProductionLogEventService
 {
-    // public event Action? ProductionLogEventChanged;
+    private ProductionLog? _currentProductionLog = null;
+    private const int DEFAULT_AUTOSAVE_DELAY = 4000; // 4 seconds
+    private Timer? _autoSaveTimer;
+    
+    public event Action? ProductionLogEventChanged;
 
     public event Action? ProductDetailsChanged;
     // public event Action? WorkInstructionDetailsChanged;
     public event Action? WorkStationDetailsChanged;
     // public event Action? LineOperatorDetailsChanged;
+    
+    public event Func<ProductionLog, Task>? AutoSaveTriggered;
 
     public string CurrentProductName { get; set; } = "";
     public string CurrentWorkStationName { get; set; } = "";
 
-    
+
+    public async Task ChangeMadeToProductionLog()
+    {
+        await TriggerAutoSaveAsync();
+        ProductionLogEventChanged?.Invoke();
+    }
+
+    private async Task TriggerAutoSaveAsync()
+    {
+        if (_currentProductionLog == null)
+        {
+            Debug.WriteLine("Cannot trigger autosave. Production log or timer is null.");
+            return;
+        }
+
+        if (_autoSaveTimer != null)
+        {
+            await _autoSaveTimer.DisposeAsync();
+        }
+
+
+        _autoSaveTimer = new Timer(_ =>
+        {
+            AutoSaveTriggered?.Invoke(_currentProductionLog);
+        }, null, DEFAULT_AUTOSAVE_DELAY, Timeout.Infinite);
+    }
+
     public void SetCurrentProductName(string productName)
     {
         CurrentProductName = productName;
@@ -27,11 +61,21 @@ public class ProductionLogEventService : IProductionLogEventService
 
     public ProductionLog? GetCurrentProductionLog()
     {
-        throw new NotImplementedException();
+        return _currentProductionLog;
     }
 
-    public void SetCurrentProductionLog(ProductionLog productionLog)
+    public async Task SetCurrentProductionLog(ProductionLog productionLog)
     {
-        throw new NotImplementedException();
+        try
+        {
+            _currentProductionLog = productionLog ?? throw new ArgumentNullException(nameof(productionLog));
+            await ChangeMadeToProductionLog();
+            Debug.WriteLine($"Production log set successfully: {_currentProductionLog.Id}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error setting production log: {ex.Message}");
+            throw;
+        }
     }
 }

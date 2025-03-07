@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using MESS.Services.ProductionLog;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
@@ -11,7 +12,7 @@ internal enum Status
     InProgress,
     Completed
 }
-public partial class Create : ComponentBase, IAsyncDisposable
+public partial class Create : ComponentBase, IDisposable
 {
     private string Title = "Add";
     private bool IsWorkflowActive { get; set; }
@@ -28,30 +29,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     
-    private Timer? _debounceTimer;
     private bool IsSaved { get; set; }
-
-    private const int DELAY_TIME = 3000;
-
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        // Cancel current timer if it exists
-        _debounceTimer?.DisposeAsync();
-        
-        _debounceTimer = new Timer(async _ =>
-        {
-            // Persist the changes to the local storage
-            await LocalCacheManager.SetNewProductionLogFormAsync(ProductionLog);
-            
-            await InvokeAsync(() =>
-            {
-                IsSaved = true;
-                StateHasChanged();
-            });
-        }, null, DELAY_TIME, Timeout.Infinite); // 2 Second delay
-        
-        return base.OnAfterRenderAsync(firstRender);
-    }
+    
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,6 +42,19 @@ public partial class Create : ComponentBase, IAsyncDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         await LoadCachedForm();
+
+        if (ProductionLog != null)
+        {
+            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        }
+     
+        // AutoSave
+        ProductionLogEventService.AutoSaveTriggered += async (log) =>
+        {
+            await LocalCacheManager.SetNewProductionLogFormAsync(log);
+            IsSaved = true;
+            StateHasChanged();
+        };
         
         // TO BE REMOVED
         ActiveLineOperator = new LineOperator
@@ -242,38 +234,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
     }
 
-    /// Loads a Production Log from the database
-    private async Task LoadExistingLog(int id)
-    {
-        var existingProductionLog = await ProductionLogService.GetByIdAsync(id);
-        if (existingProductionLog != null)
-        {
-            Title = "Edit";
-            ProductionLog = existingProductionLog;
-
-            if (ProductionLog.WorkInstruction != null)
-            {
-                ActiveWorkInstruction = ProductionLog.WorkInstruction;
-            }
-
-            if (ProductionLog.Product != null)
-            {
-                ActiveProduct = ProductionLog.Product;
-            }
-            
-            if (ProductionLog.WorkStation != null)
-            {
-                ActiveWorkStation = ProductionLog.WorkStation;
-            }
-
-            StateHasChanged();
-        }
-        else
-        {
-            Console.WriteLine($"Production log with ID {id} not found.");
-        }
-    }
-
     protected async Task HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
@@ -310,12 +270,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
         var currentTime = DateTimeOffset.UtcNow;
-        
         step.SubmitTime = currentTime;
-        
         step.Success = success;
-
         IsSaved = false;
+        await ProductionLogEventService.ChangeMadeToProductionLog();
 
         var currentStatus = await GetWorkInstructionStatus();
 
@@ -371,17 +329,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return [];
         }
     }
-
-    /// Removes the current 'state' from the browsers local storage since they are navigating to a page
-    /// which will allow the operator to change product, or workstation, or to view previous session logs
-    private async Task ResetCachedValues()
+    public void Dispose()
     {
-        await LocalCacheManager.ResetCachedValuesAsync();
-    }
-    
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_debounceTimer != null) await _debounceTimer.DisposeAsync();
+        ProductionLogEventService.AutoSaveTriggered -= async (log) =>
+        {
+            await LocalCacheManager.SetNewProductionLogFormAsync(log);
+            IsSaved = true;
+            StateHasChanged();
+        };
     }
 }
