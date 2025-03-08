@@ -71,7 +71,6 @@ public class ProductionLogEventService : IProductionLogEventService
         {
             _currentProductionLog = productionLog ?? throw new ArgumentNullException(nameof(productionLog));
             await ChangeMadeToProductionLog();
-            Debug.WriteLine($"Production log set successfully: {_currentProductionLog.Id}");
         }
         catch (Exception ex)
         {

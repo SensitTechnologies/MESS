@@ -41,12 +41,7 @@ public partial class Create : ComponentBase, IDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         await LoadCachedForm();
-
-        if (ProductionLog != null)
-        {
-            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
-        }
-     
+        
         // AutoSave Trigger
         _autoSaveHandler = async log =>
         {
@@ -59,6 +54,11 @@ public partial class Create : ComponentBase, IDisposable
         };
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
+        
+        if (ProductionLog != null)
+        {
+            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        }
         
         // TO BE REMOVED
         ActiveLineOperator = new LineOperator
@@ -279,7 +279,7 @@ public partial class Create : ComponentBase, IDisposable
         step.SubmitTime = currentTime;
         step.Success = success;
         IsSaved = false;
-        await ProductionLogEventService.ChangeMadeToProductionLog();
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
 
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
