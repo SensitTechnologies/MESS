@@ -2,6 +2,7 @@
     <div class="card-body">
         <h5 class="card-title">@Title</h5>
         <h3 class="card-text">@Text</h3>
+        @ChildContent
     </div>
 </div>
 
@@ -12,4 +13,5 @@
     
     [Parameter]
     public string? Text { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 }

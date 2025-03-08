@@ -6,7 +6,6 @@ public class ProductionLog : AuditableEntity
 {
     public int Id { get; set; }
     
-    public DateTimeOffset SubmitTime { get; set; }
     public List<ProductionLogStep> LogSteps { get; set; } = [];
     
     // Navigation Fields
@@ -24,10 +23,6 @@ public class ProductionLogValidator : AbstractValidator<ProductionLog>
 {
     public ProductionLogValidator()
     {
-        RuleFor(x => x.SubmitTime)
-            .NotNull()
-            .WithMessage("SubmitTime cannot be null.");
-        
         RuleFor(x => x.LogSteps)
             .SetValidator(new LogStepValidator());
     }

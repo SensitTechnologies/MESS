@@ -8,13 +8,6 @@ public interface IProductionLogService
     /// <returns>List of ProductionLog objects</returns>
     public Task<List<ProductionLog>?> GetAllAsync();
     /// <summary>
-    /// Determines the Total Time for a given work instruction instance for a Production Log.
-    /// Calculates total time through the summation of its ProductionLogStep's duration.
-    /// </summary>
-    /// <param name="log">A ProductionLog object</param>
-    /// <returns>A nullable TimeSpan object</returns>
-    public TimeSpan? GetTotalTime(ProductionLog log);
-    /// <summary>
     /// Retrieves a single ProductionLog object asynchronously
     /// </summary>
     /// <param name="id">integer ID value</param>

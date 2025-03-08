@@ -1,11 +1,32 @@
+@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@inject IProductionLogEventService ProductionLogEventService
+
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
-    <CreateHeaderCard Title="Product" Text="@ActiveProduct"></CreateHeaderCard>
-    <CreateHeaderCard Title="Work Station" Text="@WorkStation"></CreateHeaderCard>
+    <CreateHeaderCard Title="Work Station">
+        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@OnWorkStationSelected"></WorkStationSelect>
+    </CreateHeaderCard>
+    <CreateHeaderCard Title="Product">
+        <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
+    </CreateHeaderCard>
+    <CreateHeaderCard Title="Operator">
+        <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
+    </CreateHeaderCard>
 </div>
 
 @code {
     [Parameter]
-    public string? ActiveProduct { get; set; }
+    public List<Product>? Products { get; set; }
     [Parameter]
-    public string? WorkStation { get; set; }
+    public EventCallback<int> OnProductSelected { get; set; }
+    
+    [Parameter]
+    public List<WorkStation>? WorkStations { get; set; }
+    [Parameter]
+    public EventCallback<int> OnWorkStationSelected { get; set; }
+    
+    [Parameter]
+    public List<LineOperator>? LineOperators { get; set; }
+    [Parameter]
+    public EventCallback<int> OnLineOperatorSelected { get; set; }
 }
