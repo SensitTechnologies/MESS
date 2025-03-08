@@ -21,7 +21,6 @@ else
 <div class="card mb-3">
     <div class="card-body">
         <h5 class="card-title">Log #@log.Id</h5>
-        <p class="card-subtitle mb-2 text-muted">Submitted At: @log.SubmitTime.ToLocalTime()</p>
 
         <dl class="row">
             <dt class="col-sm-3">Work Instruction:</dt>
@@ -34,9 +33,6 @@ else
             <dd class="col-sm-9">@log.LineOperator</dd>
 
             <dt class="col-sm-3">Total Time:</dt>
-            <dd class="col-sm-9">
-                @(ProductionLogService.GetTotalTime(log)?.ToString(@"hh\:mm\:ss") ?? "N/A")
-            </dd>
         </dl>
 
         <div class="mb-3">

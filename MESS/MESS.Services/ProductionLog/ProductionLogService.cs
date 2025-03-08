@@ -51,33 +51,7 @@ public class ProductionLogService : IProductionLogService
             return new List<ProductionLog>();
         }
     }
-
-    public TimeSpan? GetTotalTime(ProductionLog log)
-    {
-        try
-        {
-            if (log.LogSteps.Count == 0)
-                return TimeSpan.Zero;
-            
-            var orderedSteps = log.LogSteps.OrderBy(l => l.SubmitTime);
-
-            var start = orderedSteps.FirstOrDefault()?.SubmitTime;
-            var logSubmitTime = log.SubmitTime;
-
-            if (logSubmitTime < start)
-            {
-                return TimeSpan.Zero;
-            }
-            
-            return logSubmitTime - start;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to GetTotalTime from a production log, in ProductionLogService");
-            return null;
-        }
-    }
+    
 
     public ProductionLog? GetById(int id)
     {
@@ -122,7 +96,6 @@ public class ProductionLogService : IProductionLogService
         try
         {
             productionLog.CreatedOn = DateTimeOffset.UtcNow;
-            productionLog.SubmitTime = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             _context.ProductionLogs.Add(productionLog);
             await _context.SaveChangesAsync();
