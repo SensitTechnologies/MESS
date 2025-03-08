@@ -86,7 +86,7 @@
 
     private void SetOptionalNotes()
     {
-        if (!string.IsNullOrWhiteSpace(logStep.Notes) && (logStep.Success.HasValue && !logStep.Success.Value))
+        if (!string.IsNullOrWhiteSpace(logStep.Notes) || (logStep.Success.HasValue && !logStep.Success.Value))
         {
             ShowOptionalNotesField = true;
         }
