@@ -116,6 +116,12 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (Products != null)
         {
+            if (productId < 0)
+            {
+                ActiveWorkInstruction = null;
+                return;
+            }
+            
             var product = Products.FirstOrDefault(p => p.Id == productId);
 
             if (product?.WorkInstructions == null)
@@ -280,7 +286,6 @@ public partial class Create : ComponentBase, IDisposable
         step.Success = success;
         IsSaved = false;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
-
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
 

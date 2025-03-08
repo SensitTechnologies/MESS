@@ -7,7 +7,7 @@
     @if (Products != null)
     {
         <select disabled="@Disabled" id="product-select" class="form-select" @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
-            <option value="">Select Product</option>
+            <option value="-1">Select Product</option>
             @foreach (var product in Products)
             {
                 @if (product.WorkInstructions == null)
