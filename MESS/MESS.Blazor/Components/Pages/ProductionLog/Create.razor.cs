@@ -27,6 +27,7 @@ public partial class Create : ComponentBase, IDisposable
     
     private List<WorkStation>? WorkStations { get; set; }
     private List<Product>? Products { get; set; }
+    private List<LineOperator>? LineOperators { get; set; }
     
     private WorkInstruction? ActiveWorkInstruction { get; set; }
     
@@ -109,6 +110,24 @@ public partial class Create : ComponentBase, IDisposable
             
             await LocalCacheManager.SetActiveWorkStationAsync(workStation);
             LoadAssociatedProductsFromStation();
+        }
+    }
+    
+    private async Task SetActiveLineOperator(int lineOperatorId)
+    {
+        if (LineOperators != null)
+        {
+            var lineOperator = LineOperators.FirstOrDefault(p => p.Id == lineOperatorId);
+
+            if (lineOperator == null)
+            {
+                return;
+            }
+
+            ActiveLineOperator = lineOperator;
+            ProductionLogEventService.SetCurrentLineOperatorName(ActiveLineOperator.FullName);
+            
+            await LocalCacheManager.SetActiveLineOperatorAsync(lineOperator);
         }
     }
 

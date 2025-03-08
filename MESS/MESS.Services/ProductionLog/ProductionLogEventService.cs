@@ -11,14 +11,18 @@ public class ProductionLogEventService : IProductionLogEventService
     public event Action? ProductionLogEventChanged;
 
     public event Action? ProductDetailsChanged;
+
     // public event Action? WorkInstructionDetailsChanged;
+
     public event Action? WorkStationDetailsChanged;
-    // public event Action? LineOperatorDetailsChanged;
+
+    public event Action? LineOperatorDetailsChanged;
     
     public event Func<ProductionLog, Task>? AutoSaveTriggered;
 
     public string CurrentProductName { get; set; } = "";
     public string CurrentWorkStationName { get; set; } = "";
+    public string CurrentLineOperatorName { get; set; } = "";
     public bool IsSaved { get; set; } = false;
 
     public async Task ChangeMadeToProductionLog()
@@ -58,6 +62,12 @@ public class ProductionLogEventService : IProductionLogEventService
     {
         CurrentWorkStationName = workStationName;
         WorkStationDetailsChanged?.Invoke();
+    }
+
+    public void SetCurrentLineOperatorName(string lineOperatorName)
+    {
+        CurrentLineOperatorName = lineOperatorName;
+        LineOperatorDetailsChanged?.Invoke();
     }
 
     public ProductionLog? GetCurrentProductionLog()

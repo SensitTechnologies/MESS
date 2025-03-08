@@ -9,6 +9,9 @@
     <CreateHeaderCard Title="Product">
         <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
     </CreateHeaderCard>
+    <CreateHeaderCard Title="Operator">
+        <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
+    </CreateHeaderCard>
 </div>
 
 @code {
@@ -21,4 +24,9 @@
     public List<WorkStation>? WorkStations { get; set; }
     [Parameter]
     public EventCallback<int> OnWorkStationSelected { get; set; }
+    
+    [Parameter]
+    public List<LineOperator>? LineOperators { get; set; }
+    [Parameter]
+    public EventCallback<int> OnLineOperatorSelected { get; set; }
 }
