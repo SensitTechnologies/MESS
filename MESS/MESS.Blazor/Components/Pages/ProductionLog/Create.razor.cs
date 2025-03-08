@@ -1,4 +1,5 @@
-﻿using MESS.Services.ProductionLog;
+﻿using MESS.Services.LineOperator;
+using MESS.Services.ProductionLog;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Serilog;
@@ -36,6 +37,7 @@ public partial class Create : ComponentBase, IDisposable
     {
         await LoadWorkStations();
         await LoadProducts();
+        LoadLineOperators();
         await GetInProgressAsync();
         
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
@@ -60,14 +62,6 @@ public partial class Create : ComponentBase, IDisposable
         {
             await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         }
-        
-        // TO BE REMOVED
-        ActiveLineOperator = new LineOperator
-        {
-            Id = 1,
-            FirstName = "John",
-            LastName = "Doe"
-        };
     }
     
     private async Task LoadCachedForm()
@@ -170,6 +164,19 @@ public partial class Create : ComponentBase, IDisposable
         
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
+    
+    private async Task GetCachedLineOperatorAsync()
+    {
+        var result = await LocalCacheManager.GetActiveLineOperatorAsync();
+        ActiveLineOperator = LineOperators?.FirstOrDefault(p => p.FullName == result.Name);
+
+        if (ActiveLineOperator == null) 
+        {
+            return;
+        }
+        
+        ProductionLogEventService.SetCurrentLineOperatorName(ActiveLineOperator.FullName);
+    }
 
     /// Sets the local storage variable
     private async Task SetInProgressAsync(bool isActive)
@@ -189,6 +196,7 @@ public partial class Create : ComponentBase, IDisposable
             await GetCachedActiveWorkStationAsync();
             await GetCachedActiveWorkInstructionAsync();
             await GetCachedActiveProductAsync();
+            await GetCachedLineOperatorAsync();
             
             
             return;
@@ -247,6 +255,19 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
+    private void LoadLineOperators()
+    {
+        try
+        {
+            var operatorsAsync = LineOperatorService.GetLineOperators();
+            LineOperators = operatorsAsync.ToList();
+        }
+        catch (Exception e)
+        {
+            Log.Error("Error loading products: {Message}", e.Message);
+        }
+    }
+    
     private async Task SetSelectedWorkInstructionId(int? value)
     {
         if (value.HasValue)
@@ -279,6 +300,7 @@ public partial class Create : ComponentBase, IDisposable
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
+        ProductionLog.LineOperator = ActiveLineOperator;
         await ProductionLogService.CreateAsync(ProductionLog);
         
         // Reset the local storage values
