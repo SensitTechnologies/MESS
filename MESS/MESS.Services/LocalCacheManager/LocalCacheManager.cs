@@ -1,4 +1,6 @@
-﻿using MESS.Data.DTO;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using MESS.Data.DTO;
 
 namespace MESS.Services.BrowserCacheManager;
 
@@ -10,6 +12,7 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
+    private const string ActiveLineOperatorKey = "LAST_KNOWN_LINE_OPERATOR";
     private const string ActiveWorkStationKey = "LAST_KNOWN_WORK_STATION";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
@@ -49,7 +52,7 @@ public class LocalCacheManager : ILocalCacheManager
                 Success = step.Success,
                 SubmitTime = step.SubmitTime,
                 Notes = step.Notes,
-                ShowNotes = step.Notes.Length > 0
+                ShowNotes = step.Notes.Length > 0,
             });
         }
 
@@ -81,13 +84,13 @@ public class LocalCacheManager : ILocalCacheManager
         try
         {
             // map to DTO
-            var CacheDTO = new CacheDTO
+            var productDTO = new CacheDTO
             {
                 Id = product.Id,
                 Name = product.Name
             };
             
-            await _protectedLocalStorage.SetAsync(ActiveProductKey, CacheDTO);
+            await _protectedLocalStorage.SetAsync(ActiveProductKey, productDTO);
         }
         catch (Exception e)
         {
@@ -135,6 +138,26 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    public async Task<CacheDTO> GetActiveLineOperatorAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveLineOperatorKey);
+
+            if (result is { Success: true, Value: not null })
+            {
+                return result.Value;
+            }
+
+            return new CacheDTO();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return new CacheDTO();
+        }
+    }
+
     public async Task<CacheDTO> GetActiveWorkStationAsync()
     {
         try
@@ -166,6 +189,25 @@ public class LocalCacheManager : ILocalCacheManager
             };
             
             await _protectedLocalStorage.SetAsync(ActiveWorkStationKey, CacheDTO);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    public async Task SetActiveLineOperatorAsync(LineOperator lineOperator)
+    {
+        try
+        {
+            // map to DTO
+            var operatorDTO = new CacheDTO
+            {
+                Id = lineOperator.Id,
+                Name = lineOperator.FullName
+            };
+            
+            await _protectedLocalStorage.SetAsync(ActiveLineOperatorKey, operatorDTO);
         }
         catch (Exception e)
         {

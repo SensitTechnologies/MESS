@@ -3,7 +3,7 @@
 @if (ActiveWorkInstruction != null && ProductionLog != null)
 {
     
-    <ul class="list-group list-group-numbered container">
+    <ol class="list-group list-group-numbered container">
         @foreach (var step in ActiveWorkInstruction.Steps)
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
@@ -18,9 +18,9 @@
                 ProductionLog.LogSteps.Add(logStep);
             }
             
-            <ProductionLogRadioButton IsEditMode="@IsEditMode" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
+            <ProductionLogRadioButton step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
         }
-    </ul>
+    </ol>
 }
 
 @code {
@@ -28,8 +28,7 @@
 
     [Parameter] public required ProductionLog ProductionLog { get; set; }
 
-    [Parameter] public EventCallback<(ProductionLogStep, bool)> OnStepCompleted { get; set; }
-    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
 
 
     private string? SelectedButton { get; set; } = "";

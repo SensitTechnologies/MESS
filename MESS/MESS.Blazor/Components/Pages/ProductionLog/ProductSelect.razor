@@ -1,18 +1,22 @@
 @using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@inject IProductionLogEventService ProductionLogEventService
+@implements IDisposable
 
 <div>
     @if (Products != null)
     {
-        <label for="product-select">Select Product</label>
         <select disabled="@Disabled" id="product-select" class="form-select" @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
-            <option value="">Select Product</option>
+            <option value="-1">Select Product</option>
             @foreach (var product in Products)
             {
                 @if (product.WorkInstructions == null)
                 {
                     continue;
                 }
-                <option value="@product.Id">@product.Name</option>
+                var selectedProductName = ProductionLogEventService.CurrentProductName;
+                var isSelected = product.Name == selectedProductName;
+                <option selected="@isSelected" value="@product.Id">@product.Name</option>
             }
         </select>
     }
@@ -25,4 +29,14 @@
     public EventCallback<int> OnProductSelected { get; set; }
     [Parameter]
     public bool Disabled { get; set; }
+
+    protected override void OnInitialized()
+    {
+        ProductionLogEventService.ProductDetailsChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ProductionLogEventService.ProductDetailsChanged -= StateHasChanged;
+    }
 }

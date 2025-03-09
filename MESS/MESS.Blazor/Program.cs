@@ -1,13 +1,17 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using MESS.Blazor.Components;
 using MESS.Data.Context;
 using MESS.Services.Product;
 using MESS.Data.Seed;
 using MESS.Services.BrowserCacheManager;
+using MESS.Services.LineOperator;
 using MESS.Services.ProductionLog;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using MESS.Services.WorkStation;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
@@ -36,9 +40,11 @@ builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>()
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddTransient<ISessionManager, SessionManager>();
+builder.Services.AddTransient<IWorkStationService, WorkStationService>();
+builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
+builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
-builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 

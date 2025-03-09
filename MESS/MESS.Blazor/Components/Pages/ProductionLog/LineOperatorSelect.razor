@@ -1,0 +1,39 @@
+﻿@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@inject IProductionLogEventService ProductionLogEventService
+
+<div>
+    @if (LineOperators != null)
+    {
+    <select disabled="@Disabled" id="operator-select" class="form-select" @onchange="async e => await OnLineOperatorSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
+        <option value="-1">Select Operator</option>
+        @foreach (var lineOperator in LineOperators)
+        {
+            var selectedLineOperatorName = ProductionLogEventService.CurrentLineOperatorName;
+            var isSelected = lineOperator.FullName == selectedLineOperatorName;
+            <option selected="@isSelected" value="@lineOperator.Id">@lineOperator.FullName</option>
+        }
+    </select>
+    }
+</div>
+
+
+
+@code {
+    [Parameter]
+    public List<LineOperator>? LineOperators { get; set; }
+    [Parameter]
+    public EventCallback<int> OnLineOperatorSelected { get; set; }
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    protected override void OnInitialized()
+    {
+        ProductionLogEventService.LineOperatorDetailsChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ProductionLogEventService.LineOperatorDetailsChanged -= StateHasChanged;
+    }
+}

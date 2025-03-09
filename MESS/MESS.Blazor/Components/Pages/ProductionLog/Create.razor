@@ -1,20 +1,19 @@
-﻿@page "/production-log/new"
-@page "/production-log/edit/{logId:int}"
-@using MESS.Data.Models
+﻿@page "/production-log"
 @using MESS.Services.BrowserCacheManager
+@using MESS.Services.LineOperator
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
-@using MESS.Blazor.Components.Utility
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
 @inject IProductionLogService ProductionLogService
-@inject NavigationManager NavigationManager
+@inject IProductionLogEventService ProductionLogEventService
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject ILocalCacheManager LocalCacheManager
 @inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
+@inject ILineOperatorService LineOperatorService
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -22,20 +21,9 @@
         <EditForm class="container" FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator/>
             <ValidationSummary/>
-            <TimeFormValidator TModel="ProductionLog" Validator="_validator"></TimeFormValidator>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                    @if (!IsWorkflowActive && !IsEditMode)
-                    {
-                        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation"/>
-                        var stationProducts = LoadAssociatedProductsFromStation();
-                        <ProductSelect Disabled="@(string.IsNullOrWhiteSpace(ActiveWorkStation))" Products="@stationProducts" OnProductSelected="@SetActiveProduct"/>
-                    }
-                    else
-                    {
-                        <CreateHeader ActiveProduct="@ActiveProduct" WorkStation="@ActiveWorkStation" />
-                    }
-
+                    <CreateHeader LineOperators="@LineOperators" OnLineOperatorSelected="@SetActiveLineOperator" WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation" Products="@LoadAssociatedProductsFromStation()" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">
                             <p class="mb-0">
@@ -49,26 +37,19 @@
                                 }
                             </p>
                         </div>
-                        @if (!IsEditMode)
-                        {
-                            <div>
-                                <button type="button" disabled="@(WorkInstructionStatus is Status.InProgress or Status.Completed)" class="btn btn-warning" @onclick="HandleResetConfiguration">Reset Configuration</button>
-                            </div>
-                        }
                     </div>
-                    
                 </div>
                 
                 @if (ActiveWorkInstruction != null && ActiveProduct != null)
                 {
-                    <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))" IsEditMode="@IsEditMode"/>
+                    <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
                 }
 
             </div>
             <div class="d-flex justify-content-center mt-4 gap-4">
 
                 <div class="mb-4">
-                    <button disabled="@(WorkInstructionStatus is Status.NotStarted or Status.InProgress)" type="submit" class="btn btn-primary">Save</button>
+                    <button type="submit" class="btn btn-primary">Submit Log</button>
                 </div>
                 
             </div>
