@@ -12,8 +12,7 @@ public class LineOperator : AuditableEntity
     public bool IsActive { get; set; }
     
     // Navigation properties
-    public int? ProductionLogId { get; set; }
-    public ProductionLog? ProductionLog { get; set; }
+    public List<ProductionLog>? ProductionLogs { get; set; }
     
     public string FullName => $"{FirstName} {LastName}";
 }
