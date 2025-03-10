@@ -18,12 +18,3 @@ public class ProductionLog : AuditableEntity
     public RootCause? RootCause { get; set; }
     public Cell? Cell { get; set; }
 }
-
-public class ProductionLogValidator : AbstractValidator<ProductionLog>
-{
-    public ProductionLogValidator()
-    {
-        RuleFor(x => x.LogSteps)
-            .SetValidator(new LogStepValidator());
-    }
-}
