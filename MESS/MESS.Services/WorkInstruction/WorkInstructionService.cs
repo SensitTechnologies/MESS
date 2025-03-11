@@ -39,6 +39,7 @@ public class WorkInstructionService : IWorkInstructionService
             var workInstructions = _context.WorkInstructions
                 .Include(w => w.Operator)
                 .Include(w => w.Steps)
+                .ThenInclude(w => w.PartsNeeded)
                 .Include(w => w.RelatedDocumentation)
                 .ToListAsync();
 

@@ -44,7 +44,7 @@
                         }
 
 
-                        @if (logStep.WorkInstructionStep is { PartsNeeded: not null })
+                        @if (step is { PartsNeeded: not null })
                         {
                             @foreach (var serialNumberLog in _serialNumberLogs)
                             {
@@ -97,14 +97,14 @@
     
     private void InitializeSerialNumberLogs()
     {
-        _serialNumberLogs.Clear();
+        // _serialNumberLogs.Clear();
 
-        if (logStep.WorkInstructionStep?.PartsNeeded == null)
+        if (step.PartsNeeded == null)
         {
             return;
         }
         
-        foreach (var part in logStep.WorkInstructionStep.PartsNeeded)
+        foreach (var part in step.PartsNeeded)
         {
             _serialNumberLogs.Add(new SerialNumberLog
             {
