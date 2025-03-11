@@ -5,7 +5,7 @@ using Data.Models;
 public class ProductionLogEventService : IProductionLogEventService
 {
     private ProductionLog? _currentProductionLog = null;
-    private const int DEFAULT_AUTOSAVE_DELAY = 2000; // 4 seconds
+    private const int DEFAULT_AUTOSAVE_DELAY = 2000; // 2 seconds
     private Timer? _autoSaveTimer;
     
     public event Action? ProductionLogEventChanged;

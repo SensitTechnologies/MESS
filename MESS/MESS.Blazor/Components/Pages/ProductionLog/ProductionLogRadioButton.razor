@@ -1,6 +1,8 @@
+@using System.Drawing
 @using MESS.Data.Models
 @using MESS.Services.BrowserCacheManager
 @using MESS.Services.ProductionLog
+@using QRCoder
 @inject ILocalCacheManager LocalCacheManager
 @inject IProductionLogEventService ProductionLogEventService
 @attribute [StreamRendering]
@@ -44,9 +46,17 @@
 
                         @if (logStep.WorkInstructionStep is { PartsNeeded: not null })
                         {
-                            foreach (var part in logStep.WorkInstructionStep.PartsNeeded)
+                            @foreach (var serialNumberLog in _serialNumberLogs)
                             {
-                                <p>@part.PartName</p>
+                                <p>@serialNumberLog.Part?.PartName</p>
+                                <InputText @bind-Value="@serialNumberLog.PartSerialNumber"></InputText>
+                            }
+                            <button type="button" class="btn btn-outline-primary" @onclick="@GenerateQRCode">Generate QR Code</button>
+                            @if (!string.IsNullOrEmpty(QRCodeDataUrl))
+                            {
+                                <div>
+                                    <img src="@QRCodeDataUrl" alt="QR Code" class="mt-2" style="max-width: 200px;" />
+                                </div>
                             }
                         }
                     </div>
@@ -63,16 +73,17 @@
     public required ProductionLogStep logStep { get; set; }
     
     [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+
+    private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
+
+    private string? QRCodeDataUrl;
     
     protected override void OnInitialized()
     {
         if (!logStep.Success.HasValue)
         {
             SetSelectedButton("");
-            return;
-        }
-
-        if (logStep.Success.Value)
+        } else if (logStep.Success.Value)
         {
             SetSelectedButton("Success");
         } else if (!logStep.Success.Value)
@@ -81,7 +92,39 @@
         }
         
         SetOptionalNotes();
-    } 
+        InitializeSerialNumberLogs();
+    }
+    
+    private void InitializeSerialNumberLogs()
+    {
+        _serialNumberLogs.Clear();
+
+        if (logStep.WorkInstructionStep?.PartsNeeded == null)
+        {
+            return;
+        }
+        
+        foreach (var part in logStep.WorkInstructionStep.PartsNeeded)
+        {
+            _serialNumberLogs.Add(new SerialNumberLog
+            {
+                Part = part,
+                ProductionLogId = logStep.ProductionLogId,
+                SubmitTimeQc = DateTimeOffset.UtcNow
+            });
+        }
+    }
+    
+    private void GenerateQRCode()
+    {
+        var serialNumbers = string.Join(",", _serialNumberLogs.Select(x => x.PartSerialNumber));
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(serialNumbers, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new BitmapByteQRCode(qrCodeData);
+        var qrCodeImageArr = qrCode.GetGraphic(20);
+    
+        QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
+    }
 
     private bool ShowOptionalNotesField { get; set; } = false;
     
