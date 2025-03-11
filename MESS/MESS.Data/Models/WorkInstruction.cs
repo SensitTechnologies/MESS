@@ -21,8 +21,5 @@ public class WorkInstructionValidator : AbstractValidator<WorkInstruction>
             .NotEmpty()
             .Length(1, 2048)
             .WithMessage("Work Instruction Title length must be between 1 and 2048 characters.");
-
-        RuleFor(x => x.Steps)
-            .SetValidator(new StepListValidator());
     }
 }
