@@ -9,5 +9,5 @@ public class Part : AuditableEntity
     
     // Navigation Field
     public int LogId { get; set; }
-    public SerialNumberLog Log { get; set; } = null!;
+    public SerialNumberLog? Log { get; set; } = null;
 }

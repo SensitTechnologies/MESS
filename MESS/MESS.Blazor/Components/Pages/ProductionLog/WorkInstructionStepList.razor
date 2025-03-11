@@ -13,6 +13,7 @@
                 logStep = new ProductionLogStep
                 {
                     WorkInstructionStepId = step.Id,
+                    WorkInstructionStep = step,
                     ProductionLogId = ProductionLog.Id,
                 };
                 ProductionLog.LogSteps.Add(logStep);

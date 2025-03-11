@@ -35,12 +35,20 @@
                 @if (logStep != null)
                 {
 
-                    <div class="d-inline-flex ">
+                    <div class="d-inline-flex">
                         @if (ShowOptionalNotesField)
                         {
                             <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="logStep.Notes"/>
                         }
 
+
+                        @if (logStep.WorkInstructionStep is { PartsNeeded: not null })
+                        {
+                            foreach (var part in logStep.WorkInstructionStep.PartsNeeded)
+                            {
+                                <p>@part.PartName</p>
+                            }
+                        }
                     </div>
                 }
             </div>
