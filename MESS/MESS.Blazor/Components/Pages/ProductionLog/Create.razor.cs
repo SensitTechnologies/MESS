@@ -103,7 +103,6 @@ public partial class Create : ComponentBase, IDisposable
             ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
             
             await LocalCacheManager.SetActiveWorkStationAsync(workStation);
-            LoadAssociatedProductsFromStation();
         }
     }
     
@@ -149,6 +148,7 @@ public partial class Create : ComponentBase, IDisposable
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
 
             await LocalCacheManager.SetActiveProductAsync(product);
+            LoadAssociatedWorkStationsFromProduct();
         }
     }
     
@@ -363,16 +363,16 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
 
-    private List<Product> LoadAssociatedProductsFromStation()
+    private List<WorkStation> LoadAssociatedWorkStationsFromProduct()
     {
         try
         {
-            if (ActiveWorkStation == null || WorkStations == null)
+            if (ActiveProduct == null || Products == null || ActiveProduct.WorkStations == null)
             {
                 return [];
             }
 
-            return ActiveWorkStation.Products;
+            return ActiveProduct.WorkStations;
         }
         catch (Exception e)
         {

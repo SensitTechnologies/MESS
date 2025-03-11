@@ -3,11 +3,11 @@
 @inject IProductionLogEventService ProductionLogEventService
 
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
-    <CreateHeaderCard Title="Work Station">
-        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@OnWorkStationSelected"></WorkStationSelect>
-    </CreateHeaderCard>
     <CreateHeaderCard Title="Product">
         <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
+    </CreateHeaderCard>
+    <CreateHeaderCard Title="Work Station">
+        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@OnWorkStationSelected"></WorkStationSelect>
     </CreateHeaderCard>
     <CreateHeaderCard Title="Operator">
         <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
