@@ -17,7 +17,7 @@
             <div class="d-flex align-items-center">
                 <div class="d-inline-flex align-items-center gap-4">
                     <input type="radio"
-                           checked="@(!logStep?.Success)"
+                           checked="@(!logStep.Success)"
                            autocomplete="off"
                            @onclick="@(async (e) => await HandleButtonPress(false))"
                            class="btn-check"
@@ -26,7 +26,7 @@
                     <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
 
                     <input type="radio"
-                           checked="@(logStep?.Success)"
+                           checked="@(logStep.Success)"
                            autocomplete="off"
                            class="btn-check"
                            name="radioBtn{@step.Name}"
@@ -44,18 +44,22 @@
                         }
 
 
-                        @if (step is { PartsNeeded: not null })
+                        @if (step is { PartsNeeded.Count: > 0 })
                         {
-                            @foreach (var serialNumberLog in _serialNumberLogs)
-                            {
-                                <p>@serialNumberLog.Part?.PartName</p>
-                                <InputText @bind-Value="@serialNumberLog.PartSerialNumber"></InputText>
-                            }
+                            <div class="container d-grid w-50">
+                                @foreach (var serialNumberLog in _serialNumberLogs)
+                                {
+                                    <div class="d-inline-flex gap-2 mb-1">
+                                        <label class="form-label col" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
+                                        <InputText id="serialNumberLog" class="form-control col" @bind-Value="@serialNumberLog.PartSerialNumber"></InputText>
+                                    </div>
+                                }
+                            </div>
                             <button type="button" class="btn btn-outline-primary" @onclick="@GenerateQRCode">Generate QR Code</button>
                             @if (!string.IsNullOrEmpty(QRCodeDataUrl))
                             {
                                 <div>
-                                    <img src="@QRCodeDataUrl" alt="QR Code" class="mt-2" style="max-width: 200px;" />
+                                    <img src="@QRCodeDataUrl" alt="QR Code" class="mt-2" style="max-width: 50px;" />
                                 </div>
                             }
                         }
@@ -97,7 +101,7 @@
     
     private void InitializeSerialNumberLogs()
     {
-        // _serialNumberLogs.Clear();
+        _serialNumberLogs.Clear();
 
         if (step.PartsNeeded == null)
         {
