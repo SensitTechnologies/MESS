@@ -5,6 +5,7 @@
 @using QRCoder
 @inject ILocalCacheManager LocalCacheManager
 @inject IProductionLogEventService ProductionLogEventService
+@inject IJSRuntime JSRuntime
 @attribute [StreamRendering]
 
 <li class="list-group-item mb-2" role="group">
@@ -59,7 +60,10 @@
                             @if (!string.IsNullOrEmpty(QRCodeDataUrl))
                             {
                                 <div>
-                                    <img src="@QRCodeDataUrl" alt="QR Code" class="mt-2" style="max-width: 50px;" />
+                                    <img src="@QRCodeDataUrl" alt="QR Code" class="mt-2" id="qrCodeImage" style="max-width: 200px;" />
+                                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="PrintQRCode">
+                                        <i class="bi bi-printer"></i> Print QR Code
+                                    </button>
                                 </div>
                             }
                         }
@@ -81,6 +85,16 @@
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
 
     private string? QRCodeDataUrl;
+    private IJSObjectReference? module;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
+        }
+    }
     
     protected override void OnInitialized()
     {
@@ -128,6 +142,18 @@
         var qrCodeImageArr = qrCode.GetGraphic(20);
     
         QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
+    }
+    
+    private async Task PrintQRCode()
+    {
+        if (string.IsNullOrEmpty(QRCodeDataUrl))
+            return;
+        
+        if (module == null)
+        {
+            return;
+        }
+        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl);
     }
 
     private bool ShowOptionalNotesField { get; set; } = false;
