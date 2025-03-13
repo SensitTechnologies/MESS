@@ -2,6 +2,7 @@
 using Data.Models;
 public interface IProductionLogEventService
 {
+    public ProductionLog? CurrentProductionLog { get; set; }
     public string CurrentProductName { get; set; }
     public string CurrentWorkStationName { get; set; }
     public string CurrentLineOperatorName { get; set; }

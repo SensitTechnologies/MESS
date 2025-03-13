@@ -4,7 +4,6 @@ namespace MESS.Services.ProductionLog;
 using Data.Models;
 public class ProductionLogEventService : IProductionLogEventService
 {
-    private ProductionLog? _currentProductionLog = null;
     private const int DEFAULT_AUTOSAVE_DELAY = 2000; // 2 seconds
     private Timer? _autoSaveTimer;
     
@@ -20,6 +19,7 @@ public class ProductionLogEventService : IProductionLogEventService
     
     public event Func<ProductionLog, Task>? AutoSaveTriggered;
 
+    public ProductionLog? CurrentProductionLog { get; set; }
     public string CurrentProductName { get; set; } = "";
     public string CurrentWorkStationName { get; set; } = "";
     public string CurrentLineOperatorName { get; set; } = "";
@@ -33,7 +33,7 @@ public class ProductionLogEventService : IProductionLogEventService
 
     private async Task TriggerAutoSaveAsync()
     {
-        if (_currentProductionLog == null)
+        if (CurrentProductionLog == null)
         {
             Debug.WriteLine("Cannot trigger autosave. Production log or timer is null.");
             return;
@@ -47,7 +47,7 @@ public class ProductionLogEventService : IProductionLogEventService
         IsSaved = false;
         _autoSaveTimer = new Timer(_ =>
         {
-            AutoSaveTriggered?.Invoke(_currentProductionLog);
+            AutoSaveTriggered?.Invoke(CurrentProductionLog);
             IsSaved = true;
         }, null, DEFAULT_AUTOSAVE_DELAY, Timeout.Infinite);
     }
@@ -72,14 +72,14 @@ public class ProductionLogEventService : IProductionLogEventService
 
     public ProductionLog? GetCurrentProductionLog()
     {
-        return _currentProductionLog;
+        return CurrentProductionLog;
     }
 
     public async Task SetCurrentProductionLog(ProductionLog productionLog)
     {
         try
         {
-            _currentProductionLog = productionLog ?? throw new ArgumentNullException(nameof(productionLog));
+            CurrentProductionLog = productionLog ?? throw new ArgumentNullException(nameof(productionLog));
             await ChangeMadeToProductionLog();
         }
         catch (Exception ex)

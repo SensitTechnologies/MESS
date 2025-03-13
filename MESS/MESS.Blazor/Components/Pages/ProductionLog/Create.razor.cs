@@ -291,17 +291,17 @@ public partial class Create : ComponentBase, IDisposable
         
         var currentTime = DateTimeOffset.UtcNow;
         
-        // Create new log
+        // Update log
         ProductionLog.CreatedOn = currentTime;
         ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
         ProductionLog.LineOperator = ActiveLineOperator;
-        var productionLogId = await ProductionLogService.CreateAsync(ProductionLog);
+        var productionLogId = await ProductionLogService.UpdateAsync(ProductionLog);
         
         // Create any associated SerialNumberLogs
-        await SerializationService.SaveCurrentSerialNumberLogsAsync(productionLogId);
+        await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
@@ -322,6 +322,15 @@ public partial class Create : ComponentBase, IDisposable
     
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
+        // Save log to database on first step complete
+        if (ProductionLog.Id == 0)
+        {
+            if (step.Id == ProductionLog.LogSteps.First().Id)
+            {
+                var id = await ProductionLogService.CreateAsync(ProductionLog);
+                ProductionLog.Id = id;
+            }
+        }
         var currentTime = DateTimeOffset.UtcNow;
         step.SubmitTime = currentTime;
         step.Success = success;
