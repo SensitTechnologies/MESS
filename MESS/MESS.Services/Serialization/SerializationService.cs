@@ -31,6 +31,10 @@ public class SerializationService : ISerializationService
             }
 
             var result = await CreateRangeAsync(CurrentSerialNumberLogs);
+            if (result)
+            {
+                CurrentSerialNumberLogs.Clear();
+            }
             return result;
         }
         catch (Exception e)

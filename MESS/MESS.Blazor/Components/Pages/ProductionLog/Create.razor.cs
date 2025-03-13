@@ -42,9 +42,6 @@ public partial class Create : ComponentBase, IDisposable
         
         await LoadCachedForm();
         
-        // Clear any previously entered serial number logs
-        SerializationService.CurrentSerialNumberLogs.Clear(); 
-        
         // AutoSave Trigger
         _autoSaveHandler = async log =>
         {
