@@ -21,10 +21,6 @@ public static class SeedWorkInstructions
                     {
                         FirstName = "John",
                         LastName = "Doe",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
                     },
                     Steps = new List<Step>
                     {
@@ -82,10 +78,6 @@ public static class SeedWorkInstructions
                     {
                         FirstName = "Jane",
                         LastName = "Smith",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
                     },
                     Steps = new List<Step>
                     {
@@ -143,10 +135,6 @@ public static class SeedWorkInstructions
                     {
                         FirstName = "Mike",
                         LastName = "Johnson",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
                     },
                     Steps = new List<Step>
                     {
