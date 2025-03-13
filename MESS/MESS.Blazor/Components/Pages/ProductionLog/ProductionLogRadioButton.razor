@@ -48,11 +48,13 @@
                         @if (step is { PartsNeeded.Count: > 0 })
                         {
                             <div class="container d-grid w-50">
+                                <label>Product Serial Number:</label>
+                                <InputText class="form-control" @bind-Value="@ProductSerialNumber"></InputText>
                                 @foreach (var serialNumberLog in _serialNumberLogs)
                                 {
                                     <div class="d-inline-flex gap-2 mb-1">
                                         <label class="form-label col" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
-                                        <InputText id="serialNumberLog" class="form-control col" @bind-Value="@serialNumberLog.PartSerialNumber"></InputText>
+                                        <InputText id="serialNumberLog" class="form-control col" @bind-Value="@serialNumberLog.PartSerialNumber" @bind-Value:after="@(() => OnSerialNumberInput(serialNumberLog))"></InputText>
                                     </div>
                                 }
                             </div>
@@ -84,6 +86,7 @@
 
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
 
+    private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
     private IJSObjectReference? module;
 
@@ -113,6 +116,7 @@
         InitializeSerialNumberLogs();
     }
     
+    /// Each part gets its own serial number log
     private void InitializeSerialNumberLogs()
     {
         _serialNumberLogs.Clear();
@@ -127,10 +131,15 @@
             _serialNumberLogs.Add(new SerialNumberLog
             {
                 Part = part,
-                ProductionLogId = logStep.ProductionLogId,
-                SubmitTimeQc = DateTimeOffset.UtcNow
+                ProductionLogId = logStep.ProductionLogId
             });
         }
+    }
+
+    private void OnSerialNumberInput(SerialNumberLog serialNumberLog)
+    {
+        serialNumberLog.ProductSerialNumber = ProductSerialNumber;
+        serialNumberLog.SubmitTimeQc = DateTimeOffset.UtcNow;
     }
     
     private void GenerateQRCode()
