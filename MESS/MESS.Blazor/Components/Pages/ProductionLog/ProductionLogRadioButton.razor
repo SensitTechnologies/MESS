@@ -148,10 +148,10 @@
     
     private void GenerateQRCode()
     {
-        var partSerialNumbers = string.Join(",", _serialNumberLogs.Select(x => x.PartSerialNumber));
+        var partSerialNumbers = string.Join(",", _serialNumberLogs.Select(x => $"{x.Part?.PartName} PartSN= {x.PartSerialNumber}"));
         var productionLogId = ProductionLogEventService.GetCurrentProductionLog()?.Id;
-        var productionLogIdString = "ProductionLogID: " + productionLogId;
-        var productSerialNumber = "ProductSerialNumber: " + ProductSerialNumber;
+        var productionLogIdString = "ProductionLogID= " + productionLogId;
+        var productSerialNumber = "ProductSerialNumber= " + ProductSerialNumber;
         var qrCodeToEncode = string.Join(",", productionLogIdString, productSerialNumber, partSerialNumbers);
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(qrCodeToEncode, QRCodeGenerator.ECCLevel.Q);
