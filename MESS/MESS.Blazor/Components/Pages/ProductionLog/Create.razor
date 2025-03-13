@@ -3,6 +3,7 @@
 @using MESS.Services.LineOperator
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
+@using MESS.Services.Serialization
 @using MESS.Services.WorkInstruction
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
@@ -13,6 +14,7 @@
 @inject ILocalCacheManager LocalCacheManager
 @inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
+@inject ISerializationService SerializationService
 @inject ILineOperatorService LineOperatorService
 
 <PageTitle>@Title</PageTitle>

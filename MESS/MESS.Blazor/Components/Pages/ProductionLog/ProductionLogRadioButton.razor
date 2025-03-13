@@ -2,9 +2,11 @@
 @using MESS.Data.Models
 @using MESS.Services.BrowserCacheManager
 @using MESS.Services.ProductionLog
+@using MESS.Services.Serialization
 @using QRCoder
 @inject ILocalCacheManager LocalCacheManager
 @inject IProductionLogEventService ProductionLogEventService
+@inject ISerializationService SerializationService
 @inject IJSRuntime JSRuntime
 @attribute [StreamRendering]
 
@@ -54,7 +56,7 @@
                                 {
                                     <div class="d-inline-flex gap-2 mb-1">
                                         <label class="form-label col" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
-                                        <InputText id="serialNumberLog" class="form-control col" @bind-Value="@serialNumberLog.PartSerialNumber" @bind-Value:after="@(() => OnSerialNumberInput(serialNumberLog))"></InputText>
+                                        <InputText id="serialNumberLog" class="form-control col" @bind-Value="@serialNumberLog.PartSerialNumber" @bind-Value:after="@(() => AfterSerialNumberInput(serialNumberLog))"></InputText>
                                     </div>
                                 }
                             </div>
@@ -130,16 +132,18 @@
         {
             _serialNumberLogs.Add(new SerialNumberLog
             {
-                Part = part,
-                ProductionLogId = logStep.ProductionLogId
+                Part = part
             });
         }
     }
 
-    private void OnSerialNumberInput(SerialNumberLog serialNumberLog)
+    private void AfterSerialNumberInput(SerialNumberLog serialNumberLog)
     {
         serialNumberLog.ProductSerialNumber = ProductSerialNumber;
         serialNumberLog.SubmitTimeQc = DateTimeOffset.UtcNow;
+        
+        // Add to current list for work instruction
+        SerializationService.CurrentSerialNumberLogs?.Add(serialNumberLog);
     }
     
     private void GenerateQRCode()

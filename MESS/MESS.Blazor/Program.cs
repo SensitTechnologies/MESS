@@ -43,7 +43,7 @@ builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddTransient<ISessionManager, SessionManager>();
 builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
-builder.Services.AddTransient<ISerializationService, SerializationService>();
+builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();

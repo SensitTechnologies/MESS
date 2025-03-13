@@ -1,7 +1,4 @@
-﻿using MESS.Services.LineOperator;
-using MESS.Services.ProductionLog;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using Microsoft.AspNetCore.Components;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
 
@@ -44,6 +41,9 @@ public partial class Create : ComponentBase, IDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         await LoadCachedForm();
+        
+        // Clear any previously entered serial number logs
+        SerializationService.CurrentSerialNumberLogs.Clear(); 
         
         // AutoSave Trigger
         _autoSaveHandler = async log =>
@@ -301,7 +301,10 @@ public partial class Create : ComponentBase, IDisposable
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
         ProductionLog.LineOperator = ActiveLineOperator;
-        await ProductionLogService.CreateAsync(ProductionLog);
+        var productionLogId = await ProductionLogService.CreateAsync(ProductionLog);
+        
+        // Create any associated SerialNumberLogs
+        await SerializationService.SaveCurrentSerialNumberLogsAsync(productionLogId);
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);

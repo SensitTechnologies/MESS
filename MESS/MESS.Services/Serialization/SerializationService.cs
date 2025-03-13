@@ -13,7 +13,33 @@ public class SerializationService : ISerializationService
     {
         _context = context;
     }
-    
+
+    public List<SerialNumberLog> CurrentSerialNumberLogs { get; set; } = [];
+
+    public async Task<bool> SaveCurrentSerialNumberLogsAsync(int productionLogId)
+    {
+        try
+        {
+            if (CurrentSerialNumberLogs.Count <= 0)
+            {
+                return false;
+            }
+
+            foreach (var log in CurrentSerialNumberLogs)
+            {
+                log.ProductionLogId = productionLogId;
+            }
+
+            var result = await CreateRangeAsync(CurrentSerialNumberLogs);
+            return result;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception caught when attempting to save Current Serial Number Logs with ProductionLogID: {ID}. Exception Message {Message}", productionLogId, e.Message);
+            return false;
+        }
+    }
+
     public async Task<List<SerialNumberLog>?> GetAllAsync()
     {
         try
@@ -43,6 +69,28 @@ public class SerializationService : ISerializationService
         catch (Exception e)
         {
             Log.Warning("Exception caught while attempting to create SerialNumberLog Async: {ExceptionMessage}", e.Message);
+            return false;
+        }
+    }
+
+    public async Task<bool> CreateRangeAsync(List<SerialNumberLog> serialNumberLogs)
+    {
+        try
+        {
+            if (serialNumberLogs.Count <= 0)
+            {
+                Log.Warning("Attempted to add range of serialNumberLogs with {LogCount} logs", serialNumberLogs.Count);
+                return false;
+            }
+
+            await _context.SerialNumberLogs.AddRangeAsync(serialNumberLogs);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception caught while attempting to Create a Range of SerialNumberLogs with Exception Message: {ExceptionMessage}",  e.Message);
             return false;
         }
     }
