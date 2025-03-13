@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MESS.Blazor.Components;
 using MESS.Data.Context;
+using MESS.Data.Models;
 using MESS.Services.Product;
 using MESS.Data.Seed;
 using MESS.Services.BrowserCacheManager;
@@ -10,6 +11,7 @@ using MESS.Services.ProductionLog;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using MESS.Services.WorkStation;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Serilog;
@@ -45,6 +47,11 @@ builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+
+// Adding Services for Identity
+builder.Services.AddIdentity<LineOperator, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationContext>()
+    .AddDefaultTokenProviders();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
@@ -84,6 +91,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 
