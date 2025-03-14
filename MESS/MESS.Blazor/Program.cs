@@ -28,6 +28,15 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 
 });
 
+// Adding Separate DbContext for Identity
+builder.Services.AddDbContext<UserContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
+    
+    options.UseSqlServer(connectionString);
+
+});
+
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddHttpClient();
@@ -50,7 +59,7 @@ builder.Services.AddHttpClient();
 
 // Adding Services for Identity
 builder.Services.AddIdentity<LineOperator, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationContext>()
+    .AddEntityFrameworkStores<UserContext>()
     .AddDefaultTokenProviders();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
