@@ -71,10 +71,9 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
-    var services = scope.ServiceProvider;
-    SeedWorkInstructions.Seed(services);
+    SeedWorkInstructions.AddTestData(app.Services);
 }
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
