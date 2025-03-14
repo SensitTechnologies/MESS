@@ -10,9 +10,8 @@ public class ProductionLogEventService : IProductionLogEventService
     public event Action? ProductionLogEventChanged;
 
     public event Action? ProductDetailsChanged;
-
-    // public event Action? WorkInstructionDetailsChanged;
-
+    public event Action? WorkInstructionDetailsChanged;
+    
     public event Action? WorkStationDetailsChanged;
 
     public event Action? LineOperatorDetailsChanged;
@@ -22,6 +21,7 @@ public class ProductionLogEventService : IProductionLogEventService
     public ProductionLog? CurrentProductionLog { get; set; }
     public string CurrentProductName { get; set; } = "";
     public string CurrentWorkStationName { get; set; } = "";
+    public string CurrentWorkInstructionName { get; set; } = "";
     public string CurrentLineOperatorName { get; set; } = "";
     public bool IsSaved { get; set; } = false;
 
@@ -62,6 +62,12 @@ public class ProductionLogEventService : IProductionLogEventService
     {
         CurrentWorkStationName = workStationName;
         WorkStationDetailsChanged?.Invoke();
+    }
+
+    public void SetCurrentWorkInstructionName(string workInstructionName)
+    {
+        CurrentWorkInstructionName = workInstructionName;
+        WorkInstructionDetailsChanged?.Invoke();
     }
 
     public void SetCurrentLineOperatorName(string lineOperatorName)

@@ -20,20 +20,23 @@ public partial class Create : ComponentBase, IDisposable
     private Product? ActiveProduct { get; set; }
     private WorkStation? ActiveWorkStation { get; set; }
     private LineOperator? ActiveLineOperator { get; set; }
+    private WorkInstruction? ActiveWorkInstruction { get; set; }
+
     
     protected ProductionLog ProductionLog = new();
     
-    private List<WorkStation>? WorkStations { get; set; }
     private List<Product>? Products { get; set; }
+    private List<WorkStation>? WorkStations { get; set; }
+    private List<WorkInstruction>? WorkInstructions { get; set; }
     private List<LineOperator>? LineOperators { get; set; }
     
-    private WorkInstruction? ActiveWorkInstruction { get; set; }
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
     {
         await LoadWorkStations();
         await LoadProducts();
+        await LoadWorkInstructions();
         LoadLineOperators();
         await GetInProgressAsync();
         
@@ -95,6 +98,9 @@ public partial class Create : ComponentBase, IDisposable
             {
                 return;
             }
+            
+            
+            await SetSelectedWorkInstructionId(int.Parse(workStation.WorkInstructions.First().Id.ToString()));
 
             ActiveWorkStation = workStation;
             ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
@@ -138,9 +144,6 @@ public partial class Create : ComponentBase, IDisposable
                 return;
             }
 
-            // SETTING ACTIVE WORK INSTRUCTION TO THE FIRST IN THE LIST SINCE WE DO NOT YET KNOW IF THERE WILL BE 
-            // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
-            await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
             ActiveProduct = product;
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
 
@@ -252,6 +255,19 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
+    private async Task LoadWorkInstructions()
+    {
+        try
+        {
+            var workInstructionsList = await WorkInstructionService.GetAllAsync();
+            WorkInstructions = workInstructionsList.ToList();
+        }
+        catch (Exception e)
+        {
+            Log.Error("Error loading products: {Message}", e.Message);
+        }
+    }
+    
     private void LoadLineOperators()
     {
         try
@@ -279,6 +295,11 @@ public partial class Create : ComponentBase, IDisposable
     private async Task LoadActiveWorkInstruction(int id)
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
+        if (ActiveWorkInstruction == null)
+        {
+            return;
+        }
+        ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
     }
 
     protected async Task HandleSubmit()
