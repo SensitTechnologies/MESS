@@ -111,6 +111,7 @@ public partial class Create : ComponentBase, IDisposable
         if (workInstructionId <= 0)
         {
             ActiveWorkInstruction = null;
+            await SetSelectedWorkInstructionId(null);
         }
         if (WorkInstructions != null)
         {
@@ -219,8 +220,6 @@ public partial class Create : ComponentBase, IDisposable
             await GetCachedActiveWorkInstructionAsync();
             await GetCachedActiveProductAsync();
             await GetCachedLineOperatorAsync();
-            
-            
             return;
         }
 
@@ -244,11 +243,6 @@ public partial class Create : ComponentBase, IDisposable
     {
         var result = await LocalCacheManager.GetActiveWorkInstructionIdAsync(); 
         await LoadActiveWorkInstruction(result);
-    }
-
-    private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
-    {
-        await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstructionId);
     }
 
     private async Task LoadProducts()
@@ -307,12 +301,11 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (value.HasValue)
         {
-            await SetCachedActiveWorkInstructionIdAsync(value.Value);
             await SetInProgressAsync(true);
         }
+        await LocalCacheManager.SetActiveWorkInstructionIdAsync(value ?? -1);
     }
-
-
+    
     private async Task LoadActiveWorkInstruction(int id)
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
