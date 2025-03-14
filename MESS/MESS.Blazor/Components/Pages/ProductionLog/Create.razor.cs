@@ -99,13 +99,31 @@ public partial class Create : ComponentBase, IDisposable
                 return;
             }
             
-            
-            await SetSelectedWorkInstructionId(int.Parse(workStation.WorkInstructions.First().Id.ToString()));
-
             ActiveWorkStation = workStation;
             ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
             
             await LocalCacheManager.SetActiveWorkStationAsync(workStation);
+        }
+    }
+    
+    private async Task SetActiveWorkInstruction(int workInstructionId)
+    {
+        if (WorkInstructions != null)
+        {
+            var workInstruction = WorkInstructions.FirstOrDefault(p => p.Id == workInstructionId);
+
+            if (workInstruction?.Products == null)
+            {
+                return;
+            }
+            
+            
+            // await SetSelectedWorkInstructionId(workInstructionId);
+
+            ActiveWorkInstruction = workInstruction;
+            ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
+            
+            await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
     
@@ -403,6 +421,54 @@ public partial class Create : ComponentBase, IDisposable
             }
 
             return ActiveProduct.WorkStations;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Loads a list of work instructions based on the currently selected Product and Work Station
+    /// </summary>
+    /// <returns></returns>
+    private List<WorkInstruction> LoadAssociatedWorkInstructions()
+    {
+        try
+        {
+            if (ActiveProduct?.WorkInstructions == null || Products?.Count <= 0 || 
+                ActiveWorkStation?.WorkInstructions == null || WorkStations?.Count <= 0 ||
+                ActiveWorkInstruction == null)
+            {
+                return [];
+            }
+            
+            // WorkInstruction ID with a T/F for if they are within both lists
+            var workInstructionMap = new Dictionary<int, bool>();
+            
+            foreach (var productWorkInstruction in ActiveProduct.WorkInstructions)
+            {
+                if (!workInstructionMap.TryAdd(productWorkInstruction.Id, false))
+                {
+                    workInstructionMap[productWorkInstruction.Id] = true;
+                }
+            }
+            
+            foreach (var stationWorkInstruction in ActiveWorkStation.WorkInstructions)
+            {
+                if (!workInstructionMap.TryAdd(stationWorkInstruction.Id, false))
+                {
+                    workInstructionMap[stationWorkInstruction.Id] = true;
+                }
+            }
+            
+
+            var commonWorkInstructionIds = workInstructionMap.Where(w => w.Value).Select(w => w.Key).ToList();
+
+            return ActiveProduct.WorkInstructions
+                .Where(w => commonWorkInstructionIds.Contains(w.Id)).ToList();
+
         }
         catch (Exception e)
         {

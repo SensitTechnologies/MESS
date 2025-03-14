@@ -36,6 +36,7 @@ public class WorkStationService : IWorkStationService
         {
             var workStation = await _context.WorkStations
                 .Include(p => p.Products)
+                .Include(p => p.WorkInstructions)
                 .FirstOrDefaultAsync(p => p.Id == id);
             
                 Log.Information("Work Station Successfully Found. ID: {WorkStationId}", workStation?.Id);
@@ -55,6 +56,7 @@ public class WorkStationService : IWorkStationService
         {
             return await _context.WorkStations
                 .Include(p => p.Products)
+                .Include(p => p.WorkInstructions)
                 .ToListAsync();
         }
         catch(Exception e)

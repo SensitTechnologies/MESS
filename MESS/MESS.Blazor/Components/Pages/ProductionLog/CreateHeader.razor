@@ -9,6 +9,9 @@
     <CreateHeaderCard Title="Work Station">
         <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@OnWorkStationSelected"></WorkStationSelect>
     </CreateHeaderCard>
+    <CreateHeaderCard Title="Work Instruction">
+        <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
+    </CreateHeaderCard>
     <CreateHeaderCard Title="Operator">
         <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
     </CreateHeaderCard>
@@ -24,7 +27,10 @@
     public List<WorkStation>? WorkStations { get; set; }
     [Parameter]
     public EventCallback<int> OnWorkStationSelected { get; set; }
-    
+    [Parameter]
+    public List<WorkInstruction>? WorkInstructions { get; set; }
+    [Parameter]
+    public EventCallback<int> OnWorkInstructionSelected { get; set; }
     [Parameter]
     public List<LineOperator>? LineOperators { get; set; }
     [Parameter]
