@@ -14,7 +14,6 @@ public class LineOperator : IdentityUser
     
     // Navigation properties
     public int? ProductionLogId { get; set; }
-    public ProductionLog? ProductionLog { get; set; }
     
     public string FullName => $"{FirstName} {LastName}";
 }
