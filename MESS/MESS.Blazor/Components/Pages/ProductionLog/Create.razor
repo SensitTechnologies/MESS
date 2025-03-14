@@ -33,7 +33,7 @@
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">
                             <p class="mb-0">
-                                @if (IsSaved)
+                                @if (@ProductionLogEventService.IsSaved)
                                 {
                                     <span class="badge text-bg-success p-2">Saved</span>
                                 }

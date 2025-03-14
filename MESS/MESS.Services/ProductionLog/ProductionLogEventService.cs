@@ -6,6 +6,7 @@ public class ProductionLogEventService : IProductionLogEventService
 {
     private const int DEFAULT_AUTOSAVE_DELAY = 2000; // 2 seconds
     private Timer? _autoSaveTimer;
+    private bool _shouldTriggerAutoSave = true;
     
     public event Action? ProductionLogEventChanged;
 
@@ -25,6 +26,16 @@ public class ProductionLogEventService : IProductionLogEventService
     public string CurrentLineOperatorName { get; set; } = "";
     public bool IsSaved { get; set; } = false;
 
+    public void DisableAutoSave()
+    {
+        _shouldTriggerAutoSave = false;
+    }
+
+    public void EnableAutoSave()
+    {
+        _shouldTriggerAutoSave = true;
+    }
+
     public async Task ChangeMadeToProductionLog()
     {
         await TriggerAutoSaveAsync();
@@ -33,7 +44,7 @@ public class ProductionLogEventService : IProductionLogEventService
 
     private async Task TriggerAutoSaveAsync()
     {
-        if (CurrentProductionLog == null)
+        if (CurrentProductionLog == null || !_shouldTriggerAutoSave)
         {
             Debug.WriteLine("Cannot trigger autosave. Production log or timer is null.");
             return;

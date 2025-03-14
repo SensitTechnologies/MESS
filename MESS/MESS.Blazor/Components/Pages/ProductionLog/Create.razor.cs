@@ -34,6 +34,8 @@ public partial class Create : ComponentBase, IDisposable
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
     {
+        ProductionLogEventService.DisableAutoSave();
+        
         await LoadWorkStations();
         await LoadProducts();
         await LoadWorkInstructions();
@@ -333,7 +335,7 @@ public partial class Create : ComponentBase, IDisposable
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
         ProductionLog.LineOperator = ActiveLineOperator;
-        var productionLogId = await ProductionLogService.UpdateAsync(ProductionLog);
+        await ProductionLogService.UpdateAsync(ProductionLog);
         
         // Create any associated SerialNumberLogs
         await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);
@@ -357,19 +359,21 @@ public partial class Create : ComponentBase, IDisposable
     
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
-        // Save log to database on first step complete
+        // Save log to database on first step complete and enable clientside autosave
         if (ProductionLog.Id == 0)
         {
             if (step.Id == ProductionLog.LogSteps.First().Id)
             {
                 var id = await ProductionLogService.CreateAsync(ProductionLog);
                 ProductionLog.Id = id;
+                
+                ProductionLogEventService.EnableAutoSave();
+                
             }
         }
         var currentTime = DateTimeOffset.UtcNow;
         step.SubmitTime = currentTime;
         step.Success = success;
-        IsSaved = false;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;

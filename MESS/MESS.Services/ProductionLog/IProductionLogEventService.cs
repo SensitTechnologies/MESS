@@ -16,6 +16,8 @@ public interface IProductionLogEventService
     public event Action? LineOperatorDetailsChanged;
     public event Func<ProductionLog, Task>? AutoSaveTriggered;
 
+    public void DisableAutoSave();
+    public void EnableAutoSave();
     public Task ChangeMadeToProductionLog();
     
     public void SetCurrentProductName(string productName);
