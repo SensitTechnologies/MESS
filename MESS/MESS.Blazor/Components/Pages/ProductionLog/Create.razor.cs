@@ -461,9 +461,18 @@ public partial class Create : ComponentBase, IDisposable
 
             var commonWorkInstructionIds = workInstructionMap.Where(w => w.Value).Select(w => w.Key).ToList();
 
-            return ActiveProduct.WorkInstructions
+            var outputList = ActiveProduct.WorkInstructions
                 .Where(w => commonWorkInstructionIds.Contains(w.Id)).ToList();
 
+            if (outputList.Count > 0)
+            {
+                return outputList;
+            }
+                
+            ActiveWorkInstruction = null;
+            _ = SetActiveWorkInstruction(-1);
+
+            return outputList;
         }
         catch (Exception e)
         {
