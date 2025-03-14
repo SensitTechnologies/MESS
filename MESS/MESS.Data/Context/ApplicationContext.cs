@@ -1,10 +1,9 @@
 using MESS.Data.Models;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Data.Context;
 
-public class ApplicationContext : IdentityDbContext<LineOperator>
+public class ApplicationContext : DbContext
 {
     public ApplicationContext()
     {
