@@ -108,6 +108,10 @@ public partial class Create : ComponentBase, IDisposable
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
     {
+        if (workInstructionId <= 0)
+        {
+            ActiveWorkInstruction = null;
+        }
         if (WorkInstructions != null)
         {
             var workInstruction = WorkInstructions.FirstOrDefault(p => p.Id == workInstructionId);
@@ -118,7 +122,7 @@ public partial class Create : ComponentBase, IDisposable
             }
             
             
-            // await SetSelectedWorkInstructionId(workInstructionId);
+            await SetSelectedWorkInstructionId(workInstructionId);
 
             ActiveWorkInstruction = workInstruction;
             ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
@@ -303,7 +307,6 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (value.HasValue)
         {
-            await LoadActiveWorkInstruction(value.Value);
             await SetCachedActiveWorkInstructionIdAsync(value.Value);
             await SetInProgressAsync(true);
         }
@@ -438,8 +441,7 @@ public partial class Create : ComponentBase, IDisposable
         try
         {
             if (ActiveProduct?.WorkInstructions == null || Products?.Count <= 0 || 
-                ActiveWorkStation?.WorkInstructions == null || WorkStations?.Count <= 0 ||
-                ActiveWorkInstruction == null)
+                ActiveWorkStation?.WorkInstructions == null || WorkStations?.Count <= 0)
             {
                 return [];
             }
