@@ -73,7 +73,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    SeedWorkInstructions.AddTestData(app.Services);
+    SeedWorkInstructions.Seed(app.Services);
 }
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
