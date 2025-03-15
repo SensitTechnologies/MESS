@@ -14,16 +14,127 @@ public static class SeedWorkInstructions
             context.WorkInstructions.AddRange(
                 new WorkInstruction
                 {
+
+                    Title = "Assembly Line Start-up Procedure",
+                    Version = "1.0",
+                    Operator = new LineOperator
+                    {
+                        FirstName = "John",
+                        LastName = "Doe",
+                    },
+                    Steps = new List<Step>
+                    {
+                        new Step
+                        {
+                            Name = "Turn on the main power switch.",
+                            SubmitTime = default,
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        },
+                        new Step
+                        {
+                            Name = "Check all safety equipment.",
+                            SubmitTime = default,
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "null",
+                            LastModifiedOn = default
+                        },
+                        new Step
+                        {
+                            Name = "Start the conveyor belt.",
+                            SubmitTime = default,
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        }
+                    },
+                    RelatedDocumentation = new List<Documentation>
+                    {
+                        new Documentation
+                        {
+                            Title = "Safety Guidelines",
+                            ContentType = "",
+                            Content = "",
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        }
+                    },
+                    CreatedBy = "",
+                    CreatedOn = default,
+                    LastModifiedBy = "",
+                    LastModifiedOn = default
+                },
+                new WorkInstruction
+                {
+                    Title = "Machine Calibration Process",
+                    Version = "2.1",
+                    Operator = new LineOperator
+                    {
+                        FirstName = "Jane",
+                        LastName = "Smith",
+                    },
+                    Steps = new List<Step>
+                    {
+                        new Step
+                        {
+                            Name = "Ensure the machine is powered off before calibration.",
+                            SubmitTime = default,
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        },
+                        new Step
+                        {
+                            Name = "Adjust the alignment screws.",
+                            SubmitTime = default,
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        },
+                        new Step
+                        {
+                            Name = "Power on and test calibration.",
+                            SubmitTime = default,
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        }
+                    },
+                    RelatedDocumentation = new List<Documentation>
+                    {
+                        new Documentation
+                        {
+                            Title = "Calibration Manual",
+                            Content = "https://example.com/calibration",
+                            ContentType = "",
+                            CreatedBy = "",
+                            CreatedOn = default,
+                            LastModifiedBy = "",
+                            LastModifiedOn = default
+                        }
+                    },
+                    CreatedBy = "",
+                    CreatedOn = default,
+                    LastModifiedBy = "",
+                    LastModifiedOn = default
+                },
+                new WorkInstruction
+                {
                     Title = "Product Packaging Instructions",
                     Version = "3.0",
                     Operator = new LineOperator
                     {
                         FirstName = "Mike",
                         LastName = "Johnson",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
                     },
                     Steps = new List<Step>
                     {

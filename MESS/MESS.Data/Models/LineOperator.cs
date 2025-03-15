@@ -1,12 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 
 namespace MESS.Data.Models;
 
-public class LineOperator : AuditableEntity
+public class LineOperator : IdentityUser
 {
     [Key]
-    public int Id { get; set; }
+    public new int Id { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
     public bool IsActive { get; set; }
