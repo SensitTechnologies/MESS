@@ -10,6 +10,9 @@ public class WorkInstruction : AuditableEntity
     public LineOperator? Operator { get; set; }
     public required List<Step> Steps { get; set; }
     public List<Documentation>? RelatedDocumentation { get; set; }
+
+    public List<Product> Products { get; set; } = [];
+    public List<WorkStation> WorkStations { get; set; } = [];
 }
 
 public class WorkInstructionValidator : AbstractValidator<WorkInstruction>
@@ -21,8 +24,5 @@ public class WorkInstructionValidator : AbstractValidator<WorkInstruction>
             .NotEmpty()
             .Length(1, 2048)
             .WithMessage("Work Instruction Title length must be between 1 and 2048 characters.");
-
-        RuleFor(x => x.Steps)
-            .SetValidator(new StepListValidator());
     }
 }

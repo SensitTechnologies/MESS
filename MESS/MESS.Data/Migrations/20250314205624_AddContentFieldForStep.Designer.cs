@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250314205624_AddContentFieldForStep")]
+    partial class AddContentFieldForStep
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -169,6 +172,9 @@ namespace MESS.Data.Migrations
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<int>("LogId")
+                        .HasColumnType("int");
+
                     b.Property<string>("PartName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -181,6 +187,9 @@ namespace MESS.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LogId")
+                        .IsUnique();
 
                     b.HasIndex("StepId");
 
@@ -431,9 +440,6 @@ namespace MESS.Data.Migrations
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<int?>("PartId")
-                        .HasColumnType("int");
-
                     b.Property<string>("PartSerialNumber")
                         .HasColumnType("nvarchar(max)");
 
@@ -447,8 +453,6 @@ namespace MESS.Data.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("PartId");
 
                     b.ToTable("SerialNumberLogs");
                 });
@@ -643,9 +647,17 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.Part", b =>
                 {
+                    b.HasOne("MESS.Data.Models.SerialNumberLog", "Log")
+                        .WithOne("Part")
+                        .HasForeignKey("MESS.Data.Models.Part", "LogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("MESS.Data.Models.Step", null)
                         .WithMany("PartsNeeded")
                         .HasForeignKey("StepId");
+
+                    b.Navigation("Log");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLog", b =>
@@ -716,15 +728,6 @@ namespace MESS.Data.Migrations
                     b.Navigation("ProductionLog");
 
                     b.Navigation("WorkInstructionStep");
-                });
-
-            modelBuilder.Entity("MESS.Data.Models.SerialNumberLog", b =>
-                {
-                    b.HasOne("MESS.Data.Models.Part", "Part")
-                        .WithMany()
-                        .HasForeignKey("PartId");
-
-                    b.Navigation("Part");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Step", b =>
@@ -811,6 +814,11 @@ namespace MESS.Data.Migrations
             modelBuilder.Entity("MESS.Data.Models.ProductionLog", b =>
                 {
                     b.Navigation("LogSteps");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.SerialNumberLog", b =>
+                {
+                    b.Navigation("Part");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Step", b =>

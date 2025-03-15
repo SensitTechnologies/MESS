@@ -257,7 +257,7 @@ public class LocalCacheManager : ILocalCacheManager
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw new KeyNotFoundException("Unable to find IsWorkflowActive key from local storage");
+            return false;
         }
     }
 

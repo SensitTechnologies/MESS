@@ -18,8 +18,8 @@ public interface IProductionLogService
     /// NOTE: Handles Audit related data
     /// </summary>
     /// <param name="productionLog">ProductionLog</param>
-    /// <returns>bool value indicating if the operation was successful</returns>
-    public Task<bool> CreateAsync(ProductionLog productionLog);
+    /// <returns>int value indicating the logs ID if successful or a -1 if an exception is thrown</returns>
+    public Task<int> CreateAsync(ProductionLog productionLog);
     /// <summary>
     /// Deletes an existing ProductionLog object from the database
     /// </summary>

@@ -8,4 +8,5 @@ public class WorkStation : AuditableEntity
     
     // Product navigation
     public List<Product> Products { get; set; } = [];
+    public List<WorkInstruction> WorkInstructions { get; set; } = [];
 }
