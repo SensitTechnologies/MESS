@@ -49,27 +49,20 @@
 
                         @if (step is { PartsNeeded.Count: > 0 })
                         {
-                            <div class="container d-grid w-50">
-                                <label>Product Serial Number:</label>
-                                <InputText class="form-control" @bind-Value="@ProductSerialNumber"></InputText>
+                            <div class="container flex-wrap scrollable-container">
                                 @foreach (var serialNumberLog in _serialNumberLogs)
                                 {
-                                    <div class="d-inline-flex gap-2 mb-1">
-                                        <label class="form-label col" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
-                                        <InputText id="serialNumberLog" class="form-control col" @bind-Value="@serialNumberLog.PartSerialNumber" @bind-Value:after="@(() => AfterSerialNumberInput(serialNumberLog))"></InputText>
-                                    </div>
+                                <div class="form-floating d-inline-flex gap-2 mb-1">
+                                    <InputText id="serialNumberLog" class="form-control col custom-input" @bind-Value="@serialNumberLog.PartSerialNumber" @bind-Value:after="@(() => AfterSerialNumberInput(serialNumberLog))"></InputText>
+                                    <label class="form-label col custom-label" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
+                                </div>
                                 }
                             </div>
-                            <button type="button" class="btn btn-outline-primary" @onclick="@GenerateQRCode">Generate QR Code</button>
-                            @if (!string.IsNullOrEmpty(QRCodeDataUrl))
-                            {
-                                <div>
-                                    <img src="@QRCodeDataUrl" alt="QR Code" class="mt-2" id="qrCodeImage" style="max-width: 200px;" />
-                                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="PrintQRCode">
-                                        <i class="bi bi-printer"></i> Print QR Code
-                                    </button>
-                                </div>
-                            }
+                            <div class="d-flex align-items-center mt-2">
+                                <button type="button" class="btn btn-outline-secondary" @onclick="PrintQRCode">
+                                    <i class="bi bi-printer"></i> Print QR Code
+                                </button>
+                            </div>
                         }
                     </div>
                 }
@@ -85,10 +78,12 @@
     public required ProductionLogStep logStep { get; set; }
     
     [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+    
+    [Parameter]
+    public string? ProductSerialNumber { get; set; }
 
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
 
-    private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
     private IJSObjectReference? module;
 
@@ -163,6 +158,7 @@
     
     private async Task PrintQRCode()
     {
+        GenerateQRCode();
         if (string.IsNullOrEmpty(QRCodeDataUrl))
             return;
         
