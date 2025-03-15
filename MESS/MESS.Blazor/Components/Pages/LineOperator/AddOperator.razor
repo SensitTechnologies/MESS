@@ -24,10 +24,6 @@
     {
         FirstName = string.Empty,
         LastName = string.Empty,
-        CreatedBy = string.Empty,
-        LastModifiedBy = string.Empty,
-        CreatedOn = DateTimeOffset.UtcNow,
-        LastModifiedOn = DateTimeOffset.UtcNow
     };
     
     private Task LoadOperators()
@@ -53,8 +49,8 @@
             {
                 FirstName = string.Empty,
                 LastName = string.Empty,
-                CreatedOn = DateTimeOffset.UtcNow,
-                LastModifiedOn = DateTimeOffset.UtcNow
+                //CreatedOn = DateTimeOffset.UtcNow,
+                //LastModifiedOn = DateTimeOffset.UtcNow
             };
             await LoadOperators();
         }
