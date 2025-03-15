@@ -63,8 +63,6 @@ public static class SeedWorkInstructions
                                     CreatedOn = default,
                                     LastModifiedBy = "",
                                     LastModifiedOn = default,
-                                    LogId = 1,
-                                    Log = new SerialNumberLog()
                                 },
                                 new Part
                                 {
@@ -74,8 +72,6 @@ public static class SeedWorkInstructions
                                     CreatedOn = default,
                                     LastModifiedBy = "",
                                     LastModifiedOn = default,
-                                    LogId = 1,
-                                    Log = new SerialNumberLog()
 
                                 },
                                 new Part
@@ -86,8 +82,6 @@ public static class SeedWorkInstructions
                                     CreatedOn = default,
                                     LastModifiedBy = "",
                                     LastModifiedOn = default,
-                                    LogId = 1,
-                                    Log = new SerialNumberLog()
 
                                 }
                             }
