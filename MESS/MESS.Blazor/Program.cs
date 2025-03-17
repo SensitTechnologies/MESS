@@ -38,16 +38,13 @@ builder.Services.AddDbContext<UserContext>(options =>
 
 });
 
-builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
-builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
-builder.Services.AddHttpClient();
-
-// Register the ProductService
-builder.Services.AddTransient<IProductService, ProductService>();
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
@@ -58,6 +55,13 @@ builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.Password.RequiredLength = 0;
+    options.Password.RequiredUniqueChars = 0;
+    options.Password.RequireDigit = false;
+});
 
 // Adding Services for Identity
 builder.Services.AddIdentity<LineOperator, IdentityRole>()
