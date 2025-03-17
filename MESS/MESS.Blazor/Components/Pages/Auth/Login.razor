@@ -1,0 +1,41 @@
+@page "/Login"
+@using MESS.Data.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<LineOperator> SignInManager
+
+<form @onsubmit="HandleLoginAsync">
+    <div>
+        <label>Email:</label>
+        <input type="email" @bind="Email" />
+    </div>
+    <div>
+        <label>Password:</label>
+        <input type="password" @bind="Password" />
+    </div>
+    <button type="submit">Login</button>
+</form>
+
+@code {
+    private string Email { get; set; } = "";
+    private string Password { get; set; } = "";
+
+    private async Task HandleLoginAsync()
+    {
+        try
+        {
+            var result = await SignInManager.PasswordSignInAsync(Email, Password, isPersistent: false, lockoutOnFailure: false);
+            if (result.Succeeded)
+            {
+                Console.WriteLine("SUCCESS");
+            }
+            else
+            {
+                // Handle login failure
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Login failed: {ex.Message}");
+        }
+    }
+}

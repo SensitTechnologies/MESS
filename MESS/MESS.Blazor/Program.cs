@@ -58,9 +58,17 @@ builder.Services.AddHttpClient();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
+    // Password config
     options.Password.RequiredLength = 0;
     options.Password.RequiredUniqueChars = 0;
     options.Password.RequireDigit = false;
+    
+    // Username
+    options.User.RequireUniqueEmail = true;
+    
+    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
 });
 
 // Adding Services for Identity
@@ -91,10 +99,6 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
-// if (app.Environment.IsDevelopment())
-// {
-//     SeedWorkInstructions.Seed(app.Services);
-// }
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
