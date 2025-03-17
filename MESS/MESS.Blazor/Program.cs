@@ -87,10 +87,10 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    SeedWorkInstructions.Seed(app.Services);
-}
+// if (app.Environment.IsDevelopment())
+// {
+//     SeedWorkInstructions.Seed(app.Services);
+// }
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

@@ -13,7 +13,7 @@ public class LineOperator : IdentityUser
     public bool IsActive { get; set; }
     
     // Navigation properties
-    public List<ProductionLog>? ProductionLogs { get; set; }
+    public List<int>? ProductionLogIds { get; set; }
     
     public string FullName => $"{FirstName} {LastName}";
 }
