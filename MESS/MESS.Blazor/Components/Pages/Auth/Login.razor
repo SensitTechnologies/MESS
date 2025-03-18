@@ -1,9 +1,11 @@
 @page "/Login"
 @using MESS.Data.Models
+@using MESS.Services.ApplicationUser
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
-@inject SignInManager<ApplicationUser> SignInManager
+@using Serilog
 @inject UserManager<ApplicationUser> UserManager
+@inject IApplicationUserService ApplicationUserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div>
@@ -33,11 +35,6 @@
 @code {
     private string Email { get; set; } = "";
 
-    protected override Task OnInitializedAsync()
-    {
-        return base.OnInitializedAsync();
-    }
-
     private async Task HandleLoginAsync()
     {
         try
@@ -45,17 +42,17 @@
             var user = await UserManager.FindByEmailAsync(Email);
             if (user != null)
             {
-                await SignInManager.SignInAsync(user, isPersistent: false);
-                Console.WriteLine("SUCCESS");
+                await ApplicationUserService.SignInAsync(user);
+                Log.Information("User with ID successfully logged in: {ID}", user.Id);
             }
             else
             {
-                Console.WriteLine("User not found");
+                Log.Information("Unsuccessful sign-in attempt");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Login failed: {ex.Message}");
+            Log.Warning($"Login failed: {ex.Message}");
         }
     }
 }

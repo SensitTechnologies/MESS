@@ -3,6 +3,7 @@ using Data.Models;
 
 public interface IApplicationUserService
 {
+    public Task<bool> SignInAsync(ApplicationUser user);
     //<summary>
     // Retrieves a list of all ApplicationUsers currently registered
     //</summary>

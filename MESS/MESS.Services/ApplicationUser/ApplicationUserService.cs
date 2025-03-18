@@ -11,12 +11,28 @@ public class ApplicationUserService : IApplicationUserService
 {
     private readonly UserContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
-    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager)
+    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
     {
         _context = context;
         _userManager = userManager;
+        _signInManager = signInManager;
+    }
+
+    public async Task<bool> SignInAsync(ApplicationUser user)
+    {
+        try
+        {
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
     }
 
     public List<ApplicationUser> GetApplicationUsers()
