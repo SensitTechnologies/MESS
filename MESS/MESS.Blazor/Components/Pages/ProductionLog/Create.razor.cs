@@ -256,7 +256,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading products for the Create view: {Message}", e.Message);
         }
     }
     
@@ -269,7 +269,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading work stations: {Message}", e.Message);
+            Log.Error("Error loading work stations for the Create view: {Message}", e.Message);
         }
     }
     
@@ -282,7 +282,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading Work Instructions for the Create view: {Message}", e.Message);
         }
     }
     
@@ -295,7 +295,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading Line Operators for the Create view: {Message}", e.Message);
         }
     }
     
