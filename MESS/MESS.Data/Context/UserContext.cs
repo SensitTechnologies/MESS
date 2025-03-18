@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Data.Context;
 
-public class UserContext : IdentityDbContext<LineOperator, IdentityRole, string>
+public class UserContext : IdentityDbContext<ApplicationUser, IdentityRole, string>
 {
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {

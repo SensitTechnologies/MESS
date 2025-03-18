@@ -32,7 +32,7 @@
     [Parameter]
     public EventCallback<int> OnWorkInstructionSelected { get; set; }
     [Parameter]
-    public List<LineOperator>? LineOperators { get; set; }
+    public List<ApplicationUser>? LineOperators { get; set; }
     [Parameter]
-    public EventCallback<int> OnLineOperatorSelected { get; set; }
+    public EventCallback<string> OnLineOperatorSelected { get; set; }
 }

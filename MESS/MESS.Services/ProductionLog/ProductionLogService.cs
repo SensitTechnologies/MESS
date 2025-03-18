@@ -19,7 +19,6 @@ public class ProductionLogService : IProductionLogService
             return _context.ProductionLogs
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Steps)
-                .Include(p => p.LineOperator)
                 .Include(p => p.LogSteps)
                 .ToList();
         }
@@ -39,7 +38,6 @@ public class ProductionLogService : IProductionLogService
             return await _context.ProductionLogs
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Steps)
-                .Include(p => p.LineOperator)
                 .Include(p => p.LogSteps)
                 .ThenInclude(p => p.WorkInstructionStep)
                 .ToListAsync();
@@ -171,7 +169,6 @@ public class ProductionLogService : IProductionLogService
             return await _context.ProductionLogs
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Steps)
-                .Include(p => p.LineOperator)
                 .Include(p => p.LogSteps)
                 .Where(p => logIds.Contains(p.Id))
                 .ToListAsync();

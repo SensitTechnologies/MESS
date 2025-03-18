@@ -1,12 +1,9 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using MESS.Blazor.Components;
 using MESS.Data.Context;
 using MESS.Data.Models;
 using MESS.Services.Product;
-using MESS.Data.Seed;
+using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
-using MESS.Services.LineOperator;
 using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
@@ -14,7 +11,6 @@ using MESS.Services.WorkInstruction;
 using MESS.Services.WorkStation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
@@ -50,7 +46,7 @@ builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddTransient<ISessionManager, SessionManager>();
 builder.Services.AddTransient<IWorkStationService, WorkStationService>();
-builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
+builder.Services.AddTransient<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddHttpContextAccessor();
@@ -59,7 +55,7 @@ builder.Services.AddHttpClient();
 builder.Services.Configure<IdentityOptions>(options =>
 {
     // Password config
-    options.Password.RequiredLength = 0;
+    options.Password.RequiredLength = -1;
     options.Password.RequiredUniqueChars = 0;
     options.Password.RequireDigit = false;
     
@@ -72,7 +68,7 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 // Adding Services for Identity
-builder.Services.AddIdentity<LineOperator, IdentityRole>()
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<UserContext>()
     .AddDefaultTokenProviders();
 

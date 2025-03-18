@@ -17,11 +17,6 @@ public static class SeedWorkInstructions
 
                     Title = "Assembly Line Start-up Procedure",
                     Version = "1.0",
-                    Operator = new LineOperator
-                    {
-                        FirstName = "John",
-                        LastName = "Doe",
-                    },
                     Steps = new List<Step>
                     {
                         new Step
@@ -74,11 +69,6 @@ public static class SeedWorkInstructions
                 {
                     Title = "Machine Calibration Process",
                     Version = "2.1",
-                    Operator = new LineOperator
-                    {
-                        FirstName = "Jane",
-                        LastName = "Smith",
-                    },
                     Steps = new List<Step>
                     {
                         new Step
@@ -131,11 +121,6 @@ public static class SeedWorkInstructions
                 {
                     Title = "Product Packaging Instructions",
                     Version = "3.0",
-                    Operator = new LineOperator
-                    {
-                        FirstName = "Mike",
-                        LastName = "Johnson",
-                    },
                     Steps = new List<Step>
                     {
                         new Step

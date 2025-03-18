@@ -1,6 +1,6 @@
 ﻿@page "/production-log"
+@using MESS.Services.ApplicationUser
 @using MESS.Services.BrowserCacheManager
-@using MESS.Services.LineOperator
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.Serialization
@@ -15,7 +15,7 @@
 @inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
 @inject ISerializationService SerializationService
-@inject ILineOperatorService LineOperatorService
+@inject IApplicationUserService LineOperatorService
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>

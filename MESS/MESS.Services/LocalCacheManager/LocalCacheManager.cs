@@ -12,7 +12,7 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
-    private const string ActiveLineOperatorKey = "LAST_KNOWN_LINE_OPERATOR";
+    private const string ActiveApplicationUserKey = "LAST_KNOWN_LINE_OPERATOR";
     private const string ActiveWorkStationKey = "LAST_KNOWN_WORK_STATION";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
@@ -86,7 +86,7 @@ public class LocalCacheManager : ILocalCacheManager
             // map to DTO
             var productDTO = new CacheDTO
             {
-                Id = product.Id,
+                Id = product.Id.ToString(),
                 Name = product.Name
             };
             
@@ -142,7 +142,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveLineOperatorKey);
+            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveApplicationUserKey);
 
             if (result is { Success: true, Value: not null })
             {
@@ -184,7 +184,7 @@ public class LocalCacheManager : ILocalCacheManager
         {
             var CacheDTO = new CacheDTO
             {
-                Id = workStation.Id,
+                Id = workStation.Id.ToString(),
                 Name = workStation.Name
             };
             
@@ -196,18 +196,18 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task SetActiveLineOperatorAsync(LineOperator lineOperator)
+    public async Task SetActiveLineOperatorAsync(ApplicationUser ApplicationUser)
     {
         try
         {
             // map to DTO
             var operatorDTO = new CacheDTO
             {
-                Id = lineOperator.Id,
-                Name = lineOperator.FullName
+                Id = ApplicationUser.Id,
+                Name = ApplicationUser.FullName
             };
             
-            await _protectedLocalStorage.SetAsync(ActiveLineOperatorKey, operatorDTO);
+            await _protectedLocalStorage.SetAsync(ActiveApplicationUserKey, operatorDTO);
         }
         catch (Exception e)
         {

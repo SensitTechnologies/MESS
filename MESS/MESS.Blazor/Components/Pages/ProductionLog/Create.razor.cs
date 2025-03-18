@@ -19,7 +19,7 @@ public partial class Create : ComponentBase, IDisposable
     
     private Product? ActiveProduct { get; set; }
     private WorkStation? ActiveWorkStation { get; set; }
-    private LineOperator? ActiveLineOperator { get; set; }
+    private ApplicationUser? ActiveLineOperator { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
     
@@ -28,7 +28,7 @@ public partial class Create : ComponentBase, IDisposable
     private List<Product>? Products { get; set; }
     private List<WorkStation>? WorkStations { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
-    private List<LineOperator>? LineOperators { get; set; }
+    private List<ApplicationUser>? LineOperators { get; set; }
     
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
@@ -134,7 +134,7 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
-    private async Task SetActiveLineOperator(int lineOperatorId)
+    private async Task SetActiveLineOperator(string lineOperatorId)
     {
         if (LineOperators != null)
         {
@@ -282,7 +282,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading work instructions: {Message}", e.Message);
         }
     }
     
@@ -290,12 +290,12 @@ public partial class Create : ComponentBase, IDisposable
     {
         try
         {
-            var operatorsAsync = LineOperatorService.GetLineOperators();
+            var operatorsAsync = LineOperatorService.GetApplicationUsers();
             LineOperators = operatorsAsync.ToList();
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading Line Operators: {Message}", e.Message);
         }
     }
     
@@ -334,7 +334,6 @@ public partial class Create : ComponentBase, IDisposable
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
-        ProductionLog.LineOperator = ActiveLineOperator;
         await ProductionLogService.UpdateAsync(ProductionLog);
         
         // Create any associated SerialNumberLogs

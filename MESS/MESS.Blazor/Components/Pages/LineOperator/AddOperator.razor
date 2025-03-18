@@ -1,64 +1,63 @@
-@page "/lineoperators/addoperator"
-@using MESS.Data.Models
-@using MESS.Services.LineOperator
-@rendermode InteractiveServer
-@inject ILineOperatorService LineOperatorService
-@inject NavigationManager NavigationManager
-
-<h3>Add Operator</h3>
-
-<input type="text" @bind="NewLineOperator.FirstName" placeholder="First Name"/>
-<input type="text" @bind="NewLineOperator.LastName" placeholder="Last Name"/>
-<button @onclick="AddLineOperator">Add Operator</button>
-<br/>
-<button @onclick="LineOperatorNavigate">Back</button>
-
-@if (OperatorAdded)
-{
-    <p>Operator successfully added.</p>
-}
-
-@code {
-    private List<LineOperator> Operators = new();
-    private LineOperator NewLineOperator = new()
-    {
-        FirstName = string.Empty,
-        LastName = string.Empty,
-    };
-    
-    private Task LoadOperators()
-    {
-        Operators = LineOperatorService.GetLineOperators();
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private bool OperatorAdded;
-    
-    private async Task AddLineOperator()
-    {
-        if (!string.IsNullOrWhiteSpace(NewLineOperator.FirstName) && !string.IsNullOrWhiteSpace(NewLineOperator.LastName))
-        {
-            bool succeeded = await LineOperatorService.AddLineOperator(NewLineOperator);
-            if (succeeded)
-            {
-                OperatorAdded = true;
-            }
-
-            NewLineOperator = new LineOperator
-            {
-                FirstName = string.Empty,
-                LastName = string.Empty,
-                //CreatedOn = DateTimeOffset.UtcNow,
-                //LastModifiedOn = DateTimeOffset.UtcNow
-            };
-            await LoadOperators();
-        }
-    }
-
-    private void LineOperatorNavigate()
-    {
-        NavigationManager.NavigateTo("/lineoperators");
-    }
-   
-}
+@* @page "/lineoperators/addoperator" *@
+@* @using MESS.Services.ApplicationUser *@
+@* @rendermode InteractiveServer *@
+@* @inject IApplicationUserService LineOperatorService *@
+@* @inject NavigationManager NavigationManager *@
+@* *@
+@* <h3>Add Operator</h3> *@
+@* *@
+@* <input type="text" @bind="NewLineOperator.FirstName" placeholder="First Name"/> *@
+@* <input type="text" @bind="NewLineOperator.LastName" placeholder="Last Name"/> *@
+@* <button @onclick="AddLineOperator">Add Operator</button> *@
+@* <br/> *@
+@* <button @onclick="LineOperatorNavigate">Back</button> *@
+@* *@
+@* @if (OperatorAdded) *@
+@* { *@
+@*     <p>Operator successfully added.</p> *@
+@* } *@
+@* *@
+@* @code { *@
+@*     private List<LineOperator> Operators = new(); *@
+@*     private LineOperator NewLineOperator = new() *@
+@*     { *@
+@*         FirstName = string.Empty, *@
+@*         LastName = string.Empty, *@
+@*     }; *@
+@*      *@
+@*     private Task LoadOperators() *@
+@*     { *@
+@*         Operators = LineOperatorService.GetLineOperators(); *@
+@*         StateHasChanged(); *@
+@*         return Task.CompletedTask; *@
+@*     } *@
+@* *@
+@*     private bool OperatorAdded; *@
+@*      *@
+@*     // private async Task AddLineOperator() *@
+@*     { *@
+@*         if (!string.IsNullOrWhiteSpace(NewLineOperator.FirstName) && !string.IsNullOrWhiteSpace(NewLineOperator.LastName)) *@
+@*         { *@
+@*             bool succeeded = await LineOperatorService.AddLineOperator(NewLineOperator); *@
+@*             if (succeeded) *@
+@*             { *@
+@*                 OperatorAdded = true; *@
+@*             } *@
+@* *@
+@*             NewLineOperator = new LineOperator *@
+@*             { *@
+@*                 FirstName = string.Empty, *@
+@*                 LastName = string.Empty, *@
+@*                 //CreatedOn = DateTimeOffset.UtcNow, *@
+@*                 //LastModifiedOn = DateTimeOffset.UtcNow *@
+@*             }; *@
+@*             await LoadOperators(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void LineOperatorNavigate() *@
+@*     { *@
+@*         NavigationManager.NavigateTo("/lineoperators"); *@
+@*     } *@
+@*     *@
+@* } *@

@@ -17,7 +17,6 @@ public class WorkInstructionService : IWorkInstructionService
         try
         {
             var workInstructions = _context.WorkInstructions
-                .Include(w => w.Operator)
                 .Include(w => w.Steps)
                 .Include(w => w.RelatedDocumentation)
                 .ToList();
@@ -37,7 +36,6 @@ public class WorkInstructionService : IWorkInstructionService
         try
         {
             var workInstructions = _context.WorkInstructions
-                .Include(w => w.Operator)
                 .Include(w => w.Steps)
                 .ThenInclude(w => w.PartsNeeded)
                 .Include(w => w.RelatedDocumentation)
