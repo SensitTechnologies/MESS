@@ -36,6 +36,7 @@ builder.Services.AddDbContext<UserContext>(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddRazorPages();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -124,5 +125,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapRazorPages();
 
 app.Run();
