@@ -1,4 +1,5 @@
 ﻿@page "/production-log"
+@attribute [Authorize(Roles = "Admin, Operator")]
 @using MESS.Services.ApplicationUser
 @using MESS.Services.BrowserCacheManager
 @using MESS.Services.Product
@@ -7,6 +8,7 @@
 @using MESS.Services.WorkInstruction
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
+@using Microsoft.AspNetCore.Authorization
 @inject IProductionLogService ProductionLogService
 @inject IProductionLogEventService ProductionLogEventService
 @inject IWorkInstructionService WorkInstructionService

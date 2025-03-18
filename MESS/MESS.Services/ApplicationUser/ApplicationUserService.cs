@@ -10,9 +10,13 @@ using Microsoft.EntityFrameworkCore;
 public class ApplicationUserService : IApplicationUserService
 {
     private readonly UserContext _context;
-    public ApplicationUserService(UserContext context)
+    private readonly UserManager<ApplicationUser> _userManager;
+    const string DEFAULT_PASSWORD = "";
+    const string DEFAULT_ROLE = "Operator";
+    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager)
     {
         _context = context;
+        _userManager = userManager;
     }
 
     public List<ApplicationUser> GetApplicationUsers()
@@ -36,18 +40,17 @@ public class ApplicationUserService : IApplicationUserService
     {
         try
         {
-            var ApplicationUserValidator = new ApplicationUserValidator();
-            var validationResult = await ApplicationUserValidator.ValidateAsync(ApplicationUser);
-        
-            if (!validationResult.IsValid)
+            var result = await _userManager.CreateAsync(ApplicationUser);
+
+            if (result.Succeeded)
             {
-                return false;
+                await _userManager.AddToRoleAsync(ApplicationUser, DEFAULT_ROLE);
+                Log.Information("Added ApplicationUser with ID {id}", ApplicationUser.Id);
+                return true;
             }
-        
-            // await _context.ApplicationUsers.AddAsync(ApplicationUser);
-            // await _context.SaveChangesAsync();
-            Log.Information("Added ApplicationUser with ID {id}", ApplicationUser.Id);
-            return true;
+            
+            Log.Error("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
+            return false;
         }
         catch (Exception ex)
         {

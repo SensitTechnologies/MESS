@@ -1,36 +1,56 @@
 @page "/Login"
 @using MESS.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<form @onsubmit="HandleLoginAsync">
-    <div>
-        <label>Email:</label>
-        <input type="email" @bind="Email" />
-    </div>
-    <div>
-        <label>Password:</label>
-        <input type="password" @bind="Password" />
-    </div>
-    <button type="submit">Login</button>
-</form>
+<div>
+    <AuthorizeView>
+        <Authorized>
+            <nav>
+                @if (context.User.IsInRole("Admin"))
+                {
+                <a href="/admin">Admin Dashboard</a>
+                }
+                @if (context.User.IsInRole("Operator"))
+                {
+                <a href="/production-log">Production Log</a>
+                }
+            </nav>
+        </Authorized>
+    </AuthorizeView>
+    <form @onsubmit="HandleLoginAsync">
+        <div>
+            <label>Email:</label>
+            <input type="email" @bind="Email"/>
+        </div>
+        <button type="submit">Login</button>
+    </form>
+</div>
 
 @code {
     private string Email { get; set; } = "";
-    private string Password { get; set; } = "";
+
+    protected override Task OnInitializedAsync()
+    {
+        return base.OnInitializedAsync();
+    }
 
     private async Task HandleLoginAsync()
     {
         try
         {
-            var result = await SignInManager.PasswordSignInAsync(Email, Password, isPersistent: false, lockoutOnFailure: false);
-            if (result.Succeeded)
+            var user = await UserManager.FindByEmailAsync(Email);
+            if (user != null)
             {
+                await SignInManager.SignInAsync(user, isPersistent: false);
                 Console.WriteLine("SUCCESS");
             }
             else
             {
-                // Handle login failure
+                Console.WriteLine("User not found");
             }
         }
         catch (Exception ex)

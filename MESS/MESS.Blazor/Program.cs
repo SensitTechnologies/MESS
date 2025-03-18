@@ -49,15 +49,19 @@ builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 builder.Services.AddTransient<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
+builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
     // Password config
-    options.Password.RequiredLength = -1;
+    options.Password.RequiredLength = 1;
     options.Password.RequiredUniqueChars = 0;
     options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
     
     // Username
     options.User.RequireUniqueEmail = true;
@@ -72,6 +76,15 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<UserContext>()
     .AddDefaultTokenProviders();
 
+// Roles
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireTechnician", policy =>
+        policy.RequireRole("Admin"));
+    options.AddPolicy("RequireOperator", policy =>
+        policy.RequireRole("Operator"));
+});
+
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
 Log.Logger = new LoggerConfiguration()
@@ -84,16 +97,14 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Is(logLevel)
     .CreateLogger();
 
-
-// User Secrets Setup
-var config = new ConfigurationBuilder()
-    .AddUserSecrets<Program>()
-    .Build();
-
-// Example user secrets usage
-// Console.WriteLine($"Hello, {config["Name"]}");
-
 var app = builder.Build();
+
+// Initializes the roles if they are not already created in the database
+using (var scope = app.Services.CreateScope())
+{
+    var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
+    await roleInit.InitializeAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
