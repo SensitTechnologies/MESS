@@ -1,0 +1,36 @@
+﻿@page "/auth/Login"
+@using Azure.Core
+@using MESS.Services.ApplicationUser
+@using Microsoft.AspNetCore.Components.Authorization
+@using Serilog
+@inject NavigationManager Navigation
+@inject IApplicationUserService ApplicationUserService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView>
+    <Authorized>
+        <p>You are logged in as: @context.User.Identity?.Name</p>
+        <form method="post" action="/api/auth/logout">
+            <button type="submit">Logout</button>
+        </form>
+    </Authorized>
+    <NotAuthorized>
+        <div>
+            <form method="post" action="/api/auth/login">
+                <AntiforgeryToken />
+                <div>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email"/>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            @if (!string.IsNullOrEmpty(Navigation.Uri) && Navigation.Uri.Contains("error=true"))
+            {
+            <div class="error">Login failed. Please check your credentials.</div>
+            }
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+}

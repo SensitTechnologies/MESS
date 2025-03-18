@@ -21,11 +21,25 @@ public class ApplicationUserService : IApplicationUserService
         _signInManager = signInManager;
     }
 
-    public async Task<bool> SignInAsync(ApplicationUser user)
+    public async Task SignOutAsync()
     {
         try
         {
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            await _signInManager.SignOutAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    public async Task<bool> SignInAsync(string email)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user != null) await _signInManager.SignInAsync(user, isPersistent: false);
             return true;
         }
         catch (Exception e)

@@ -36,11 +36,12 @@ builder.Services.AddDbContext<UserContext>(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddRazorPages();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+    
+    
 builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
@@ -53,6 +54,7 @@ builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService
 builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+builder.Services.AddRazorPages();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
@@ -85,6 +87,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireOperator", policy =>
         policy.RequireRole("Operator"));
 });
+
+builder.Services.AddAntiforgery();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
@@ -127,5 +131,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapRazorPages();
+
+app.MapControllers();
 
 app.Run();
