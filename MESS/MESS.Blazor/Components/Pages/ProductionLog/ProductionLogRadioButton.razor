@@ -49,20 +49,7 @@
 
                         @if (step is { PartsNeeded.Count: > 0 })
                         {
-                            <div class="container flex-wrap scrollable-container">
-                                @foreach (var serialNumberLog in _serialNumberLogs)
-                                {
-                                    <div class="form-floating d-inline-flex gap-2 mb-1">
-                                        <InputText id="serialNumberLog" class="form-control col custom-input" @bind-Value="@serialNumberLog.PartSerialNumber" @bind-Value:after="@(() => AfterSerialNumberInput(serialNumberLog))"></InputText>
-                                        <label class="form-label col custom-label" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
-                                    </div>
-                                }
-                            </div>
-                            <div class="d-flex align-items-center mt-2">
-                                <button disabled="@(string.IsNullOrWhiteSpace(ProductSerialNumber) || _serialNumberLogs.Any(l => string.IsNullOrWhiteSpace(l.PartSerialNumber)))" type="button" class="btn btn-outline-secondary" @onclick="PrintQRCode">
-                                    <i class="bi bi-printer"></i> Print QR Code
-                                </button>
-                            </div>
+                            <RequiredPartsList _serialNumberLogs="_serialNumberLogs" ProductSerialNumber="@ProductSerialNumber" AfterSerialNumberInput="@AfterSerialNumberInput" PrintQRCode="PrintQRCode"/>
                         }
                     </div>
                 }

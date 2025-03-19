@@ -1,0 +1,30 @@
+﻿@using MESS.Data.Models
+
+<div class="container flex-wrap scrollable-container">
+    @foreach (var serialNumberLog in _serialNumberLogs)
+    {
+    <div class="form-floating d-inline-flex gap-2 mb-1">
+        <InputText id="serialNumberLog" class="form-control col custom-input" @bind-Value="@serialNumberLog.PartSerialNumber"
+                   @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(serialNumberLog))"></InputText>
+        <label class="form-label col custom-label" for="serialNumberLog">@serialNumberLog.Part?.PartName</label>
+    </div>
+    }
+</div>
+<div class="d-flex align-items-center mt-2">
+    <button disabled="@(string.IsNullOrWhiteSpace(ProductSerialNumber) || _serialNumberLogs.Any(l => string.IsNullOrWhiteSpace(l.PartSerialNumber)))"
+            type="button" class="btn btn-outline-secondary" @onclick="PrintQRCode">
+        <i class="bi bi-printer"></i> Print QR Code
+    </button>
+</div>
+
+@code {
+    [Parameter] public required List<SerialNumberLog> _serialNumberLogs { get; set; }
+
+    [Parameter] public required string ProductSerialNumber { get; set; }
+
+    [Parameter]
+    public required EventCallback<SerialNumberLog> AfterSerialNumberInput { get; set; }
+    
+    [Parameter]
+    public required EventCallback<MouseEventArgs> PrintQRCode { get; set; }
+}
