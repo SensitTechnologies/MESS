@@ -2,10 +2,13 @@
 
 @if (ActiveWorkInstruction != null && ProductionLog != null)
 {
-    <div class="form-floating p-2 mb-2">
-        <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber"></InputText>
-        <label for="productSerialNumber">Product Serial Number:</label>
-    </div>
+    @if (!ActiveWorkInstruction.Steps.TrueForAll(ls => ls.PartsNeeded?.Count <= 0))
+    {
+        <div class="form-floating p-2 mb-2">
+            <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber"></InputText>
+            <label for="productSerialNumber">Product Serial Number:</label>
+        </div>
+    }
     
     <ol class="list-group list-group-numbered container">
         @foreach (var step in ActiveWorkInstruction.Steps)
