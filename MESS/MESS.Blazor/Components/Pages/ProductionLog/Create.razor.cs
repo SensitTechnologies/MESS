@@ -46,7 +46,16 @@ public partial class Create : ComponentBase, IDisposable
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = Status.NotStarted;
         
-        await LoadCachedForm();
+        var cachedForm = await LoadCachedForm();
+        
+        // Create ProductionLog in database since we will need the ID for QR codes
+        if (!cachedForm)
+        {
+            var id = await ProductionLogService.CreateAsync(ProductionLog);
+            ProductionLog.Id = id;
+                
+            ProductionLogEventService.EnableAutoSave();
+        }
         
         // AutoSave Trigger
         _autoSaveHandler = async log =>
@@ -67,7 +76,7 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
-    private async Task LoadCachedForm()
+    private async Task<bool> LoadCachedForm()
     {
         var cachedFormData = await LocalCacheManager.GetProductionLogFormAsync();
         if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
@@ -84,11 +93,17 @@ public partial class Create : ComponentBase, IDisposable
                 }).ToList()
             };
         }
+        else
+        {
+            return false;
+        }
 
         if (ProductionLog.LogSteps.TrueForAll(p => p.SubmitTime != DateTimeOffset.MinValue))
         {
             WorkInstructionStatus = Status.Completed;
         }
+
+        return true;
     }
     
     private async Task SetActiveWorkStation(int workStationId)
@@ -156,7 +171,6 @@ public partial class Create : ComponentBase, IDisposable
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
 
             await LocalCacheManager.SetActiveProductAsync(product);
-            LoadAssociatedWorkStationsFromProduct();
         }
     }
     
@@ -300,43 +314,31 @@ public partial class Create : ComponentBase, IDisposable
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
-        await ProductionLogEventService.SetCurrentProductionLog(new ProductionLog());
 
         
         // Add the new log to the session
         await SessionManager.AddProductionLogAsync(ProductionLog.Id);
-        ResetFormState();
+        await ResetFormState();
     }
 
-    private void ResetFormState()
+    private async Task ResetFormState()
     {
         ProductionLog = new ProductionLog();
+        var id = await ProductionLogService.CreateAsync(ProductionLog);
+        ProductionLog.Id = id;
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
-        StateHasChanged();
     }
     
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
-        // Save log to database on first step complete and enable clientside autosave
-        if (ProductionLog.Id == 0)
-        {
-            if (step.Id == ProductionLog.LogSteps.First().Id)
-            {
-                var id = await ProductionLogService.CreateAsync(ProductionLog);
-                ProductionLog.Id = id;
-                
-                ProductionLogEventService.EnableAutoSave();
-                
-            }
-        }
         var currentTime = DateTimeOffset.UtcNow;
         step.SubmitTime = currentTime;
         step.Success = success;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
-
-        StateHasChanged();
     }
     
     /// <summary>
