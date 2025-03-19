@@ -8,39 +8,50 @@
 @inject IApplicationUserService ApplicationUserService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<AuthorizeView>
-    <Authorized>
-        <p>You are logged in as: @context.User.Identity?.Name</p>
-        <form method="post" action="/api/auth/logout">
-            <button type="submit">Logout</button>
-        </form>
-    </Authorized>
-    <NotAuthorized>
-        <div>
-            <form method="post" action="/api/auth/login">
-                <AntiforgeryToken />
-                <div>
-                    <label for="email">Email:</label>
-                    <select id="email" name="email" class="form-select">
-                        <option value="">-- Select an operator --</option>
-                        @if (LineOperators != null)
-                        {
-                            @foreach (var lineOperator in LineOperators)
-                            {
-                                <option value="@lineOperator.Email">@lineOperator.Email</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <button type="submit">Login</button>
-            </form>
-            @if (!string.IsNullOrEmpty(Navigation.Uri) && Navigation.Uri.Contains("error=true"))
-            {
-                <div class="error">Login failed. Please check your credentials.</div>
-            }
+<div class="d-flex justify-content-center align-items-center">
+    <div class="card shadow" style="min-width: 350px; max-width: 450px;">
+        <div class="card-header bg-primary text-white">
+            <h3 class="m-0">Login</h3>
         </div>
-    </NotAuthorized>
-</AuthorizeView>
+        <div class="card-body p-4">
+            <AuthorizeView>
+                <Authorized>
+                    <div class="text-center mb-3">
+                        <p>You are logged in as: <strong>@context.User.Identity?.Name</strong></p>
+                        <form method="post" action="/api/auth/logout">
+                            <button type="submit" class="btn btn-danger">Logout</button>
+                        </form>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <form method="post" action="/api/auth/login">
+                        <AntiforgeryToken />
+                        <div class="mb-4">
+                            <label for="email" class="form-label">Email:</label>
+                            <select id="email" name="email" class="form-select">
+                                <option value="">-- Select an operator --</option>
+                                @if (LineOperators != null)
+                                {
+                                @foreach (var lineOperator in LineOperators)
+                                {
+                                <option value="@lineOperator.Email">@lineOperator.Email</option>
+                                }
+                                }
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </div>
+                    </form>
+                    @if (!string.IsNullOrEmpty(Navigation.Uri) && Navigation.Uri.Contains("error=true"))
+                    {
+                    <div class="alert alert-danger mt-3">Login failed. Please check your credentials.</div>
+                    }
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</div>
 
 @code {
     private List<ApplicationUser>? LineOperators { get; set; }
