@@ -70,10 +70,9 @@ public partial class Create : ComponentBase, IDisposable
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         
-        if (ProductionLog != null)
-        {
-            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
-        }
+
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        
     }
     
     private async Task<bool> LoadCachedForm()
@@ -84,6 +83,7 @@ public partial class Create : ComponentBase, IDisposable
             WorkInstructionStatus = Status.InProgress;
             ProductionLog = new ProductionLog
             {
+                Id = cachedFormData.ProductionLogId,
                 LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
                 {
                     WorkInstructionStepId = step.WorkInstructionStepId,

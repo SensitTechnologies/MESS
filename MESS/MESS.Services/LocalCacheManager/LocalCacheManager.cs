@@ -56,6 +56,8 @@ public class LocalCacheManager : ILocalCacheManager
             });
         }
 
+        productionLogFormDto.ProductionLogId = productionLog.Id;
+
         return productionLogFormDto;
     }
 
