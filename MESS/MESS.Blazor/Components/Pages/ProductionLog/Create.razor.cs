@@ -1,7 +1,4 @@
-﻿using MESS.Services.LineOperator;
-using MESS.Services.ProductionLog;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using Microsoft.AspNetCore.Components;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
 
@@ -23,20 +20,25 @@ public partial class Create : ComponentBase, IDisposable
     private Product? ActiveProduct { get; set; }
     private WorkStation? ActiveWorkStation { get; set; }
     private LineOperator? ActiveLineOperator { get; set; }
+    private WorkInstruction? ActiveWorkInstruction { get; set; }
+
     
     protected ProductionLog ProductionLog = new();
     
-    private List<WorkStation>? WorkStations { get; set; }
     private List<Product>? Products { get; set; }
+    private List<WorkStation>? WorkStations { get; set; }
+    private List<WorkInstruction>? WorkInstructions { get; set; }
     private List<LineOperator>? LineOperators { get; set; }
     
-    private WorkInstruction? ActiveWorkInstruction { get; set; }
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
     {
+        ProductionLogEventService.DisableAutoSave();
+        
         await LoadWorkStations();
         await LoadProducts();
+        await LoadWorkInstructions();
         LoadLineOperators();
         await GetInProgressAsync();
         
@@ -98,12 +100,37 @@ public partial class Create : ComponentBase, IDisposable
             {
                 return;
             }
-
+            
             ActiveWorkStation = workStation;
             ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
             
             await LocalCacheManager.SetActiveWorkStationAsync(workStation);
-            LoadAssociatedProductsFromStation();
+        }
+    }
+    
+    private async Task SetActiveWorkInstruction(int workInstructionId)
+    {
+        if (workInstructionId <= 0)
+        {
+            ActiveWorkInstruction = null;
+            await SetSelectedWorkInstructionId(null);
+        }
+        if (WorkInstructions != null)
+        {
+            var workInstruction = WorkInstructions.FirstOrDefault(p => p.Id == workInstructionId);
+
+            if (workInstruction?.Products == null)
+            {
+                return;
+            }
+            
+            
+            await SetSelectedWorkInstructionId(workInstructionId);
+
+            ActiveWorkInstruction = workInstruction;
+            ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
+            
+            await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
     
@@ -142,13 +169,11 @@ public partial class Create : ComponentBase, IDisposable
                 return;
             }
 
-            // SETTING ACTIVE WORK INSTRUCTION TO THE FIRST IN THE LIST SINCE WE DO NOT YET KNOW IF THERE WILL BE 
-            // AN ACTIVE WORK INSTRUCTION FOR EACH PRODUCT OR A WAY TO ALLOW OPERATORS TO CHOOSE
-            await SetSelectedWorkInstructionId(int.Parse(product.WorkInstructions.First().Id.ToString()));
             ActiveProduct = product;
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
 
             await LocalCacheManager.SetActiveProductAsync(product);
+            LoadAssociatedWorkStationsFromProduct();
         }
     }
     
@@ -197,8 +222,6 @@ public partial class Create : ComponentBase, IDisposable
             await GetCachedActiveWorkInstructionAsync();
             await GetCachedActiveProductAsync();
             await GetCachedLineOperatorAsync();
-            
-            
             return;
         }
 
@@ -224,11 +247,6 @@ public partial class Create : ComponentBase, IDisposable
         await LoadActiveWorkInstruction(result);
     }
 
-    private async Task SetCachedActiveWorkInstructionIdAsync(int workInstructionId)
-    {
-        await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstructionId);
-    }
-
     private async Task LoadProducts()
     {
         try
@@ -238,7 +256,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading products for the Create view: {Message}", e.Message);
         }
     }
     
@@ -251,7 +269,20 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading work stations: {Message}", e.Message);
+            Log.Error("Error loading work stations for the Create view: {Message}", e.Message);
+        }
+    }
+    
+    private async Task LoadWorkInstructions()
+    {
+        try
+        {
+            var workInstructionsList = await WorkInstructionService.GetAllAsync();
+            WorkInstructions = workInstructionsList.ToList();
+        }
+        catch (Exception e)
+        {
+            Log.Error("Error loading Work Instructions for the Create view: {Message}", e.Message);
         }
     }
     
@@ -264,7 +295,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading products: {Message}", e.Message);
+            Log.Error("Error loading Line Operators for the Create view: {Message}", e.Message);
         }
     }
     
@@ -272,16 +303,19 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (value.HasValue)
         {
-            await LoadActiveWorkInstruction(value.Value);
-            await SetCachedActiveWorkInstructionIdAsync(value.Value);
             await SetInProgressAsync(true);
         }
+        await LocalCacheManager.SetActiveWorkInstructionIdAsync(value ?? -1);
     }
-
-
+    
     private async Task LoadActiveWorkInstruction(int id)
     {
         ActiveWorkInstruction = await WorkInstructionService.GetByIdAsync(id);
+        if (ActiveWorkInstruction == null)
+        {
+            return;
+        }
+        ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
     }
 
     protected async Task HandleSubmit()
@@ -294,14 +328,17 @@ public partial class Create : ComponentBase, IDisposable
         
         var currentTime = DateTimeOffset.UtcNow;
         
-        // Create new log
+        // Update log
         ProductionLog.CreatedOn = currentTime;
         ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
         ProductionLog.LineOperator = ActiveLineOperator;
-        await ProductionLogService.CreateAsync(ProductionLog);
+        await ProductionLogService.UpdateAsync(ProductionLog);
+        
+        // Create any associated SerialNumberLogs
+        await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
@@ -322,10 +359,21 @@ public partial class Create : ComponentBase, IDisposable
     
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
+        // Save log to database on first step complete and enable clientside autosave
+        if (ProductionLog.Id == 0)
+        {
+            if (step.Id == ProductionLog.LogSteps.First().Id)
+            {
+                var id = await ProductionLogService.CreateAsync(ProductionLog);
+                ProductionLog.Id = id;
+                
+                ProductionLogEventService.EnableAutoSave();
+                
+            }
+        }
         var currentTime = DateTimeOffset.UtcNow;
         step.SubmitTime = currentTime;
         step.Success = success;
-        IsSaved = false;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
@@ -363,16 +411,72 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
 
-    private List<Product> LoadAssociatedProductsFromStation()
+    private List<WorkStation> LoadAssociatedWorkStationsFromProduct()
     {
         try
         {
-            if (ActiveWorkStation == null || WorkStations == null)
+            if (ActiveProduct == null || Products == null || ActiveProduct.WorkStations == null)
             {
                 return [];
             }
 
-            return ActiveWorkStation.Products;
+            return ActiveProduct.WorkStations;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Loads a list of work instructions based on the currently selected Product and Work Station
+    /// </summary>
+    /// <returns></returns>
+    private List<WorkInstruction> LoadAssociatedWorkInstructions()
+    {
+        try
+        {
+            if (ActiveProduct?.WorkInstructions == null || Products?.Count <= 0 || 
+                ActiveWorkStation?.WorkInstructions == null || WorkStations?.Count <= 0)
+            {
+                return [];
+            }
+            
+            // WorkInstruction ID with a T/F for if they are within both lists
+            var workInstructionMap = new Dictionary<int, bool>();
+            
+            foreach (var productWorkInstruction in ActiveProduct.WorkInstructions)
+            {
+                if (!workInstructionMap.TryAdd(productWorkInstruction.Id, false))
+                {
+                    workInstructionMap[productWorkInstruction.Id] = true;
+                }
+            }
+            
+            foreach (var stationWorkInstruction in ActiveWorkStation.WorkInstructions)
+            {
+                if (!workInstructionMap.TryAdd(stationWorkInstruction.Id, false))
+                {
+                    workInstructionMap[stationWorkInstruction.Id] = true;
+                }
+            }
+            
+
+            var commonWorkInstructionIds = workInstructionMap.Where(w => w.Value).Select(w => w.Key).ToList();
+
+            var outputList = ActiveProduct.WorkInstructions
+                .Where(w => commonWorkInstructionIds.Contains(w.Id)).ToList();
+
+            if (outputList.Count > 0)
+            {
+                return outputList;
+            }
+                
+            ActiveWorkInstruction = null;
+            _ = SetActiveWorkInstruction(-1);
+
+            return outputList;
         }
         catch (Exception e)
         {

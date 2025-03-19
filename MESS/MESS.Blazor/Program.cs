@@ -8,6 +8,7 @@ using MESS.Data.Seed;
 using MESS.Services.BrowserCacheManager;
 using MESS.Services.LineOperator;
 using MESS.Services.ProductionLog;
+using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using MESS.Services.WorkStation;
@@ -53,6 +54,7 @@ builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddTransient<ISessionManager, SessionManager>();
 builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
+builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
@@ -85,11 +87,10 @@ var config = new ConfigurationBuilder()
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    SeedWorkInstructions.Seed(services);
-}
+// if (app.Environment.IsDevelopment())
+// {
+//     SeedWorkInstructions.Seed(app.Services);
+// }
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

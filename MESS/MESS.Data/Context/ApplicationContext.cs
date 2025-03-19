@@ -28,6 +28,16 @@ public class ApplicationContext : DbContext
     public virtual DbSet<Documentation> Documentations { get; set; } = null!;
     public virtual DbSet<Cell> Cells { get; set; } = null!;
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<LineOperator>(entity =>
+        {
+            entity.ToTable("AspNetUsers");
+        });
+    }
+
     public override int SaveChanges()
     {
         UpdateAuditFields();

@@ -1,5 +1,18 @@
 # MESS - Reference Sheet
 
+### EF Core (Common Database Interactions)
+**NOTE:** *For both of these commands you must be in the MESS.Data directory, otherwise you must specify the base project as well.*
+#### Migrations
+```shell
+dotnet ef migrations add "MIGRATION_NAME" --startup-project ..\MESS.Blazor\MESS.Blazor.csproj
+```
+
+#### Updates
+```shell
+dotnet ef database update --startup-project ..\MESS.Blazor\MESS.Blazor.csproj
+```
+
+
 ### Secret Management 
 **NOTE:** *This should only be used for development purposes*
 
