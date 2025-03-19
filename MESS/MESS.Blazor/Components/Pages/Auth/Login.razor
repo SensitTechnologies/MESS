@@ -1,5 +1,6 @@
 ﻿@page "/auth/Login"
 @using Azure.Core
+@using MESS.Data.Models
 @using MESS.Services.ApplicationUser
 @using Microsoft.AspNetCore.Components.Authorization
 @using Serilog
@@ -26,11 +27,17 @@
             </form>
             @if (!string.IsNullOrEmpty(Navigation.Uri) && Navigation.Uri.Contains("error=true"))
             {
-            <div class="error">Login failed. Please check your credentials.</div>
+                <div class="error">Login failed. Please check your credentials.</div>
             }
         </div>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
+    private List<ApplicationUser>? LineOperators { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        LineOperators = await ApplicationUserService.GetUsersByRoleAsync("Operator");
+    }
 }

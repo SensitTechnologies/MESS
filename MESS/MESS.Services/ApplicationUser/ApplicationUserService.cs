@@ -49,9 +49,23 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
-    public List<ApplicationUser> GetApplicationUsers()
+    public async Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName)
     {
-        return _context.Users.ToList();
+        try
+        {
+            var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
+            return usersInRole.ToList();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return [];
+        }
+    }
+
+    public async Task<List<ApplicationUser>> GetApplicationUsers()
+    {
+        return await _context.Users.ToListAsync();
     }
 
     public ApplicationUser? GetApplicationUserById(string id)

@@ -3,13 +3,27 @@ using Data.Models;
 
 public interface IApplicationUserService
 {
+    /// <summary>
+    /// Signs out the current user.
+    /// </summary>
     public Task SignOutAsync();
+    /// <summary>
+    /// Signs in a user by email.
+    /// </summary>
+    /// <param name="email">The email of the user.</param>
+    /// <returns>True if sign-in was successful, otherwise false.</returns>
     public Task<bool> SignInAsync(string email);
+    /// <summary>
+    /// Gets a list of users by role.
+    /// </summary>
+    /// <param name="roleName">The name of the role.</param>
+    /// <returns>A list of users in the specified role.</returns>
+    public Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName);
     //<summary>
     // Retrieves a list of all ApplicationUsers currently registered
     //</summary>
     //<returns>List of ApplicationUser objects</returns>
-    public List<ApplicationUser> GetApplicationUsers();
+    public Task<List<ApplicationUser>> GetApplicationUsers();
     
     //<summary>
     // Retrieves a ApplicationUser by id number
