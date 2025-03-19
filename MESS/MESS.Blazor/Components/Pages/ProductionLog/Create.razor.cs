@@ -19,7 +19,6 @@ public partial class Create : ComponentBase, IDisposable
     
     private Product? ActiveProduct { get; set; }
     private WorkStation? ActiveWorkStation { get; set; }
-    private ApplicationUser? ActiveLineOperator { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
     
@@ -28,7 +27,6 @@ public partial class Create : ComponentBase, IDisposable
     private List<Product>? Products { get; set; }
     private List<WorkStation>? WorkStations { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
-    private List<ApplicationUser>? LineOperators { get; set; }
     
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
@@ -39,7 +37,6 @@ public partial class Create : ComponentBase, IDisposable
         await LoadWorkStations();
         await LoadProducts();
         await LoadWorkInstructions();
-        LoadLineOperators();
         await GetInProgressAsync();
         
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
@@ -133,24 +130,6 @@ public partial class Create : ComponentBase, IDisposable
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
-    
-    private async Task SetActiveLineOperator(string lineOperatorId)
-    {
-        if (LineOperators != null)
-        {
-            var lineOperator = LineOperators.FirstOrDefault(p => p.Id == lineOperatorId);
-
-            if (lineOperator == null)
-            {
-                return;
-            }
-
-            ActiveLineOperator = lineOperator;
-            ProductionLogEventService.SetCurrentLineOperatorName(ActiveLineOperator.FullName);
-            
-            await LocalCacheManager.SetActiveLineOperatorAsync(lineOperator);
-        }
-    }
 
     private async Task SetActiveProduct(int productId)
     {
@@ -189,19 +168,6 @@ public partial class Create : ComponentBase, IDisposable
         
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
-    
-    private async Task GetCachedLineOperatorAsync()
-    {
-        var result = await LocalCacheManager.GetActiveLineOperatorAsync();
-        ActiveLineOperator = LineOperators?.FirstOrDefault(p => p.FullName == result.Name);
-
-        if (ActiveLineOperator == null) 
-        {
-            return;
-        }
-        
-        ProductionLogEventService.SetCurrentLineOperatorName(ActiveLineOperator.FullName);
-    }
 
     /// Sets the local storage variable
     private async Task SetInProgressAsync(bool isActive)
@@ -221,7 +187,6 @@ public partial class Create : ComponentBase, IDisposable
             await GetCachedActiveWorkStationAsync();
             await GetCachedActiveWorkInstructionAsync();
             await GetCachedActiveProductAsync();
-            await GetCachedLineOperatorAsync();
             return;
         }
 
@@ -286,19 +251,6 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
-    private void LoadLineOperators()
-    {
-        try
-        {
-            var operatorsAsync = LineOperatorService.GetApplicationUsers();
-            LineOperators = operatorsAsync.ToList();
-        }
-        catch (Exception e)
-        {
-            Log.Error("Error loading Line Operators: {Message}", e.Message);
-        }
-    }
-    
     private async Task SetSelectedWorkInstructionId(int? value)
     {
         if (value.HasValue)
@@ -327,13 +279,16 @@ public partial class Create : ComponentBase, IDisposable
         }
         
         var currentTime = DateTimeOffset.UtcNow;
-        
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
         // Update log
         ProductionLog.CreatedOn = currentTime;
         ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
+        ProductionLog.OperatorId = userId;
         await ProductionLogService.UpdateAsync(ProductionLog);
         
         // Create any associated SerialNumberLogs

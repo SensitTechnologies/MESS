@@ -137,26 +137,7 @@ public class LocalCacheManager : ILocalCacheManager
             return -1;
         }
     }
-
-    public async Task<CacheDTO> GetActiveLineOperatorAsync()
-    {
-        try
-        {
-            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveApplicationUserKey);
-
-            if (result is { Success: true, Value: not null })
-            {
-                return result.Value;
-            }
-
-            return new CacheDTO();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return new CacheDTO();
-        }
-    }
+    
 
     public async Task<CacheDTO> GetActiveWorkStationAsync()
     {
@@ -196,26 +177,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task SetActiveLineOperatorAsync(ApplicationUser ApplicationUser)
-    {
-        try
-        {
-            // map to DTO
-            var operatorDTO = new CacheDTO
-            {
-                Id = ApplicationUser.Id,
-                Name = ApplicationUser.FullName
-            };
-            
-            await _protectedLocalStorage.SetAsync(ActiveApplicationUserKey, operatorDTO);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-    }
-
-
+    
     public async Task SetActiveWorkInstructionIdAsync(int workInstructionId)
     {
         try
