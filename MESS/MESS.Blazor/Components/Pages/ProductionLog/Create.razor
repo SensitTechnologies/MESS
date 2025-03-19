@@ -32,6 +32,7 @@
                     <CreateHeader
                         WorkInstructions="@LoadAssociatedWorkInstructions()" OnWorkInstructionSelected="@SetActiveWorkInstruction"
                         WorkStations="@LoadAssociatedWorkStationsFromProduct()" OnWorkStationSelected="@SetActiveWorkStation"
+                        ActiveLineOperator="@ActiveLineOperator"
                         Products="@Products" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">

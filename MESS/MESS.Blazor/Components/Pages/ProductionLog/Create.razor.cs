@@ -28,6 +28,8 @@ public partial class Create : ComponentBase, IDisposable
     private List<WorkStation>? WorkStations { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
     
+    private string? ActiveLineOperator { get; set; }
+    
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
@@ -38,7 +40,9 @@ public partial class Create : ComponentBase, IDisposable
         await LoadProducts();
         await LoadWorkInstructions();
         await GetInProgressAsync();
-        
+
+        var result = await AuthProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = result.User.Identity?.Name;
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = Status.NotStarted;
         

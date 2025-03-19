@@ -13,7 +13,14 @@
         <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
     </CreateHeaderCard>
     <CreateHeaderCard Title="Operator">
-        <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
+        @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
+        {
+            <p>@ActiveLineOperator</p>
+        }
+        else
+        {
+            <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
+        }
     </CreateHeaderCard>
 </div>
 
@@ -35,4 +42,6 @@
     public List<ApplicationUser>? LineOperators { get; set; }
     [Parameter]
     public EventCallback<string> OnLineOperatorSelected { get; set; }
+    [Parameter]
+    public string? ActiveLineOperator { get; set; }
 }
