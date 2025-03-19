@@ -32,10 +32,10 @@
                                 <option value="">-- Select an operator --</option>
                                 @if (LineOperators != null)
                                 {
-                                @foreach (var lineOperator in LineOperators)
-                                {
-                                <option value="@lineOperator.Email">@lineOperator.Email</option>
-                                }
+                                    @foreach (var lineOperator in LineOperators)
+                                    {
+                                        <option value="@lineOperator.Email">@lineOperator.Email</option>
+                                    }
                                 }
                             </select>
                         </div>
@@ -43,10 +43,6 @@
                             <button type="submit" class="btn btn-primary">Login</button>
                         </div>
                     </form>
-                    @if (!string.IsNullOrEmpty(Navigation.Uri) && Navigation.Uri.Contains("error=true"))
-                    {
-                    <div class="alert alert-danger mt-3">Login failed. Please check your credentials.</div>
-                    }
                 </NotAuthorized>
             </AuthorizeView>
         </div>

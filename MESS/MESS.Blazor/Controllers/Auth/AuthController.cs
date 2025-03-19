@@ -1,5 +1,6 @@
 ﻿using MESS.Services.ApplicationUser;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace MESS.Blazor.Controllers.Auth;
 
@@ -8,12 +9,10 @@ namespace MESS.Blazor.Controllers.Auth;
 public class AuthController : ControllerBase
 {
     private readonly IApplicationUserService _applicationUserService;
-    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IApplicationUserService applicationUserService, ILogger<AuthController> logger)
+    public AuthController(IApplicationUserService applicationUserService)
     {
         _applicationUserService = applicationUserService;
-        _logger = logger;
     }
 
     [HttpPost("login")]
@@ -24,17 +23,17 @@ public class AuthController : ControllerBase
             var result = await _applicationUserService.SignInAsync(email);
             if (result)
             {
-                _logger.LogInformation("User successfully logged in: {Email}", email);
-                return Redirect("/");
+                Log.Information("User successfully logged in: {Email}", email);
+                return Redirect("/production-log");
             }
             
-            _logger.LogInformation("Unsuccessful sign-in attempt");
-            return Redirect("/auth/Login?error=true");
+            Log.Information("Unsuccessful sign-in attempt");
+            return Redirect("/auth/Login");
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Login failed: {Message}", ex.Message);
-            return Redirect("/auth/Login?error=true");
+            Log.Warning("Login failed: {Message}", ex.Message);
+            return Redirect("/auth/Login");
         }
     }
 
