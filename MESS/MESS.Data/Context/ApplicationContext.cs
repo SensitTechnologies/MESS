@@ -24,19 +24,8 @@ public class ApplicationContext : DbContext
     public virtual DbSet<Product> Products { get; set; } = null!;
     public virtual DbSet<Problem> Problems { get; set; } = null!;
     public virtual DbSet<Part> Parts { get; set; } = null!;
-    public virtual DbSet<LineOperator> LineOperators { get; set; } = null!;
     public virtual DbSet<Documentation> Documentations { get; set; } = null!;
     public virtual DbSet<Cell> Cells { get; set; } = null!;
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<LineOperator>(entity =>
-        {
-            entity.ToTable("AspNetUsers");
-        });
-    }
 
     public override int SaveChanges()
     {

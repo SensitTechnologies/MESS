@@ -19,7 +19,6 @@ public partial class Create : ComponentBase, IDisposable
     
     private Product? ActiveProduct { get; set; }
     private WorkStation? ActiveWorkStation { get; set; }
-    private LineOperator? ActiveLineOperator { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
     
@@ -28,7 +27,8 @@ public partial class Create : ComponentBase, IDisposable
     private List<Product>? Products { get; set; }
     private List<WorkStation>? WorkStations { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
-    private List<LineOperator>? LineOperators { get; set; }
+    
+    private string? ActiveLineOperator { get; set; }
     
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
@@ -39,13 +39,23 @@ public partial class Create : ComponentBase, IDisposable
         await LoadWorkStations();
         await LoadProducts();
         await LoadWorkInstructions();
-        LoadLineOperators();
         await GetInProgressAsync();
-        
+
+        var result = await AuthProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = result.User.Identity?.Name;
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = Status.NotStarted;
         
-        await LoadCachedForm();
+        var cachedForm = await LoadCachedForm();
+        
+        // Create ProductionLog in database since we will need the ID for QR codes
+        if (!cachedForm)
+        {
+            var id = await ProductionLogService.CreateAsync(ProductionLog);
+            ProductionLog.Id = id;
+                
+            ProductionLogEventService.EnableAutoSave();
+        }
         
         // AutoSave Trigger
         _autoSaveHandler = async log =>
@@ -60,13 +70,12 @@ public partial class Create : ComponentBase, IDisposable
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         
-        if (ProductionLog != null)
-        {
-            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
-        }
+
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        
     }
     
-    private async Task LoadCachedForm()
+    private async Task<bool> LoadCachedForm()
     {
         var cachedFormData = await LocalCacheManager.GetProductionLogFormAsync();
         if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
@@ -74,6 +83,7 @@ public partial class Create : ComponentBase, IDisposable
             WorkInstructionStatus = Status.InProgress;
             ProductionLog = new ProductionLog
             {
+                Id = cachedFormData.ProductionLogId,
                 LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
                 {
                     WorkInstructionStepId = step.WorkInstructionStepId,
@@ -83,11 +93,17 @@ public partial class Create : ComponentBase, IDisposable
                 }).ToList()
             };
         }
+        else
+        {
+            return false;
+        }
 
         if (ProductionLog.LogSteps.TrueForAll(p => p.SubmitTime != DateTimeOffset.MinValue))
         {
             WorkInstructionStatus = Status.Completed;
         }
+
+        return true;
     }
     
     private async Task SetActiveWorkStation(int workStationId)
@@ -133,24 +149,6 @@ public partial class Create : ComponentBase, IDisposable
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
-    
-    private async Task SetActiveLineOperator(int lineOperatorId)
-    {
-        if (LineOperators != null)
-        {
-            var lineOperator = LineOperators.FirstOrDefault(p => p.Id == lineOperatorId);
-
-            if (lineOperator == null)
-            {
-                return;
-            }
-
-            ActiveLineOperator = lineOperator;
-            ProductionLogEventService.SetCurrentLineOperatorName(ActiveLineOperator.FullName);
-            
-            await LocalCacheManager.SetActiveLineOperatorAsync(lineOperator);
-        }
-    }
 
     private async Task SetActiveProduct(int productId)
     {
@@ -173,7 +171,6 @@ public partial class Create : ComponentBase, IDisposable
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
 
             await LocalCacheManager.SetActiveProductAsync(product);
-            LoadAssociatedWorkStationsFromProduct();
         }
     }
     
@@ -188,19 +185,6 @@ public partial class Create : ComponentBase, IDisposable
         }
         
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
-    }
-    
-    private async Task GetCachedLineOperatorAsync()
-    {
-        var result = await LocalCacheManager.GetActiveLineOperatorAsync();
-        ActiveLineOperator = LineOperators?.FirstOrDefault(p => p.FullName == result.Name);
-
-        if (ActiveLineOperator == null) 
-        {
-            return;
-        }
-        
-        ProductionLogEventService.SetCurrentLineOperatorName(ActiveLineOperator.FullName);
     }
 
     /// Sets the local storage variable
@@ -221,7 +205,6 @@ public partial class Create : ComponentBase, IDisposable
             await GetCachedActiveWorkStationAsync();
             await GetCachedActiveWorkInstructionAsync();
             await GetCachedActiveProductAsync();
-            await GetCachedLineOperatorAsync();
             return;
         }
 
@@ -282,7 +265,7 @@ public partial class Create : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Log.Error("Error loading Work Instructions for the Create view: {Message}", e.Message);
+            Log.Error("Error loading work instructions: {Message}", e.Message);
         }
     }
     
@@ -327,14 +310,16 @@ public partial class Create : ComponentBase, IDisposable
         }
         
         var currentTime = DateTimeOffset.UtcNow;
-        
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
         // Update log
         ProductionLog.CreatedOn = currentTime;
         ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.WorkStation = ActiveWorkStation;
-        ProductionLog.LineOperator = ActiveLineOperator;
+        ProductionLog.OperatorId = userId;
         await ProductionLogService.UpdateAsync(ProductionLog);
         
         // Create any associated SerialNumberLogs
@@ -342,43 +327,31 @@ public partial class Create : ComponentBase, IDisposable
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
-        await ProductionLogEventService.SetCurrentProductionLog(new ProductionLog());
 
         
         // Add the new log to the session
         await SessionManager.AddProductionLogAsync(ProductionLog.Id);
-        ResetFormState();
+        await ResetFormState();
     }
 
-    private void ResetFormState()
+    private async Task ResetFormState()
     {
         ProductionLog = new ProductionLog();
+        var id = await ProductionLogService.CreateAsync(ProductionLog);
+        ProductionLog.Id = id;
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
-        StateHasChanged();
     }
     
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
-        // Save log to database on first step complete and enable clientside autosave
-        if (ProductionLog.Id == 0)
-        {
-            if (step.Id == ProductionLog.LogSteps.First().Id)
-            {
-                var id = await ProductionLogService.CreateAsync(ProductionLog);
-                ProductionLog.Id = id;
-                
-                ProductionLogEventService.EnableAutoSave();
-                
-            }
-        }
         var currentTime = DateTimeOffset.UtcNow;
         step.SubmitTime = currentTime;
         step.Success = success;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
-
-        StateHasChanged();
     }
     
     /// <summary>

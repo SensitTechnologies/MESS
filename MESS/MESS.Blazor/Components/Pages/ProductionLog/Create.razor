@@ -1,12 +1,15 @@
 ﻿@page "/production-log"
+@attribute [Authorize(Roles = "Admin, Operator")]
+@using MESS.Services.ApplicationUser
 @using MESS.Services.BrowserCacheManager
-@using MESS.Services.LineOperator
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
 @using MESS.Services.Serialization
 @using MESS.Services.WorkInstruction
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IProductionLogService ProductionLogService
 @inject IProductionLogEventService ProductionLogEventService
 @inject IWorkInstructionService WorkInstructionService
@@ -15,7 +18,8 @@
 @inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
 @inject ISerializationService SerializationService
-@inject ILineOperatorService LineOperatorService
+@inject IApplicationUserService LineOperatorService
+@inject AuthenticationStateProvider AuthProvider
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -27,8 +31,8 @@
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                     <CreateHeader
                         WorkInstructions="@LoadAssociatedWorkInstructions()" OnWorkInstructionSelected="@SetActiveWorkInstruction"
-                        LineOperators="@LineOperators" OnLineOperatorSelected="@SetActiveLineOperator" 
                         WorkStations="@LoadAssociatedWorkStationsFromProduct()" OnWorkStationSelected="@SetActiveWorkStation"
+                        ActiveLineOperator="@ActiveLineOperator"
                         Products="@Products" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using FluentValidation;
 
 namespace MESS.Data.Models;
@@ -7,7 +8,8 @@ public class WorkInstruction : AuditableEntity
     public int Id { get; set; }
     public required string Title { get; set; }
     public string? Version { get; set; }
-    public LineOperator? Operator { get; set; }
+    [ForeignKey("UserId")]
+    public string? OperatorId { get; set; }
     public required List<Step> Steps { get; set; }
     public List<Documentation>? RelatedDocumentation { get; set; }
 

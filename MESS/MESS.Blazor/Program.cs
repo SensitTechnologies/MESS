@@ -1,12 +1,9 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using MESS.Blazor.Components;
 using MESS.Data.Context;
 using MESS.Data.Models;
 using MESS.Services.Product;
-using MESS.Data.Seed;
+using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
-using MESS.Services.LineOperator;
 using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
@@ -14,7 +11,6 @@ using MESS.Services.WorkInstruction;
 using MESS.Services.WorkStation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
@@ -38,31 +34,61 @@ builder.Services.AddDbContext<UserContext>(options =>
 
 });
 
-builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
-builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
-builder.Services.AddHttpClient();
-
-// Register the ProductService
-builder.Services.AddTransient<IProductService, ProductService>();
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+    
+    
+builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddTransient<ISessionManager, SessionManager>();
 builder.Services.AddTransient<IWorkStationService, WorkStationService>();
-builder.Services.AddTransient<ILineOperatorService, LineOperatorService>();
+builder.Services.AddTransient<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
+builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+builder.Services.AddRazorPages();
+
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    // Password config
+    options.Password.RequiredLength = 1;
+    options.Password.RequiredUniqueChars = 0;
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    
+    // Username
+    options.User.RequireUniqueEmail = true;
+    
+    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
+});
 
 // Adding Services for Identity
-builder.Services.AddIdentity<LineOperator, IdentityRole>()
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<UserContext>()
     .AddDefaultTokenProviders();
+
+// Roles
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireTechnician", policy =>
+        policy.RequireRole("Admin"));
+    options.AddPolicy("RequireOperator", policy =>
+        policy.RequireRole("Operator"));
+});
+
+builder.Services.AddAntiforgery();
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
@@ -76,21 +102,15 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Is(logLevel)
     .CreateLogger();
 
-
-// User Secrets Setup
-var config = new ConfigurationBuilder()
-    .AddUserSecrets<Program>()
-    .Build();
-
-// Example user secrets usage
-// Console.WriteLine($"Hello, {config["Name"]}");
-
 var app = builder.Build();
 
-// if (app.Environment.IsDevelopment())
-// {
-//     SeedWorkInstructions.Seed(app.Services);
-// }
+// Initializes the roles if they are not already created in the database
+using (var scope = app.Services.CreateScope())
+{
+    var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
+    await roleInit.InitializeAsync();
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -109,5 +129,9 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapRazorPages();
+
+app.MapControllers();
 
 app.Run();

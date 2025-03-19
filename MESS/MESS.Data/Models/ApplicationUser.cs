@@ -4,12 +4,10 @@ using Microsoft.AspNetCore.Identity;
 
 namespace MESS.Data.Models;
 
-public class LineOperator : IdentityUser
+public class ApplicationUser : IdentityUser
 {
-    [Key]
-    public new int Id { get; set; }
-    public required string FirstName { get; set; }
-    public required string LastName { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
     public bool IsActive { get; set; }
     
     // Navigation properties
@@ -19,9 +17,9 @@ public class LineOperator : IdentityUser
 }
 
 
-public class LineOperatorValidator : AbstractValidator<LineOperator>
+public class ApplicationUserValidator : AbstractValidator<ApplicationUser>
 {
-    public LineOperatorValidator()
+    public ApplicationUserValidator()
     {
         RuleFor(x => x.FirstName).NotEmpty().Length(0, 1024);
         RuleFor(x => x.LastName).NotEmpty().Length(0, 1024);
