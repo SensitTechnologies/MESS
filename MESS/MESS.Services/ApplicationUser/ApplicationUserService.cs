@@ -80,7 +80,7 @@ public class ApplicationUserService : IApplicationUserService
         return ApplicationUser;
     }
 
-    public async Task<bool> AddApplicationUser(ApplicationUser ApplicationUser)
+    public async Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser)
     {
         try
         {
@@ -90,16 +90,16 @@ public class ApplicationUserService : IApplicationUserService
             {
                 await _userManager.AddToRoleAsync(ApplicationUser, DEFAULT_ROLE);
                 Log.Information("Added ApplicationUser with ID {id}", ApplicationUser.Id);
-                return true;
+                return IdentityResult.Success;
             }
             
             Log.Error("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
-            return false;
+            return result;
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Could not add ApplicationUser");
-            return false;
+            return IdentityResult.Failed();
         }
     }
 

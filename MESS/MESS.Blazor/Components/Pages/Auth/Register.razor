@@ -1,6 +1,8 @@
 @page "/Register"
 @using MESS.Data.Models
 @using MESS.Services.ApplicationUser
+@using Microsoft.AspNetCore.Identity
+@using Serilog
 @inject IApplicationUserService ApplicationUserService
 
 <h3>Register</h3>
@@ -13,9 +15,21 @@
 
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
+@if (ErrorMessages != null)
+{
+    <div>
+        @foreach (var error in ErrorMessages)
+        {
+            <p>
+                @error.Description
+            </p>
+        }
+    </div>
+}
 
 @code {
     private string Email { get; set; } = "";
+    private List<IdentityError> ErrorMessages { get; set; } = new List<IdentityError>();
     
     
     private async Task HandleRegistrationAsync()
@@ -28,9 +42,10 @@
 
         var result = await ApplicationUserService.AddApplicationUser(user);
 
-        if (!result)
+        if (!result.Succeeded)
         {
-            Console.WriteLine("ERROR REGISTERING USER");
+            Log.Warning("Unable to register new user with email: {Email}. Failed with the following errors: {errors}", Email, result.Errors);
+            ErrorMessages.AddRange(result.Errors);
         }
     }
     

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+
 namespace MESS.Services.ApplicationUser;
 using Data.Models;
 
@@ -41,7 +43,7 @@ public interface IApplicationUserService
     // Creates a ApplicationUser object and saves it to the database
     //</summary>
     //<returns>ApplicationUser object</returns>
-    public Task<bool> AddApplicationUser(ApplicationUser ApplicationUser);
+    public Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser);
     
     //<summary>
     // Updates a ApplicationUser currently in the database
