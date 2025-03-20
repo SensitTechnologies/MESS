@@ -269,19 +269,6 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
-    private void LoadLineOperators()
-    {
-        try
-        {
-            var operatorsAsync = LineOperatorService.GetLineOperators();
-            LineOperators = operatorsAsync.ToList();
-        }
-        catch (Exception e)
-        {
-            Log.Error("Error loading Line Operators for the Create view: {Message}", e.Message);
-        }
-    }
-    
     private async Task SetSelectedWorkInstructionId(int? value)
     {
         if (value.HasValue)

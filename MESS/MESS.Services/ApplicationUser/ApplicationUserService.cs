@@ -63,9 +63,10 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
-    public async Task<List<ApplicationUser>> GetApplicationUsers()
+    public Task<List<ApplicationUser>> GetApplicationUsers()
     {
-        return await _context.Users.ToListAsync();
+        var ApplicationUsers = _context.Users.ToListAsync();
+        return ApplicationUsers;
     }
 
     public ApplicationUser? GetApplicationUserById(string id)
