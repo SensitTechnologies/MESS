@@ -1,11 +1,14 @@
 ﻿@page "/users"
 @attribute [Authorize(Roles = "Technician")]
+@using MESS.Data.DTO
 @using MESS.Data.Models
 @using MESS.Services.ApplicationUser
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 @inject AuthenticationStateProvider AuthProvider
 @inject IApplicationUserService ApplicationUserService
+@inject UserManager<ApplicationUser> UserManager
 
 <div class="container justify-content-center">
     <h1>
@@ -20,14 +23,18 @@
                     #
                 </th>
                 <th scope="col">Email</th>
+                <th scope="col">First Name</th>
+                <th scope="col">Last Name</th>
+                <th scope="col">Role</th>
+                <th scope="col">Actions</th>
             </tr>
             </thead>
             <tbody>
-                @if (ApplicationUsers != null)
+                @if (ApplicationUserDtoList != null)
                 {
-                    @foreach (var (user, index) in ApplicationUsers.Select((user, index) => (user, index)))
+                    @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
                     {
-                        <UserTableRow RowNumber="index" User="user" />
+                        <UserTableRow RowNumber="index" UserRoleDto="userDto" />
                     }
                 }
             </tbody>
@@ -40,20 +47,33 @@
 </div>
 
 @code {
-    private List<ApplicationUser>? ApplicationUsers { get; set; }
+    private List<UserRoleDto> ApplicationUserDtoList { get; set; } = [];
 
     protected override async Task OnInitializedAsync()
     {
-        ApplicationUsers = await ApplicationUserService.GetApplicationUsers();
+        var applicationUsers = await ApplicationUserService.GetApplicationUsers();
+        foreach (var user in applicationUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            var userDto = new UserRoleDto
+            {
+                User = user,
+                Roles = roles
+            };
+            
+            ApplicationUserDtoList.Add(userDto);
+        }
     }
 
-    protected async Task SaveChanges()
+    private async Task SaveChanges()
     {
-        if (ApplicationUsers != null)
-            foreach (var user in ApplicationUsers)
+        if (ApplicationUserDtoList != null)
+        {
+            foreach (var user in ApplicationUserDtoList)
             {
-                await ApplicationUserService.UpdateApplicationUser(user);
+                await ApplicationUserService.UpdateApplicationUser(user.User);
             }
+        }
     }
 
 }

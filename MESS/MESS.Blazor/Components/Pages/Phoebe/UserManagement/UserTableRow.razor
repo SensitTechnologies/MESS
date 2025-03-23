@@ -1,18 +1,52 @@
-﻿@using MESS.Data.Models
+﻿@using MESS.Data.DTO
+@using MESS.Data.Models
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
 
-
-<tr>
-    <th scope="row">@RowNumber</th>
-    <td>
-        <input type="email" class="form-control" @bind="User.Email" @bind:event="oninput" @onchange="() => IsChanged = false"/>
-    </td>
-</tr>
+@if (User != null)
+{
+    <tr>
+        <th scope="row">@RowNumber</th>
+        <td>
+            <input type="email" class="form-control" @bind="User.Email" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+        </td>
+        <td>
+            <input type="text" class="form-control" @bind="User.FirstName" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+        </td>
+        <td>
+            <input type="text" class="form-control" @bind="User.LastName" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+        </td>
+        <td>
+            <select class="form-select" @bind="selectedRole">
+                <option value="Administrator">Administrator</option>
+                <option value="Technician">Technician</option>
+                <option value="Operator">Operator</option>
+            </select>
+        </td>
+        <td>
+        </td>
+    </tr>
+}
 
 @code {
     [Parameter]
     public required int RowNumber { get; set; }
     [Parameter]
-    public required ApplicationUser User { get; set; }
-    
+    public required UserRoleDto UserRoleDto { get; set; }
+    private ApplicationUser? User { get; set; }
+    private IList<string>? CurrentRoles { get; set; }
     private bool IsChanged { get; set; }
+    private string selectedRole = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        User = UserRoleDto.User;
+        CurrentRoles = UserRoleDto.Roles;
+
+        if (CurrentRoles != null && CurrentRoles.Any())
+        {
+            selectedRole = CurrentRoles.First();
+        }
+    }
+
 }

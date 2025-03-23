@@ -41,12 +41,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
     
     
-builder.Services.AddTransient<IProductService, ProductService>();
-builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
-builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
-builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
-builder.Services.AddTransient<ISessionManager, SessionManager>();
-builder.Services.AddTransient<IApplicationUserService, ApplicationUserService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IWorkInstructionService, WorkInstructionService>();
+builder.Services.AddScoped<IProductionLogService, ProductionLogService>();
+builder.Services.AddScoped<ILocalCacheManager, LocalCacheManager>();
+builder.Services.AddScoped<ISessionManager, SessionManager>();
+builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddScoped<RoleInitializer>();
