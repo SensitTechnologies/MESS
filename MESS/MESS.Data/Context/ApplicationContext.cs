@@ -24,8 +24,6 @@ public class ApplicationContext : DbContext
     public virtual DbSet<Product> Products { get; set; } = null!;
     public virtual DbSet<Problem> Problems { get; set; } = null!;
     public virtual DbSet<Part> Parts { get; set; } = null!;
-    public virtual DbSet<Documentation> Documentations { get; set; } = null!;
-    public virtual DbSet<Cell> Cells { get; set; } = null!;
 
     public override int SaveChanges()
     {
