@@ -14,7 +14,7 @@
     <h1>
         Users
     </h1>
-    <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button>
+    @* <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button> *@
     @if (AlertMessage?.Length > 0)
     {
         <div class="alert alert-info alert-dismissible fade show" role="alert">
@@ -41,7 +41,7 @@
             {
                 @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
                 {
-                    <UserTableRow RowNumber="index" UserRoleDto="userDto" DisplayAlert="DisplayAlert"/>
+                    <UserTableRow RowNumber="index" UserRoleDto="userDto" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"/>
                 }
             }
             </tbody>
@@ -49,7 +49,9 @@
         
     </div>
     <div>
-
+        <button type="button" @onclick="CreateNewUser">
+            Create New User
+        </button>
     </div>
 </div>
 
@@ -77,15 +79,9 @@
         }
     }
 
-    private async Task SaveChanges()
+    private async Task SaveChanges(ApplicationUser user)
     {
-        if (ApplicationUserDtoList != null)
-        {
-            foreach (var user in ApplicationUserDtoList)
-            {
-                await ApplicationUserService.UpdateApplicationUser(user.User);
-            }
-        }
+        await ApplicationUserService.UpdateApplicationUser(user);
     }
 
     private async Task DisplayAlert(string message)
@@ -96,6 +92,17 @@
         AlertMessage = string.Empty;
         
         StateHasChanged();
+    }
+
+    private void CreateNewUser()
+    {
+        var newApplicationUser = new ApplicationUser();
+        var newUser = new UserRoleDto
+        {
+            User = newApplicationUser
+        };
+        
+        ApplicationUserDtoList.Add(newUser);
     }
 
 }

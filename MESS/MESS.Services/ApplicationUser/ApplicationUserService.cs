@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Transactions;
 using MESS.Data.Context;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
@@ -103,21 +104,45 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
-    public async Task<bool> UpdateApplicationUser(ApplicationUser ApplicationUser)
+    public async Task<bool> UpdateApplicationUser(ApplicationUser applicationUser)
     {
-        // var existingOperator = await _context.ApplicationUsers.FindAsync(ApplicationUser.Id);
-        // if (existingOperator == null)
-        // {
-        //     Log.Error("Could not find ApplicationUser with ID {id}", ApplicationUser.Id);
-        //     return false;
-        // }
-        //
-        // existingOperator.FirstName = ApplicationUser.FirstName;
-        // existingOperator.LastName = ApplicationUser.LastName;
-        //
-        await _context.SaveChangesAsync();
-        // Log.Information("Updated ApplicationUser with ID {id}", ApplicationUser.Id);
-        return true;
+        try
+        {
+            using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        
+            var existingUser = await _context.Users.FindAsync(applicationUser.Id);
+            if (existingUser == null)
+            {
+                Log.Error("Could not find user with ID {id}", applicationUser.Id);
+                return false;
+            }
+
+            // Detach any entities so that they will not be saved on accident
+            foreach (var entry in _context.ChangeTracker.Entries())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            _context.Users.Attach(existingUser);
+
+            existingUser.FirstName = applicationUser.FirstName;
+            existingUser.LastName = applicationUser.LastName;
+            existingUser.Email = applicationUser.Email;
+            existingUser.UserName = applicationUser.UserName;
+
+            _context.Entry(existingUser).State = EntityState.Modified;
+        
+            await _context.SaveChangesAsync();
+            scope.Complete();
+
+            Log.Information("Updated user with ID {id}", applicationUser.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error updating user with ID {id}", applicationUser.Id);
+            return false;
+        }
     }
 
     public async Task<bool> DeleteApplicationUser(string id)

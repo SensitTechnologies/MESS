@@ -11,10 +11,10 @@
             <input type="email" class="form-control" @bind="User.Email" @bind:event="oninput"/>
         </td>
         <td>
-            <input type="text" class="form-control" @bind="User.FirstName" @bind:event="oninput"/>
+            <input type="text" class="form-control" @bind="User.FirstName" @bind:event="oninput" />
         </td>
         <td>
-            <input type="text" class="form-control" @bind="User.LastName" @bind:event="oninput"/>
+            <input type="text" class="form-control" @bind="User.LastName" @bind:event="oninput" />
         </td>
         <td>
             <div class="btn-group" role="group">
@@ -50,6 +50,9 @@
                 Delete
             </button>
             }
+            <button type="button" @onclick="async () => await SaveChanges.InvokeAsync(User)">
+                Save Changes
+            </button>
         </td>
     </tr>
 }
@@ -61,6 +64,8 @@
     public required UserRoleDto UserRoleDto { get; set; }
     [Parameter]
     public EventCallback<string> DisplayAlert { get; set; }
+    [Parameter]
+    public EventCallback<ApplicationUser> SaveChanges { get; set; }
     private ApplicationUser? User { get; set; }
     private IList<string>? CurrentRoles { get; set; }
     
