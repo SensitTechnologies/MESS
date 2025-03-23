@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
             if (result)
             {
                 Log.Information("User successfully logged in: {Email}", email);
-                return Redirect("/production-log");
+                return Redirect("/");
             }
             
             Log.Information("Unsuccessful sign-in attempt");

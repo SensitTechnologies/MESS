@@ -30,9 +30,9 @@
                             <label for="email" class="form-label">Email:</label>
                             <select id="email" name="email" class="form-select">
                                 <option value="">-- Select an operator --</option>
-                                @if (LineOperators != null)
+                                @if (ApplicationUsers != null)
                                 {
-                                    @foreach (var lineOperator in LineOperators)
+                                    @foreach (var lineOperator in ApplicationUsers)
                                     {
                                         <option value="@lineOperator.Email">@lineOperator.Email</option>
                                     }
@@ -50,10 +50,10 @@
 </div>
 
 @code {
-    private List<ApplicationUser>? LineOperators { get; set; }
+    private List<ApplicationUser>? ApplicationUsers { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        LineOperators = await ApplicationUserService.GetUsersByRoleAsync("Operator");
+        ApplicationUsers = await ApplicationUserService.GetApplicationUsers();
     }
 }
