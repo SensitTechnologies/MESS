@@ -18,14 +18,14 @@
         </td>
         <td>
             <div class="btn-group" role="group">
-                <input type="checkbox" checked="@IsOperator" class="btn-check" id="operator" autocomplete="off">
-                <label class="btn btn-outline-primary" for="operator">Operator</label>
+                <input type="checkbox" checked="@IsOperator" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
+                <label class="btn btn-outline-primary" for="operator@(User.Id)">Operator</label>
 
-                <input type="checkbox" checked="@IsTechnician" class="btn-check" id="technician" autocomplete="off">
-                <label class="btn btn-outline-primary" for="technician">Technician</label>
+                <input type="checkbox" checked="@IsTechnician" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
+                <label class="btn btn-outline-primary" for="technician@(User.Id)">Technician</label>
 
-                <input type="checkbox" checked="@IsAdmin" class="btn-check" id="administrator" autocomplete="off">
-                <label class="btn btn-outline-primary" for="administrator">Administrator</label>
+                <input type="checkbox" checked="@IsAdmin" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
+                <label class="btn btn-outline-primary" for="administrator@(User.Id)">Administrator</label>
             </div>
         </td>
         <td>
@@ -69,7 +69,7 @@
         }
     }
 
-    private async Task UpdateRoleAsync(string selectedRole)
+    private async Task UpdateRoleAsync(string selectedRole, bool isChecked)
     {
         try
         {
@@ -78,7 +78,27 @@
                 return;
             }
 
-            var result = await UserManager.AddToRoleAsync(User, selectedRole);
+            if (isChecked)
+            {
+                await UserManager.AddToRoleAsync(User, selectedRole);
+            }
+            else
+            {
+                await UserManager.RemoveFromRoleAsync(User, selectedRole);
+            }
+            
+            switch (selectedRole)
+            {
+                case "Operator":
+                    IsOperator = isChecked;
+                    break;
+                case "Technician":
+                    IsTechnician = isChecked;
+                    break;
+                case "Administrator":
+                    IsAdmin = isChecked;
+                    break;
+            }
         }
         catch (Exception e)
         {
