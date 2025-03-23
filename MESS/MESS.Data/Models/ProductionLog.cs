@@ -13,6 +13,5 @@ public class ProductionLog : AuditableEntity
     [ForeignKey("UserId")]
     public string? OperatorId { get; set; }
     public Product? Product { get; set; }
-    public WorkStation? WorkStation { get; set; }
     public WorkInstruction? WorkInstruction { get; set; }
 }

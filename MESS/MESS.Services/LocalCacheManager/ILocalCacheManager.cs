@@ -22,9 +22,6 @@ public interface ILocalCacheManager
     public Task<CacheDTO> GetActiveProductAsync();
 
     public Task<int> GetActiveWorkInstructionIdAsync();
-    public Task<CacheDTO> GetActiveWorkStationAsync();
-    
-    public Task SetActiveWorkStationAsync(WorkStation workStation);
     public Task SetActiveWorkInstructionIdAsync(int workInstructionId);
     public Task SetIsWorkflowActiveAsync(bool isActive);
     public Task<bool> GetWorkflowActiveStatusAsync();

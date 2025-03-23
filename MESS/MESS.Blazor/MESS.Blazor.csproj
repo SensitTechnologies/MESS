@@ -42,4 +42,9 @@
         <PackageReference Include="System.Drawing.Common" Version="9.0.3" />
     </ItemGroup>
 
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
+      <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
+    </ItemGroup>
+
 </Project>

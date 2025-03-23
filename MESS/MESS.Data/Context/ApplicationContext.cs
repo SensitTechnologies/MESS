@@ -15,7 +15,6 @@ public class ApplicationContext : DbContext
     }
 
     public virtual DbSet<WorkInstruction> WorkInstructions { get; set; } = null!;
-    public virtual DbSet<WorkStation> WorkStations { get; set; } = null!;
     public virtual DbSet<Step> Steps { get; set; } = null!;
     public virtual DbSet<SerialNumberLog> SerialNumberLogs { get; set; } = null!;
     public virtual DbSet<ProductionLog> ProductionLogs { get; set; } = null!;
