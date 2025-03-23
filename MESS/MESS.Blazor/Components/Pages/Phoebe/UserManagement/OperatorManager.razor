@@ -81,7 +81,20 @@
 
     private async Task SaveChanges(ApplicationUser user)
     {
-        await ApplicationUserService.UpdateApplicationUser(user);
+        if (user.Email == null)
+        {
+            // TODO Add error handling here
+            return;
+        }
+        if (user.UserName == null)
+        {
+            user.UserName = user.Email;
+            await ApplicationUserService.AddApplicationUser(user);
+        }
+        else
+        {
+            await ApplicationUserService.UpdateApplicationUser(user);
+        }
     }
 
     private async Task DisplayAlert(string message)

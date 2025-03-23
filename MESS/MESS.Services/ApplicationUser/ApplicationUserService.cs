@@ -86,7 +86,7 @@ public class ApplicationUserService : IApplicationUserService
         try
         {
             var result = await _userManager.CreateAsync(ApplicationUser);
-
+            
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(ApplicationUser, DEFAULT_ROLE);
