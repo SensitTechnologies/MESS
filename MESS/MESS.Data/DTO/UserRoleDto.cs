@@ -7,4 +7,5 @@ public class UserRoleDto
 {
     public required ApplicationUser User { get; set; }
     public IList<string>? Roles { get; set; }
+    public bool IsLockedOut { get; set; }
 }

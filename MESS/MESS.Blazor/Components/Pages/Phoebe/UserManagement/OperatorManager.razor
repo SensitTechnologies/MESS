@@ -55,10 +55,14 @@
         foreach (var user in applicationUsers)
         {
             var roles = await UserManager.GetRolesAsync(user);
+            var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
+            var IsLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
+
             var userDto = new UserRoleDto
             {
                 User = user,
-                Roles = roles
+                Roles = roles,
+                IsLockedOut = IsLockedOut
             };
             
             ApplicationUserDtoList.Add(userDto);
