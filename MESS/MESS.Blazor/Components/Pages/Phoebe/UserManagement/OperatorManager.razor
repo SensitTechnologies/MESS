@@ -15,6 +15,13 @@
         Users
     </h1>
     <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button>
+    @if (AlertMessage?.Length > 0)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @AlertMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
     <div>
         <table>
             <thead>
@@ -30,13 +37,13 @@
             </tr>
             </thead>
             <tbody>
-                @if (ApplicationUserDtoList != null)
+            @if (ApplicationUserDtoList != null)
+            {
+                @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
                 {
-                    @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
-                    {
-                        <UserTableRow RowNumber="index" UserRoleDto="userDto" />
-                    }
+                    <UserTableRow RowNumber="index" UserRoleDto="userDto" DisplayAlert="DisplayAlert"/>
                 }
+            }
             </tbody>
         </table>
         
@@ -48,6 +55,7 @@
 
 @code {
     private List<UserRoleDto> ApplicationUserDtoList { get; set; } = [];
+    private string? AlertMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,6 +86,16 @@
                 await ApplicationUserService.UpdateApplicationUser(user.User);
             }
         }
+    }
+
+    private async Task DisplayAlert(string message)
+    {
+        AlertMessage = message;
+
+        await Task.Delay(2000);
+        AlertMessage = string.Empty;
+        
+        StateHasChanged();
     }
 
 }

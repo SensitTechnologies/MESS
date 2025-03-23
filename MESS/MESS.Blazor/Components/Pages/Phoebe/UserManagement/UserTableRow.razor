@@ -34,6 +34,22 @@
                     @onclick="ToggleLockoutAsync">
                 @(IsLockedOut ? "Unlock" : "Lock") User
             </button>
+            @if (IsConfirmingDelete && UserToDeleteId == User.Id)
+            {
+            <div class="confirm-delete mt-2">
+                <span>Are you sure?</span>
+                <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteUser">Yes</button>
+                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteUser">No</button>
+            </div>
+            }
+            else
+            {
+            <button type="button"
+                    class="btn btn-danger"
+                    @onclick="() => InitiateDeleteUser(User.Id)">
+                Delete
+            </button>
+            }
         </td>
     </tr>
 }
@@ -43,10 +59,14 @@
     public required int RowNumber { get; set; }
     [Parameter]
     public required UserRoleDto UserRoleDto { get; set; }
+    [Parameter]
+    public EventCallback<string> DisplayAlert { get; set; }
     private ApplicationUser? User { get; set; }
     private IList<string>? CurrentRoles { get; set; }
     
     private bool IsLockedOut { get; set; }
+    private bool IsConfirmingDelete { get; set; } = false;
+    private string? UserToDeleteId { get; set; }
     
     private bool IsOperator { get; set; }
     private bool IsTechnician { get; set; }
@@ -89,6 +109,7 @@
             {
                 case "Operator":
                     IsOperator = isChecked;
+                    await DisplayAlert.InvokeAsync("Operator Updated");
                     break;
                 case "Technician":
                     IsTechnician = isChecked;
@@ -113,6 +134,7 @@
         
         try
         {
+            await DisplayAlert.InvokeAsync("Message");
             if (IsLockedOut)
             {
                 await UserManager.SetLockoutEndDateAsync(User, null);
@@ -128,6 +150,59 @@
         {
             Console.WriteLine(e);
         }
+    }
+
+    private void InitiateDeleteUser(string userId)
+    {
+        UserToDeleteId = userId;
+        IsConfirmingDelete = true;
+    }
+
+    private void CancelDeleteUser()
+    {
+        IsConfirmingDelete = false;
+        UserToDeleteId = null;
+    }
+
+    private async Task ConfirmDeleteUser()
+    {
+        if (User == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await UserManager.DeleteAsync(User);
+            if (result.Succeeded)
+            {
+                await DisplayAlert.InvokeAsync($"User {User.Email} has been deleted");
+            }
+            else
+            {
+                await DisplayAlert.InvokeAsync($"Failed to delete user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            await DisplayAlert.InvokeAsync($"Error deleting user: {e.Message}");
+        }
+        finally
+        {
+            IsConfirmingDelete = false;
+            UserToDeleteId = null;
+        }
+    }
+
+    private void DeleteUserAsync()
+    {
+        if (User == null)
+        {
+            return;
+        }
+    
+        InitiateDeleteUser(User.Id);
     }
 
 }
