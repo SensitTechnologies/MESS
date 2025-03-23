@@ -18,8 +18,6 @@ public class ApplicationContext : DbContext
     public virtual DbSet<WorkStation> WorkStations { get; set; } = null!;
     public virtual DbSet<Step> Steps { get; set; } = null!;
     public virtual DbSet<SerialNumberLog> SerialNumberLogs { get; set; } = null!;
-    public virtual DbSet<RootCause> RootCauses { get; set; } = null!;
-    public virtual DbSet<ProductStatus> ProductStatus { get; set; } = null!;
     public virtual DbSet<ProductionLog> ProductionLogs { get; set; } = null!;
     public virtual DbSet<Product> Products { get; set; } = null!;
     public virtual DbSet<Problem> Problems { get; set; } = null!;
