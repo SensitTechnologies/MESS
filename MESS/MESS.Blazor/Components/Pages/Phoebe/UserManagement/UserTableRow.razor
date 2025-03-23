@@ -1,0 +1,18 @@
+﻿@using MESS.Data.Models
+
+
+<tr>
+    <th scope="row">@RowNumber</th>
+    <td>
+        <input type="email" class="form-control" @bind="User.Email" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+    </td>
+</tr>
+
+@code {
+    [Parameter]
+    public required int RowNumber { get; set; }
+    [Parameter]
+    public required ApplicationUser User { get; set; }
+    
+    private bool IsChanged { get; set; }
+}
