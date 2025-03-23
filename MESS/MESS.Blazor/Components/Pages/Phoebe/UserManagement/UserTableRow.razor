@@ -8,20 +8,25 @@
     <tr>
         <th scope="row">@RowNumber</th>
         <td>
-            <input type="email" class="form-control" @bind="User.Email" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+            <input type="email" class="form-control" @bind="User.Email" @bind:event="oninput"/>
         </td>
         <td>
-            <input type="text" class="form-control" @bind="User.FirstName" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+            <input type="text" class="form-control" @bind="User.FirstName" @bind:event="oninput"/>
         </td>
         <td>
-            <input type="text" class="form-control" @bind="User.LastName" @bind:event="oninput" @onchange="() => IsChanged = false"/>
+            <input type="text" class="form-control" @bind="User.LastName" @bind:event="oninput"/>
         </td>
         <td>
-            <select class="form-select" @bind="selectedRole">
-                <option value="Administrator">Administrator</option>
-                <option value="Technician">Technician</option>
-                <option value="Operator">Operator</option>
-            </select>
+            <div class="btn-group" role="group">
+                <input type="checkbox" checked="@IsOperator" class="btn-check" id="operator" autocomplete="off">
+                <label class="btn btn-outline-primary" for="operator">Operator</label>
+
+                <input type="checkbox" checked="@IsTechnician" class="btn-check" id="technician" autocomplete="off">
+                <label class="btn btn-outline-primary" for="technician">Technician</label>
+
+                <input type="checkbox" checked="@IsAdmin" class="btn-check" id="administrator" autocomplete="off">
+                <label class="btn btn-outline-primary" for="administrator">Administrator</label>
+            </div>
         </td>
         <td>
         </td>
@@ -35,17 +40,49 @@
     public required UserRoleDto UserRoleDto { get; set; }
     private ApplicationUser? User { get; set; }
     private IList<string>? CurrentRoles { get; set; }
-    private bool IsChanged { get; set; }
-    private string selectedRole = string.Empty;
+    
+    private bool IsOperator { get; set; }
+    private bool IsTechnician { get; set; }
+    private bool IsAdmin { get; set; }
 
     protected override void OnInitialized()
     {
         User = UserRoleDto.User;
         CurrentRoles = UserRoleDto.Roles;
 
-        if (CurrentRoles != null && CurrentRoles.Any())
+        if (CurrentRoles != null)
         {
-            selectedRole = CurrentRoles.First();
+            if (CurrentRoles.Contains("Administrator"))
+            {
+                IsAdmin = true;
+            }
+            
+            if (CurrentRoles.Contains("Operator"))
+            {
+                IsOperator = true;
+            }
+            
+            if (CurrentRoles.Contains("Technician"))
+            {
+                IsTechnician = true;
+            }
+        }
+    }
+
+    private async Task UpdateRoleAsync(string selectedRole)
+    {
+        try
+        {
+            if (User == null)
+            {
+                return;
+            }
+
+            var result = await UserManager.AddToRoleAsync(User, selectedRole);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
         }
     }
 
