@@ -34,7 +34,7 @@
                                 {
                                     @foreach (var lineOperator in ApplicationUsers)
                                     {
-                                        <option value="@lineOperator.Email">@lineOperator.Email</option>
+                                        <option value="@lineOperator.Email">@lineOperator.FullName</option>
                                     }
                                 }
                             </select>
@@ -51,6 +51,7 @@
 
 @code {
     private List<ApplicationUser>? ApplicationUsers { get; set; }
+    private string SearchFilter { get; set; } = "";
 
     protected override async Task OnInitializedAsync()
     {
