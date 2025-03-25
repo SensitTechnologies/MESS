@@ -7,7 +7,6 @@
 @using MESS.Services.Serialization
 @using MESS.Services.WorkInstruction
 @using MESS.Services.SessionManager
-@using MESS.Services.WorkStation
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IProductionLogService ProductionLogService
@@ -15,7 +14,6 @@
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject ILocalCacheManager LocalCacheManager
-@inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
 @inject ISerializationService SerializationService
 @inject IApplicationUserService LineOperatorService
@@ -30,8 +28,7 @@
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                     <CreateHeader
-                        WorkInstructions="@LoadAssociatedWorkInstructions()" OnWorkInstructionSelected="@SetActiveWorkInstruction"
-                        WorkStations="@LoadAssociatedWorkStationsFromProduct()" OnWorkStationSelected="@SetActiveWorkStation"
+                        WorkInstructions="@ActiveProduct?.WorkInstructions" OnWorkInstructionSelected="@SetActiveWorkInstruction"
                         ActiveLineOperator="@ActiveLineOperator"
                         Products="@Products" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">

@@ -8,7 +8,6 @@ using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
-using MESS.Services.WorkStation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -47,7 +46,6 @@ builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>()
 builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
 builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddTransient<ISessionManager, SessionManager>();
-builder.Services.AddTransient<IWorkStationService, WorkStationService>();
 builder.Services.AddTransient<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
