@@ -129,6 +129,7 @@ public partial class Create : ComponentBase, IDisposable
         {
             ActiveWorkInstruction = null;
             await SetSelectedWorkInstructionId(null);
+            ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
         }
         if (WorkInstructions != null)
         {
@@ -168,7 +169,8 @@ public partial class Create : ComponentBase, IDisposable
 
             ActiveProduct = product;
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
-
+            await SetActiveWorkInstruction(-1);
+            
             await LocalCacheManager.SetActiveProductAsync(product);
         }
     }
