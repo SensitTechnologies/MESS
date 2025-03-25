@@ -9,7 +9,7 @@
 @inject ISerializationService SerializationService
 @attribute [StreamRendering]
 
-<li class="list-group-item mb-2" role="group">
+<li class="container list-group-item mb-2" role="group">
     <div class="row">
         <div class="col">
             <span>@step.Name</span>
@@ -44,16 +44,16 @@
                         {
                             <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="logStep.Notes"/>
                         }
-
-
-                        @if (step is { PartsNeeded.Count: > 0 })
-                        {
-                            <RequiredPartsList _serialNumberLogs="_serialNumberLogs" AfterSerialNumberInput="@AfterSerialNumberInput" />
-                        }
                     </div>
                 }
             </div>
         </div>
+    </div>
+    <div>
+        @if (step is { PartsNeeded.Count: > 0 })
+        {
+            <RequiredPartsList _serialNumberLogs="_serialNumberLogs" AfterSerialNumberInput="@AfterSerialNumberInput" />
+        }
     </div>
 </li>
 
