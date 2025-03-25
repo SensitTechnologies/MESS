@@ -1,43 +1,11 @@
 ﻿@using MESS.Data.Models
 <div class="card m-1">
     <div class="card-body p-1 d-flex align-items-center">
-        <button type="button"
-                class="btn btn-outline-secondary py-0 px-2"
-                disabled="@(CurrentLog <= 0)"
-                @onclick="() => { if (CurrentLog > 0) { CurrentLog--; ActiveSerialNumberLog = _serialNumberLogs[CurrentLog]; } }">
-            &lt;
-        </button>
-
-        @if (ActiveSerialNumberLog != null)
+        @foreach (var log in _serialNumberLogs)
         {
-        <div class="form-floating flex-grow-1 mx-2">
-            <InputText id="serialNumberLog" class="form-control col custom-input" @bind-Value="@ActiveSerialNumberLog.PartSerialNumber"
-                       @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveSerialNumberLog))"></InputText>
-            <label class="form-label col custom-label" for="serialNumberLog">@ActiveSerialNumberLog.Part?.PartName</label>
-        </div>
+            <RequiredPartInput ActiveSerialNumberLog="log" AfterSerialNumberInput="AfterSerialNumberInput" />
         }
-        
-        <button type="button"
-                class="btn btn-outline-secondary py-0 px-2"
-                disabled="@(CurrentLog >= _serialNumberLogs.Count - 1)"
-                @onclick="() => { if (CurrentLog < _serialNumberLogs.Count - 1) { CurrentLog++; ActiveSerialNumberLog = _serialNumberLogs[CurrentLog]; } }">
-            &gt;
-        </button>
-    </div>
-    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center">
-        <div class="d-none d-md-block"></div>
-        <div class="text-center">
-            <ul class="pagination pagination-sm mb-0">
-                @for (var i = 0; i < _serialNumberLogs.Count; i++)
-                {
-                    var index = i;
-                    <li class="page-item @(index == CurrentLog ? "active" : "")">
-                        <button type="button" class="page-link" @onclick="@(() => { ActiveSerialNumberLog = _serialNumberLogs[index]; CurrentLog = index; })">@(i + 1)</button>
-                    </li>
-                }
-            </ul>
-        </div>
-        
+
     </div>
 </div>
 
@@ -47,16 +15,6 @@
     [Parameter]
     public required EventCallback<SerialNumberLog> AfterSerialNumberInput { get; set; }
     
-    private SerialNumberLog? ActiveSerialNumberLog { get; set; }
     private int CurrentLog { get; set; }
-
-    protected override void OnInitialized()
-    {
-        if (_serialNumberLogs.Count > 0 && ActiveSerialNumberLog == null)
-        {
-            ActiveSerialNumberLog = _serialNumberLogs[0];
-        }
-        base.OnInitialized();
-    }
 
 }
