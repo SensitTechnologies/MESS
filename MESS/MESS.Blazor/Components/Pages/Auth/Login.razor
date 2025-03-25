@@ -26,18 +26,38 @@
                 <NotAuthorized>
                     <form method="post" action="/api/auth/login">
                         <AntiforgeryToken />
-                        <div class="mb-4">
+                        <div class="position-relative">
                             <label for="email" class="form-label">Email:</label>
-                            <select id="email" name="email" class="form-select">
-                                <option value="">-- Select an operator --</option>
+                            <input type="text"
+                                   id="email"
+                                   name="email"
+                                   class="form-control"
+                                   @bind-value="SearchFilter"
+                                   @bind-value:event="oninput"
+                                   @onfocus="ShowDropdown"
+                                   placeholder="Search or select an operator..." />
+
+                            @if (IsDropdownVisible)
+                            {
+                            <div class="position-absolute w-100 mt-1 shadow bg-white border rounded"
+                                 style="max-height: 200px; overflow-y: auto; z-index: 1000;">
                                 @if (ApplicationUsers != null)
                                 {
-                                    @foreach (var lineOperator in ApplicationUsers)
+                                    @foreach (var lineOperator in ApplicationUsers.Where(u =>
+                                        u.Email != null && (string.IsNullOrEmpty(SearchFilter) ||
+                                                            u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
+                                                            u.Email.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
                                     {
-                                        <option value="@lineOperator.Email">@lineOperator.FullName</option>
-                                    }
+                                    <div class="dropdown-item py-2 px-3"
+                                         @onclick="() => SelectOperator(lineOperator)"
+                                         style="cursor: pointer;">
+                                        <div>@lineOperator.FullName</div>
+                                        <small class="text-muted">@lineOperator.Email</small>
+                                    </div>
                                 }
-                            </select>
+                                }
+                            </div>
+                            }
                         </div>
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary">Login</button>
@@ -52,9 +72,22 @@
 @code {
     private List<ApplicationUser>? ApplicationUsers { get; set; }
     private string SearchFilter { get; set; } = "";
+    private bool IsDropdownVisible { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         ApplicationUsers = await ApplicationUserService.GetApplicationUsers();
     }
+
+    private void ShowDropdown()
+    {
+        IsDropdownVisible = true;
+    }
+
+    private void SelectOperator(ApplicationUser user)
+    {
+        if (user.Email != null) SearchFilter = user.Email;
+        IsDropdownVisible = false;
+    }
+
 }
