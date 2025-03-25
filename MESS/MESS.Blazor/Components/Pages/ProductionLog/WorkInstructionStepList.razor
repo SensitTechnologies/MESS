@@ -12,7 +12,7 @@
         </div>
     }
     
-    <ol class="list-group list-group-numbered container">
+    <ol class="list-group container">
         @foreach (var step in ActiveWorkInstruction.Steps)
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
