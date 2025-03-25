@@ -27,6 +27,8 @@
         <EditForm class="container" FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator/>
             <ValidationSummary/>
+            <ConfirmationModal @ref="popupRef" OnSubmit="HandleConfirmation"/>
+            
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                     <CreateHeader

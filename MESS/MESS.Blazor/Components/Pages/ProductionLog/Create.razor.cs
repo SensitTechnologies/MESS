@@ -15,6 +15,7 @@ internal enum Status
 public partial class Create : ComponentBase, IDisposable
 {
     private string Title = "Add";
+    private ConfirmationModal? popupRef;
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
     private bool IsSaved { get; set; }
@@ -267,7 +268,32 @@ public partial class Create : ComponentBase, IDisposable
         {
             return;
         }
+        
+        int partsNeededCount = 0;
+        ActiveWorkInstruction.Steps.ForEach(step => partsNeededCount += step.PartsNeeded?.Count ?? 0);
 
+        bool allStepsHavePartsNeeded = _serialNumberLogs.Count >= partsNeededCount;
+
+        if (!allStepsHavePartsNeeded)
+        {
+            popupRef?.Show("There are parts without serial numbers. Are you sure you want to submit this log?");
+        }
+        else
+        {
+            await CompleteSubmit();
+        }
+    }
+
+    private async Task HandleConfirmation(bool confirmed)
+    {
+        if (confirmed)
+        {
+            await CompleteSubmit();
+        }
+    }
+
+    private async Task CompleteSubmit()
+    {
         await PrintQRCode();
         
         var currentTime = DateTimeOffset.UtcNow;
