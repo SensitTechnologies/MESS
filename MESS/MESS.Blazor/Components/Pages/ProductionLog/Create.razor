@@ -1,11 +1,15 @@
 ﻿@page "/production-log"
+@attribute [Authorize(Roles = "Admin, Operator")]
+@using MESS.Services.ApplicationUser
 @using MESS.Services.BrowserCacheManager
-@using MESS.Services.LineOperator
 @using MESS.Services.Product
 @using MESS.Services.ProductionLog
+@using MESS.Services.Serialization
 @using MESS.Services.WorkInstruction
 @using MESS.Services.SessionManager
 @using MESS.Services.WorkStation
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IProductionLogService ProductionLogService
 @inject IProductionLogEventService ProductionLogEventService
 @inject IWorkInstructionService WorkInstructionService
@@ -13,7 +17,9 @@
 @inject ILocalCacheManager LocalCacheManager
 @inject IWorkStationService WorkStationService
 @inject ISessionManager SessionManager
-@inject ILineOperatorService LineOperatorService
+@inject ISerializationService SerializationService
+@inject IApplicationUserService LineOperatorService
+@inject AuthenticationStateProvider AuthProvider
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -23,11 +29,15 @@
             <ValidationSummary/>
             <div class="mb-3">
                 <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                    <CreateHeader LineOperators="@LineOperators" OnLineOperatorSelected="@SetActiveLineOperator" WorkStations="@WorkStations" OnWorkStationSelected="@SetActiveWorkStation" Products="@LoadAssociatedProductsFromStation()" OnProductSelected="@SetActiveProduct" />
+                    <CreateHeader
+                        WorkInstructions="@LoadAssociatedWorkInstructions()" OnWorkInstructionSelected="@SetActiveWorkInstruction"
+                        WorkStations="@LoadAssociatedWorkStationsFromProduct()" OnWorkStationSelected="@SetActiveWorkStation"
+                        ActiveLineOperator="@ActiveLineOperator"
+                        Products="@Products" OnProductSelected="@SetActiveProduct" />
                     <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                         <div class="">
                             <p class="mb-0">
-                                @if (IsSaved)
+                                @if (@ProductionLogEventService.IsSaved)
                                 {
                                     <span class="badge text-bg-success p-2">Saved</span>
                                 }

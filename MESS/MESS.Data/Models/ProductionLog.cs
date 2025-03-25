@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using FluentValidation;
 
 namespace MESS.Data.Models;
@@ -9,7 +10,8 @@ public class ProductionLog : AuditableEntity
     public List<ProductionLogStep> LogSteps { get; set; } = [];
     
     // Navigation Fields
-    public LineOperator? LineOperator { get; set; }
+    [ForeignKey("UserId")]
+    public string? OperatorId { get; set; }
     public Product? Product { get; set; }
     public WorkStation? WorkStation { get; set; }
     public WorkInstruction? WorkInstruction { get; set; }
@@ -17,13 +19,4 @@ public class ProductionLog : AuditableEntity
     public Problem? Problem { get; set; }
     public RootCause? RootCause { get; set; }
     public Cell? Cell { get; set; }
-}
-
-public class ProductionLogValidator : AbstractValidator<ProductionLog>
-{
-    public ProductionLogValidator()
-    {
-        RuleFor(x => x.LogSteps)
-            .SetValidator(new LogStepValidator());
-    }
 }

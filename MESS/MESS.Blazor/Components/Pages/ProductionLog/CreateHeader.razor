@@ -3,14 +3,31 @@
 @inject IProductionLogEventService ProductionLogEventService
 
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
-    <CreateHeaderCard Title="Work Station">
-        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@OnWorkStationSelected"></WorkStationSelect>
-    </CreateHeaderCard>
     <CreateHeaderCard Title="Product">
         <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
     </CreateHeaderCard>
+    <CreateHeaderCard Title="Work Station">
+        <WorkStationSelect WorkStations="@WorkStations" OnWorkStationSelected="@OnWorkStationSelected"></WorkStationSelect>
+    </CreateHeaderCard>
+    <CreateHeaderCard Title="Work Instruction">
+        <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
+    </CreateHeaderCard>
     <CreateHeaderCard Title="Operator">
-        <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
+        @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
+        {
+            <div class="d-flex align-items-center justify-content-center">
+                <span class="me-3">@ActiveLineOperator</span>
+                <form method="post" action="/api/auth/logout">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="bi bi-box-arrow-right me-1"></i>Logout
+                    </button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
+        }
     </CreateHeaderCard>
 </div>
 
@@ -24,9 +41,14 @@
     public List<WorkStation>? WorkStations { get; set; }
     [Parameter]
     public EventCallback<int> OnWorkStationSelected { get; set; }
-    
     [Parameter]
-    public List<LineOperator>? LineOperators { get; set; }
+    public List<WorkInstruction>? WorkInstructions { get; set; }
     [Parameter]
-    public EventCallback<int> OnLineOperatorSelected { get; set; }
+    public EventCallback<int> OnWorkInstructionSelected { get; set; }
+    [Parameter]
+    public List<ApplicationUser>? LineOperators { get; set; }
+    [Parameter]
+    public EventCallback<string> OnLineOperatorSelected { get; set; }
+    [Parameter]
+    public string? ActiveLineOperator { get; set; }
 }

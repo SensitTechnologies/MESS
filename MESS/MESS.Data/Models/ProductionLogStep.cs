@@ -14,23 +14,3 @@ public class ProductionLogStep
     public ProductionLog? ProductionLog { get; set; }
     public Step? WorkInstructionStep { get; set; }
 }
-
-public class LogStepValidator : AbstractValidator<List<ProductionLogStep>>
-{
-    public LogStepValidator()
-    {
-        RuleFor(steps => steps)
-            .NotEmpty()
-            .Must(steps =>
-            {
-                for (int i = 1; i < steps.Count; i++)
-                {
-                    if (steps[i].SubmitTime < steps[i - 1].SubmitTime)
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }).WithMessage("LogSteps must be in ascending order.");
-    }
-}

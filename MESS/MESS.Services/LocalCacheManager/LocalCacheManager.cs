@@ -12,7 +12,7 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
     private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
-    private const string ActiveLineOperatorKey = "LAST_KNOWN_LINE_OPERATOR";
+    private const string ActiveApplicationUserKey = "LAST_KNOWN_LINE_OPERATOR";
     private const string ActiveWorkStationKey = "LAST_KNOWN_WORK_STATION";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
@@ -56,6 +56,8 @@ public class LocalCacheManager : ILocalCacheManager
             });
         }
 
+        productionLogFormDto.ProductionLogId = productionLog.Id;
+
         return productionLogFormDto;
     }
 
@@ -86,7 +88,7 @@ public class LocalCacheManager : ILocalCacheManager
             // map to DTO
             var productDTO = new CacheDTO
             {
-                Id = product.Id,
+                Id = product.Id.ToString(),
                 Name = product.Name
             };
             
@@ -137,26 +139,7 @@ public class LocalCacheManager : ILocalCacheManager
             return -1;
         }
     }
-
-    public async Task<CacheDTO> GetActiveLineOperatorAsync()
-    {
-        try
-        {
-            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveLineOperatorKey);
-
-            if (result is { Success: true, Value: not null })
-            {
-                return result.Value;
-            }
-
-            return new CacheDTO();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return new CacheDTO();
-        }
-    }
+    
 
     public async Task<CacheDTO> GetActiveWorkStationAsync()
     {
@@ -184,7 +167,7 @@ public class LocalCacheManager : ILocalCacheManager
         {
             var CacheDTO = new CacheDTO
             {
-                Id = workStation.Id,
+                Id = workStation.Id.ToString(),
                 Name = workStation.Name
             };
             
@@ -196,26 +179,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
-    public async Task SetActiveLineOperatorAsync(LineOperator lineOperator)
-    {
-        try
-        {
-            // map to DTO
-            var operatorDTO = new CacheDTO
-            {
-                Id = lineOperator.Id,
-                Name = lineOperator.FullName
-            };
-            
-            await _protectedLocalStorage.SetAsync(ActiveLineOperatorKey, operatorDTO);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-    }
-
-
+    
     public async Task SetActiveWorkInstructionIdAsync(int workInstructionId)
     {
         try
@@ -257,7 +221,7 @@ public class LocalCacheManager : ILocalCacheManager
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw new KeyNotFoundException("Unable to find IsWorkflowActive key from local storage");
+            return false;
         }
     }
 

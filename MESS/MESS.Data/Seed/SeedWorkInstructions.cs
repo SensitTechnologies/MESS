@@ -10,22 +10,13 @@ public static class SeedWorkInstructions
     {
         var context = serviceProvider.GetRequiredService<ApplicationContext>();
 
-        if (!context.WorkInstructions.Any())
-        {
+        if (!context.WorkInstructions.Any()) {
             context.WorkInstructions.AddRange(
                 new WorkInstruction
                 {
+
                     Title = "Assembly Line Start-up Procedure",
                     Version = "1.0",
-                    Operator = new LineOperator
-                    {
-                        FirstName = "John",
-                        LastName = "Doe",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
-                    },
                     Steps = new List<Step>
                     {
                         new Step
@@ -78,15 +69,6 @@ public static class SeedWorkInstructions
                 {
                     Title = "Machine Calibration Process",
                     Version = "2.1",
-                    Operator = new LineOperator
-                    {
-                        FirstName = "Jane",
-                        LastName = "Smith",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
-                    },
                     Steps = new List<Step>
                     {
                         new Step
@@ -139,15 +121,6 @@ public static class SeedWorkInstructions
                 {
                     Title = "Product Packaging Instructions",
                     Version = "3.0",
-                    Operator = new LineOperator
-                    {
-                        FirstName = "Mike",
-                        LastName = "Johnson",
-                        CreatedBy = "",
-                        CreatedOn = default,
-                        LastModifiedBy = "",
-                        LastModifiedOn = default
-                    },
                     Steps = new List<Step>
                     {
                         new Step
@@ -175,7 +148,39 @@ public static class SeedWorkInstructions
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
-                            LastModifiedOn = default
+                            LastModifiedOn = default,
+                            PartsNeeded = new List<Part>
+                            {
+                                new Part
+                                {
+                                    PartName = "Package",
+                                    PartNumber = string.Empty,
+                                    CreatedBy = "",
+                                    CreatedOn = default,
+                                    LastModifiedBy = "",
+                                    LastModifiedOn = default,
+                                },
+                                new Part
+                                {
+                                    PartName = "Tape",
+                                    PartNumber = string.Empty,
+                                    CreatedBy = "",
+                                    CreatedOn = default,
+                                    LastModifiedBy = "",
+                                    LastModifiedOn = default,
+
+                                },
+                                new Part
+                                {
+                                    PartName = "Label",
+                                    PartNumber = string.Empty,
+                                    CreatedBy = "",
+                                    CreatedOn = default,
+                                    LastModifiedBy = "",
+                                    LastModifiedOn = default,
+
+                                }
+                            }
                         }
                     },
                     RelatedDocumentation = new List<Documentation>
@@ -196,7 +201,7 @@ public static class SeedWorkInstructions
                     LastModifiedBy = "",
                     LastModifiedOn = default
                 });
-            context.SaveChanges();
-        }
+        context.SaveChanges();
     }
+}
 }
