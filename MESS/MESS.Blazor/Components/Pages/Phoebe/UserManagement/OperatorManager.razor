@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Serilog
 @inject AuthenticationStateProvider AuthProvider
 @inject IApplicationUserService ApplicationUserService
 @inject UserManager<ApplicationUser> UserManager
@@ -30,6 +31,7 @@
                     #
                 </th>
                 <th scope="col">Email</th>
+                <th scope="col">User Name</th>
                 <th scope="col">First Name</th>
                 <th scope="col">Last Name</th>
                 <th scope="col">Role</th>
@@ -81,9 +83,11 @@
 
     private async Task SaveChanges(ApplicationUser user)
     {
-        if (user.Email == null)
+        // A user requires either an email or a UserName for Identity creation
+        if (user is { Email: {Length: <= 0 }, UserName: {Length: <= 0} })
         {
-            // TODO Add error handling here
+            Log.Information("Attempted user save changes with empty or null UserName and Email, for user ID: {UserId}", user.Id);
+            await DisplayAlert("A user must have either an email or a username or both.");
             return;
         }
         if (user.UserName == null)
