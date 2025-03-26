@@ -63,7 +63,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var applicationUsers = await ApplicationUserService.GetApplicationUsers();
+        var applicationUsers = await ApplicationUserService.GetAllAsync();
         foreach (var user in applicationUsers)
         {
             var roles = await UserManager.GetRolesAsync(user);
@@ -90,14 +90,31 @@
             await DisplayAlert("A user must have either an email or a username or both.");
             return;
         }
-        if (user.UserName == null)
+
+        try
         {
-            user.UserName = user.Email;
-            await ApplicationUserService.AddApplicationUser(user);
+            var isNewUser = await ApplicationUserService.IsNewUser(user);
+
+            if (!isNewUser.HasValue)
+            {
+                await DisplayAlert("A user must have either an email or a username or both.");
+                return;
+            }
+
+            if (isNewUser.Value)
+            {
+                user.UserName = user.UserName is {Length: >= 0} ? user.UserName : user.Email;
+                await ApplicationUserService.AddApplicationUser(user);
+            }
+            else
+            {
+                await ApplicationUserService.UpdateApplicationUser(user);
+            }
         }
-        else
+        catch (Exception e)
         {
-            await ApplicationUserService.UpdateApplicationUser(user);
+            Log.Error("Error saving user changes: {errorMessage}", e.Message);
+            await DisplayAlert("An error occurred while saving changes");
         }
     }
 

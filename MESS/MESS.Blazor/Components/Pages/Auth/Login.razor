@@ -26,7 +26,7 @@
                 <NotAuthorized>
                     <form method="post" action="/api/auth/login">
                         <AntiforgeryToken />
-                        <div class="position-relative" @onfocusout="((e) => HideDropdown(e))">
+                        <div class="position-relative" @onfocusout="HideDropdown">
                             <label for="email" class="form-label">Email:</label>
                             <input type="text"
                                    id="email"
@@ -81,7 +81,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ApplicationUsers = await ApplicationUserService.GetApplicationUsers();
+        ApplicationUsers = await ApplicationUserService.GetAllAsync();
     }
 
     private bool _isMouseOverDropdown;
