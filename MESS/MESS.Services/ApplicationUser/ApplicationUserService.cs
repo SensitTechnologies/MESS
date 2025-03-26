@@ -64,21 +64,75 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
-    public async Task<List<ApplicationUser>> GetApplicationUsers()
+    public async Task<List<ApplicationUser>> GetAllAsync()
     {
         return await _context.Users.ToListAsync();
     }
 
-    public ApplicationUser? GetApplicationUserById(string id)
+    public async Task<ApplicationUser?> GetByIdAsync(string id)
     {
-        var ApplicationUser = _context.Users.Find(id);
+        var ApplicationUser = await _context.Users.FindAsync(id);
         return ApplicationUser;
     }
 
-    public ApplicationUser? GetApplicationUserByLastName(string lastName)
+    public async Task<bool?> IsNewUser(ApplicationUser user)
     {
-        var ApplicationUser = _context.Users.FirstOrDefault(n => n.LastName == lastName);
+        try
+        {
+            bool isNew;
+            if (user.UserName != null)
+            {
+                isNew = await GetByUserNameAsync(user.UserName) == null;
+                return isNew;
+            }
+
+            if (user.Email != null)
+            {
+                isNew = await GetByEmailAsync(user.Email) == null;
+                return isNew;
+            }
+
+            return null;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to determine if user is new Source: {ExceptionSource}", e.Source);
+            return null;
+        }
+    }
+
+    public async Task<ApplicationUser?> GetByLastNameAsync(string lastName)
+    {
+        var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.LastName == lastName);
         return ApplicationUser;
+    }
+
+    public async Task<ApplicationUser?> GetByUserNameAsync(string userName)
+    {
+        try
+        {
+            var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.UserName == userName);
+            return ApplicationUser;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to find user with UserName: {Username}. Source: {ExceptionSource}", userName, e.Source);
+            return null;
+        }
+    }
+
+    public async Task<ApplicationUser?> GetByEmailAsync(string email)
+    {
+        try
+        {
+            var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.Email == email);
+            return ApplicationUser;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to find user with Email: {Email}. Source: {ExceptionSource}", email, e.Source);
+            return null;
+        }
     }
 
     public async Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser)
@@ -110,27 +164,17 @@ public class ApplicationUserService : IApplicationUserService
         {
             using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         
-            var existingUser = await _context.Users.FindAsync(applicationUser.Id);
+            var existingUser = await _context.Users.FirstOrDefaultAsync(
+                u => u.Id == applicationUser.Id);
+            
             if (existingUser == null)
             {
                 Log.Error("Could not find user with ID {id}", applicationUser.Id);
                 return false;
             }
-
-            // Detach any entities so that they will not be saved on accident
-            foreach (var entry in _context.ChangeTracker.Entries())
-            {
-                entry.State = EntityState.Detached;
-            }
-
-            _context.Users.Attach(existingUser);
-
-            existingUser.FirstName = applicationUser.FirstName;
-            existingUser.LastName = applicationUser.LastName;
-            existingUser.Email = applicationUser.Email;
-            existingUser.UserName = applicationUser.UserName;
-
-            _context.Entry(existingUser).State = EntityState.Modified;
+            
+            // Setting the values directly since if you were to simply apply them directly it would update all touched entities on save
+            _context.Entry(existingUser).CurrentValues.SetValues(applicationUser);
         
             await _context.SaveChangesAsync();
             scope.Complete();
