@@ -65,7 +65,7 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireNonAlphanumeric = false;
     
     // Username
-    options.User.RequireUniqueEmail = true;
+    options.User.RequireUniqueEmail = false;
     
     options.SignIn.RequireConfirmedAccount = false;
     options.SignIn.RequireConfirmedEmail = false;
