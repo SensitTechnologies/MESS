@@ -26,12 +26,12 @@
                 <NotAuthorized>
                     <form method="post" action="/api/auth/login">
                         <AntiforgeryToken />
-                        <div class="position-relative">
+                        <div class="position-relative" @onfocusout="((e) => HideDropdown(e))">
                             <label for="email" class="form-label">Email:</label>
                             <input type="text"
                                    id="email"
                                    name="email"
-                                   class="form-control"
+                                   class="form-control mb-2"
                                    @bind-value="SearchFilter"
                                    @bind-value:event="oninput"
                                    @onfocus="ShowDropdown"
@@ -40,7 +40,10 @@
 
                             @if (IsDropdownVisible)
                             {
-                            <div class="position-absolute w-100 mt-1 shadow bg-white border rounded"
+                                <div @ref="_dropdownContainer"
+                                     @onmouseenter="OnDropdownMouseEnter"
+                                     @onmouseleave="OnDropdownMouseLeave"
+                                    class="position-absolute w-100 mt-1 shadow bg-white border rounded"
                                  style="max-height: 200px; overflow-y: auto; z-index: 1000;">
                                 @if (ApplicationUsers != null)
                                 {
@@ -74,16 +77,37 @@
     private List<ApplicationUser>? ApplicationUsers { get; set; }
     private string SearchFilter { get; set; } = "";
     private bool IsDropdownVisible { get; set; }
+    private ElementReference _dropdownContainer;
 
     protected override async Task OnInitializedAsync()
     {
         ApplicationUsers = await ApplicationUserService.GetApplicationUsers();
     }
 
+    private bool _isMouseOverDropdown;
+
+    private void OnDropdownMouseEnter()
+    {
+        _isMouseOverDropdown = true;
+    }
+
+    private void OnDropdownMouseLeave()
+    {
+        _isMouseOverDropdown = false;
+    }
+
+    private void HideDropdown(FocusEventArgs e)
+    {
+        if (!_isMouseOverDropdown)
+        {
+            IsDropdownVisible = false;
+        }
+    }
     private void ShowDropdown()
     {
         IsDropdownVisible = true;
     }
+    
 
     private void SelectOperator(ApplicationUser user)
     {
