@@ -4,6 +4,9 @@ namespace MESS.Services.Serialization;
 
 public interface ISerializationService
 {
+    public event Action? CurrentSerialNumberLogChanged;
+    public event Action? CurrentProductNumberChanged;
+    public string? CurrentProductNumber { get; set; }
     /// <summary>
     /// A List of the Current Serial Number Logs for a given Work Instruction Request.
     /// Defaults to an empty List

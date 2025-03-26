@@ -86,6 +86,11 @@ public class WorkInstructionService : IWorkInstructionService
     {
         try
         {
+            if (id <= 0)
+            {
+                return null;
+            }
+            
             var workInstruction = await _context.WorkInstructions
                 .Include(w => w.Steps)
                 .ThenInclude(s => s.PartsNeeded)
