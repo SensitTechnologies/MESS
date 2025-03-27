@@ -1,18 +1,21 @@
 ﻿@using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @inject IProductionLogEventService ProductionLogEventService
+@implements IDisposable
 
 <div>
     @if (WorkInstructions != null)
     {
         <select id="workInstruction-select" class="form-select" @onchange="async e => await OnWorkInstructionSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
-            <option value="-1">Select Instruction</option>
-
-            @foreach (var workInstruction in WorkInstructions)
-            {
+            @{
                 var selectedWorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
-                var isSelected = workInstruction.Title == selectedWorkInstructionName;
-                <option selected="@isSelected" value="@workInstruction.Id">@workInstruction.Title</option>
+                var isDefaultSelected = string.IsNullOrEmpty(selectedWorkInstructionName);
+                <option selected="@isDefaultSelected" value="-1">Select Instruction</option>
+                @foreach (var workInstruction in WorkInstructions)
+                {
+                    var isSelected = workInstruction.Title == selectedWorkInstructionName;
+                    <option selected="@isSelected" value="@workInstruction.Id">@workInstruction.Title</option>
+                }
             }
         </select>
     }

@@ -7,10 +7,9 @@
 @inject ILocalCacheManager LocalCacheManager
 @inject IProductionLogEventService ProductionLogEventService
 @inject ISerializationService SerializationService
-@inject IJSRuntime JSRuntime
 @attribute [StreamRendering]
 
-<li class="list-group-item mb-2" role="group">
+<li class="container list-group-item mb-2" role="group">
     <div class="row">
         <div class="col">
             <span>@step.Name</span>
@@ -45,16 +44,16 @@
                         {
                             <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="logStep.Notes"/>
                         }
-
-
-                        @if (step is { PartsNeeded.Count: > 0 })
-                        {
-                            <RequiredPartsList _serialNumberLogs="_serialNumberLogs" ProductSerialNumber="@ProductSerialNumber" AfterSerialNumberInput="@AfterSerialNumberInput" PrintQRCode="PrintQRCode"/>
-                        }
                     </div>
                 }
             </div>
         </div>
+    </div>
+    <div>
+        @if (step is { PartsNeeded.Count: > 0 })
+        {
+            <RequiredPartsList _serialNumberLogs="_serialNumberLogs" AfterSerialNumberInput="@AfterSerialNumberInput" />
+        }
     </div>
 </li>
 
@@ -70,18 +69,6 @@
     public string? ProductSerialNumber { get; set; }
 
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
-
-    private string? QRCodeDataUrl;
-    private IJSObjectReference? module;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
-                "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
-        }
-    }
     
     protected override void OnInitialized()
     {
@@ -123,39 +110,13 @@
     {
         serialNumberLog.ProductSerialNumber = ProductSerialNumber;
         serialNumberLog.SubmitTimeQc = DateTimeOffset.UtcNow;
-        
-        // Add to current list for work instruction
-        SerializationService.CurrentSerialNumberLogs?.Add(serialNumberLog);
-    }
-    
-    private void GenerateQRCode()
-    {
-        var partSerialNumbers = string.Join(",", _serialNumberLogs.Select(x => $"{x.Part?.PartName} PartSN= {x.PartSerialNumber}"));
-        var productionLogId = ProductionLogEventService.GetCurrentProductionLog()?.Id;
-        var productionLogIdString = "ProductionLogID= " + productionLogId;
-        var productSerialNumber = "ProductSerialNumber= " + ProductSerialNumber;
-        var qrCodeToEncode = string.Join(",", productionLogIdString, productSerialNumber, partSerialNumbers);
-        using var qrGenerator = new QRCodeGenerator();
-        using var qrCodeData = qrGenerator.CreateQrCode(qrCodeToEncode, QRCodeGenerator.ECCLevel.Q);
-        using var qrCode = new BitmapByteQRCode(qrCodeData);
-        var qrCodeImageArr = qrCode.GetGraphic(20);
-    
-        QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
-    }
-    
-    private async Task PrintQRCode()
-    {
-        GenerateQRCode();
-        if (string.IsNullOrEmpty(QRCodeDataUrl))
-            return;
-        
-        if (module == null)
-        {
-            return;
-        }
-        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl);
-    }
 
+        var updatedList = new List<SerialNumberLog>(SerializationService.CurrentSerialNumberLogs);
+        updatedList.Add(serialNumberLog);
+
+        SerializationService.CurrentSerialNumberLogs = updatedList;
+    }
+    
     private bool ShowOptionalNotesField { get; set; } = false;
     
     private string? SelectedButton { get; set; } = "";

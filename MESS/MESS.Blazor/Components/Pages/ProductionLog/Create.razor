@@ -1,4 +1,4 @@
-﻿@page "/production-log"
+@page "/production-log"
 @attribute [Authorize(Roles = "Admin, Technician, Operator")]
 @using MESS.Services.ApplicationUser
 @using MESS.Services.BrowserCacheManager
@@ -15,9 +15,11 @@
 @inject IProductService ProductService
 @inject ILocalCacheManager LocalCacheManager
 @inject ISessionManager SessionManager
-@inject ISerializationService SerializationService
 @inject IApplicationUserService LineOperatorService
 @inject AuthenticationStateProvider AuthProvider
+@inject ISerializationService SerializationService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -33,6 +35,8 @@
                 <EditForm class="container" FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator/>
                     <ValidationSummary/>
+                    <ConfirmationModal @ref="popupRef" OnSubmit="HandleConfirmation"/>
+
                     <div class="mb-3">
                         <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                             <CreateHeader
