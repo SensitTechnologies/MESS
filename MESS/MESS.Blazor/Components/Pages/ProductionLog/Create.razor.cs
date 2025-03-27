@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using QRCoder;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
 
@@ -13,6 +15,7 @@ internal enum Status
 public partial class Create : ComponentBase, IDisposable
 {
     private string Title = "Add";
+    private ConfirmationModal? popupRef;
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
     private bool IsSaved { get; set; }
@@ -27,7 +30,10 @@ public partial class Create : ComponentBase, IDisposable
     private List<WorkInstruction>? WorkInstructions { get; set; }
     
     private string? ActiveLineOperator { get; set; }
-    
+    private string? ProductSerialNumber { get; set; }
+    private string? QRCodeDataUrl;
+    private IJSObjectReference? module;
+    private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
@@ -66,10 +72,23 @@ public partial class Create : ComponentBase, IDisposable
         };
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
-        
+        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
+        ProductSerialNumber = SerializationService.CurrentProductNumber;
+
+        SerializationService.CurrentSerialNumberLogChanged += HandleSerialNumberLogsChanged;
+        SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
 
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
+        }
     }
     
     private async Task<bool> LoadCachedForm()
@@ -110,6 +129,7 @@ public partial class Create : ComponentBase, IDisposable
         {
             ActiveWorkInstruction = null;
             await SetSelectedWorkInstructionId(null);
+            ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
         }
         if (WorkInstructions != null)
         {
@@ -149,7 +169,8 @@ public partial class Create : ComponentBase, IDisposable
 
             ActiveProduct = product;
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
-
+            await SetActiveWorkInstruction(-1);
+            
             await LocalCacheManager.SetActiveProductAsync(product);
         }
     }
@@ -247,9 +268,35 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (ActiveWorkInstruction == null)
         {
-            Console.WriteLine("No Work Instruction selected.");
             return;
         }
+        
+        int partsNeededCount = 0;
+        ActiveWorkInstruction.Steps.ForEach(step => partsNeededCount += step.PartsNeeded?.Count ?? 0);
+
+        bool allStepsHavePartsNeeded = _serialNumberLogs.Count >= partsNeededCount;
+
+        if (!allStepsHavePartsNeeded)
+        {
+            popupRef?.Show("There are parts without serial numbers. Are you sure you want to submit this log?");
+        }
+        else
+        {
+            await CompleteSubmit();
+        }
+    }
+
+    private async Task HandleConfirmation(bool confirmed)
+    {
+        if (confirmed)
+        {
+            await CompleteSubmit();
+        }
+    }
+
+    private async Task CompleteSubmit()
+    {
+        await PrintQRCode();
         
         var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -273,6 +320,45 @@ public partial class Create : ComponentBase, IDisposable
         // Add the new log to the session
         await SessionManager.AddProductionLogAsync(ProductionLog.Id);
         await ResetFormState();
+    }
+    
+    private void HandleSerialNumberLogsChanged()
+    {
+        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
+    
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleProductNumberChanged()
+    {
+        ProductSerialNumber = SerializationService.CurrentProductNumber;
+
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private void GenerateQRCode()
+    {
+        var productionLogId = ProductionLogEventService.GetCurrentProductionLog()?.Id;
+        var productionLogIdString = productionLogId + ",";
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(productionLogIdString, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new BitmapByteQRCode(qrCodeData);
+        var qrCodeImageArr = qrCode.GetGraphic(20);
+    
+        QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
+    }
+    
+    private async Task PrintQRCode()
+    {
+        GenerateQRCode();
+        if (string.IsNullOrEmpty(QRCodeDataUrl))
+            return;
+        
+        if (module == null)
+        {
+            return;
+        }
+        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl);
     }
 
     private async Task ResetFormState()
@@ -327,5 +413,11 @@ public partial class Create : ComponentBase, IDisposable
     public void Dispose()
     {
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        SerializationService.CurrentSerialNumberLogChanged -= HandleSerialNumberLogsChanged;
+        if (module != null) await module.DisposeAsync();
     }
 }
