@@ -1,7 +1,7 @@
 @using MESS.Data.Models
 
 <details>
-    <summary>View Work Instructions and Work Stations</summary>
+    <summary>View Work Instructions</summary>
     <div class="p-3">
         <h5>Work Instructions</h5>
         @if (Product.WorkInstructions != null && Product.WorkInstructions.Any())
@@ -16,21 +16,6 @@
         else
         {
             <p>No work instructions available.</p>
-        }
-
-        <h5>Work Stations</h5>
-        @if (Product.WorkStations != null && Product.WorkStations.Any())
-        {
-            <ul>
-                @foreach (var workStation in Product.WorkStations)
-                {
-                    <li>@workStation.Name</li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p>No work stations available.</p>
         }
     </div>
 </details>
