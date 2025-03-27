@@ -54,7 +54,6 @@ public class WorkInstructionService : IWorkInstructionService
                     Body = worksheet.Cell(stepStartRow, 3).GetString(),
                     SubmitTime = DateTimeOffset.UtcNow,
                     PartsNeeded = new List<Part>(),
-                    Success = false
                 };
                 
                 var pictures = worksheet.Pictures
