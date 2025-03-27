@@ -1,0 +1,13 @@
+﻿@page "/Dashboard"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthProvider
+
+<AuthorizeView Roles="Technician">
+    <p>
+        You are a technician
+    </p>
+</AuthorizeView>
+
+@code {
+    
+}

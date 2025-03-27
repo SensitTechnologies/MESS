@@ -57,21 +57,6 @@ else
                             {
                                 <p>No work instructions available.</p>
                             }
-
-                            <h5>Work Stations</h5>
-                            @if (product.WorkStations != null && product.WorkStations.Any())
-                            {
-                                <ul>
-                                    @foreach (var workStation in product.WorkStations)
-                                    {
-                                        <li>@workStation.Name</li>
-                                    }
-                                </ul>
-                            }
-                            else
-                            {
-                                <p>No work stations available.</p>
-                            }
                         </div>
                     </details>
                 </td>

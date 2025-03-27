@@ -1,16 +1,12 @@
-﻿@inherits LayoutComponentBase
-@inject IJSRuntime JSRuntime
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="page">
     <main>
         <div class="top-row px-4">
-            <nav class="navbar navbar-expand-lg">
-                <a class="navbar-brand" href="/">
-                    <img src="sensitlogo.png" alt="Sensit Logo" class="logo">
-                </a>
-            </nav>
             <NavLink class="btn btn-outline-secondary text-decoration-none" href="" Match="NavLinkMatch.All">
-                <span>Log In</span>
+                <span>Home</span>
             </NavLink>
             <NavLink class="btn btn-outline-secondary text-decoration-none" href="workInstruction" Match="NavLinkMatch.All">
                 <span>Work Instruction</span>
@@ -21,13 +17,11 @@
             <NavLink class="btn btn-outline-secondary text-decoration-none" href="production-log" Match="NavLinkMatch.All">
                 <span>Production Log</span>
             </NavLink>
-            <NavLink class="btn btn-outline-secondary text-decoration-none" href="work-stations" Match="NavLinkMatch.All">
-                <span></span> Work Stations
-            </NavLink>
-
-            <div class="darkmode">
-                <button @onclick="ToggleDarkMode" class="btn btn-outline-secondary">🌙 Dark Mode</button>
-            </div>
+            <AuthorizeView Roles="Technician">
+                <NavLink class="btn btn-outline-secondary text-decoration-none" href="dashboard" Match="NavLinkMatch.All">
+                    <span>Phoebe</span>
+                </NavLink>
+            </AuthorizeView>
         </div>
         
         <article class="content px-4 mx-auto">
@@ -36,16 +30,8 @@
     </main>
 </div>
 
-
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
-
-@code {
-    private async Task ToggleDarkMode()
-    {
-        await JSRuntime.InvokeVoidAsync("toggleDarkMode");
-    }
-}

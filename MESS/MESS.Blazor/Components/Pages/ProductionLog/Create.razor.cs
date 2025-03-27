@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using QRCoder;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
 
@@ -13,30 +15,31 @@ internal enum Status
 public partial class Create : ComponentBase, IDisposable
 {
     private string Title = "Add";
+    private ConfirmationModal? popupRef;
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
     private bool IsSaved { get; set; }
     
     private Product? ActiveProduct { get; set; }
-    private WorkStation? ActiveWorkStation { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
     
     protected ProductionLog ProductionLog = new();
     
     private List<Product>? Products { get; set; }
-    private List<WorkStation>? WorkStations { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
     
     private string? ActiveLineOperator { get; set; }
-    
+    private string? ProductSerialNumber { get; set; }
+    private string? QRCodeDataUrl;
+    private IJSObjectReference? module;
+    private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
     {
         ProductionLogEventService.DisableAutoSave();
         
-        await LoadWorkStations();
         await LoadProducts();
         await LoadWorkInstructions();
         await GetInProgressAsync();
@@ -69,10 +72,23 @@ public partial class Create : ComponentBase, IDisposable
         };
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
-        
+        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
+        ProductSerialNumber = SerializationService.CurrentProductNumber;
+
+        SerializationService.CurrentSerialNumberLogChanged += HandleSerialNumberLogsChanged;
+        SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
 
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
+        }
     }
     
     private async Task<bool> LoadCachedForm()
@@ -106,23 +122,6 @@ public partial class Create : ComponentBase, IDisposable
         return true;
     }
     
-    private async Task SetActiveWorkStation(int workStationId)
-    {
-        if (WorkStations != null)
-        {
-            var workStation = WorkStations.FirstOrDefault(p => p.Id == workStationId);
-
-            if (workStation?.Products == null)
-            {
-                return;
-            }
-            
-            ActiveWorkStation = workStation;
-            ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
-            
-            await LocalCacheManager.SetActiveWorkStationAsync(workStation);
-        }
-    }
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
     {
@@ -130,6 +129,7 @@ public partial class Create : ComponentBase, IDisposable
         {
             ActiveWorkInstruction = null;
             await SetSelectedWorkInstructionId(null);
+            ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
         }
         if (WorkInstructions != null)
         {
@@ -169,7 +169,8 @@ public partial class Create : ComponentBase, IDisposable
 
             ActiveProduct = product;
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
-
+            await SetActiveWorkInstruction(-1);
+            
             await LocalCacheManager.SetActiveProductAsync(product);
         }
     }
@@ -202,7 +203,6 @@ public partial class Create : ComponentBase, IDisposable
         if (result)
         {
             IsWorkflowActive = result;
-            await GetCachedActiveWorkStationAsync();
             await GetCachedActiveWorkInstructionAsync();
             await GetCachedActiveProductAsync();
             return;
@@ -210,19 +210,7 @@ public partial class Create : ComponentBase, IDisposable
 
         await SetInProgressAsync(false);
     }
-
-    private async Task GetCachedActiveWorkStationAsync()
-    {
-        var result = await LocalCacheManager.GetActiveWorkStationAsync();
-        ActiveWorkStation = WorkStations?.FirstOrDefault(w => w.Name == result.Name);
-        
-        if (ActiveWorkStation == null)
-        {
-            return;
-        }
-        
-        ProductionLogEventService.SetCurrentWorkStationName(ActiveWorkStation.Name);
-    }
+    
 
     private async Task GetCachedActiveWorkInstructionAsync()
     {
@@ -243,18 +231,6 @@ public partial class Create : ComponentBase, IDisposable
         }
     }
     
-    private async Task LoadWorkStations()
-    {
-        try
-        {
-            var workStationsAsync = await WorkStationService.GetAllWorkStationsAsync();
-            WorkStations = workStationsAsync.ToList();
-        }
-        catch (Exception e)
-        {
-            Log.Error("Error loading work stations for the Create view: {Message}", e.Message);
-        }
-    }
     
     private async Task LoadWorkInstructions()
     {
@@ -292,9 +268,35 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (ActiveWorkInstruction == null)
         {
-            Console.WriteLine("No Work Instruction selected.");
             return;
         }
+        
+        int partsNeededCount = 0;
+        ActiveWorkInstruction.Steps.ForEach(step => partsNeededCount += step.PartsNeeded?.Count ?? 0);
+
+        bool allStepsHavePartsNeeded = _serialNumberLogs.Count >= partsNeededCount;
+
+        if (!allStepsHavePartsNeeded)
+        {
+            popupRef?.Show("There are parts without serial numbers. Are you sure you want to submit this log?");
+        }
+        else
+        {
+            await CompleteSubmit();
+        }
+    }
+
+    private async Task HandleConfirmation(bool confirmed)
+    {
+        if (confirmed)
+        {
+            await CompleteSubmit();
+        }
+    }
+
+    private async Task CompleteSubmit()
+    {
+        await PrintQRCode();
         
         var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -305,7 +307,6 @@ public partial class Create : ComponentBase, IDisposable
         ProductionLog.LastModifiedOn = currentTime;
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
-        ProductionLog.WorkStation = ActiveWorkStation;
         ProductionLog.OperatorId = userId;
         await ProductionLogService.UpdateAsync(ProductionLog);
         
@@ -319,6 +320,45 @@ public partial class Create : ComponentBase, IDisposable
         // Add the new log to the session
         await SessionManager.AddProductionLogAsync(ProductionLog.Id);
         await ResetFormState();
+    }
+    
+    private void HandleSerialNumberLogsChanged()
+    {
+        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
+    
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleProductNumberChanged()
+    {
+        ProductSerialNumber = SerializationService.CurrentProductNumber;
+
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private void GenerateQRCode()
+    {
+        var productionLogId = ProductionLogEventService.GetCurrentProductionLog()?.Id;
+        var productionLogIdString = productionLogId + ",";
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(productionLogIdString, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new BitmapByteQRCode(qrCodeData);
+        var qrCodeImageArr = qrCode.GetGraphic(20);
+    
+        QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
+    }
+    
+    private async Task PrintQRCode()
+    {
+        GenerateQRCode();
+        if (string.IsNullOrEmpty(QRCodeDataUrl))
+            return;
+        
+        if (module == null)
+        {
+            return;
+        }
+        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl);
     }
 
     private async Task ResetFormState()
@@ -370,82 +410,14 @@ public partial class Create : ComponentBase, IDisposable
             return false;
         }
     }
-
-    private List<WorkStation> LoadAssociatedWorkStationsFromProduct()
-    {
-        try
-        {
-            if (ActiveProduct == null || Products == null || ActiveProduct.WorkStations == null)
-            {
-                return [];
-            }
-
-            return ActiveProduct.WorkStations;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return [];
-        }
-    }
-
-    /// <summary>
-    /// Loads a list of work instructions based on the currently selected Product and Work Station
-    /// </summary>
-    /// <returns></returns>
-    private List<WorkInstruction> LoadAssociatedWorkInstructions()
-    {
-        try
-        {
-            if (ActiveProduct?.WorkInstructions == null || Products?.Count <= 0 || 
-                ActiveWorkStation?.WorkInstructions == null || WorkStations?.Count <= 0)
-            {
-                return [];
-            }
-            
-            // WorkInstruction ID with a T/F for if they are within both lists
-            var workInstructionMap = new Dictionary<int, bool>();
-            
-            foreach (var productWorkInstruction in ActiveProduct.WorkInstructions)
-            {
-                if (!workInstructionMap.TryAdd(productWorkInstruction.Id, false))
-                {
-                    workInstructionMap[productWorkInstruction.Id] = true;
-                }
-            }
-            
-            foreach (var stationWorkInstruction in ActiveWorkStation.WorkInstructions)
-            {
-                if (!workInstructionMap.TryAdd(stationWorkInstruction.Id, false))
-                {
-                    workInstructionMap[stationWorkInstruction.Id] = true;
-                }
-            }
-            
-
-            var commonWorkInstructionIds = workInstructionMap.Where(w => w.Value).Select(w => w.Key).ToList();
-
-            var outputList = ActiveProduct.WorkInstructions
-                .Where(w => commonWorkInstructionIds.Contains(w.Id)).ToList();
-
-            if (outputList.Count > 0)
-            {
-                return outputList;
-            }
-                
-            ActiveWorkInstruction = null;
-            _ = SetActiveWorkInstruction(-1);
-
-            return outputList;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return [];
-        }
-    }
     public void Dispose()
     {
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        SerializationService.CurrentSerialNumberLogChanged -= HandleSerialNumberLogsChanged;
+        if (module != null) await module.DisposeAsync();
     }
 }

@@ -1,0 +1,142 @@
+﻿@page "/users"
+@attribute [Authorize(Roles = "Technician")]
+@using MESS.Data.DTO
+@using MESS.Data.Models
+@using MESS.Services.ApplicationUser
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Serilog
+@inject AuthenticationStateProvider AuthProvider
+@inject IApplicationUserService ApplicationUserService
+@inject UserManager<ApplicationUser> UserManager
+
+<div class="container justify-content-center">
+    <h1>
+        Users
+    </h1>
+    @* <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button> *@
+    @if (AlertMessage?.Length > 0)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @AlertMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    <div>
+        <table>
+            <thead>
+            <tr>
+                <th scope="col">
+                    #
+                </th>
+                <th scope="col">Email</th>
+                <th scope="col">User Name</th>
+                <th scope="col">First Name</th>
+                <th scope="col">Last Name</th>
+                <th scope="col">Role</th>
+                <th scope="col">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            @if (ApplicationUserDtoList != null)
+            {
+                @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
+                {
+                    <UserTableRow RowNumber="index" UserRoleDto="userDto" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"/>
+                }
+            }
+            </tbody>
+        </table>
+        
+    </div>
+    <div>
+        <button type="button" @onclick="CreateNewUser">
+            Create New User
+        </button>
+    </div>
+</div>
+
+@code {
+    private List<UserRoleDto> ApplicationUserDtoList { get; set; } = [];
+    private string? AlertMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var applicationUsers = await ApplicationUserService.GetAllAsync();
+        foreach (var user in applicationUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
+            var IsLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
+
+            var userDto = new UserRoleDto
+            {
+                User = user,
+                Roles = roles,
+                IsLockedOut = IsLockedOut
+            };
+            
+            ApplicationUserDtoList.Add(userDto);
+        }
+    }
+
+    private async Task SaveChanges(ApplicationUser user)
+    {
+        // A user requires either an email or a UserName for Identity creation
+        if (user is { Email: {Length: <= 0 }, UserName: {Length: <= 0} })
+        {
+            Log.Information("Attempted user save changes with empty or null UserName and Email, for user ID: {UserId}", user.Id);
+            await DisplayAlert("A user must have either an email or a username or both.");
+            return;
+        }
+
+        try
+        {
+            var isNewUser = await ApplicationUserService.IsNewUser(user);
+
+            if (!isNewUser.HasValue)
+            {
+                await DisplayAlert("A user must have either an email or a username or both.");
+                return;
+            }
+
+            if (isNewUser.Value)
+            {
+                user.UserName = user.UserName is {Length: >= 0} ? user.UserName : user.Email;
+                await ApplicationUserService.AddApplicationUser(user);
+            }
+            else
+            {
+                await ApplicationUserService.UpdateApplicationUser(user);
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Error("Error saving user changes: {errorMessage}", e.Message);
+            await DisplayAlert("An error occurred while saving changes");
+        }
+    }
+
+    private async Task DisplayAlert(string message)
+    {
+        AlertMessage = message;
+
+        await Task.Delay(2000);
+        AlertMessage = string.Empty;
+        
+        StateHasChanged();
+    }
+
+    private void CreateNewUser()
+    {
+        var newApplicationUser = new ApplicationUser();
+        var newUser = new UserRoleDto
+        {
+            User = newApplicationUser
+        };
+        
+        ApplicationUserDtoList.Add(newUser);
+    }
+
+}

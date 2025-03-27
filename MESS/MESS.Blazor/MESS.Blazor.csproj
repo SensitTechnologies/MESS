@@ -43,16 +43,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <_ContentIncludedByDefault Remove="Components\Pages\LineOperator\AddOperator.razor" />
-      <_ContentIncludedByDefault Remove="Components\Pages\LineOperator\DeleteOperator.razor" />
-      <_ContentIncludedByDefault Remove="Components\Pages\LineOperator\LineOperators.razor" />
-      <_ContentIncludedByDefault Remove="Components\Pages\LineOperator\UpdateOperator.razor" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Content Update="wwwroot\darkmode.js">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
+      <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
+      <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
     </ItemGroup>
 
 </Project>

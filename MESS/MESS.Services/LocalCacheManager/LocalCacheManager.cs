@@ -140,46 +140,6 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
     
-
-    public async Task<CacheDTO> GetActiveWorkStationAsync()
-    {
-        try
-        {
-            var result = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveWorkStationKey);
-
-            if (result is { Success: true, Value: not null })
-            {
-                return result.Value;
-            }
-
-            return new CacheDTO();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return new CacheDTO();
-        }
-    }
-
-    public async Task SetActiveWorkStationAsync(WorkStation workStation)
-    {
-        try
-        {
-            var CacheDTO = new CacheDTO
-            {
-                Id = workStation.Id.ToString(),
-                Name = workStation.Name
-            };
-            
-            await _protectedLocalStorage.SetAsync(ActiveWorkStationKey, CacheDTO);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-    }
-
-    
     public async Task SetActiveWorkInstructionIdAsync(int workInstructionId)
     {
         try
