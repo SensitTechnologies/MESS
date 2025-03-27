@@ -2,6 +2,7 @@ using System.Reflection;
 using ClosedXML.Excel;
 using MESS.Data.Context;
 using MESS.Services.Product;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -17,11 +18,22 @@ public class WorkInstructionService : IWorkInstructionService
         _productService = productService;
     }
 
-    public async Task<WorkInstruction?> ImportFromXlsx(string filePath)
+    public async Task<WorkInstruction?> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
         {
-            using var workbook = new XLWorkbook(filePath);
+            if (files == null || files.Count == 0)
+            {
+                Log.Warning("No files provided for import.");
+                return null;
+            }
+            
+            var file = files.First();
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream().CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            using var workbook = new XLWorkbook(memoryStream);
             var worksheet = workbook.Worksheet(1);
         
             var workInstruction = new WorkInstruction
@@ -65,7 +77,7 @@ public class WorkInstructionService : IWorkInstructionService
                 {
                     // Convert picture to base64 string
                     using var ms = new MemoryStream();
-                    picture.ImageStream.CopyTo(ms);
+                    await picture.ImageStream.CopyToAsync(ms);
                     var base64String = Convert.ToBase64String(ms.ToArray());
                     step.Content.Add($"data:image/png;base64,{base64String}");
                 }
@@ -84,7 +96,7 @@ public class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Error(e, "Failed to import WorkInstruction from Excel file: {filePath}", filePath);
+            Log.Error(e, "Failed to import WorkInstruction from uploaded Excel file");
             return null;
         }
     }

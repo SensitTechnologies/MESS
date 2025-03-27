@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Components.Forms;
+
 namespace MESS.Services.WorkInstruction;
 using Data.Models;
 
 public interface IWorkInstructionService
 {
-    public Task<WorkInstruction?> ImportFromXlsx(string filePath);
+    public Task<WorkInstruction?> ImportFromXlsx(List<IBrowserFile> files);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects
     /// </summary>

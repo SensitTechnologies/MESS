@@ -53,6 +53,7 @@ public class ProductService : IProductService
     {
         try
         {
+            // TODO: Create logic to differentiate when duplicate titles are encountered
             var product = await _context.Products
                 .Include(p => p.WorkInstructions)
                 .FirstOrDefaultAsync(p => p.Name == title);
