@@ -47,19 +47,6 @@ public static class SeedWorkInstructions
                             LastModifiedOn = default
                         }
                     },
-                    RelatedDocumentation = new List<Documentation>
-                    {
-                        new Documentation
-                        {
-                            Title = "Safety Guidelines",
-                            ContentType = "",
-                            Content = "",
-                            CreatedBy = "",
-                            CreatedOn = default,
-                            LastModifiedBy = "",
-                            LastModifiedOn = default
-                        }
-                    },
                     CreatedBy = "",
                     CreatedOn = default,
                     LastModifiedBy = "",
@@ -93,19 +80,6 @@ public static class SeedWorkInstructions
                         {
                             Name = "Power on and test calibration.",
                             SubmitTime = default,
-                            CreatedBy = "",
-                            CreatedOn = default,
-                            LastModifiedBy = "",
-                            LastModifiedOn = default
-                        }
-                    },
-                    RelatedDocumentation = new List<Documentation>
-                    {
-                        new Documentation
-                        {
-                            Title = "Calibration Manual",
-                            Content = "https://example.com/calibration",
-                            ContentType = "",
                             CreatedBy = "",
                             CreatedOn = default,
                             LastModifiedBy = "",
@@ -181,19 +155,6 @@ public static class SeedWorkInstructions
 
                                 }
                             }
-                        }
-                    },
-                    RelatedDocumentation = new List<Documentation>
-                    {
-                        new Documentation
-                        {
-                            Title = "Packaging Standards",
-                            Content = "https://example.com/packaging",
-                            ContentType = "",
-                            CreatedBy = "",
-                            CreatedOn = default,
-                            LastModifiedBy = "",
-                            LastModifiedOn = default
                         }
                     },
                     CreatedBy = "",

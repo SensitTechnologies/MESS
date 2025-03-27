@@ -11,10 +11,8 @@ public class WorkInstruction : AuditableEntity
     [ForeignKey("UserId")]
     public string? OperatorId { get; set; }
     public required List<Step> Steps { get; set; }
-    public List<Documentation>? RelatedDocumentation { get; set; }
 
     public List<Product> Products { get; set; } = [];
-    public List<WorkStation> WorkStations { get; set; } = [];
 }
 
 public class WorkInstructionValidator : AbstractValidator<WorkInstruction>

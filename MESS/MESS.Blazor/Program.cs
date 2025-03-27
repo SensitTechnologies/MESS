@@ -8,7 +8,6 @@ using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
-using MESS.Services.WorkStation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -42,13 +41,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
     
     
-builder.Services.AddTransient<IProductService, ProductService>();
-builder.Services.AddTransient<IWorkInstructionService, WorkInstructionService>();
-builder.Services.AddTransient<IProductionLogService, ProductionLogService>();
-builder.Services.AddTransient<ILocalCacheManager, LocalCacheManager>();
-builder.Services.AddTransient<ISessionManager, SessionManager>();
-builder.Services.AddTransient<IWorkStationService, WorkStationService>();
-builder.Services.AddTransient<IApplicationUserService, ApplicationUserService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IWorkInstructionService, WorkInstructionService>();
+builder.Services.AddScoped<IProductionLogService, ProductionLogService>();
+builder.Services.AddScoped<ILocalCacheManager, LocalCacheManager>();
+builder.Services.AddScoped<ISessionManager, SessionManager>();
+builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddScoped<RoleInitializer>();
@@ -67,7 +65,7 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireNonAlphanumeric = false;
     
     // Username
-    options.User.RequireUniqueEmail = true;
+    options.User.RequireUniqueEmail = false;
     
     options.SignIn.RequireConfirmedAccount = false;
     options.SignIn.RequireConfirmedEmail = false;

@@ -1,7 +1,8 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="page">
-
     <main>
         <div class="top-row px-4">
             <NavLink class="btn btn-outline-secondary text-decoration-none" href="" Match="NavLinkMatch.All">
@@ -16,9 +17,11 @@
             <NavLink class="btn btn-outline-secondary text-decoration-none" href="production-log" Match="NavLinkMatch.All">
                 <span>Production Log</span>
             </NavLink>
-            <NavLink class="btn btn-outline-secondary text-decoration-none" href="work-stations" Match="NavLinkMatch.All">
-                <span></span> Work Stations
-            </NavLink>
+            <AuthorizeView Roles="Technician">
+                <NavLink class="btn btn-outline-secondary text-decoration-none" href="dashboard" Match="NavLinkMatch.All">
+                    <span>Phoebe</span>
+                </NavLink>
+            </AuthorizeView>
         </div>
         
         <article class="content px-4 mx-auto">

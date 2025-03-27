@@ -36,7 +36,6 @@ public class ProductService : IProductService
         {
             var product = await _context.Products
                 .Include(p => p.WorkInstructions)
-                .Include(p => p.WorkStations)
                 .FirstOrDefaultAsync(p => p.Id == id);
             
             Log.Information("Product found. ID: {ProductId}", product?.Id);
@@ -56,7 +55,6 @@ public class ProductService : IProductService
         {
             return await _context.Products
                 .Include(p => p.WorkInstructions)
-                .Include(p => p.WorkStations)
                 .ToListAsync();
         }
         catch (Exception e)

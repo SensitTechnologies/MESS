@@ -1,0 +1,14 @@
+@using MESS.Data.Models
+<div class="form-floating flex-grow-1 mx-2">
+    <InputText id="serialNumberLog" class="form-control col custom-input" @bind-Value="@ActiveSerialNumberLog.PartSerialNumber"
+               @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveSerialNumberLog))"></InputText>
+    <label class="form-label col custom-label" for="serialNumberLog">@ActiveSerialNumberLog.Part?.PartName</label>
+</div>
+
+@code {
+    [Parameter]
+    public required SerialNumberLog ActiveSerialNumberLog { get; set; }
+    
+    [Parameter]
+    public required EventCallback<SerialNumberLog> AfterSerialNumberInput { get; set; }
+}

@@ -76,7 +76,6 @@ public class ProductionLogService : IProductionLogService
                 .ThenInclude(p => p.WorkInstructionStep)
                 .Include(w => w.WorkInstruction)
                 .Include(p => p.Product)
-                .Include(w => w.WorkStation)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             return productionLog;

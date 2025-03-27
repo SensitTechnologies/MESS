@@ -14,7 +14,30 @@ public class SerializationService : ISerializationService
         _context = context;
     }
 
-    public List<SerialNumberLog> CurrentSerialNumberLogs { get; set; } = [];
+    public event Action? CurrentSerialNumberLogChanged;
+    public event Action? CurrentProductNumberChanged;
+    private string? _currentProductNumber;
+
+    public string? CurrentProductNumber
+    {
+        get => _currentProductNumber;
+        set
+        {
+            _currentProductNumber = value;
+            CurrentProductNumberChanged?.Invoke();
+        }
+    }
+
+    private List<SerialNumberLog> _currentSerialNumberLogs = [];
+    public List<SerialNumberLog> CurrentSerialNumberLogs
+    {
+        get => _currentSerialNumberLogs;
+        set
+        {
+            _currentSerialNumberLogs = value;
+            CurrentSerialNumberLogChanged?.Invoke();
+        }
+    }
 
     public async Task<bool> SaveCurrentSerialNumberLogsAsync(int productionLogId)
     {

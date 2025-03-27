@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250323151334_Removed_Unused_Models")]
+    partial class Removed_Unused_Models
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -153,11 +156,16 @@ namespace MESS.Data.Migrations
                     b.Property<int?>("WorkInstructionId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("WorkStationId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
                     b.HasIndex("WorkInstructionId");
+
+                    b.HasIndex("WorkStationId");
 
                     b.ToTable("ProductionLogs");
                 });
@@ -324,6 +332,40 @@ namespace MESS.Data.Migrations
                     b.ToTable("WorkInstructions");
                 });
 
+            modelBuilder.Entity("MESS.Data.Models.WorkStation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("LastModifiedOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WorkStations");
+                });
+
             modelBuilder.Entity("ProblemProduct", b =>
                 {
                     b.Property<int>("ProblemsId")
@@ -354,6 +396,36 @@ namespace MESS.Data.Migrations
                     b.ToTable("ProductWorkInstruction");
                 });
 
+            modelBuilder.Entity("ProductWorkStation", b =>
+                {
+                    b.Property<int>("ProductsId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkStationsId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProductsId", "WorkStationsId");
+
+                    b.HasIndex("WorkStationsId");
+
+                    b.ToTable("ProductWorkStation");
+                });
+
+            modelBuilder.Entity("WorkInstructionWorkStation", b =>
+                {
+                    b.Property<int>("WorkInstructionsId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkStationsId")
+                        .HasColumnType("int");
+
+                    b.HasKey("WorkInstructionsId", "WorkStationsId");
+
+                    b.HasIndex("WorkStationsId");
+
+                    b.ToTable("WorkInstructionWorkStation");
+                });
+
             modelBuilder.Entity("MESS.Data.Models.Part", b =>
                 {
                     b.HasOne("MESS.Data.Models.Step", null)
@@ -371,9 +443,15 @@ namespace MESS.Data.Migrations
                         .WithMany()
                         .HasForeignKey("WorkInstructionId");
 
+                    b.HasOne("MESS.Data.Models.WorkStation", "WorkStation")
+                        .WithMany()
+                        .HasForeignKey("WorkStationId");
+
                     b.Navigation("Product");
 
                     b.Navigation("WorkInstruction");
+
+                    b.Navigation("WorkStation");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogStep", b =>
@@ -437,6 +515,36 @@ namespace MESS.Data.Migrations
                     b.HasOne("MESS.Data.Models.WorkInstruction", null)
                         .WithMany()
                         .HasForeignKey("WorkInstructionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProductWorkStation", b =>
+                {
+                    b.HasOne("MESS.Data.Models.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MESS.Data.Models.WorkStation", null)
+                        .WithMany()
+                        .HasForeignKey("WorkStationsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WorkInstructionWorkStation", b =>
+                {
+                    b.HasOne("MESS.Data.Models.WorkInstruction", null)
+                        .WithMany()
+                        .HasForeignKey("WorkInstructionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MESS.Data.Models.WorkStation", null)
+                        .WithMany()
+                        .HasForeignKey("WorkStationsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
