@@ -19,24 +19,58 @@ public class WorkInstructionService : IWorkInstructionService
         try
         {
             using var workbook = new XLWorkbook(filePath);
-            
             var worksheet = workbook.Worksheet(1);
-            int rowCount = worksheet.RowCount();
-            int colCount = worksheet.ColumnCount();
-
-            for (int row = 1; row <= rowCount; row++)
+        
+            var workInstruction = new WorkInstruction
             {
-                for (int col = 1; col <= colCount; col++)
+                Title = worksheet.Cell("B1").GetString(),
+                Version = worksheet.Cell("D1").GetString(),
+                Steps = new List<Step>()
+            };
+
+            // Start from row 7 (assuming header row is 6)
+            var stepStartRow = 7;
+            while (!worksheet.Cell(stepStartRow, 1).IsEmpty())
+            {
+                var step = new Step
                 {
-                    Console.WriteLine($"Value at R{row}C{col}: {worksheet.Cell(row, col).Value}");
+                    Name = worksheet.Cell(stepStartRow, 2).GetString(),
+                    Content = new List<string>(),
+                    Body = worksheet.Cell(stepStartRow, 3).GetString(),
+                    SubmitTime = DateTimeOffset.UtcNow,
+                    PartsNeeded = new List<Part>(),
+                    Success = false
+                };
+                
+                var pictures = worksheet.Pictures
+                    .Where(p => p.TopLeftCell.Address.RowNumber == stepStartRow 
+                                && p.TopLeftCell.Address.ColumnNumber == 5)
+                    .ToList();
+                
+                foreach (var picture in pictures)
+                {
+                    // Convert picture to base64 string
+                    using var ms = new MemoryStream();
+                    picture.ImageStream.CopyTo(ms);
+                    var base64String = Convert.ToBase64String(ms.ToArray());
+                    step.Content.Add($"data:image/png;base64,{base64String}");
                 }
+            
+                workInstruction.Steps.Add(step);
+                stepStartRow++;
+            }
+
+            if (Create(workInstruction))
+            {
+                Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
+                return workInstruction;
             }
 
             return null;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Error(e, "Failed to import WorkInstruction from Excel file: {filePath}", filePath);
             return null;
         }
     }
