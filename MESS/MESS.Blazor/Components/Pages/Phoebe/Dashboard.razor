@@ -2,11 +2,9 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthProvider
 
-<AuthorizeView Roles="Technician">
-    <p>
-        You are a technician
-    </p>
-</AuthorizeView>
+<NavLink class="btn btn-outline-secondary text-decoration-none" href="users" Match="NavLinkMatch.All">
+    <span>Operator Management</span>
+</NavLink>
 
 @code {
     

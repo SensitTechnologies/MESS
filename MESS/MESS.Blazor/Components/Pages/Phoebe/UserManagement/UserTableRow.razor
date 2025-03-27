@@ -33,7 +33,7 @@
         </td>
         <td>
             <button type="button"
-                    class="btn @(IsLockedOut ? "btn-danger" : "btn-outline-secondary")"
+                    class="btn @(IsLockedOut ? "btn-success" : "btn-warning")"
                     @onclick="ToggleLockoutAsync">
                 @(IsLockedOut ? "Unlock" : "Lock") User
             </button>
@@ -48,7 +48,7 @@
             else
             {
             <button type="button"
-                    class="btn btn-danger"
+                    class="btn btn-warning"
                     @onclick="() => InitiateDeleteUser(User.Id)">
                 Delete
             </button>
