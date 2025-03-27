@@ -1,12 +1,9 @@
-using MESS.Data.DTO;
-using Microsoft.AspNetCore.Components.Forms;
-
 namespace MESS.Services.WorkInstruction;
 using Data.Models;
 
 public interface IWorkInstructionService
 {
-    public Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files);
+    public WorkInstruction? ImportFromXlsx(string filePath);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects
     /// </summary>
@@ -41,7 +38,7 @@ public interface IWorkInstructionService
     /// </summary>
     /// <param name="workInstruction">An instance of WorkInstruction.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
-    public Task<bool> Create(WorkInstruction workInstruction);
+    public bool Create(WorkInstruction workInstruction);
     /// <summary>
     /// Deletes a WorkInstruction from the database.
     /// </summary>

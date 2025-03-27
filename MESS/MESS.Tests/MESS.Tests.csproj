@@ -56,5 +56,12 @@
       <ProjectReference Include="..\MESS.Data\MESS.Data.csproj" />
       <ProjectReference Include="..\MESS.Services\MESS.Services.csproj" />
     </ItemGroup>
+    
+
+    <ItemGroup>
+      <None Update="Services\Resources\MESSRTFTest.xlsx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 
 </Project>
