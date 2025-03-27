@@ -1,0 +1,15 @@
+@page "/WorkInstructionImport"
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+
+<button @onclick="Import">Import</button>
+
+
+@code {
+
+    private void Import()
+    {
+        WorkInstructionService.ImportFromXlsx("./Resources/MESSRTFTest.xlsx");
+    }
+
+}

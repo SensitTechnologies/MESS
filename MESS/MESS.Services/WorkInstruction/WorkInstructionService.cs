@@ -1,3 +1,5 @@
+using System.Reflection;
+using ClosedXML.Excel;
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -10,6 +12,33 @@ public class WorkInstructionService : IWorkInstructionService
     public WorkInstructionService(ApplicationContext context)
     {
         _context = context;
+    }
+
+    public WorkInstruction? ImportFromXlsx(string filePath)
+    {
+        try
+        {
+            using var workbook = new XLWorkbook(filePath);
+            
+            var worksheet = workbook.Worksheet(1);
+            int rowCount = worksheet.RowCount();
+            int colCount = worksheet.ColumnCount();
+
+            for (int row = 1; row <= rowCount; row++)
+            {
+                for (int col = 1; col <= colCount; col++)
+                {
+                    Console.WriteLine($"Value at R{row}C{col}: {worksheet.Cell(row, col).Value}");
+                }
+            }
+
+            return null;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
     }
 
     public List<WorkInstruction> GetAll()

@@ -3,6 +3,7 @@ using Data.Models;
 
 public interface IWorkInstructionService
 {
+    public WorkInstruction? ImportFromXlsx(string filePath);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects
     /// </summary>

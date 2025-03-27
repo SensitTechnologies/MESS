@@ -47,4 +47,10 @@
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Resources\MESSRTFTest.xlsx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>
