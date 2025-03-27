@@ -1,6 +1,7 @@
 using System.Reflection;
 using ClosedXML.Excel;
 using MESS.Data.Context;
+using MESS.Services.Product;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -9,12 +10,14 @@ using MESS.Data.Models;
 public class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
-    public WorkInstructionService(ApplicationContext context)
+    private readonly IProductService _productService;
+    public WorkInstructionService(ApplicationContext context, IProductService productService)
     {
         _context = context;
+        _productService = productService;
     }
 
-    public WorkInstruction? ImportFromXlsx(string filePath)
+    public async Task<WorkInstruction?> ImportFromXlsx(string filePath)
     {
         try
         {
@@ -25,8 +28,20 @@ public class WorkInstructionService : IWorkInstructionService
             {
                 Title = worksheet.Cell("B1").GetString(),
                 Version = worksheet.Cell("D1").GetString(),
+                Products = new List<Product>(),
                 Steps = new List<Step>()
             };
+            
+            // Retrieve Product and assign relationship
+            var product = await _productService.FindByTitleAsync(worksheet.Cell("B2").GetString());
+
+            if (product == null)
+            {
+                Log.Information("Product not found. Cannot create Work Instruction");
+                return null;
+            }
+            
+            workInstruction.Products.Add(product);
 
             // Start from row 7 (assuming header row is 6)
             var stepStartRow = 7;
@@ -60,7 +75,7 @@ public class WorkInstructionService : IWorkInstructionService
                 stepStartRow++;
             }
 
-            if (Create(workInstruction))
+            if (await Create(workInstruction))
             {
                 Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
                 return workInstruction;
@@ -169,7 +184,7 @@ public class WorkInstructionService : IWorkInstructionService
         }
     }
 
-    public bool Create(WorkInstruction workInstruction)
+    public async Task<bool> Create(WorkInstruction workInstruction)
     {
         try
         {
@@ -182,8 +197,8 @@ public class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
-            _context.WorkInstructions.Add(workInstruction);
-            _context.SaveChanges();
+            await _context.WorkInstructions.AddAsync(workInstruction);
+            await _context.SaveChangesAsync();
             
             Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
