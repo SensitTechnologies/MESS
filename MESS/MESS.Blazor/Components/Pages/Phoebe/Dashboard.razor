@@ -3,9 +3,16 @@
 @inject AuthenticationStateProvider AuthProvider
 
 <AuthorizeView Roles="Technician">
-    <p>
-        You are a technician
-    </p>
+    <div>
+        <nav>
+            <NavLink href="/workinstructionimport" Match="NavLinkMatch.All">
+                Work Instructions
+            </NavLink>
+            <NavLink href="/users" Match="NavLinkMatch.All">
+                Users
+            </NavLink>
+        </nav>
+    </div>
 </AuthorizeView>
 
 @code {
