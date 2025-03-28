@@ -12,6 +12,20 @@ public class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
     private readonly IProductService _productService;
+    
+    // The following attributes define the current expected XLSX structure as of 3/28/2025
+    private const string INSTRUCTION_TITLE_CELL = "B1";
+    private const string VERSION_CELL = "D1";
+    private const string PRODUCT_NAME_CELL = "B2";
+    private const string QR_CODE_REQUIRED_CELL = "B1";
+    
+    // Using int values here since there is an indeterminate amount of steps per Work Instruction
+    private const int STEP_START_ROW = 7;
+    private const int STEP_START_COLUMN = 1;
+    private const int STEP_TITLE_COLUMN = 2;
+    private const int STEP_DESCRIPTION_COLUMN = 3;
+    private const int STEP_PARTS_LIST_COLUMN = 4;
+    private const int STEP_MEDIA_COLUMN = 5;
     public WorkInstructionService(ApplicationContext context, IProductService productService)
     {
         _context = context;
@@ -35,17 +49,20 @@ public class WorkInstructionService : IWorkInstructionService
 
             using var workbook = new XLWorkbook(memoryStream);
             var worksheet = workbook.Worksheet(1);
-        
+            
+            var versionString = worksheet.Cell(VERSION_CELL).GetString();
+            
             var workInstruction = new WorkInstruction
             {
-                Title = worksheet.Cell("B1").GetString(),
-                Version = worksheet.Cell("D1").GetString(),
+                Title = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString(),
+                Version = versionString,
                 Products = new List<Product>(),
                 Steps = new List<Step>()
             };
             
             // Retrieve Product and assign relationship
-            var product = await _productService.FindByTitleAsync(worksheet.Cell("B2").GetString());
+            var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
+            var product = await _productService.FindByTitleAsync(productString, versionString);
 
             if (product == null)
             {
@@ -56,21 +73,21 @@ public class WorkInstructionService : IWorkInstructionService
             workInstruction.Products.Add(product);
 
             // Start from row 7 (assuming header row is 6)
-            var stepStartRow = 7;
-            while (!worksheet.Cell(stepStartRow, 1).IsEmpty())
+            var stepStartRow = STEP_START_ROW;
+            while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
             {
                 var step = new Step
                 {
-                    Name = worksheet.Cell(stepStartRow, 2).GetString(),
+                    Name = worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN).GetString(),
                     Content = new List<string>(),
-                    Body = worksheet.Cell(stepStartRow, 3).GetString(),
+                    Body = worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN).GetString(),
                     SubmitTime = DateTimeOffset.UtcNow,
                     PartsNeeded = new List<Part>(),
                 };
                 
                 var pictures = worksheet.Pictures
                     .Where(p => p.TopLeftCell.Address.RowNumber == stepStartRow 
-                                && p.TopLeftCell.Address.ColumnNumber == 5)
+                                && p.TopLeftCell.Address.ColumnNumber == STEP_MEDIA_COLUMN)
                     .ToList();
                 
                 foreach (var picture in pictures)

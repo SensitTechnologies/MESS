@@ -49,14 +49,25 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<Product?> FindByTitleAsync(string title)
+    
+    public async Task<Product?> FindByTitleAsync(string title, string? version)
     {
         try
         {
-            // TODO: Create logic to differentiate when duplicate titles are encountered
-            var product = await _context.Products
-                .Include(p => p.WorkInstructions)
-                .FirstOrDefaultAsync(p => p.Name == title);
+            Product? product;
+            if (version != null)
+            {
+                product = await _context.Products
+                    .Include(p => p.WorkInstructions)
+                    .FirstOrDefaultAsync(p => p.Name == title && p.Version == version);
+            }
+            else
+            {
+                product = await _context.Products
+                    .Include(p => p.WorkInstructions)
+                    .FirstOrDefaultAsync(p => p.Name == title);
+            }
+
             
             Log.Information("Product found. Title: {ProductTitle}", product?.Name);
             

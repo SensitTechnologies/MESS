@@ -8,6 +8,10 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile></DocumentationFile>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\MESS.Data\MESS.Data.csproj" />
         <ProjectReference Include="..\MESS.Services\MESS.Services.csproj" />
