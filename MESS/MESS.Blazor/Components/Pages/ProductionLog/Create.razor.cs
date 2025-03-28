@@ -41,8 +41,8 @@ public partial class Create : ComponentBase, IDisposable
         ProductionLogEventService.DisableAutoSave();
         
         await LoadProducts();
-        await LoadWorkInstructions();
         await GetInProgressAsync();
+        await LoadWorkInstructions();
 
         var result = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = result.User.Identity?.Name;
@@ -50,16 +50,6 @@ public partial class Create : ComponentBase, IDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         var cachedForm = await LoadCachedForm();
-        
-        // Create ProductionLog in database since we will need the ID for QR codes
-        if (!cachedForm)
-        {
-            var id = await ProductionLogService.CreateAsync(ProductionLog);
-            ProductionLog.Id = id;
-                
-            ProductionLogEventService.EnableAutoSave();
-        }
-        
         // AutoSave Trigger
         _autoSaveHandler = async log =>
         {
@@ -70,6 +60,14 @@ public partial class Create : ComponentBase, IDisposable
                 StateHasChanged();
             }));
         };
+        // Create ProductionLog in database since we will need the ID for QR codes
+        if (!cachedForm)
+        {
+            var id = await ProductionLogService.CreateAsync(ProductionLog);
+            ProductionLog.Id = id;
+                
+            ProductionLogEventService.EnableAutoSave();
+        }
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
@@ -418,6 +416,19 @@ public partial class Create : ComponentBase, IDisposable
     public async ValueTask DisposeAsync()
     {
         SerializationService.CurrentSerialNumberLogChanged -= HandleSerialNumberLogsChanged;
-        if (module != null) await module.DisposeAsync();
+        SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
+        try
+        {
+            if (module != null) await module.DisposeAsync();
+
+        }
+        catch (JSDisconnectedException jsDisconnectedException)
+        {
+            Log.Warning("JS Interop Disconnect thrown, {Message}", jsDisconnectedException.Message);
+        }
+        catch (JSException jsException)
+        {
+            Log.Warning("JS Interop Exception thrown, {Message}", jsException.Message);
+        }
     }
 }
