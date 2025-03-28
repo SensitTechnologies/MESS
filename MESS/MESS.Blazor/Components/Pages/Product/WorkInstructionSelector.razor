@@ -1,0 +1,79 @@
+@using MESS.Data.Models
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+
+<div class="mb-3">
+    <h5>Associated Work Instructions</h5>
+    <div class="list-group scrollable-checkbox-container">
+        @if (_allInstructions == null)
+        {
+            <div class="list-group-item">
+                <div class="d-flex justify-content-center text-muted">
+                    Loading work instructions...
+                </div>
+            </div>
+        }
+        else if (!_allInstructions.Any())
+        {
+            <div class="list-group-item">
+                <div class="d-flex justify-content-center text-muted">
+                    No work instructions available
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var instruction in _allInstructions)
+            {
+                <label class="list-group-item">
+                    <input type="checkbox" 
+                           class="form-check-input me-1" 
+                           checked="@IsInstructionSelected(instruction.Id)"
+                           @onchange="@(e => ToggleInstructionSelection(instruction.Id, e.Value as bool? ?? false))" />
+                    @instruction.Title
+                </label>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<WorkInstruction>? _allInstructions;
+    [Parameter]
+    public List<WorkInstruction>? SelectedInstructions { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<List<WorkInstruction>> SelectedInstructionsChanged { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _allInstructions = await WorkInstructionService.GetAllAsync();
+    }
+
+    private bool IsInstructionSelected(int instructionId)
+    {
+        return SelectedInstructions?.Any(wi => wi.Id == instructionId) ?? false;
+    }
+
+    private async Task ToggleInstructionSelection(int instructionId, bool isChecked)
+    {
+        var instruction = _allInstructions?.FirstOrDefault(wi => wi.Id == instructionId);
+        if (instruction == null) return;
+
+        SelectedInstructions ??= [];
+
+        if (isChecked)
+        {
+            if (SelectedInstructions.All(wi => wi.Id != instructionId))
+            {
+                SelectedInstructions.Add(instruction);
+            }
+        }
+        else
+        {
+            SelectedInstructions.RemoveAll(wi => wi.Id == instructionId);
+        }
+
+        await SelectedInstructionsChanged.InvokeAsync(SelectedInstructions);
+    }
+}
