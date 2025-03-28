@@ -1,9 +1,10 @@
 @page "/products"
+@attribute [Authorize(Roles = "Technician")]
 @using MESS.Data.Models
 @using MESS.Services.Product
+@using Microsoft.AspNetCore.Authorization
 @inject IProductService ProductService
 @inject NavigationManager NavigationManager
-
 
 <PageTitle>Product List</PageTitle>
 

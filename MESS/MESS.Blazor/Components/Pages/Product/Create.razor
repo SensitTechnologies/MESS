@@ -1,5 +1,7 @@
 @page "/products/create"
 @page "/products/edit/{ProductId:int}"
+@attribute [Authorize(Roles = "Technician")]
+@using Microsoft.AspNetCore.Authorization
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using Serilog
