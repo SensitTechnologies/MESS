@@ -8,7 +8,7 @@
             <ul>
                 @foreach (var instruction in Product.WorkInstructions)
                 {
-                    <li>@instruction.Title</li>
+                    <li>@($"{instruction.Title} v{instruction.Version}")</li>
                 }
             </ul>
         }

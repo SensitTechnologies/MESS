@@ -30,7 +30,7 @@
                            class="form-check-input me-1" 
                            checked="@IsInstructionSelected(instruction.Id)"
                            @onchange="@(e => ToggleInstructionSelection(instruction.Id, e.Value as bool? ?? false))" />
-                    @instruction.Title
+                    @($"{instruction.Title} v{instruction.Version}")
                 </label>
             }
         }
