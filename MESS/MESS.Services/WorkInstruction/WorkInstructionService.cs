@@ -1,5 +1,6 @@
 using System.Reflection;
 using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using MESS.Data.Context;
 using MESS.Data.DTO;
 using MESS.Services.Product;
@@ -9,7 +10,7 @@ using Serilog;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
-public class WorkInstructionService : IWorkInstructionService
+public partial class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
     private readonly IProductService _productService;
@@ -83,7 +84,7 @@ public class WorkInstructionService : IWorkInstructionService
                     Content = new List<string>(),
                     Body = worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN).GetString(),
                     SubmitTime = DateTimeOffset.UtcNow,
-                    PartsNeeded = new List<Part>(),
+                    PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
                 };
                 
                 var pictures = worksheet.Pictures
@@ -157,6 +158,80 @@ public class WorkInstructionService : IWorkInstructionService
 
             errorResult.ImportError = error;
             return errorResult;
+        }
+    }
+
+    // Expected string format is as follows:
+    // (PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), ...
+    private async Task<List<Part>?> GetPartsListFromString(string partsListString)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(partsListString))
+            {
+                return null;
+            }
+
+            var parts = new List<Part>();
+            var regexFilter = PartsListRegex();
+            var partStringMatches = regexFilter.Matches(partsListString);
+
+            foreach (System.Text.RegularExpressions.Match match in partStringMatches)
+            {
+                if (match.Groups.Count >= 3)
+                {
+                    var partToAdd = new Part
+                    {
+                        PartName = match.Groups[1].Value.Trim(),
+                        PartNumber = match.Groups[2].Value.Trim()
+                    };
+
+                    // This will always retrieve a persisted part in the database,
+                    // whether it retrieves an existing Part or creates a new one
+                    var persistedPart = await GetOrAddPart(partToAdd);
+
+                    if (persistedPart != null)
+                    {
+                        parts.Add(persistedPart);
+                    }
+                    else
+                    {
+                        Log.Warning("Unable to find or create Part when attempting to import a XLSX file. Parts List: {PartsList}", partsListString);
+                    }
+                }
+            }
+
+            return parts.Count > 0 ? parts : null;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception Caught when attempting to use a Regex pattern on a Parts List on Work Instruction Import. Message: {Message}", e.Message);
+            return null;
+        }
+    }
+
+    private async Task<Part?> GetOrAddPart(Part partToAdd)
+    {
+        try
+        {
+            var part = await _context.Parts.FirstOrDefaultAsync(p =>
+                p.PartName == partToAdd.PartName &&
+                p.PartNumber == partToAdd.PartNumber);
+
+            // If a part does not exist in the database create it here
+            // and return with database generated ID
+            if (part != null)
+            {
+                return part;
+            }
+            
+            await _context.Parts.AddAsync(partToAdd);
+            return await _context.Parts.FindAsync(partToAdd);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
         }
     }
 
@@ -338,4 +413,7 @@ public class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
+    private static partial System.Text.RegularExpressions.Regex PartsListRegex();
 }
