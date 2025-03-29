@@ -1,18 +1,80 @@
 @page "/WorkInstructionImport"
+@using MESS.Data.DTO
 @using MESS.Services.WorkInstruction
 @inject IWorkInstructionService WorkInstructionService
 
-<InputFile OnChange="LoadFiles"></InputFile>
-<button @onclick="Import">Import</button>
+<div class="container mt-4">
+    <h1>Work Instruction Import</h1>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Select Excel Files</h5>
+        </div>
+        <div class="card-body">
+            <InputFile OnChange="LoadFiles" multiple accept=".xlsx" class="form-control mb-3" />
+
+            <div class="d-flex gap-2 mb-3">
+                <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || Files.Count == 0)">
+                    Import Files
+                </button>
+                
+            </div>
+
+            @if (Files.Count > 0)
+            {
+            <div class="alert alert-info">
+                @Files.Count file(s) selected
+            </div>
+            }
+        </div>
+    </div>
+
+    @if (FileStatus != null)
+    {
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Import Status</h5>
+        </div>
+        <div class="card-body">
+            @if (ImportComplete)
+            {
+            <div class="alert alert-success mt-3">
+                Import completed! Successfully imported @Files.Count file(s).
+            </div>
+            }
+        </div>
+    </div>
+    }
+</div>
 
 
 @code {
-
     private List<IBrowserFile> Files { get; set; } = [];
-
-    private void Import()
+    private bool IsImporting { get; set; }
+    private string? StatusMessage { get; set; }
+    private string? FileStatus { get; set; }
+    private bool ImportComplete { get; set; }
+    
+    private async Task Import()
     {
-        WorkInstructionService.ImportFromXlsx(Files);
+        IsImporting = true;
+        ImportComplete = false;
+        var importResult = await WorkInstructionService.ImportFromXlsx(Files);
+
+        FileStatus = importResult.Status.ToString();
+        if (importResult is { Status: ImportStatus.Error, ImportError: not null })
+        {
+            StatusMessage = importResult.ImportError.ToString();
+        }
+
+        IsImporting = importResult is {Status: ImportStatus.Pending};
+
+        if (importResult.Status == ImportStatus.Complete)
+        {
+            IsImporting = false;
+            ImportComplete = true;
+
+        }
     }
 
     private void LoadFiles(InputFileChangeEventArgs obj)

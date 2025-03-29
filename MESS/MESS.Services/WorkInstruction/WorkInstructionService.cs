@@ -1,6 +1,7 @@
 using System.Reflection;
 using ClosedXML.Excel;
 using MESS.Data.Context;
+using MESS.Data.DTO;
 using MESS.Services.Product;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
@@ -32,14 +33,14 @@ public class WorkInstructionService : IWorkInstructionService
         _productService = productService;
     }
 
-    public async Task<WorkInstruction?> ImportFromXlsx(List<IBrowserFile> files)
+    public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
         {
             if (files == null || files.Count == 0)
             {
                 Log.Warning("No files provided for import.");
-                return null;
+                return WorkInstructionImportResult.NoFilesProvided();
             }
             
             var file = files.First();
@@ -67,7 +68,7 @@ public class WorkInstructionService : IWorkInstructionService
             if (product == null)
             {
                 Log.Information("Product not found. Cannot create Work Instruction");
-                return null;
+                return WorkInstructionImportResult.NoProductFound(files.First().Name, productString);
             }
             
             workInstruction.Products.Add(product);
@@ -102,19 +103,60 @@ public class WorkInstructionService : IWorkInstructionService
                 workInstruction.Steps.Add(step);
                 stepStartRow++;
             }
+            
+            var fileNames = files.Select(browserFile => browserFile.Name).ToList();
 
             if (await Create(workInstruction))
             {
                 Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
-                return workInstruction;
+                return WorkInstructionImportResult.Success(fileNames, workInstruction);
             }
 
-            return null;
+            return WorkInstructionImportResult.Failure(fileNames);
         }
         catch (Exception e)
         {
             Log.Error(e, "Failed to import WorkInstruction from uploaded Excel file");
-            return null;
+            var fileNames = files.Select(f => f.Name).ToList();
+            var errorResult = WorkInstructionImportResult.Failure(fileNames);
+
+            var error = new ImportError
+            {
+                File = fileNames.Count > 0 ? fileNames.First() : "Unknown",
+                Message = e.Message,
+                ErrorType = e.GetType().Name
+            };
+
+            switch (e)
+            {
+                case IOException or UnauthorizedAccessException:
+                    error.ErrorType = "File Access Error";
+                    error.Message = $"Could not access file: {e.Message}";
+                    break;
+                case ArgumentException or FormatException:
+                    error.ErrorType = "Excel Format Error";
+                    error.Message = $"Invalid format in Excel file: {e.Message}";
+                    break;
+                case IndexOutOfRangeException:
+                    error.ErrorType = "Excel Structure Error";
+                    error.Message = "Could not find expected worksheet or cell references";
+                    break;
+                case NullReferenceException:
+                    error.ErrorType = "Missing Data";
+                    error.Message = "Required data is missing from the Excel file";
+                    break;
+                case DbUpdateException:
+                    error.ErrorType = "Database Error";
+                    error.Message = "Failed to save work instruction to database";
+                    break;
+                case InvalidOperationException:
+                    error.ErrorType = "Processing Error";
+                    error.Message = "Failed to process file data";
+                    break;
+            }
+
+            errorResult.ImportError = error;
+            return errorResult;
         }
     }
 
