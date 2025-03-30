@@ -6,6 +6,7 @@ using MESS.Data.DTO;
 using MESS.Services.Product;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 
 namespace MESS.Services.WorkInstruction;
@@ -14,6 +15,7 @@ public partial class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
     private readonly IProductService _productService;
+    private readonly IMemoryCache _cache;
     
     // The following attributes define the current expected XLSX structure as of 3/28/2025
     private const string INSTRUCTION_TITLE_CELL = "B1";
@@ -28,10 +30,11 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const int STEP_DESCRIPTION_COLUMN = 3;
     private const int STEP_PARTS_LIST_COLUMN = 4;
     private const int STEP_MEDIA_COLUMN = 5;
-    public WorkInstructionService(ApplicationContext context, IProductService productService)
+    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache)
     {
         _context = context;
         _productService = productService;
+        _cache = cache;
     }
 
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
@@ -253,20 +256,30 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
-    public Task<List<WorkInstruction>> GetAllAsync()
+    public async Task<List<WorkInstruction>> GetAllAsync()
     {
+        const string cacheKey = "AllWorkInstructions";
+        
+        if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
+            cachedWorkInstructionList != null)
+        {
+            return cachedWorkInstructionList;
+        }
+        
         try
         {
-            var workInstructions = _context.WorkInstructions
+            var workInstructions = await _context.WorkInstructions
                 .Include(w => w.Steps)
                 .ThenInclude(w => w.PartsNeeded)
                 .ToListAsync();
+
+            // Cache data for 15 minutes
+            _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
 
             return workInstructions;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
             throw;
         }
