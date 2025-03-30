@@ -20,6 +20,7 @@
 @inject ISerializationService SerializationService
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
+@attribute [StreamRendering(false)]
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>

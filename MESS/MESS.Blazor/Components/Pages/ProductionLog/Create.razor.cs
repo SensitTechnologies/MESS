@@ -12,7 +12,7 @@ internal enum Status
     InProgress,
     Completed
 }
-public partial class Create : ComponentBase, IDisposable
+public partial class Create : ComponentBase, IAsyncDisposable
 {
     private string Title = "Add";
     private ConfirmationModal? popupRef;
@@ -40,16 +40,6 @@ public partial class Create : ComponentBase, IDisposable
     {
         ProductionLogEventService.DisableAutoSave();
         
-        await LoadProducts();
-        await GetInProgressAsync();
-        await LoadWorkInstructions();
-
-        var result = await AuthProvider.GetAuthenticationStateAsync();
-        ActiveLineOperator = result.User.Identity?.Name;
-        // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
-        WorkInstructionStatus = Status.NotStarted;
-        
-        var cachedForm = await LoadCachedForm();
         // AutoSave Trigger
         _autoSaveHandler = async log =>
         {
@@ -60,14 +50,16 @@ public partial class Create : ComponentBase, IDisposable
                 StateHasChanged();
             }));
         };
-        // Create ProductionLog in database since we will need the ID for QR codes
-        if (!cachedForm)
-        {
-            var id = await ProductionLogService.CreateAsync(ProductionLog);
-            ProductionLog.Id = id;
-                
-            ProductionLogEventService.EnableAutoSave();
-        }
+        
+
+
+        var result = await AuthProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = result.User.Identity?.Name;
+        // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
+        WorkInstructionStatus = Status.NotStarted;
+        
+
+
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
@@ -76,7 +68,6 @@ public partial class Create : ComponentBase, IDisposable
         SerializationService.CurrentSerialNumberLogChanged += HandleSerialNumberLogsChanged;
         SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
 
-        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         
     }
     
@@ -84,6 +75,24 @@ public partial class Create : ComponentBase, IDisposable
     {
         if (firstRender)
         {
+            await LoadProducts();
+            await LoadWorkInstructions();
+            await GetInProgressAsync();
+
+            var cachedForm = await LoadCachedForm();
+
+            // Create ProductionLog in database since we will need the ID for QR codes
+            if (cachedForm)
+            {
+                ProductionLogEventService.EnableAutoSave();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                var id = await ProductionLogService.CreateAsync(ProductionLog);
+                ProductionLog.Id = id;
+                await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+            }
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
         }
@@ -408,23 +417,23 @@ public partial class Create : ComponentBase, IDisposable
             return false;
         }
     }
-    public void Dispose()
-    {
-        ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
-    }
     
     public async ValueTask DisposeAsync()
     {
         SerializationService.CurrentSerialNumberLogChanged -= HandleSerialNumberLogsChanged;
         SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
+        ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
         try
         {
-            if (module != null) await module.DisposeAsync();
-
+            if (module is not null)
+            {
+                await module.DisposeAsync();
+            }
         }
-        catch (JSDisconnectedException jsDisconnectedException)
+        catch (JSDisconnectedException)
         {
-            Log.Warning("JS Interop Disconnect thrown, {Message}", jsDisconnectedException.Message);
+            // Deliberately not acting on the JSDisconnectedException since it is the preferred
+            // way to handle disposed JS scripts without logging: https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-9.0
         }
         catch (JSException jsException)
         {
