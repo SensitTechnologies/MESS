@@ -62,7 +62,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
-        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
         ProductSerialNumber = SerializationService.CurrentProductNumber;
 
         SerializationService.CurrentSerialNumberLogChanged += HandleSerialNumberLogsChanged;
@@ -73,6 +72,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
         if (firstRender)
         {
             await LoadProducts();

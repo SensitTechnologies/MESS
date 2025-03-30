@@ -93,10 +93,10 @@
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
+        InitializeSerialNumberLogs();
 
         if (firstRender)
         {
-            InitializeSerialNumberLogs();
 
             _initialized = true;
             StateHasChanged();
