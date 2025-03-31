@@ -17,9 +17,12 @@
         <div class="col col-5 col-md-5 col-sm-12">
             <p>@step.Body</p>
         </div>
-        <div>
-            <img src="@step.Content?.FirstOrDefault()" alt="Step Image" />
-        </div>
+        @if (step.Content != null)
+        {
+            <div>
+                <img src="@step.Content?.FirstOrDefault()" alt="Step Image" />
+            </div>
+        }
 
         <div class="col container">
             <div class="d-flex align-items-center">
@@ -95,14 +98,19 @@
 
     protected override void OnAfterRender(bool firstRender)
     {
-        InitializeSerialNumberLogs();
         base.OnAfterRender(firstRender);
 
         if (firstRender)
         {
             _initialized = true;
+            StateHasChanged();
         }
-        StateHasChanged();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        InitializeSerialNumberLogs();
     }
 
 
