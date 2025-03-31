@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
+using System.Drawing;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
@@ -104,12 +105,14 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
 
-                    var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
+                    var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+                    var imagePath = Path.Combine(imageDir, fileName);
                     
                     // Verify that directory exists. If not create it.
-                    if (!Directory.Exists(imagePath))
+                    if (!Directory.Exists(imageDir))
                     {
-                        Directory.CreateDirectory(imagePath);
+                        Directory.CreateDirectory(imageDir);
                     }
                     
                     using (var ms = new MemoryStream())
