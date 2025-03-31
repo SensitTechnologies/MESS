@@ -32,6 +32,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const int STEP_DESCRIPTION_COLUMN = 3;
     private const int STEP_PARTS_LIST_COLUMN = 4;
     private const int STEP_MEDIA_COLUMN = 5;
+
+    private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment)
     {
         _context = context;
@@ -102,7 +104,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
 
-                    var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionImages", fileName);
+                    var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
                     
                     // Verify that directory exists. If not create it.
                     if (!Directory.Exists(imagePath))
@@ -117,7 +119,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                         await File.WriteAllBytesAsync(imagePath, imageBytes);
                     }
                     
-                    step.Content.Add(Path.Combine("WorkInstructionImages", fileName));
+                    step.Content.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
                 }
             
                 workInstruction.Steps.Add(step);
