@@ -8,6 +8,10 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile></DocumentationFile>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\MESS.Data\MESS.Data.csproj" />
         <ProjectReference Include="..\MESS.Services\MESS.Services.csproj" />
@@ -45,6 +49,12 @@
     <ItemGroup>
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Resources\MESSRTFTest.xlsx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

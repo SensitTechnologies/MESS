@@ -1,0 +1,23 @@
+@page "/WorkInstructionImport"
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+
+<InputFile OnChange="LoadFiles"></InputFile>
+<button @onclick="Import">Import</button>
+
+
+@code {
+
+    private List<IBrowserFile> Files { get; set; } = [];
+
+    private void Import()
+    {
+        WorkInstructionService.ImportFromXlsx(Files);
+    }
+
+    private void LoadFiles(InputFileChangeEventArgs obj)
+    {
+        Files.Add(obj.File);
+    }
+
+}

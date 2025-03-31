@@ -1,4 +1,8 @@
+using System.Reflection;
+using ClosedXML.Excel;
 using MESS.Data.Context;
+using MESS.Services.Product;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -7,9 +11,111 @@ using MESS.Data.Models;
 public class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
-    public WorkInstructionService(ApplicationContext context)
+    private readonly IProductService _productService;
+    
+    // The following attributes define the current expected XLSX structure as of 3/28/2025
+    private const string INSTRUCTION_TITLE_CELL = "B1";
+    private const string VERSION_CELL = "D1";
+    private const string PRODUCT_NAME_CELL = "B2";
+    private const string QR_CODE_REQUIRED_CELL = "B1";
+    
+    // Using int values here since there is an indeterminate amount of steps per Work Instruction
+    private const int STEP_START_ROW = 7;
+    private const int STEP_START_COLUMN = 1;
+    private const int STEP_TITLE_COLUMN = 2;
+    private const int STEP_DESCRIPTION_COLUMN = 3;
+    private const int STEP_PARTS_LIST_COLUMN = 4;
+    private const int STEP_MEDIA_COLUMN = 5;
+    public WorkInstructionService(ApplicationContext context, IProductService productService)
     {
         _context = context;
+        _productService = productService;
+    }
+
+    public async Task<WorkInstruction?> ImportFromXlsx(List<IBrowserFile> files)
+    {
+        try
+        {
+            if (files == null || files.Count == 0)
+            {
+                Log.Warning("No files provided for import.");
+                return null;
+            }
+            
+            var file = files.First();
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream().CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            using var workbook = new XLWorkbook(memoryStream);
+            var worksheet = workbook.Worksheet(1);
+            
+            var versionString = worksheet.Cell(VERSION_CELL).GetString();
+            
+            var workInstruction = new WorkInstruction
+            {
+                Title = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString(),
+                Version = versionString,
+                Products = new List<Product>(),
+                Steps = new List<Step>()
+            };
+            
+            // Retrieve Product and assign relationship
+            var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
+            var product = await _productService.FindByTitleAsync(productString, versionString);
+
+            if (product == null)
+            {
+                Log.Information("Product not found. Cannot create Work Instruction");
+                return null;
+            }
+            
+            workInstruction.Products.Add(product);
+
+            // Start from row 7 (assuming header row is 6)
+            var stepStartRow = STEP_START_ROW;
+            while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
+            {
+                var step = new Step
+                {
+                    Name = worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN).GetString(),
+                    Content = new List<string>(),
+                    Body = worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN).GetString(),
+                    SubmitTime = DateTimeOffset.UtcNow,
+                    PartsNeeded = new List<Part>(),
+                };
+                
+                var pictures = worksheet.Pictures
+                    .Where(p => p.TopLeftCell.Address.RowNumber == stepStartRow 
+                                && p.TopLeftCell.Address.ColumnNumber == STEP_MEDIA_COLUMN)
+                    .ToList();
+                
+                foreach (var picture in pictures)
+                {
+                    // Convert picture to base64 string
+                    using var ms = new MemoryStream();
+                    await picture.ImageStream.CopyToAsync(ms);
+                    var base64String = Convert.ToBase64String(ms.ToArray());
+                    step.Content.Add($"data:image/png;base64,{base64String}");
+                }
+            
+                workInstruction.Steps.Add(step);
+                stepStartRow++;
+            }
+
+            if (await Create(workInstruction))
+            {
+                Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
+                return workInstruction;
+            }
+
+            return null;
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Failed to import WorkInstruction from uploaded Excel file");
+            return null;
+        }
     }
 
     public List<WorkInstruction> GetAll()
@@ -106,7 +212,7 @@ public class WorkInstructionService : IWorkInstructionService
         }
     }
 
-    public bool Create(WorkInstruction workInstruction)
+    public async Task<bool> Create(WorkInstruction workInstruction)
     {
         try
         {
@@ -119,8 +225,8 @@ public class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
-            _context.WorkInstructions.Add(workInstruction);
-            _context.SaveChanges();
+            await _context.WorkInstructions.AddAsync(workInstruction);
+            await _context.SaveChangesAsync();
             
             Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
