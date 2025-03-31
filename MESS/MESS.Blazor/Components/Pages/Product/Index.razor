@@ -1,9 +1,10 @@
 @page "/products"
+@attribute [Authorize(Roles = "Technician")]
 @using MESS.Data.Models
 @using MESS.Services.Product
+@using Microsoft.AspNetCore.Authorization
 @inject IProductService ProductService
 @inject NavigationManager NavigationManager
-
 
 <PageTitle>Product List</PageTitle>
 
@@ -29,36 +30,16 @@ else
         @foreach (var product in Products)
         {
             <tr>
-                <td>@product.Id</td>
-                <td>@product.Name</td>
+                <td>@product.Id </td>
+                <td>
+                    @product.Name
+                    <ProductDetails Product="product" />
+                </td>
                 <td>@product.Version</td>
                 <td>@(product.IsActive ? "Yes" : "No")</td>
                 <td>
                     <button class="btn btn-primary btn-sm" @onclick="() => EditProduct(product.Id)">Edit</button>
                     <button class="btn btn-danger btn-sm" @onclick="() => RemoveProduct(product.Id)">Delete</button>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="5">
-                    <details>
-                        <summary>View Work Instructions and Work Stations</summary>
-                        <div class="p-3">
-                            <h5>Work Instructions</h5>
-                            @if (product.WorkInstructions != null && product.WorkInstructions.Any())
-                            {
-                                <ul>
-                                    @foreach (var instruction in product.WorkInstructions)
-                                    {
-                                        <li>@instruction.Title</li>
-                                    }
-                                </ul>
-                            }
-                            else
-                            {
-                                <p>No work instructions available.</p>
-                            }
-                        </div>
-                    </details>
                 </td>
             </tr>
         }

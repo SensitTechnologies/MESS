@@ -46,5 +46,15 @@
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
     </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Components\Pages\Phoebe\WorkInstruction\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Remove="Components\Pages\Phoebe\WorkInstruction\WorkInstructionImport.razor" />
+      <Content Remove="Components\Pages\Product\WorkInstructionSelector.razor" />
+      <Content Remove="Components\Pages\Product\ProductDetails.razor" />
+    </ItemGroup>
 
 </Project>
