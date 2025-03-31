@@ -15,6 +15,7 @@ internal enum Status
 public partial class Create : ComponentBase, IAsyncDisposable
 {
     private string Title = "Add";
+    private bool IsLoading { get; set; } = true;
     private ConfirmationModal? popupRef;
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
@@ -38,6 +39,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private Func<ProductionLog, Task>? _autoSaveHandler;
     protected override async Task OnInitializedAsync()
     {
+        IsLoading = true;
         ProductionLogEventService.DisableAutoSave();
         await LoadProducts();
         await LoadWorkInstructions();
@@ -80,7 +82,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
         _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
 
-        
+        IsLoading = false;
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
