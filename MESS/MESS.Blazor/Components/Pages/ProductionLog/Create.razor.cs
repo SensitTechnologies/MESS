@@ -39,7 +39,24 @@ public partial class Create : ComponentBase, IAsyncDisposable
     protected override async Task OnInitializedAsync()
     {
         ProductionLogEventService.DisableAutoSave();
-        
+        await LoadProducts();
+        await LoadWorkInstructions();
+        await GetInProgressAsync();
+
+        var cachedForm = await LoadCachedForm();
+
+        // Create ProductionLog in database since we will need the ID for QR codes
+        if (cachedForm)
+        {
+            ProductionLogEventService.EnableAutoSave();
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            var id = await ProductionLogService.CreateAsync(ProductionLog);
+            ProductionLog.Id = id;
+            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        }
         // AutoSave Trigger
         _autoSaveHandler = async log =>
         {
@@ -51,48 +68,26 @@ public partial class Create : ComponentBase, IAsyncDisposable
             }));
         };
         
-
-
         var result = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = result.User.Identity?.Name;
         // This must come before the LoadCachedForm method since if it finds a cached form, it will set the status to InProgress
         WorkInstructionStatus = Status.NotStarted;
-        
-
-
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         ProductSerialNumber = SerializationService.CurrentProductNumber;
 
         SerializationService.CurrentSerialNumberLogChanged += HandleSerialNumberLogsChanged;
         SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
+        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
 
         
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
         if (firstRender)
         {
-            await LoadProducts();
-            await LoadWorkInstructions();
-            await GetInProgressAsync();
 
-            var cachedForm = await LoadCachedForm();
-
-            // Create ProductionLog in database since we will need the ID for QR codes
-            if (cachedForm)
-            {
-                ProductionLogEventService.EnableAutoSave();
-                await InvokeAsync(StateHasChanged);
-            }
-            else
-            {
-                var id = await ProductionLogService.CreateAsync(ProductionLog);
-                ProductionLog.Id = id;
-                await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
-            }
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
         }
