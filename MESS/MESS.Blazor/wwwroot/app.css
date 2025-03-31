@@ -8,9 +8,35 @@ html, body {
 }
 
 body.dark-mode{
-    background-color: #282828;
+    background-color: #121212;
     color: white;
     transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.light-mode .table,
+body.light-mode .table th,
+body.light-mode .table td {
+    background-color: #ffffff; 
+    color: #000000;
+    border: 1px solid #dee2e6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.light-mode .table.table-striped tbody tr {
+    background-color: #6e6e6e; 
+}
+
+body.dark-mode .table,
+body.dark-mode .table th,
+body.dark-mode .table td {
+    background-color: #1e1e1e; 
+    color: #ffffff; 
+    border: 1px solid #ffd502;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode .table.table-striped tbody tr {
+    background-color: #505050; 
 }
 
 .page {
@@ -28,29 +54,37 @@ a, .btn-link {
 }
 
 .btn-primary {
-    color: #fff;
-    background-color: #d6a100;
+    color: #020000;
+    background-color: #fffef8;
     border-color: #c37f00;
 }
 
 .btn {
-    background-color: #d6a100;
-    color: #ffffff;
-    border: 1px solid #ffffff;
+    background-color: #ffffff;
+    color: #020000;
+    border: 3px solid #ffd502;
+    margin: 5px;
 }
 .btn:hover {
     background-color: #ffffff;
     color: #d6a100;
 }
 
+.btn-checkbox {
+    color: #ffd502;
+    background-color: #020000;
+}
+
 .btn-warning {
-    color: white;
-    background-color: red;
+    color: red;
+    background-color: #020000;
+    border: 3px solid red;
 }
 
 .btn-success{
-    color: white;
-    background-color: green;
+    color: #4aff00;
+    background-color: #020000;
+    border: 3px solid #4aff00;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
@@ -183,9 +217,19 @@ h1:focus {
 }
 
 .darkmode {
-    position: absolute;
-    top: 10px; 
-    right: 10px; 
+    background-color: #1e1e1e;
+    outline: none;
+    color: #ffd502;
+    position: fixed;
+    right: 20px;
+}
+
+.darkmode .darkmode-button {
+    border: none;
+    outline: none;
+    background: none;
+    padding: 0;
+    color: inherit;
 }
 
 @media (max-width: 768px) {

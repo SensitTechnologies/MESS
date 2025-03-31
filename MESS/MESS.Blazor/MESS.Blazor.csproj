@@ -46,5 +46,5 @@
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
       <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
     </ItemGroup>
-
+    
 </Project>

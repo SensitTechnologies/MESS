@@ -1,5 +1,18 @@
-﻿<h3>DarkModeButton</h3>
+﻿@inject IJSRuntime JS
+@inherits LayoutComponentBase
+
+<div class="btn btn-outline-secondary text-decoration-none darkmode">
+    <button class="darkmode-button" @onclick="ToggleDarkMode">
+        <span>Theme Toggle</span>
+    </button>
+</div>
+
 
 @code {
-    
+    private bool isDarkMode = false;
+
+    private async Task ToggleDarkMode() {
+        isDarkMode = !isDarkMode;
+        await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
+    }
 }
