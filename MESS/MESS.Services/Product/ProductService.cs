@@ -48,7 +48,38 @@ public class ProductService : IProductService
             return null;
         }
     }
+
     
+    public async Task<Product?> FindByTitleAsync(string title, string? version)
+    {
+        try
+        {
+            Product? product;
+            if (version != null)
+            {
+                product = await _context.Products
+                    .Include(p => p.WorkInstructions)
+                    .FirstOrDefaultAsync(p => p.Name == title && p.Version == version);
+            }
+            else
+            {
+                product = await _context.Products
+                    .Include(p => p.WorkInstructions)
+                    .FirstOrDefaultAsync(p => p.Name == title);
+            }
+
+            
+            Log.Information("Product found. Title: {ProductTitle}", product?.Name);
+            
+            return product;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Unable to find product for Title. Title: {InputTitle}", title);
+            return null;
+        }
+    }
+
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
         try

@@ -1,5 +1,7 @@
 @page "/products/create"
 @page "/products/edit/{ProductId:int}"
+@attribute [Authorize(Roles = "Technician")]
+@using Microsoft.AspNetCore.Authorization
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using Serilog
@@ -33,7 +35,12 @@
                 <InputCheckbox id="isActive" @bind-Value="Product.IsActive" class="form-check-input" />
                 <label for="isActive" class="form-check-label">Active</label>
             </div>
-
+            <div class="mb-3">
+                @if (_componentsReady)
+                {
+                    <WorkInstructionSelector @bind-SelectedInstructions="Product.WorkInstructions" />
+                }
+            </div>
             <button type="submit" class="btn btn-primary">@(IsEditMode ? "Save Changes" : "Create")</button>
         </EditForm>
     </div>
@@ -48,6 +55,8 @@
     public int? ProductId { get; set; }
 
     private bool IsEditMode => ProductId.HasValue;
+    private bool _componentsReady;
+    
     private Product Product { get; set; } = new()
     {
         Name = ""
@@ -70,8 +79,11 @@
                     // Handle case where product does not exist (e.g., navigate back)
                     NavigationManager.NavigateTo("/products");
                 }
+                
+                _componentsReady = true;
             }
         }
+        
     }
 
     private async Task SaveProduct()
