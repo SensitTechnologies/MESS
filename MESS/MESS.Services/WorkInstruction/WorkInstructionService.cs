@@ -5,6 +5,7 @@ using MESS.Data.Context;
 using MESS.Data.DTO;
 using MESS.Services.Product;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
@@ -16,7 +17,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     private readonly ApplicationContext _context;
     private readonly IProductService _productService;
     private readonly IMemoryCache _cache;
-    
+    private readonly IWebHostEnvironment _webHostEnvironment;
+
     // The following attributes define the current expected XLSX structure as of 3/28/2025
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
@@ -30,11 +32,12 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const int STEP_DESCRIPTION_COLUMN = 3;
     private const int STEP_PARTS_LIST_COLUMN = 4;
     private const int STEP_MEDIA_COLUMN = 5;
-    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache)
+    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment)
     {
         _context = context;
         _productService = productService;
         _cache = cache;
+        _webHostEnvironment = webHostEnvironment;
     }
 
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
@@ -97,11 +100,18 @@ public partial class WorkInstructionService : IWorkInstructionService
                 
                 foreach (var picture in pictures)
                 {
-                    // Convert picture to base64 string
-                    using var ms = new MemoryStream();
-                    await picture.ImageStream.CopyToAsync(ms);
-                    var base64String = Convert.ToBase64String(ms.ToArray());
-                    step.Content.Add($"data:image/png;base64,{base64String}");
+                    var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+
+                    var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionImages", fileName);
+
+                    using (var ms = new MemoryStream())
+                    {
+                        await picture.ImageStream.CopyToAsync(ms);
+                        var imageBytes = ms.ToArray();
+                        await File.WriteAllBytesAsync(imagePath, imageBytes);
+                    }
+                    
+                    step.Content.Add(Path.Combine("WorkInstructionImages", fileName));
                 }
             
                 workInstruction.Steps.Add(step);
