@@ -103,7 +103,13 @@ public partial class WorkInstructionService : IWorkInstructionService
                     var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
 
                     var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionImages", fileName);
-
+                    
+                    // Verify that directory exists. If not create it.
+                    if (!Directory.Exists(imagePath))
+                    {
+                        Directory.CreateDirectory(imagePath);
+                    }
+                    
                     using (var ms = new MemoryStream())
                     {
                         await picture.ImageStream.CopyToAsync(ms);
