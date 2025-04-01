@@ -89,9 +89,9 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 var step = new Step
                 {
-                    Name = worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN).GetString(),
+                    Name = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN)),
                     Content = new List<string>(),
-                    Body = worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN).GetString(),
+                    Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN)),
                     SubmitTime = DateTimeOffset.UtcNow,
                     PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
                 };
@@ -183,6 +183,17 @@ public partial class WorkInstructionService : IWorkInstructionService
             errorResult.ImportError = error;
             return errorResult;
         }
+    }
+
+    private string GetRichTextFromCell(IXLCell cell)
+    {
+        if (!cell.HasRichText)
+        {
+            return cell.GetString();
+        }
+
+        var formatted = cell.GetFormattedString();
+        return formatted ?? "";
     }
 
     // Expected string format is as follows:

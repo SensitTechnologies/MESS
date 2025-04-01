@@ -3,12 +3,12 @@
 @inject AuthenticationStateProvider AuthProvider
 
 <AuthorizeView Roles="Technician">
-    <div>
+    <div class="container justify-content-between">
         <nav>
-            <NavLink href="/workinstructionimport" Match="NavLinkMatch.All">
-                Work Instructions
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="/workinstructionimport" Match="NavLinkMatch.All">
+                Import Work Instructions
             </NavLink>
-            <NavLink href="/users" Match="NavLinkMatch.All">
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="/users" Match="NavLinkMatch.All">
                 Users
             </NavLink>
         </nav>
