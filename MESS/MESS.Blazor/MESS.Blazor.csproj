@@ -69,7 +69,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ClosedXML" Version="0.104.2" />
         <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
     </ItemGroup>

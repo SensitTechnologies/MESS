@@ -17,16 +17,6 @@ public interface IProductService
     /// <param name="id">The ID of the product to find.</param>
     /// <returns>The product if found; otherwise, null.</returns>
     Task<Product?> FindProductByIdAsync(int id);
-    /// <summary>
-    /// Finds the 1st product with the given title.
-    /// If given a version string it will find the first Product that has the
-    /// given Title & Version match.
-    ///
-    /// Includes related WorkInstructions and WorkStations.
-    /// </summary>
-    /// <param name="id">The ID of the product to find.</param>
-    /// <returns>The product if found; otherwise, null.</returns>
-    Task<Product?> FindByTitleAsync(string title, string? version);
     
     /// <summary>
     /// Finds the 1st product with the given title.
