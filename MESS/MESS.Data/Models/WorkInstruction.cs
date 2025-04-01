@@ -8,8 +8,7 @@ public class WorkInstruction : AuditableEntity
     public int Id { get; set; }
     public required string Title { get; set; }
     public string? Version { get; set; }
-    [ForeignKey("UserId")]
-    public string? OperatorId { get; set; }
+    public bool IsActive { get; set; }
     public required List<Step> Steps { get; set; }
 
     public List<Product> Products { get; set; } = [];
