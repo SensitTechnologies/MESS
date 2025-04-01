@@ -240,7 +240,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         try
         {
-            var workInstructionsList = await WorkInstructionService.GetAllAsync();
+            var workInstructionsList = await WorkInstructionService.GetAllActiveAsync();
             WorkInstructions = workInstructionsList.ToList();
         }
         catch (Exception e)

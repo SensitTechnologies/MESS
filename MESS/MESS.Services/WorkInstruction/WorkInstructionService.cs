@@ -318,13 +318,13 @@ public partial class WorkInstructionService : IWorkInstructionService
 
     public async Task<List<WorkInstruction>> GetAllAsync()
     {
-        const string cacheKey = "AllWorkInstructions";
-        
-        if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
-            cachedWorkInstructionList != null)
-        {
-            return cachedWorkInstructionList;
-        }
+        // const string cacheKey = "AllWorkInstructions";
+        //
+        // if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
+        //     cachedWorkInstructionList != null)
+        // {
+        //     return cachedWorkInstructionList;
+        // }
         
         try
         {
@@ -334,7 +334,37 @@ public partial class WorkInstructionService : IWorkInstructionService
                 .ToListAsync();
 
             // Cache data for 15 minutes
-            _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
+            // _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
+
+            return workInstructions;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
+            throw;
+        }
+    }
+
+    public async Task<List<WorkInstruction>> GetAllActiveAsync()
+    {
+        // const string cacheKey = "AllWorkInstructions";
+        //
+        // if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
+        //     cachedWorkInstructionList != null)
+        // {
+        //     return cachedWorkInstructionList;
+        // }
+        
+        try
+        {
+            var workInstructions = await _context.WorkInstructions
+                .Include(w => w.Steps)
+                .ThenInclude(w => w.PartsNeeded)
+                .Where(w => w.IsActive == true)
+                .ToListAsync();
+
+            // Cache data for 15 minutes
+            // _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
 
             return workInstructions;
         }
@@ -415,6 +445,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
+            workInstruction.IsActive = true;
             await _context.WorkInstructions.AddAsync(workInstruction);
             await _context.SaveChangesAsync();
             
@@ -441,7 +472,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
-            _context.WorkInstructions.Remove(workInstruction);
+            workInstruction.IsActive = false;
             await _context.SaveChangesAsync();
             
             Log.Information("Successfully deleted WorkInstruction with ID: {workInstructionID}", workInstruction.Id);

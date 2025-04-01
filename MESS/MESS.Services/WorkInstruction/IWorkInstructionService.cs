@@ -18,6 +18,11 @@ public interface IWorkInstructionService
     /// <returns>List of WorkInstruction objects</returns>
     public Task<List<WorkInstruction>> GetAllAsync();
     /// <summary>
+    /// Retrieves a List of currently active WorkInstruction objects asynchronously
+    /// </summary>
+    /// <returns>List of WorkInstruction objects</returns>
+    public Task<List<WorkInstruction>> GetAllActiveAsync();
+    /// <summary>
     /// Retrieves a WorkInstruction by its title.
     /// </summary>
     /// <param name="title">The title of the WorkInstruction to retrieve.</param>
