@@ -7,12 +7,15 @@
 @inject ILocalCacheManager LocalCacheManager
 @inject IProductionLogEventService ProductionLogEventService
 @inject ISerializationService SerializationService
-@attribute [StreamRendering]
+@attribute [StreamRendering(false)]
 
 <li class="container list-group-item mb-2" role="group">
     <div class="row">
-        <div class="col">
-            <span>@step.Name</span>
+        <div class="col col-md-3 col-sm-12 col-3">
+            <p class="d-block mb-1">@step.Name</p>
+        </div>
+        <div class="col col-5 col-md-5 col-sm-12">
+            <p>@step.Body</p>
         </div>
 
         <div class="col container">
@@ -24,17 +27,17 @@
                            @onclick="@(async (e) => await HandleButtonPress(false))"
                            class="btn-check"
                            name="radioBtn{@step.Name}"
-                           id="radioFailureBtn{@step.Name}"/>
-                    <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}">Failure</label>
+                           id="radioFailureBtn{@step.Name}-@step.Id"/>
+                    <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}-@step.Id">Failure</label>
 
                     <input type="radio"
                            checked="@(logStep.Success)"
                            autocomplete="off"
                            class="btn-check"
                            name="radioBtn{@step.Name}"
-                           id="radioSuccessBtn{@step.Name}"
+                           id="radioSuccessBtn{@step.Name}-@step.Id"
                            @onclick="@(async (e) => await HandleButtonPress(true))"/>
-                    <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}">Success</label>
+                    <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}-@step.Id">Success</label>
                 </div>
                 @if (logStep != null)
                 {
@@ -50,11 +53,17 @@
         </div>
     </div>
     <div>
-        @if (step is { PartsNeeded.Count: > 0 })
+        @if (step is { PartsNeeded.Count: > 0 } && _initialized)
         {
             <RequiredPartsList _serialNumberLogs="_serialNumberLogs" AfterSerialNumberInput="@AfterSerialNumberInput" />
         }
     </div>
+    @if (step.Content is {Count: > 0})
+    {
+    <div class="col col-5 col-md-5 col-sm-12 container">
+        <img src="@step.Content?.FirstOrDefault()" alt="Step Image" />
+    </div>
+    }
 </li>
 
 @code {
@@ -69,7 +78,8 @@
     public string? ProductSerialNumber { get; set; }
 
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
-    
+    private bool _initialized = false;
+
     protected override void OnInitialized()
     {
         if (!logStep.Success.HasValue)
@@ -84,25 +94,38 @@
         }
         
         SetOptionalNotes();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            _initialized = true;
+            StateHasChanged();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
         InitializeSerialNumberLogs();
     }
-    
+
+
     /// Each part gets its own serial number log
     private void InitializeSerialNumberLogs()
     {
-        _serialNumberLogs.Clear();
-
-        if (step.PartsNeeded == null)
+        if (_serialNumberLogs.Count == 0 && step?.PartsNeeded != null)
         {
-            return;
-        }
-        
-        foreach (var part in step.PartsNeeded)
-        {
-            _serialNumberLogs.Add(new SerialNumberLog
+            foreach (var part in step.PartsNeeded)
             {
-                Part = part
-            });
+                _serialNumberLogs.Add(new SerialNumberLog
+                {
+                    Part = part
+                });
+            }
         }
     }
 

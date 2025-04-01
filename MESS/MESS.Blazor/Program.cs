@@ -20,7 +20,13 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
     
-    options.UseSqlServer(connectionString);
+    options.UseSqlServer(connectionString, options =>
+    {
+        options.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    });
 
 });
 
@@ -29,8 +35,13 @@ builder.Services.AddDbContext<UserContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
     
-    options.UseSqlServer(connectionString);
-
+    options.UseSqlServer(connectionString, options =>
+    {
+        options.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    });
 });
 
 builder.Services.AddAuthorization();
@@ -125,7 +136,6 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.UseStaticFiles();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

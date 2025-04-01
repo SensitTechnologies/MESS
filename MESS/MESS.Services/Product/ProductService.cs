@@ -49,6 +49,37 @@ public class ProductService : IProductService
         }
     }
     
+    public async Task<Product?> FindByTitleAsync(string title, string? version)
+    {
+        try
+        {
+            var productListWithMatchingTitle = await _context.Products
+                .Where(p => p.Name == title)
+                .ToListAsync();
+            
+            Product? product;
+            if (version != null)
+            {
+                // Attempt to find a product with matching title & version
+                // If product with version does not exist return first
+                product = productListWithMatchingTitle.Find(p => p.Version == version) ?? productListWithMatchingTitle.FirstOrDefault();
+            }
+            else
+            {
+                product = productListWithMatchingTitle.FirstOrDefault();
+            }
+            
+            Log.Information("Product found. Title: {ProductTitle}", product?.Name);
+            
+            return product;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Unable to find product for Title. Title: {InputTitle}", title);
+            return null;
+        }
+    }
+    
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
         try
