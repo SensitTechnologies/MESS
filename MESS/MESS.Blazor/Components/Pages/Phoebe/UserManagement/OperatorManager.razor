@@ -13,7 +13,7 @@
 
 <div class="container justify-content-center">
     <h1>
-        Users
+        Operators
     </h1>
     @* <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button> *@
     @if (AlertMessage?.Length > 0)
@@ -28,14 +28,14 @@
             <thead>
             <tr>
                 <th scope="col">
-                    #
+                    # 
                 </th>
                 <th scope="col">Email</th>
                 <th scope="col">User Name</th>
                 <th scope="col">First Name</th>
                 <th scope="col">Last Name</th>
-                <th scope="col">Role</th>
-                <th scope="col">Actions</th>
+                <th scope="col">Manage Roles</th>
+                <th scope="col">User Actions</th>
             </tr>
             </thead>
             <tbody>
@@ -51,8 +51,8 @@
         
     </div>
     <div>
-        <button type="button" @onclick="CreateNewUser">
-            Create New User
+        <button type="button" class="btn btn-success" @onclick="CreateNewUser">
+            New User
         </button>
     </div>
 </div>

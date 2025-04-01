@@ -1,6 +1,11 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime JS
+
+<HeadContent>
+    <script src="darkmode.js"></script>
+</HeadContent>
 
 <div class="page">
     <main>
@@ -19,6 +24,7 @@
                     <span>Phoebe</span>
                 </NavLink>
             </AuthorizeView>
+            <DarkModeButton></DarkModeButton>
         </div>
         
         <article class="content px-4 mx-auto">
@@ -32,3 +38,8 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code
+{
+
+}

@@ -22,18 +22,18 @@
         <td>
             <div class="btn-group" role="group">
                 <input type="checkbox" checked="@IsOperator" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
-                <label class="btn btn-outline-primary" for="operator@(User.Id)">Operator</label>
+                <label class="btn btn-checkbox" for="operator@(User.Id)">Operator</label>
 
                 <input type="checkbox" checked="@IsTechnician" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
-                <label class="btn btn-outline-primary" for="technician@(User.Id)">Technician</label>
+                <label class="btn btn-checkbox" for="technician@(User.Id)">Technician</label>
 
                 <input type="checkbox" checked="@IsAdmin" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
-                <label class="btn btn-outline-primary" for="administrator@(User.Id)">Administrator</label>
+                <label class="btn btn-checkbox" for="administrator@(User.Id)">Administrator</label>
             </div>
         </td>
         <td>
             <button type="button"
-                    class="btn @(IsLockedOut ? "btn-danger" : "btn-outline-secondary")"
+                    class="btn @(IsLockedOut ? "btn-success" : "btn-warning")"
                     @onclick="ToggleLockoutAsync">
                 @(IsLockedOut ? "Unlock" : "Lock") User
             </button>
@@ -48,7 +48,7 @@
             else
             {
             <button type="button"
-                    class="btn btn-danger"
+                    class="btn btn-warning"
                     @onclick="() => InitiateDeleteUser(User.Id)">
                 Delete
             </button>
@@ -56,6 +56,7 @@
             <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(User)">
                 Save Changes
             </button>
+
         </td>
     </tr>
 }
