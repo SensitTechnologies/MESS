@@ -9,12 +9,12 @@
 @inject ISerializationService SerializationService
 @attribute [StreamRendering(false)]
 
-<li class="container list-group-item mb-2" role="group">
+<li class="container list-group-item mb-2 border border-1 p-2" role="group">
     <div class="row">
         <div class="col col-md-3 col-sm-12 col-3">
             <p class="d-block mb-1">@((MarkupString)step.Name)</p>
         </div>
-        <div class="col col-5 col-md-5 col-sm-12">
+        <div class="col">
             @if (step.Body != null)
             {
                 <p>@((MarkupString)step.Body)</p>
@@ -42,7 +42,6 @@
         <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}-@step.Id">Success</label>
     </div>
         </div>
-        </li>
                 @if (logStep != null)
                 {
 
@@ -65,6 +64,7 @@
         <img src="@step.Content?.FirstOrDefault()" alt="Step Image" />
     </div>
     }
+</li>
 
 @code {
     [Parameter]
