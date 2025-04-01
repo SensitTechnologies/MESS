@@ -12,7 +12,7 @@
         </div>
     }
     
-    <ol class="list-group container">
+    <ol class="step">
         @foreach (var step in ActiveWorkInstruction.Steps)
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
@@ -28,7 +28,7 @@
                 ProductionLog.LogSteps.Add(logStep);
             }
             
-            <ProductionLogRadioButton ProductSerialNumber="@ProductSerialNumber" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted" />
+                <ProductionLogRadioButton ProductSerialNumber="@ProductSerialNumber" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted"/>
         }
     </ol>
 }
@@ -43,7 +43,7 @@
     private string? ProductSerialNumber { get; set; }
 
     private string? SelectedButton { get; set; } = "";
-    
+
     private void SetSelectedButton(string buttonName)
     {
         if (SelectedButton == buttonName)
@@ -60,17 +60,17 @@
     {
         SelectedButton = null;
     }
-    
+
     private string GetButtonClass(string buttonName)
     {
         string baseClass = "btn";
 
         if (buttonName == "Clear")
         {
-            return string.IsNullOrEmpty(SelectedButton) ? $"{baseClass} btn-secondary" : $"{baseClass} btn-danger";
+            return string.IsNullOrEmpty(SelectedButton) ? $"{baseClass} btn-secondary" : $"{baseClass} btn-warning";
         }
 
-        return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-secondary";
+        return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
     }
 
     private void UpdateSerializationService()
