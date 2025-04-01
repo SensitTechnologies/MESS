@@ -54,20 +54,21 @@ public class ProductService : IProductService
     {
         try
         {
+            var productListWithMatchingTitle = await _context.Products
+                .Where(p => p.Name == title)
+                .ToListAsync();
+            
             Product? product;
             if (version != null)
             {
-                product = await _context.Products
-                    .Include(p => p.WorkInstructions)
-                    .FirstOrDefaultAsync(p => p.Name == title && p.Version == version);
+                // Attempt to find a product with matching title & version
+                // If product with version does not exist return first
+                product = productListWithMatchingTitle.Find(p => p.Version == version) ?? productListWithMatchingTitle.FirstOrDefault();
             }
             else
             {
-                product = await _context.Products
-                    .Include(p => p.WorkInstructions)
-                    .FirstOrDefaultAsync(p => p.Name == title);
+                product = productListWithMatchingTitle.FirstOrDefault();
             }
-
             
             Log.Information("Product found. Title: {ProductTitle}", product?.Name);
             

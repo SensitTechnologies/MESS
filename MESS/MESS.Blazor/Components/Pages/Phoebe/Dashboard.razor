@@ -2,9 +2,18 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthProvider
 
-<NavLink class="btn btn-outline-secondary text-decoration-none" href="users" Match="NavLinkMatch.All">
-    <span>Operator Management</span>
-</NavLink>
+<AuthorizeView Roles="Technician">
+    <div class="container justify-content-between">
+        <nav>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="/workinstructionimport" Match="NavLinkMatch.All">
+                Import Work Instructions
+            </NavLink>
+            <NavLink class="btn btn-outline-secondary text-decoration-none" href="/users" Match="NavLinkMatch.All">
+                Users
+            </NavLink>
+        </nav>
+    </div>
+</AuthorizeView>
 
 @code {
     

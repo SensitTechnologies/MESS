@@ -1,18 +1,27 @@
 using System.Reflection;
 using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using MESS.Data.Context;
+using MESS.Data.DTO;
 using MESS.Services.Product;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Serilog;
+using System.Drawing;
+using System.Net;
+using System.Text;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
-public class WorkInstructionService : IWorkInstructionService
+public partial class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
     private readonly IProductService _productService;
-    
+    private readonly IMemoryCache _cache;
+    private readonly IWebHostEnvironment _webHostEnvironment;
+
     // The following attributes define the current expected XLSX structure as of 3/28/2025
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
@@ -26,20 +35,24 @@ public class WorkInstructionService : IWorkInstructionService
     private const int STEP_DESCRIPTION_COLUMN = 3;
     private const int STEP_PARTS_LIST_COLUMN = 4;
     private const int STEP_MEDIA_COLUMN = 5;
-    public WorkInstructionService(ApplicationContext context, IProductService productService)
+
+    private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
+    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment)
     {
         _context = context;
         _productService = productService;
+        _cache = cache;
+        _webHostEnvironment = webHostEnvironment;
     }
 
-    public async Task<WorkInstruction?> ImportFromXlsx(List<IBrowserFile> files)
+    public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
         {
             if (files == null || files.Count == 0)
             {
                 Log.Warning("No files provided for import.");
-                return null;
+                return WorkInstructionImportResult.NoFilesProvided();
             }
             
             var file = files.First();
@@ -67,7 +80,7 @@ public class WorkInstructionService : IWorkInstructionService
             if (product == null)
             {
                 Log.Information("Product not found. Cannot create Work Instruction");
-                return null;
+                return WorkInstructionImportResult.NoProductFound(files.First().Name, productString);
             }
             
             workInstruction.Products.Add(product);
@@ -78,11 +91,11 @@ public class WorkInstructionService : IWorkInstructionService
             {
                 var step = new Step
                 {
-                    Name = worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN).GetString(),
+                    Name = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN)),
                     Content = new List<string>(),
-                    Body = worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN).GetString(),
+                    Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN)),
                     SubmitTime = DateTimeOffset.UtcNow,
-                    PartsNeeded = new List<Part>(),
+                    PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
                 };
                 
                 var pictures = worksheet.Pictures
@@ -92,28 +105,195 @@ public class WorkInstructionService : IWorkInstructionService
                 
                 foreach (var picture in pictures)
                 {
-                    // Convert picture to base64 string
-                    using var ms = new MemoryStream();
-                    await picture.ImageStream.CopyToAsync(ms);
-                    var base64String = Convert.ToBase64String(ms.ToArray());
-                    step.Content.Add($"data:image/png;base64,{base64String}");
+                    var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+
+                    var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+                    var imagePath = Path.Combine(imageDir, fileName);
+                    
+                    // Verify that directory exists. If not create it.
+                    if (!Directory.Exists(imageDir))
+                    {
+                        Directory.CreateDirectory(imageDir);
+                    }
+                    
+                    using (var ms = new MemoryStream())
+                    {
+                        await picture.ImageStream.CopyToAsync(ms);
+                        var imageBytes = ms.ToArray();
+                        await File.WriteAllBytesAsync(imagePath, imageBytes);
+                    }
+                    
+                    step.Content.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
                 }
             
                 workInstruction.Steps.Add(step);
                 stepStartRow++;
             }
+            
+            var fileNames = files.Select(browserFile => browserFile.Name).ToList();
 
             if (await Create(workInstruction))
             {
                 Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
-                return workInstruction;
+                return WorkInstructionImportResult.Success(fileNames, workInstruction);
             }
 
-            return null;
+            return WorkInstructionImportResult.Failure(fileNames);
         }
         catch (Exception e)
         {
             Log.Error(e, "Failed to import WorkInstruction from uploaded Excel file");
+            var fileNames = files.Select(f => f.Name).ToList();
+            var errorResult = WorkInstructionImportResult.Failure(fileNames);
+
+            var error = new ImportError
+            {
+                File = fileNames.Count > 0 ? fileNames.First() : "Unknown",
+                Message = e.Message,
+                ErrorType = e.GetType().Name
+            };
+
+            switch (e)
+            {
+                case IOException or UnauthorizedAccessException:
+                    error.ErrorType = "File Access Error";
+                    error.Message = $"Could not access file: {e.Message}";
+                    break;
+                case ArgumentException or FormatException:
+                    error.ErrorType = "Excel Format Error";
+                    error.Message = $"Invalid format in Excel file: {e.Message}";
+                    break;
+                case IndexOutOfRangeException:
+                    error.ErrorType = "Excel Structure Error";
+                    error.Message = "Could not find expected worksheet or cell references";
+                    break;
+                case NullReferenceException:
+                    error.ErrorType = "Missing Data";
+                    error.Message = "Required data is missing from the Excel file";
+                    break;
+                case DbUpdateException:
+                    error.ErrorType = "Database Error";
+                    error.Message = "Failed to save work instruction to database";
+                    break;
+                case InvalidOperationException:
+                    error.ErrorType = "Processing Error";
+                    error.Message = "Failed to process file data";
+                    break;
+            }
+
+            errorResult.ImportError = error;
+            return errorResult;
+        }
+    }
+
+    private string GetRichTextFromCell(IXLCell cell)
+    {
+        if (!cell.HasRichText)
+        {
+            return cell.GetString();
+        }
+
+        var sb = new StringBuilder();
+        sb.Append("<div>");
+
+        foreach (var richText in cell.GetRichText())
+        {
+            var styles = new List<string>();
+
+            if (richText.Bold) styles.Add("font-weight: bold");
+            if (richText.Italic) styles.Add("font-style: italic");
+            // if (richText.Underlined) styles.Add("text-decoration: underline");
+            // if (richText.Strike) styles.Add("text-decoration: line-through");
+            if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+            if (richText.FontColor != XLColor.NoColor) styles.Add($"color: {richText.FontColor}");
+
+            var text = WebUtility.HtmlEncode(richText.Text);
+        
+            if (styles.Any())
+            {
+                sb.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+            }
+            else
+            {
+                sb.Append(text);
+            }
+        }
+
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // Expected string format is as follows:
+    // (PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), ...
+    private async Task<List<Part>?> GetPartsListFromString(string partsListString)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(partsListString))
+            {
+                return null;
+            }
+
+            var parts = new List<Part>();
+            var regexFilter = PartsListRegex();
+            var partStringMatches = regexFilter.Matches(partsListString);
+
+            foreach (System.Text.RegularExpressions.Match match in partStringMatches)
+            {
+                if (match.Groups.Count >= 3)
+                {
+                    var partToAdd = new Part
+                    {
+                        PartName = match.Groups[1].Value.Trim(),
+                        PartNumber = match.Groups[2].Value.Trim()
+                    };
+
+                    // This will always retrieve a persisted part in the database,
+                    // whether it retrieves an existing Part or creates a new one
+                    var persistedPart = await GetOrAddPart(partToAdd);
+
+                    if (persistedPart != null)
+                    {
+                        parts.Add(persistedPart);
+                    }
+                    else
+                    {
+                        Log.Warning("Unable to find or create Part when attempting to import a XLSX file. Parts List: {PartsList}", partsListString);
+                    }
+                }
+            }
+
+            return parts.Count > 0 ? parts : null;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception Caught when attempting to use a Regex pattern on a Parts List on Work Instruction Import. Message: {Message}", e.Message);
+            return null;
+        }
+    }
+
+    private async Task<Part?> GetOrAddPart(Part partToAdd)
+    {
+        try
+        {
+            var part = await _context.Parts.FirstOrDefaultAsync(p =>
+                p.PartName == partToAdd.PartName &&
+                p.PartNumber == partToAdd.PartNumber);
+
+            // If a part does not exist in the database create it here
+            // and return with database generated ID
+            if (part != null)
+            {
+                return part;
+            }
+            
+            await _context.Parts.AddAsync(partToAdd);
+            return await _context.Parts.FindAsync(partToAdd);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
             return null;
         }
     }
@@ -136,20 +316,30 @@ public class WorkInstructionService : IWorkInstructionService
         }
     }
 
-    public Task<List<WorkInstruction>> GetAllAsync()
+    public async Task<List<WorkInstruction>> GetAllAsync()
     {
+        const string cacheKey = "AllWorkInstructions";
+        
+        if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
+            cachedWorkInstructionList != null)
+        {
+            return cachedWorkInstructionList;
+        }
+        
         try
         {
-            var workInstructions = _context.WorkInstructions
+            var workInstructions = await _context.WorkInstructions
                 .Include(w => w.Steps)
                 .ThenInclude(w => w.PartsNeeded)
                 .ToListAsync();
+
+            // Cache data for 15 minutes
+            _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
 
             return workInstructions;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
             throw;
         }
@@ -296,4 +486,7 @@ public class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
+    private static partial System.Text.RegularExpressions.Regex PartsListRegex();
 }

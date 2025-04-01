@@ -9,6 +9,9 @@
 # log files
 /Logs
 
+# image files
+MESS.Blazor/wwwroot/WorkInstructionImages
+
 # User-specific files
 *.rsuser
 *.suo

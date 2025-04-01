@@ -22,6 +22,17 @@ public class ApplicationContext : DbContext
     public virtual DbSet<Problem> Problems { get; set; } = null!;
     public virtual DbSet<Part> Parts { get; set; } = null!;
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ProductionLog>()
+            .HasOne(p => p.WorkInstruction)
+            .WithMany()
+            .HasForeignKey("WorkInstructionId")
+            .IsRequired(false);
+    }
+
     public override int SaveChanges()
     {
         UpdateAuditFields();

@@ -1,0 +1,34 @@
+@page "/WorkInstructionManager"
+@using MESS.Data.DTO
+@using MESS.Data.Models
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+
+<div class="container">
+    <div>
+        <ul>
+            @foreach (var instruction in WorkInstructions)
+            {
+                <li value="@instruction.Id">
+                    @instruction.Title, @instruction.Version
+                    <button @onclick="async () => await Delete(instruction.Id)">Delete</button>
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    private List<WorkInstruction> WorkInstructions { get; set; } = [];
+    
+    protected override async Task OnInitializedAsync()
+    {
+        WorkInstructions = await WorkInstructionService.GetAllAsync();
+    }
+
+    private async Task Delete(int id)
+    {
+        await WorkInstructionService.DeleteByIdAsync(id);
+    }
+
+}

@@ -20,6 +20,7 @@
 @inject ISerializationService SerializationService
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
+@attribute [StreamRendering(false)]
 
 <PageTitle>@Title</PageTitle>
 <ErrorBoundary>
@@ -37,41 +38,50 @@
                     <ValidationSummary/>
                     <ConfirmationModal @ref="popupRef" OnSubmit="HandleConfirmation"/>
 
-                    <div class="mb-3">
-                        <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
-                            <CreateHeader
-                                WorkInstructions="@ActiveProduct?.WorkInstructions" OnWorkInstructionSelected="@SetActiveWorkInstruction"
-                                ActiveLineOperator="@ActiveLineOperator"
-                                Products="@Products" OnProductSelected="@SetActiveProduct"/>
-                            <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
-                                <div class="">
-                                    <p class="mb-0">
-                                        @if (@ProductionLogEventService.IsSaved)
-                                        {
-                                            <span class="badge text-bg-success p-2">Saved</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge text-bg-danger p-2">Unsaved</span>
-                                        }
-                                    </p>
+                    @if (!IsLoading)
+                    {
+                        <div class="mb-3">
+                            <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
+                                <CreateHeader
+                                    WorkInstructions="@ActiveProduct?.WorkInstructions" OnWorkInstructionSelected="@SetActiveWorkInstruction"
+                                    ActiveLineOperator="@ActiveLineOperator"
+                                    Products="@Products" OnProductSelected="@SetActiveProduct"/>
+                                <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
+                                    <div class="">
+                                        <p class="mb-0">
+                                            @if (@ProductionLogEventService.IsSaved)
+                                            {
+                                                <span class="badge text-bg-success p-2">Saved</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge text-bg-danger p-2">Unsaved</span>
+                                            }
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
+
+                            @if (ActiveWorkInstruction != null && ActiveProduct != null)
+                            {
+                                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
+                            }
+
                         </div>
+                        <div class="d-flex justify-content-center mt-4 gap-4">
 
-                        @if (ActiveWorkInstruction != null && ActiveProduct != null)
-                        {
-                            <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
-                        }
+                            <div class="mb-4">
+                                <button type="submit" class="btn btn-primary">Submit Log</button>
+                            </div>
 
-                    </div>
-                    <div class="d-flex justify-content-center mt-4 gap-4">
-
-                        <div class="mb-4">
-                            <button type="submit" class="btn btn-primary">Submit Log</button>
                         </div>
-
-                    </div>
+                    }
+                    else
+                    {
+                        <div class="container">
+                            Loading...
+                        </div>
+                    }
                 </EditForm>
             </ChildContent>
         </AuthorizeView>
