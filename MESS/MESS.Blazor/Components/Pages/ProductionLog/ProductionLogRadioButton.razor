@@ -20,28 +20,29 @@
                 <p>@((MarkupString)step.Body)</p>
             }
         </div>
+    </div>
+        <div class="row mt-3">
+    <div class="col text-left">
+        <input type="radio"
+               checked="@(!logStep.Success)"
+               autocomplete="off"
+               @onclick="@(async (e) => await HandleButtonPress(false))"
+               class="btn-check"
+               name="radioBtn{@step.Name}"
+               id="radioFailureBtn{@step.Name}-@step.Id"/>
+        <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}-@step.Id">Failure</label>
 
-        <div class="col container">
-            <div class="d-flex align-items-center">
-                <div class="d-inline-flex align-items-center gap-4">
-                    <input type="radio"
-                           checked="@(!logStep.Success)"
-                           autocomplete="off"
-                           @onclick="@(async (e) => await HandleButtonPress(false))"
-                           class="btn-check"
-                           name="radioBtn{@step.Name}"
-                           id="radioFailureBtn{@step.Name}-@step.Id"/>
-                    <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@step.Name}-@step.Id">Failure</label>
-
-                    <input type="radio"
-                           checked="@(logStep.Success)"
-                           autocomplete="off"
-                           class="btn-check"
-                           name="radioBtn{@step.Name}"
-                           id="radioSuccessBtn{@step.Name}-@step.Id"
-                           @onclick="@(async (e) => await HandleButtonPress(true))"/>
-                    <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}-@step.Id">Success</label>
-                </div>
+        <input type="radio"
+               checked="@(logStep.Success)"
+               autocomplete="off"
+               class="btn-check"
+               name="radioBtn{@step.Name}"
+               id="radioSuccessBtn{@step.Name}-@step.Id"
+               @onclick="@(async (e) => await HandleButtonPress(true))"/>
+        <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@step.Name}-@step.Id">Success</label>
+    </div>
+        </div>
+        </li>
                 @if (logStep != null)
                 {
 
@@ -52,9 +53,6 @@
                         }
                     </div>
                 }
-            </div>
-        </div>
-    </div>
     <div>
         @if (step is { PartsNeeded.Count: > 0 } && _initialized)
         {
@@ -67,7 +65,6 @@
         <img src="@step.Content?.FirstOrDefault()" alt="Step Image" />
     </div>
     }
-</li>
 
 @code {
     [Parameter]
