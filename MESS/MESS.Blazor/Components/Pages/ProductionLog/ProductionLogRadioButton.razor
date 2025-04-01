@@ -12,10 +12,13 @@
 <li class="container list-group-item mb-2" role="group">
     <div class="row">
         <div class="col col-md-3 col-sm-12 col-3">
-            <p class="d-block mb-1">@step.Name</p>
+            <p class="d-block mb-1">@((MarkupString)step.Name)</p>
         </div>
         <div class="col col-5 col-md-5 col-sm-12">
-            <p>@step.Body</p>
+            @if (step.Body != null)
+            {
+                <p>@((MarkupString)step.Body)</p>
+            }
         </div>
 
         <div class="col container">

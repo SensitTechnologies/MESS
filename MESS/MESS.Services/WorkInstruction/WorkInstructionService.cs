@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using System.Drawing;
+using System.Net;
+using System.Text;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
@@ -192,8 +194,34 @@ public partial class WorkInstructionService : IWorkInstructionService
             return cell.GetString();
         }
 
-        var formatted = cell.GetFormattedString();
-        return formatted ?? "";
+        var sb = new StringBuilder();
+        sb.Append("<div>");
+
+        foreach (var richText in cell.GetRichText())
+        {
+            var styles = new List<string>();
+
+            if (richText.Bold) styles.Add("font-weight: bold");
+            if (richText.Italic) styles.Add("font-style: italic");
+            // if (richText.Underlined) styles.Add("text-decoration: underline");
+            // if (richText.Strike) styles.Add("text-decoration: line-through");
+            if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+            if (richText.FontColor != XLColor.NoColor) styles.Add($"color: {richText.FontColor}");
+
+            var text = WebUtility.HtmlEncode(richText.Text);
+        
+            if (styles.Any())
+            {
+                sb.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+            }
+            else
+            {
+                sb.Append(text);
+            }
+        }
+
+        sb.Append("</div>");
+        return sb.ToString();
     }
 
     // Expected string format is as follows:
