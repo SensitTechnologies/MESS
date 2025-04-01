@@ -39,7 +39,7 @@ else
                 <td>@(product.IsActive ? "Yes" : "No")</td>
                 <td>
                     <button class="btn btn-primary btn-sm" @onclick="() => EditProduct(product.Id)">Edit</button>
-                    <button class="btn btn-danger btn-sm" @onclick="() => RemoveProduct(product.Id)">Delete</button>
+                    <button class="btn btn-warning btn-sm" @onclick="() => RemoveProduct(product.Id)">Delete</button>
                 </td>
             </tr>
         }
