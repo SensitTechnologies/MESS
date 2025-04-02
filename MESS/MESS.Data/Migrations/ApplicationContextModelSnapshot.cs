@@ -274,6 +274,9 @@ namespace MESS.Data.Migrations
                     b.Property<DateTimeOffset>("SubmitTime")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("Success")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("WorkInstructionId")
                         .HasColumnType("int");
 

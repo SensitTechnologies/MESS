@@ -8,6 +8,7 @@ public class Step : AuditableEntity
     public required string Name { get; set; }
     public string? Body { get; set; }
     public List<string>? Content { get; set; }
+    public bool Success { get; set; }
     public DateTimeOffset SubmitTime { get; set; }
     public List<Part>? PartsNeeded { get; set; }
 }
