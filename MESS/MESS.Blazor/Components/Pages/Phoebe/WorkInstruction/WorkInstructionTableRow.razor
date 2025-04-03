@@ -1,0 +1,106 @@
+@using MESS.Data.Models
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+
+@if (WorkInstruction != null)
+{
+    <tr>
+        <th scope="row">@RowNumber</th>
+        <td>
+            <input type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
+        </td>
+        <td>
+            <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
+        </td>
+        @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
+        {
+            <div class="confirm-delete mt-2">
+                <span>Are you sure?</span>
+                <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
+                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
+            </div>
+        }
+        else
+        {
+            <button type="button"
+                    class="btn btn-warning"
+                    @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
+                Delete
+            </button>
+        }
+        <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
+            Save Changes
+        </button>
+    </tr>
+}
+
+@code {
+    [Parameter]
+    public required int RowNumber { get; set; }
+    [Parameter]
+    public EventCallback<string> DisplayAlert { get; set; }
+    [Parameter]
+    public EventCallback<WorkInstruction> SaveChanges { get; set; }
+    [Parameter]
+    public required WorkInstruction WorkInstruction { get; set; }
+
+    private bool IsConfirmingDelete { get; set; } = false;
+    private int? WorkInstructionToDeleteId { get; set; }
+
+   
+    
+    private void InitiateDeleteInstruction(int instructionId)
+    {
+        WorkInstructionToDeleteId = instructionId;
+        IsConfirmingDelete = true;
+    }
+
+    private void CancelDeleteInstruction()
+    {
+        IsConfirmingDelete = false;
+        WorkInstructionToDeleteId = null;
+    }
+
+    private async Task ConfirmDeleteInstruction()
+    {
+        if (WorkInstruction == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
+            
+            if (result)
+            {
+                await DisplayAlert.InvokeAsync($"User {WorkInstruction.Title} has been deleted");
+            }
+            else
+            {
+                await DisplayAlert.InvokeAsync($"Failed to delete Work Instruction: {WorkInstruction.Title} with ID: {WorkInstruction.Id}");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            await DisplayAlert.InvokeAsync($"Error deleting user: {e.Message}");
+        }
+        finally
+        {
+            IsConfirmingDelete = false;
+            WorkInstructionToDeleteId = null;
+        }
+    }
+
+    private void DeleteWorkInstructionAsync()
+    {
+        if (WorkInstruction == null)
+        {
+            return;
+        }
+
+        InitiateDeleteInstruction(WorkInstruction.Id);
+    }
+
+}
