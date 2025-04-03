@@ -37,6 +37,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const int STEP_MEDIA_COLUMN = 5;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
+    const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
+
     public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment)
     {
         _context = context;
@@ -136,6 +138,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             if (await Create(workInstruction))
             {
                 Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
+                // Not invalidating cache here, since it gets invalidated on successful creation
                 return WorkInstructionImportResult.Success(fileNames, workInstruction);
             }
 
@@ -318,13 +321,11 @@ public partial class WorkInstructionService : IWorkInstructionService
 
     public async Task<List<WorkInstruction>> GetAllAsync()
     {
-        // const string cacheKey = "AllWorkInstructions";
-        //
-        // if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
-        //     cachedWorkInstructionList != null)
-        // {
-        //     return cachedWorkInstructionList;
-        // }
+        if (_cache.TryGetValue(WORK_INSTRUCTION_CACHE_KEY, out List<WorkInstruction>? cachedWorkInstructionList) &&
+            cachedWorkInstructionList != null)
+        {
+            return cachedWorkInstructionList;
+        }
         
         try
         {
@@ -334,7 +335,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 .ToListAsync();
 
             // Cache data for 15 minutes
-            // _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
+            _cache.Set(WORK_INSTRUCTION_CACHE_KEY, workInstructions, TimeSpan.FromMinutes(15));
 
             return workInstructions;
         }
@@ -347,13 +348,12 @@ public partial class WorkInstructionService : IWorkInstructionService
 
     public async Task<List<WorkInstruction>> GetAllActiveAsync()
     {
-        // const string cacheKey = "AllWorkInstructions";
-        //
-        // if (_cache.TryGetValue(cacheKey, out List<WorkInstruction>? cachedWorkInstructionList) &&
-        //     cachedWorkInstructionList != null)
-        // {
-        //     return cachedWorkInstructionList;
-        // }
+        
+        if (_cache.TryGetValue(WORK_INSTRUCTION_CACHE_KEY, out List<WorkInstruction>? cachedWorkInstructionList) &&
+            cachedWorkInstructionList != null)
+        {
+            return cachedWorkInstructionList;
+        }
         
         try
         {
@@ -364,7 +364,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 .ToListAsync();
 
             // Cache data for 15 minutes
-            // _cache.Set(cacheKey, workInstructions, TimeSpan.FromMinutes(15));
+            _cache.Set(WORK_INSTRUCTION_CACHE_KEY, workInstructions, TimeSpan.FromMinutes(15));
 
             return workInstructions;
         }
@@ -449,6 +449,9 @@ public partial class WorkInstructionService : IWorkInstructionService
             await _context.WorkInstructions.AddAsync(workInstruction);
             await _context.SaveChangesAsync();
             
+            // Invalidate cache so that on next request users retrieve the latest data
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            
             Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
             return true;
@@ -474,6 +477,9 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             workInstruction.IsActive = false;
             await _context.SaveChangesAsync();
+            
+            // Invalidate cache so that on next request users retrieve the latest data
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
             
             Log.Information("Successfully deleted WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
@@ -508,6 +514,10 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             _context.WorkInstructions.Update(workInstruction);
             await _context.SaveChangesAsync();
+            
+            // Invalidate cache so that on next request users retrieve the latest data
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            
             return true;
         }
         catch (Exception e)
