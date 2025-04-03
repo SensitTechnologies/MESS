@@ -44,7 +44,6 @@ builder.Services.AddDbContext<UserContext>(options =>
     });
 });
 
-builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 
 // Add services to the container.
