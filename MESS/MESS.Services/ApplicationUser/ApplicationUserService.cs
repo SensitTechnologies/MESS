@@ -84,9 +84,7 @@ public class ApplicationUserService : IApplicationUserService
                 return null;
             }
 
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => 
-                (user.UserName != null && u.UserName == user.UserName) || 
-                (user.Email != null && u.Email == user.Email));
+            var existingUser = await _context.Users.FindAsync(user.Id);
 
             return existingUser == null;
         }
@@ -172,6 +170,9 @@ public class ApplicationUserService : IApplicationUserService
                     Log.Error("Could not find user with ID {id}", applicationUser.Id);
                     return false;
                 }
+
+                applicationUser.NormalizedEmail = applicationUser.Email?.ToUpper();
+                applicationUser.NormalizedUserName = applicationUser.UserName?.ToUpper();
 
                 _context.Entry(existingUser).CurrentValues.SetValues(applicationUser);
 
