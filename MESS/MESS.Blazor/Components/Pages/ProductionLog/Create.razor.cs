@@ -47,18 +47,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
         var cachedForm = await LoadCachedForm();
 
-        // Create ProductionLog in database since we will need the ID for QR codes
         if (cachedForm)
         {
             ProductionLogEventService.EnableAutoSave();
             await InvokeAsync(StateHasChanged);
         }
-        else
-        {
-            var id = await ProductionLogService.CreateAsync(ProductionLog);
-            ProductionLog.Id = id;
-            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
-        }
+        
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        
         // AutoSave Trigger
         _autoSaveHandler = async log =>
         {
@@ -240,7 +236,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         try
         {
-            var workInstructionsList = await WorkInstructionService.GetAllAsync();
+            var workInstructionsList = await WorkInstructionService.GetAllActiveAsync();
             WorkInstructions = workInstructionsList.ToList();
         }
         catch (Exception e)
@@ -300,6 +296,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
     private async Task CompleteSubmit()
     {
+        // If no log is created, it gets created now to utilize the id for the QR code
+        if (ProductionLog.Id <= 0)
+        {
+            var id = await ProductionLogService.CreateAsync(ProductionLog);
+            ProductionLog.Id = id;
+        }
+        
         await PrintQRCode();
         
         var currentTime = DateTimeOffset.UtcNow;
@@ -312,7 +315,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.OperatorId = userId;
-        await ProductionLogService.UpdateAsync(ProductionLog);
         
         // Create any associated SerialNumberLogs
         await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);

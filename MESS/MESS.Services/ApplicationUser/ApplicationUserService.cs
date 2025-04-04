@@ -79,20 +79,14 @@ public class ApplicationUserService : IApplicationUserService
     {
         try
         {
-            bool isNew;
-            if (user.UserName != null)
+            if (string.IsNullOrEmpty(user.UserName) && string.IsNullOrEmpty(user.Email))
             {
-                isNew = await GetByUserNameAsync(user.UserName) == null;
-                return isNew;
+                return null;
             }
 
-            if (user.Email != null)
-            {
-                isNew = await GetByEmailAsync(user.Email) == null;
-                return isNew;
-            }
+            var existingUser = await _context.Users.FindAsync(user.Id);
 
-            return null;
+            return existingUser == null;
         }
         catch (Exception e)
         {
@@ -162,25 +156,32 @@ public class ApplicationUserService : IApplicationUserService
     {
         try
         {
-            using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            var strategy = _context.Database.CreateExecutionStrategy();
         
-            var existingUser = await _context.Users.FirstOrDefaultAsync(
-                u => u.Id == applicationUser.Id);
-            
-            if (existingUser == null)
+            return await strategy.ExecuteAsync(async () =>
             {
-                Log.Error("Could not find user with ID {id}", applicationUser.Id);
-                return false;
-            }
+                using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             
-            // Setting the values directly since if you were to simply apply them directly it would update all touched entities on save
-            _context.Entry(existingUser).CurrentValues.SetValues(applicationUser);
-        
-            await _context.SaveChangesAsync();
-            scope.Complete();
+                var existingUser = await _context.Users.FirstOrDefaultAsync(
+                    u => u.Id == applicationUser.Id);
 
-            Log.Information("Updated user with ID {id}", applicationUser.Id);
-            return true;
+                if (existingUser == null)
+                {
+                    Log.Error("Could not find user with ID {id}", applicationUser.Id);
+                    return false;
+                }
+
+                applicationUser.NormalizedEmail = applicationUser.Email?.ToUpper();
+                applicationUser.NormalizedUserName = applicationUser.UserName?.ToUpper();
+
+                _context.Entry(existingUser).CurrentValues.SetValues(applicationUser);
+
+                await _context.SaveChangesAsync();
+                scope.Complete();
+
+                Log.Information("Updated user with ID {id}", applicationUser.Id);
+                return true;
+            });
         }
         catch (Exception ex)
         {
