@@ -12,6 +12,7 @@ using Serilog;
 using System.Drawing;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
@@ -87,15 +88,16 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             workInstruction.Products.Add(product);
 
+            // Create all steps within instruction
             // Start from row 7 (assuming header row is 6)
             var stepStartRow = STEP_START_ROW;
             while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
             {
                 var step = new Step
                 {
-                    Name = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN)),
+                    Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
                     Content = new List<string>(),
-                    Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN)),
+                    Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
                     SubmitTime = DateTimeOffset.UtcNow,
                     PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
                 };
@@ -189,37 +191,103 @@ public partial class WorkInstructionService : IWorkInstructionService
             return errorResult;
         }
     }
-
-    private string GetRichTextFromCell(IXLCell cell)
+    
+    /// <summary>
+    /// Processes Text from a given cell. Parses out Rich Text, HyperLinks, Fonts, and Colors
+    /// </summary>
+    /// <param name="cell">An IXLCell object</param>
+    /// <param name="workbook">An IXLWorkbook object</param>
+    /// <returns>An HTML encoded  string value for the formatted cell value.</returns>
+    private string ProcessCellText(IXLCell cell, IXLWorkbook workbook)
     {
-        if (!cell.HasRichText)
-        {
-            return cell.GetString();
-        }
-
         var sb = new StringBuilder();
         sb.Append("<div>");
 
-        foreach (var richText in cell.GetRichText())
-        {
-            var styles = new List<string>();
-
-            if (richText.Bold) styles.Add("font-weight: bold");
-            if (richText.Italic) styles.Add("font-style: italic");
-            // if (richText.Underlined) styles.Add("text-decoration: underline");
-            // if (richText.Strike) styles.Add("text-decoration: line-through");
-            if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
-            if (richText.FontColor != XLColor.NoColor) styles.Add($"color: {richText.FontColor}");
-
-            var text = WebUtility.HtmlEncode(richText.Text);
+        var hasHyperLink = cell.HasHyperlink;
+        string? hyperLinkUri = null;
         
-            if (styles.Any())
+        
+        if (hasHyperLink)
+        {
+            var hyperLink = cell.GetHyperlink();
+            hyperLinkUri = hyperLink.ExternalAddress.AbsoluteUri;
+        }
+
+        if (!cell.HasRichText)
+        {
+            string content = cell.GetString();
+
+            string cellColor = "";
+            
+            if (cell.Style.Font.FontColor.ColorType == XLColorType.Color)
             {
-                sb.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                var color = cell.Style.Font.FontColor.Color;
+                string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                cellColor = $"color: {hexColor};";
+            } else
+            {
+                var themeColor = workbook.Theme.ResolveThemeColor(cell.Style.Font.FontColor.ThemeColor);
+                cellColor = themeColor.Color.ToString();
+            }
+            
+            if (hasHyperLink)
+            {
+                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\" style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</a>");
             }
             else
             {
-                sb.Append(text);
+                sb.Append($"<span style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</span>");
+            }
+        }
+        else
+        {
+            StringBuilder richTextContent = new StringBuilder();
+            foreach (var richText in cell.GetRichText())
+            {
+                var styles = new List<string>();
+
+                if (richText.Bold) styles.Add("font-weight: bold");
+                if (richText.Italic) styles.Add("font-style: italic");
+                if (richText.Underline != XLFontUnderlineValues.None) styles.Add("text-decoration: underline");
+                if (richText.Strikethrough) styles.Add("text-decoration: line-through");
+                if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+
+                if (richText.FontColor != XLColor.NoColor && richText.FontColor.HasValue)
+                {
+                    if (richText.FontColor.ColorType == XLColorType.Color)
+                    {
+                        var color = richText.FontColor.Color;
+                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                        styles.Add($"color: {hexColor}");
+                    } 
+                    else if (richText.FontColor.ColorType == XLColorType.Theme)
+                    {
+                        var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
+                        var color = themeColor.Color;
+                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                        styles.Add($"color: {hexColor}");
+                    }
+                }
+                
+                var text = WebUtility.HtmlEncode(richText.Text);
+        
+                if (styles.Any())
+                {
+                    richTextContent.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                }
+                else
+                {
+                    richTextContent.Append(text);
+                }
+            }
+
+            if (hasHyperLink)
+            {
+                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\">{richTextContent}</a>");
+            }
+            else
+            {
+                sb.Append(richTextContent);
             }
         }
 
