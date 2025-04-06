@@ -198,7 +198,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// <param name="cell">An IXLCell object</param>
     /// <param name="workbook">An IXLWorkbook object</param>
     /// <returns>An HTML encoded  string value for the formatted cell value.</returns>
-    private string ProcessCellText(IXLCell cell, IXLWorkbook workbook)
+    private string ProcessCellText(IXLCell cell, XLWorkbook workbook)
     {
         var sb = new StringBuilder();
         sb.Append("<div>");
