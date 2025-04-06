@@ -67,10 +67,22 @@ public partial class WorkInstructionService : IWorkInstructionService
             var worksheet = workbook.Worksheet(1);
             
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
+            var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
+            
+            // Check for pre-existing WorkInstruction that have matching title + version
+            var preexistingWorkInstruction = await _context.WorkInstructions
+                .Where(w => w.Title == workInstructionTitle && w.Version == versionString)
+                .AnyAsync();
+
+            if (preexistingWorkInstruction)
+            {
+                Log.Information("Unable to import Work Instruction. Pre-existing work instruction found for Title: {Title}, Version: {Version}. ", workInstructionTitle, versionString);
+                return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
+            }
             
             var workInstruction = new WorkInstruction
             {
-                Title = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString(),
+                Title = workInstructionTitle,
                 Version = versionString,
                 Products = new List<Product>(),
                 Steps = new List<Step>()

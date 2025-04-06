@@ -1,4 +1,6 @@
-﻿using MESS.Data.Models;
+﻿using System.Text;
+using MESS.Data.Models;
+using Microsoft.Extensions.Primitives;
 
 namespace MESS.Data.DTO;
 
@@ -65,6 +67,20 @@ public class WorkInstructionImportResult
             Status = ImportStatus.Error
         };
     }
+    
+    public static WorkInstructionImportResult DuplicateWorkInstructionFound(string file, string workInstructionTitle, string workInstructionVersion)
+    {
+        return new WorkInstructionImportResult
+        {
+            HasValue = false,
+            ImportError = new ImportError
+            {
+                File = file,
+                Message = $"There exists a work instruction in the database with the same Title: {workInstructionTitle} and Version: {workInstructionVersion}. Please ensure you are creating a unique Work Instruction, by changing the Title and/or Version."
+            },
+            Status = ImportStatus.Error
+        };
+    }
 }
 
 public class ImportError
@@ -76,6 +92,25 @@ public class ImportError
 
     public override string ToString()
     {
-        return $"Import Error with File: {File}. Message: {Message}. Location: {Location}. Error Type: {ErrorType}";
+        var sb = new StringBuilder();
+        sb.Append("Import Error with File: ");
+        sb.Append(File);
+        
+        if (!string.IsNullOrEmpty(Message))
+        {
+            sb.Append($". {Message}");
+        }
+        
+        if (!string.IsNullOrEmpty(Location))
+        {
+            sb.Append($". Location: {Location}");
+        }
+        
+        if (!string.IsNullOrEmpty(ErrorType))
+        {
+            sb.Append($". Error Type: {ErrorType}");
+        }
+        
+        return sb.ToString();
     }
 }
