@@ -27,6 +27,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
     private const string QR_CODE_REQUIRED_CELL = "B1";
+    private const string STEPS_PARTS_LIST_CELL = "B3";
+    
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
     private const int STEP_START_ROW = 7;
@@ -51,7 +53,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            if (files == null || files.Count == 0)
+            if (files.Count == 0)
             {
                 Log.Warning("No files provided for import.");
                 return WorkInstructionImportResult.NoFilesProvided();
@@ -71,8 +73,8 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 Title = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString(),
                 Version = versionString,
-                Products = new List<Product>(),
-                Steps = new List<Step>()
+                Products = [],
+                Nodes = []
             };
             
             // Retrieve Product and assign relationship
@@ -87,6 +89,16 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             workInstruction.Products.Add(product);
 
+            // Add any required parts to the work instruction
+            var partsNode = new PartNode();
+            var partsList = await GetPartsListFromString(worksheet.Cell(STEPS_PARTS_LIST_CELL).GetString());
+
+            if (partsList != null)
+            {
+                partsNode.Parts.AddRange(partsList);
+                workInstruction.Nodes.Add(partsNode);
+            }
+
             // Start from row 7 (assuming header row is 6)
             var stepStartRow = STEP_START_ROW;
             while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
@@ -97,7 +109,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     Content = new List<string>(),
                     Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN)),
                     SubmitTime = DateTimeOffset.UtcNow,
-                    PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
+                    // PartsNeeded = ,
                 };
                 
                 var pictures = worksheet.Pictures
@@ -330,8 +342,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         try
         {
             var workInstructions = await _context.WorkInstructions
-                .Include(w => w.Steps)
-                .ThenInclude(w => w.PartsNeeded)
+                .Include(w => w.Nodes)
                 .ToListAsync();
 
             // Cache data for 15 minutes
