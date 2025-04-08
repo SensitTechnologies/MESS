@@ -77,7 +77,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             // Retrieve Product and assign relationship
             var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
-            var product = await _productService.FindByTitleAsync(productString, versionString);
+            var product = await _productService.FindByTitleAsync(productString);
 
             if (product == null)
             {

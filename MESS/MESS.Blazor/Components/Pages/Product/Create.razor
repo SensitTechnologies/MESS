@@ -25,11 +25,6 @@
                 <label for="name" class="form-label">Name:</label> 
                 <InputText id="name" @bind-Value="Product.Name" class="form-control" /> 
                 <ValidationMessage For="() => Product.Name" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="version" class="form-label">Version:</label> 
-                <InputText id="version" @bind-Value="Product.Version" class="form-control" /> 
-                <ValidationMessage For="() => Product.Version" class="text-danger" /> 
             </div>
             <div class="mb-3 form-check">
                 <InputCheckbox id="isActive" @bind-Value="Product.IsActive" class="form-check-input" />

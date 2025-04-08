@@ -25,9 +25,9 @@ public interface IProductService
     ///
     /// Includes related WorkInstructions and WorkStations.
     /// </summary>
-    /// <param name="id">The ID of the product to find.</param>
+    /// <param name="title">The ID of the product to find.</param>
     /// <returns>The product if found; otherwise, null.</returns>
-    Task<Product?> FindByTitleAsync(string title, string? version);
+    Task<Product?> FindByTitleAsync(string title);
     
     /// <summary>
     /// Retrieves all products from the database, including related WorkInstructions and WorkStations.

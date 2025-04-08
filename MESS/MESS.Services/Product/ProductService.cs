@@ -50,25 +50,12 @@ public class ProductService : IProductService
     }
 
     
-    public async Task<Product?> FindByTitleAsync(string title, string? version)
+    public async Task<Product?> FindByTitleAsync(string title)
     {
         try
         {
-            var productListWithMatchingTitle = await _context.Products
-                .Where(p => p.Name == title)
-                .ToListAsync();
-            
-            Product? product;
-            if (version != null)
-            {
-                // Attempt to find a product with matching title & version
-                // If product with version does not exist return first
-                product = productListWithMatchingTitle.Find(p => p.Version == version) ?? productListWithMatchingTitle.FirstOrDefault();
-            }
-            else
-            {
-                product = productListWithMatchingTitle.FirstOrDefault();
-            }
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Name == title);
             
             Log.Information("Product found. Title: {ProductTitle}", product?.Name);
             

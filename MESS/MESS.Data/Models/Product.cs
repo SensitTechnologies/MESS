@@ -4,7 +4,6 @@ public class Product : AuditableEntity
 {
     public int Id { get; set; }
     public required string Name { get; set; }
-    public string? Version { get; set; }
     public bool IsActive { get; set; }
     
     // Navigation fields
