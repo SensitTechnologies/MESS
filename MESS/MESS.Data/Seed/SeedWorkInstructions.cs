@@ -44,7 +44,9 @@ public static class SeedWorkInstructions
                 {
                     Title = "Machine Calibration Process",
                     Version = "2.1",
-                    Steps = new List<Step>
+                    Nodes = new List<WorkInstructionNode>
+                    {
+                    new List<Step>
                     {
                         new Step
                         {
@@ -61,6 +63,7 @@ public static class SeedWorkInstructions
                             Name = "Power on and test calibration.",
                             SubmitTime = default
                         }
+                    },
                     },
                     CreatedBy = "",
                     CreatedOn = default,

@@ -109,7 +109,6 @@ public partial class WorkInstructionService : IWorkInstructionService
                     Content = new List<string>(),
                     Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN)),
                     SubmitTime = DateTimeOffset.UtcNow,
-                    // PartsNeeded = ,
                 };
                 
                 var pictures = worksheet.Pictures
@@ -141,7 +140,10 @@ public partial class WorkInstructionService : IWorkInstructionService
                     step.Content.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
                 }
             
-                workInstruction.Steps.Add(step);
+                // Step extends WorkInstructionNode for ordering purposes
+                // Calculation 0 Indexes the step order. 1st step has position 0.
+                step.Position = stepStartRow - STEP_START_ROW;
+                workInstruction.Nodes.Add(step);
                 stepStartRow++;
             }
             
@@ -318,7 +320,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         try
         {
             var workInstructions = _context.WorkInstructions
-                .Include(w => w.Steps)
+                .Include(w => w.Nodes)
                 .ToList();
 
             return workInstructions;
@@ -356,35 +358,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             throw;
         }
     }
-
-    public async Task<List<WorkInstruction>> GetAllActiveAsync()
-    {
-        
-        if (_cache.TryGetValue(WORK_INSTRUCTION_CACHE_KEY, out List<WorkInstruction>? cachedWorkInstructionList) &&
-            cachedWorkInstructionList != null)
-        {
-            return cachedWorkInstructionList;
-        }
-        
-        try
-        {
-            var workInstructions = await _context.WorkInstructions
-                .Include(w => w.Steps)
-                .ThenInclude(w => w.PartsNeeded)
-                .Where(w => w.IsActive == true)
-                .ToListAsync();
-
-            // Cache data for 15 minutes
-            _cache.Set(WORK_INSTRUCTION_CACHE_KEY, workInstructions, TimeSpan.FromMinutes(15));
-
-            return workInstructions;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
-            throw;
-        }
-    }
+    
 
     public WorkInstruction? GetByTitle(string title)
     {
@@ -429,8 +403,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             }
             
             var workInstruction = await _context.WorkInstructions
-                .Include(w => w.Steps)
-                .ThenInclude(s => s.PartsNeeded)
+                .Include(w => w.Nodes)
                 .FirstAsync(w => w.Id == id);
             
             return workInstruction;
