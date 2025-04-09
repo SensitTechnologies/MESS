@@ -110,8 +110,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     Name = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN)),
                     Content = new List<string>(),
-                    Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN)),
-                    SubmitTime = DateTimeOffset.UtcNow,
+                    Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN))
                 };
                 
                 var pictures = worksheet.Pictures

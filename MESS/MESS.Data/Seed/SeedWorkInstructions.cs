@@ -21,17 +21,14 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Turn on the main power switch.",
-                            SubmitTime = default
                         },
                         new Step
                         {
                             Name = "Check all safety equipment.",
-                            SubmitTime = default
                         },
                         new Step
                         {
                             Name = "Start the conveyor belt.",
-                            SubmitTime = default
                         }
                     },
                     CreatedBy = "",
@@ -48,17 +45,14 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Ensure the machine is powered off before calibration.",
-                            SubmitTime = default
                         },
                         new Step
                         {
                             Name = "Adjust the alignment screws.",
-                            SubmitTime = default
                         },
                         new Step
                         {
                             Name = "Power on and test calibration.",
-                            SubmitTime = default
                         }
                     },
                     CreatedBy = "",
@@ -75,17 +69,14 @@ public static class SeedWorkInstructions
                         new Step
                         {
                             Name = "Place the product in the designated box.",
-                            SubmitTime = default
                         },
                         new Step
                         {
                             Name = "Seal the box with the appropriate tape.",
-                            SubmitTime = default
                         },
                         new Step
                         {
                             Name = "Label the package correctly.",
-                            SubmitTime = default,
                         }
                     }
                 });
