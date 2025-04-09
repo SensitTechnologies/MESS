@@ -385,8 +385,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private async Task ResetFormState()
     {
         ProductionLog = new ProductionLog();
-        var id = await ProductionLogService.CreateAsync(ProductionLog);
-        ProductionLog.Id = id;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
