@@ -14,10 +14,9 @@ public static class SeedWorkInstructions
             context.WorkInstructions.AddRange(
                 new WorkInstruction
                 {
-
                     Title = "Assembly Line Start-up Procedure",
                     Version = "1.0",
-                    Steps = new List<Step>
+                    Nodes = new List<WorkInstructionNode>
                     {
                         new Step
                         {
@@ -46,8 +45,6 @@ public static class SeedWorkInstructions
                     Version = "2.1",
                     Nodes = new List<WorkInstructionNode>
                     {
-                    new List<Step>
-                    {
                         new Step
                         {
                             Name = "Ensure the machine is powered off before calibration.",
@@ -64,7 +61,6 @@ public static class SeedWorkInstructions
                             SubmitTime = default
                         }
                     },
-                    },
                     CreatedBy = "",
                     CreatedOn = default,
                     LastModifiedBy = "",
@@ -74,7 +70,7 @@ public static class SeedWorkInstructions
                 {
                     Title = "Product Packaging Instructions",
                     Version = "3.0",
-                    Steps = new List<Step>
+                    Nodes = new List<WorkInstructionNode>
                     {
                         new Step
                         {
@@ -93,7 +89,7 @@ public static class SeedWorkInstructions
                         }
                     }
                 });
-        context.SaveChanges();
+            context.SaveChanges();
+        }
     }
-}
 }

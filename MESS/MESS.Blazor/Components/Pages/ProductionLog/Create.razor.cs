@@ -236,7 +236,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         try
         {
-            var workInstructionsList = await WorkInstructionService.GetAllActiveAsync();
+            var workInstructionsList = await WorkInstructionService.GetAllAsync();
             WorkInstructions = workInstructionsList.ToList();
         }
         catch (Exception e)
@@ -271,10 +271,20 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return;
         }
         
-        int partsNeededCount = 0;
-        ActiveWorkInstruction.Steps.ForEach(step => partsNeededCount += step.PartsNeeded?.Count ?? 0);
+        var partNodes = ActiveWorkInstruction.Nodes.Where(node => node.NodeType == WorkInstructionNodeType.Part);
 
-        bool allStepsHavePartsNeeded = _serialNumberLogs.Count >= partsNeededCount;
+        int totalPartsNeeded = 0;
+        foreach (var node in partNodes)
+        {
+            // Cast to PartNode to access its Parts collection
+            if (node is PartNode partNode)
+            {
+                totalPartsNeeded += partNode.Parts.Count;
+            }
+        }
+        
+
+        bool allStepsHavePartsNeeded = _serialNumberLogs.Count >= totalPartsNeeded;
 
         if (!allStepsHavePartsNeeded)
         {

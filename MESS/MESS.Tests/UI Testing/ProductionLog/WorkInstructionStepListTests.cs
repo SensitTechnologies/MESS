@@ -4,6 +4,7 @@ using MESS.Services.BrowserCacheManager;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Linq;
 
 namespace MESS.Tests.UI_Testing.ProductionLog;
 using Data.Models;
@@ -14,7 +15,7 @@ public class WorkInstructionStepListTests : TestContext
     public void WorkInstructionStepListComponentRendersWithNoSteps()
     {
         // Arrange
-        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction 1", Steps = new List<Step>() };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction 1", Nodes = new List<WorkInstructionNode>() };
         var productionLog = new ProductionLog { LogSteps = new List<ProductionLogStep>() };
 
         // Act
@@ -36,7 +37,7 @@ public class WorkInstructionStepListTests : TestContext
             new Step { Id = 1, Name = "Step 1" },
             new Step { Id = 2, Name = "Step 2" }
         };
-        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Steps = steps };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Nodes = steps.Cast<WorkInstructionNode>().ToList() };
         var productionLog = new ProductionLog { LogSteps = new List<ProductionLogStep>() };
 
         var mockLocalCacheManager = new Mock<ILocalCacheManager>();
@@ -62,7 +63,7 @@ public class WorkInstructionStepListTests : TestContext
         {
             new Step { Id = 1, Name = "Step 1" }
         };
-        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Steps = steps };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Nodes = steps.Cast<WorkInstructionNode>().ToList() };
         var productionLog = new ProductionLog { LogSteps = new List<ProductionLogStep>() };
         var stepCompleted = false;
         
@@ -91,7 +92,7 @@ public class WorkInstructionStepListTests : TestContext
             new Step { Id = 1, Name = "Step 1" },
             new Step { Id = 2, Name = "Step 2" }
         };
-        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Steps = steps };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Nodes = steps.Cast<WorkInstructionNode>().ToList() };
         var productionLog = new ProductionLog { LogSteps = new List<ProductionLogStep>() };
         var completedSteps = new List<int>();
         
@@ -126,7 +127,7 @@ public class WorkInstructionStepListTests : TestContext
             new Step { Id = 1, Name = "Step 1" },
             new Step { Id = 2, Name = "Step 2" }
         };
-        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Steps = steps };
+        var activeWorkInstruction = new WorkInstruction { Title = "WorkInstruction1", Nodes = steps.Cast<WorkInstructionNode>().ToList() };
         var productionLog = new ProductionLog
         {
             LogSteps = new List<ProductionLogStep>
