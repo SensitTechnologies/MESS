@@ -1,4 +1,11 @@
 # MESS - Reference Sheet
+### Startup
+
+Note: There are several seeders that will input required entries into the database if the database does **not** contain any entries
+This includes a default **Technician** account that is required to log in to MESS and to start creating WorkInstructions, Users, etc.
+
+### **Change Default Technician Password.**
+
 
 ### EF Core (Common Database Interactions)
 **NOTE:** *For both of these commands you must be in the MESS.Data directory, otherwise you must specify the base project as well.*

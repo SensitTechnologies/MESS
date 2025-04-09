@@ -16,6 +16,8 @@ public class ApplicationContext : DbContext
 
     public virtual DbSet<WorkInstruction> WorkInstructions { get; set; } = null!;
     public virtual DbSet<Step> Steps { get; set; } = null!;
+    public virtual DbSet<WorkInstructionNode> WorkInstructionNodes { get; set; } = null!;
+    public virtual DbSet<PartNode> PartNodes { get; set; } = null!;
     public virtual DbSet<SerialNumberLog> SerialNumberLogs { get; set; } = null!;
     public virtual DbSet<ProductionLog> ProductionLogs { get; set; } = null!;
     public virtual DbSet<Product> Products { get; set; } = null!;
@@ -26,6 +28,18 @@ public class ApplicationContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<WorkInstructionNode>()
+            .UseTptMappingStrategy();
+
+        modelBuilder.Entity<PartNode>()
+            .ToTable("PartNodes")
+            .HasMany(p => p.Parts)
+            .WithMany()
+            .UsingEntity("PartNodeParts");
+
+        modelBuilder.Entity<Step>()
+            .ToTable("Steps");
+        
         modelBuilder.Entity<ProductionLog>()
             .HasOne(p => p.WorkInstruction)
             .WithMany()

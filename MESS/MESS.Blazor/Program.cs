@@ -1,6 +1,7 @@
 using MESS.Blazor.Components;
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Data.Seed;
 using MESS.Services.Product;
 using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
@@ -117,6 +118,16 @@ using (var scope = app.Services.CreateScope())
 {
     var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
     await roleInit.InitializeAsync();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
+    await roleInit.InitializeAsync();
+    
+    // Seed default technician
+    await InitialUserSeed.SeedDefaultUserAsync(scope.ServiceProvider);
+    
 }
 
 // Configure the HTTP request pipeline.

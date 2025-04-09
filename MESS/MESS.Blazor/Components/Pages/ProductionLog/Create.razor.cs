@@ -87,7 +87,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
 
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
-                "./Components/Pages/ProductionLog/ProductionLogRadioButton.razor.js");
+                "./Components/Pages/ProductionLog/Create.razor.js");
         }
     }
     
