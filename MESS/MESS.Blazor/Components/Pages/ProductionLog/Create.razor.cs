@@ -393,7 +393,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
         var currentTime = DateTimeOffset.UtcNow;
-        step.SubmitTime = currentTime;
+        
+        // If success is null, that means the button was unselected thus set time to default
+        step.SubmitTime = success == null ? DateTimeOffset.MinValue : currentTime;
+        
         step.Success = success;
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
