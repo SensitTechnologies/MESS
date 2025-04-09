@@ -306,15 +306,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
     private async Task CompleteSubmit()
     {
-        // If no log is created, it gets created now to utilize the id for the QR code
-        if (ProductionLog.Id <= 0)
-        {
-            var id = await ProductionLogService.CreateAsync(ProductionLog);
-            ProductionLog.Id = id;
-        }
-        
-        await PrintQRCode();
-        
         var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -325,6 +316,20 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLog.WorkInstruction = ActiveWorkInstruction;
         ProductionLog.Product = ActiveProduct;
         ProductionLog.OperatorId = userId;
+        
+        // If no log is created, it gets created now to utilize the id for the QR code
+        if (ProductionLog.Id <= 0)
+        {
+            var id = await ProductionLogService.CreateAsync(ProductionLog);
+            ProductionLog.Id = id;
+        }
+        else
+        {
+            await ProductionLogService.UpdateAsync(ProductionLog);
+        }
+        
+        await PrintQRCode();
+        
         
         // Create any associated SerialNumberLogs
         await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);

@@ -143,6 +143,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 // Step extends WorkInstructionNode for ordering purposes
                 // Calculation 0 Indexes the step order. 1st step has position 0.
                 step.Position = stepStartRow - STEP_START_ROW;
+                step.NodeType = WorkInstructionNodeType.Step;
                 workInstruction.Nodes.Add(step);
                 stepStartRow++;
             }
