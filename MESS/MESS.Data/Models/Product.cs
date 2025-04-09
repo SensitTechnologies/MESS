@@ -8,5 +8,4 @@ public class Product : AuditableEntity
     
     // Navigation fields
     public List<WorkInstruction>? WorkInstructions { get; set; } = [];
-    public List<Problem>? Problems { get; set; } = [];
 }
