@@ -91,6 +91,7 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             // Add any required parts to the work instruction
             var partsNode = new PartNode();
+            partsNode.NodeType = WorkInstructionNodeType.Part;
             var partsList = await GetPartsListFromString(worksheet.Cell(STEPS_PARTS_LIST_CELL).GetString());
 
             if (partsList != null)
