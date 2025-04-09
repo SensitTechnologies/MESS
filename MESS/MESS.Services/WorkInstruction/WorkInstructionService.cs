@@ -26,7 +26,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
-    private const string QR_CODE_REQUIRED_CELL = "B1";
+    private const string QR_CODE_REQUIRED_CELL = "D1";
     private const string STEPS_PARTS_LIST_CELL = "B3";
     
     
@@ -68,13 +68,15 @@ public partial class WorkInstructionService : IWorkInstructionService
             var worksheet = workbook.Worksheet(1);
             
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
+            var partsRequired = worksheet.Cell(QR_CODE_REQUIRED_CELL).GetValue<bool>();
             
             var workInstruction = new WorkInstruction
             {
                 Title = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString(),
                 Version = versionString,
                 Products = [],
-                Nodes = []
+                Nodes = [],
+                PartsRequired = partsRequired
             };
             
             // Retrieve Product and assign relationship
