@@ -308,11 +308,12 @@ public partial class WorkInstructionService : IWorkInstructionService
             }
             
             await _context.Parts.AddAsync(partToAdd);
-            return await _context.Parts.FindAsync(partToAdd);
+            await _context.SaveChangesAsync();
+            return partToAdd;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception when adding part: {Message}", e.Message);
             return null;
         }
     }
