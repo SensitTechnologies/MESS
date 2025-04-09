@@ -407,6 +407,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             var workInstruction = await _context.WorkInstructions
                 .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
                 .FirstAsync(w => w.Id == id);
             
             return workInstruction;
