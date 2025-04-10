@@ -1,0 +1,123 @@
+@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@inject IProductionLogEventService ProductionLogEventService
+
+<div class="row">
+    <div class="col col-md-3 col-sm-12 col-3">
+        <p class="d-block mb-1">@((MarkupString)Step.Name)</p>
+    </div>
+    <div class="col">
+        @if (Step.Body != null)
+        {
+        <p>@((MarkupString)Step.Body)</p>
+        }
+    </div>
+</div>
+<div class="row mt-3">
+    <div class="col text-left">
+        <input type="radio"
+               checked="@(!LogStep.Success)"
+               autocomplete="off"
+               @onclick="@(async (e) => await HandleButtonPress(false))"
+               class="btn-check"
+               name="radioBtn{@Step.Name}"
+               id="radioFailureBtn{@Step.Name}-@Step.Id"/>
+        <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@Step.Name}-@Step.Id">Failure</label>
+
+        <input type="radio"
+               checked="@(LogStep.Success)"
+               autocomplete="off"
+               class="btn-check"
+               name="radioBtn{@Step.Name}"
+               id="radioSuccessBtn{@Step.Name}-@Step.Id"
+               @onclick="@(async (e) => await HandleButtonPress(true))"/>
+        <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@Step.Name}-@Step.Id">Success</label>
+    </div>
+</div>
+
+
+<div class="d-inline-flex">
+    @if (ShowOptionalNotesField)
+    {
+    <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
+    }
+</div>
+@if (Step.Content is { Count: > 0 })
+{
+    <div class="col col-5 col-md-5 col-sm-12 container">
+        <img src="@Step.Content?.FirstOrDefault()" alt="Step Image"/>
+    </div>
+
+
+
+@code {
+    [Parameter]
+    public required Step Step { get; set;}
+    [Parameter]
+    public required ProductionLogStep LogStep { get; set;}
+    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!LogStep.Success.HasValue)
+        {
+            SetSelectedButton("");
+        } else if (LogStep.Success.Value)
+        {
+            SetSelectedButton("Success");
+        } else if (!LogStep.Success.Value)
+        {
+            SetSelectedButton("Failure");
+        }
+        
+        SetOptionalNotes();
+    }
+    
+    private bool ShowOptionalNotesField { get; set; } = false;
+    
+    private string? SelectedButton { get; set; } = "";
+
+    private void SetSelectedButton(string buttonName)
+    {
+        SelectedButton = SelectedButton == buttonName ? null : buttonName;
+    }
+    
+    private void SetOptionalNotes()
+    {
+        if (!string.IsNullOrWhiteSpace(LogStep.Notes) || (LogStep.Success.HasValue && !LogStep.Success.Value))
+        {
+            ShowOptionalNotesField = true;
+        }
+    }
+
+    private async Task HandleButtonPress(bool? result)
+    {
+        if (SelectedButton == (result.HasValue ? (result.Value ? "Success" : "Failure") : ""))
+        {
+            result = null;
+        }
+        
+        if (!result.HasValue)
+        {
+            ShowOptionalNotesField = false;
+            await OnStepCompleted.InvokeAsync((LogStep, null));
+            SetSelectedButton("");
+            return;
+        }
+        
+        if (!result.Value)
+        {
+            ShowOptionalNotesField = !ShowOptionalNotesField;
+            await OnStepCompleted.InvokeAsync((LogStep, false));
+        }
+        else
+        {
+            ShowOptionalNotesField = false;
+            await OnStepCompleted.InvokeAsync((LogStep, true));
+        }
+
+        SetSelectedButton(result.Value ? "Success" : "Failure");
+    }
+}
+
+}

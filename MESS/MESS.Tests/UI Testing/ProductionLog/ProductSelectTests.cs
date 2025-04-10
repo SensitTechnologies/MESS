@@ -20,7 +20,7 @@ public class ProductSelectTests : TestContext
                         new WorkInstruction
                         {
                             Title = "Work Instruction 1",
-                            Steps = new List<Step>
+                            Nodes = new List<WorkInstructionNode>
                             {
                                 new Step
                                 {

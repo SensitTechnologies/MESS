@@ -18,7 +18,7 @@ public class ProductionLogService : IProductionLogService
         {
             return _context.ProductionLogs
                 .Include(p => p.WorkInstruction)
-                .ThenInclude(w => w!.Steps)
+                .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
                 .ToList();
         }
@@ -37,7 +37,7 @@ public class ProductionLogService : IProductionLogService
         {
             return await _context.ProductionLogs
                 .Include(p => p.WorkInstruction)
-                .ThenInclude(w => w!.Steps)
+                .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
                 .ThenInclude(p => p.WorkInstructionStep)
                 .ToListAsync();
@@ -94,20 +94,19 @@ public class ProductionLogService : IProductionLogService
         {
             productionLog.CreatedOn = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
-
-
             
             await _context.ProductionLogs.AddAsync(productionLog);
             
+            await _context.SaveChangesAsync();
+
             if (productionLog.LogSteps is {Count: > 0})
             {
                 foreach (var logStep in productionLog.LogSteps)
                 {
                     logStep.ProductionLogId = productionLog.Id;
                 }
+                await _context.SaveChangesAsync();
             }
-            
-            await _context.SaveChangesAsync();
             
             Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
             
@@ -179,7 +178,7 @@ public class ProductionLogService : IProductionLogService
             
             return await _context.ProductionLogs
                 .Include(p => p.WorkInstruction)
-                .ThenInclude(w => w!.Steps)
+                .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
                 .Where(p => logIds.Contains(p.Id))
                 .ToListAsync();

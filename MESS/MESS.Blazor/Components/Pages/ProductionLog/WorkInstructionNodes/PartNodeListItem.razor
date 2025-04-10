@@ -1,0 +1,66 @@
+@using MESS.Data.Models
+@using MESS.Services.Serialization
+@inject ISerializationService SerializationService
+
+@if (_initialized)
+{
+    <RequiredPartsList _serialNumberLogs="_serialNumberLogs" AfterSerialNumberInput="@AfterSerialNumberInput" />
+}
+
+@code {
+    [Parameter]
+    public string? ProductSerialNumber { get; set; }
+    [Parameter]
+    public required PartNode PartNode { get; set; } 
+    
+    private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
+    private bool _initialized = false;
+
+    
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            _initialized = true;
+            StateHasChanged();
+        }
+    }
+    
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        InitializeSerialNumberLogs();
+    }
+
+
+    /// Each part gets its own serial number log
+    private void InitializeSerialNumberLogs()
+    {
+        // No need to initialize serial number logs if they are present in the UI
+        if (_serialNumberLogs.Count > 0)
+        {
+            return;
+        }
+        
+        foreach (var part in PartNode.Parts)
+        {
+            _serialNumberLogs.Add(new SerialNumberLog
+            {
+                Part = part
+            });
+        }
+    }
+    
+    private void AfterSerialNumberInput(SerialNumberLog serialNumberLog)
+    {
+        serialNumberLog.ProductSerialNumber = ProductSerialNumber;
+        serialNumberLog.SubmitTimeQc = DateTimeOffset.UtcNow;
+
+        var updatedList = new List<SerialNumberLog>(SerializationService.CurrentSerialNumberLogs);
+        updatedList.Add(serialNumberLog);
+
+        SerializationService.CurrentSerialNumberLogs = updatedList;
+    }
+}

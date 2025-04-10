@@ -21,7 +21,6 @@ else
         <tr>
             <th>ID</th>
             <th>Name</th>
-            <th>Version</th>
             <th>Active</th>
             <th>Actions</th>
         </tr>
@@ -35,7 +34,6 @@ else
                     @product.Name
                     <ProductDetails Product="product" />
                 </td>
-                <td>@product.Version</td>
                 <td>@(product.IsActive ? "Yes" : "No")</td>
                 <td>
                     <button class="btn btn-primary btn-sm" @onclick="() => EditProduct(product.Id)">Edit</button>
