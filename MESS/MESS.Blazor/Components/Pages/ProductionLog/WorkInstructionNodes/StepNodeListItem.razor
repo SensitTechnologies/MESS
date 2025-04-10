@@ -42,12 +42,12 @@
     <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
     }
 </div>
-@if (Step.Content is { Count: > 0 })
+@if (Step.PrimaryMedia is { Count: > 0 })
 {
     <div class="col col-5 col-md-5 col-sm-12 container">
-        <img src="@Step.Content?.FirstOrDefault()" alt="Step Image"/>
+        <img src="@Step.PrimaryMedia?.FirstOrDefault()" alt="Step Image"/>
     </div>
-
+}
 
 
 @code {

@@ -36,8 +36,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const int STEP_START_COLUMN = 1;
     private const int STEP_TITLE_COLUMN = 2;
     private const int STEP_DESCRIPTION_COLUMN = 3;
-    private const int STEP_PARTS_LIST_COLUMN = 4;
-    private const int STEP_MEDIA_COLUMN = 5;
+    private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
+    private const int STEP_SECONDARY_MEDIA_COLUMN = 5;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -145,39 +145,11 @@ public partial class WorkInstructionService : IWorkInstructionService
                 var step = new Step
                 {
                     Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
-                    Content = new List<string>(),
                     Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
                 };
                 
-                var pictures = worksheet.Pictures
-                    .Where(p => p.TopLeftCell.Address.RowNumber == stepStartRow 
-                                && p.TopLeftCell.Address.ColumnNumber == STEP_MEDIA_COLUMN)
-                    .ToList();
+                await ProcessStepMedia(worksheet, step, stepStartRow);
                 
-                foreach (var picture in pictures)
-                {
-                    var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
-
-                    var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
-
-                    var imagePath = Path.Combine(imageDir, fileName);
-                    
-                    // Verify that directory exists. If not create it.
-                    if (!Directory.Exists(imageDir))
-                    {
-                        Directory.CreateDirectory(imageDir);
-                    }
-                    
-                    using (var ms = new MemoryStream())
-                    {
-                        await picture.ImageStream.CopyToAsync(ms);
-                        var imageBytes = ms.ToArray();
-                        await File.WriteAllBytesAsync(imagePath, imageBytes);
-                    }
-                    
-                    step.Content.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
-                }
-            
                 // Step extends WorkInstructionNode for ordering purposes
                 // Calculation 0 Indexes the step order. 1st step has position 0.
                 step.Position = stepStartRow - STEP_START_ROW;
@@ -240,6 +212,82 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             errorResult.ImportError = error;
             return errorResult;
+        }
+    }
+
+    /// <summary>
+    /// Processes media (images) associated with a step in a work instruction from an Excel worksheet.
+    /// </summary>
+    /// <param name="worksheet">The Excel worksheet containing the step data.</param>
+    /// <param name="step">The step object to which the media will be added.</param>
+    /// <param name="row">The row number in the worksheet corresponding to the step.</param>
+    /// <remarks>
+    /// This method extracts images from specific columns in the worksheet, saves them to the server, 
+    /// and associates their paths with the step object. It handles both primary and secondary media.
+    /// </remarks>
+    /// <exception cref="Exception">
+    /// Logs any exceptions that occur during the processing of step media, such as file I/O errors or 
+    /// issues with the Excel worksheet structure.
+    /// </exception>
+    private async Task ProcessStepMedia(IXLWorksheet worksheet, Step step, int row)
+    {
+        try
+        {
+            var primaryPictures = worksheet.Pictures
+                .Where(p => p.TopLeftCell.Address.RowNumber == row 
+                            && p.TopLeftCell.Address.ColumnNumber == STEP_PRIMARY_MEDIA_COLUMN)
+                .ToList();
+                
+            var secondaryPictures = worksheet.Pictures
+                .Where(p => p.TopLeftCell.Address.RowNumber == row 
+                            && p.TopLeftCell.Address.ColumnNumber == STEP_SECONDARY_MEDIA_COLUMN)
+                .ToList();
+            
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+            
+            // Verify that directory exists. If not create it.
+            if (!Directory.Exists(imageDir))
+            {
+                Directory.CreateDirectory(imageDir);
+            }
+            
+            foreach (var picture in primaryPictures)
+            {
+                var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+                
+                var imagePath = Path.Combine(imageDir, fileName);
+                    
+                
+                using (var ms = new MemoryStream())
+                {
+                    await picture.ImageStream.CopyToAsync(ms);
+                    var imageBytes = ms.ToArray();
+                    await File.WriteAllBytesAsync(imagePath, imageBytes);
+                }
+                
+                step.PrimaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
+            }
+            
+            foreach (var picture in secondaryPictures)
+            {
+                var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+                
+                var imagePath = Path.Combine(imageDir, fileName);
+                    
+                
+                using (var ms = new MemoryStream())
+                {
+                    await picture.ImageStream.CopyToAsync(ms);
+                    var imageBytes = ms.ToArray();
+                    await File.WriteAllBytesAsync(imagePath, imageBytes);
+                }
+                
+                step.SecondaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Information("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
         }
     }
 
