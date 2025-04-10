@@ -9,8 +9,8 @@ public class WorkInstruction : AuditableEntity
     public required string Title { get; set; }
     public string? Version { get; set; }
     public bool IsActive { get; set; }
-    public required List<Step> Steps { get; set; }
-
+    public bool PartsRequired { get; set; }
+    public List<WorkInstructionNode> Nodes { get; set; } = [];
     public List<Product> Products { get; set; } = [];
 }
 

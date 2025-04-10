@@ -1,34 +1,44 @@
 @using MESS.Data.Models
 @using MESS.Services.Serialization
+@using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes
+@using PartNode = MESS.Data.Models.PartNode
 @inject ISerializationService SerializationService
 
 @if (ActiveWorkInstruction != null && ProductionLog != null)
 {
-    @if (!ActiveWorkInstruction.Steps.TrueForAll(ls => ls.PartsNeeded?.Count <= 0))
+    @if (ActiveWorkInstruction.PartsRequired)
     {
         <div class="form-floating p-2 mb-2">
             <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="UpdateSerializationService"></InputText>
             <label for="productSerialNumber">Product Serial Number:</label>
         </div>
     }
-    
     <ol class="step">
-        @foreach (var step in ActiveWorkInstruction.Steps)
+        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes)
         {
-            var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+            var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == workInstructionNode.Id);
 
-            if (logStep == null && ProductionLog.LogSteps != null)
+            // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
+            if (workInstructionNode is Step workInstructionStep && workInstructionNode.NodeType == WorkInstructionNodeType.Step)
             {
-                logStep = new ProductionLogStep
+                if (logStep == null && ProductionLog.LogSteps != null)
                 {
-                    WorkInstructionStepId = step.Id,
-                    WorkInstructionStep = step,
-                    ProductionLogId = ProductionLog.Id,
-                };
-                ProductionLog.LogSteps.Add(logStep);
+                    logStep = new ProductionLogStep
+                    {
+                        WorkInstructionStepId = workInstructionNode.Id,
+                        WorkInstructionStep = workInstructionStep,
+                        ProductionLogId = ProductionLog.Id,
+                    };
+                    ProductionLog.LogSteps.Add(logStep);
+                }
+                <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep"/>
+            }
+            else if (workInstructionNode is PartNode workInstructionPart && workInstructionNode.NodeType == WorkInstructionNodeType.Part)
+            {
+                <PartNodeListItem PartNode="workInstructionPart" ProductSerialNumber="@ProductSerialNumber"/>
             }
             
-                <ProductionLogRadioButton ProductSerialNumber="@ProductSerialNumber" step="step" logStep="logStep" OnStepCompleted="OnStepCompleted"/>
+            
         }
     </ol>
 }

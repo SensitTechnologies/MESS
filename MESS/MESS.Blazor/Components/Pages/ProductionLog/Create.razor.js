@@ -1,4 +1,4 @@
-﻿export function printQRCode(value) {
+export function printQRCode(value) {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
@@ -24,6 +24,6 @@
         </body>
         </html>
     `);
-    
+
     iframe.contentDocument.close();
 }

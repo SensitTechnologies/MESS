@@ -1,4 +1,11 @@
 # MESS - Reference Sheet
+### Startup
+
+Note: There are several seeders that will input required entries into the database if the database does **not** contain any entries
+This includes a default **Technician** account that is required to log in to MESS and to start creating WorkInstructions, Users, etc.
+
+### **Change Default Technician Password.**
+
 
 ## Work Instruction Import
 

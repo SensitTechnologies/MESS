@@ -10,7 +10,5 @@ public class ProductionLogStep
     public bool? Success { get; set; } = null;
     public string Notes { get; set; } = string.Empty;
     public DateTimeOffset SubmitTime { get; set; }
-    
-    public ProductionLog? ProductionLog { get; set; }
     public Step? WorkInstructionStep { get; set; }
 }
