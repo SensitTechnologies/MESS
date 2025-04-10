@@ -12,26 +12,36 @@
         <td>
             <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
         </td>
-        @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
-        {
-            <div class="confirm-delete mt-2">
-                <span>Are you sure?</span>
-                <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
-                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
-            </div>
-        }
-        else
-        {
-            <button type="button"
-                    class="btn btn-warning"
-                    @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
-                Delete
+        <td>
+            <button type="button" class="btn btn-info" @onclick="ShowStepManager">
+                Edit
             </button>
-        }
-        <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
-            Save Changes
-        </button>
+            @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
+            {
+                <div class="confirm-delete mt-2">
+                    <span>Are you sure?</span>
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
+                    <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
+                </div>
+            }
+            else
+            {
+                <button type="button"
+                        class="btn btn-warning"
+                        @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
+                    Delete
+                </button>
+            }
+
+            <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
+                Save Changes
+            </button>
+        </td>
     </tr>
+    @if (DisplayStepManager)
+    {
+        <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes" />
+    }
 }
 
 @code {
@@ -46,8 +56,7 @@
 
     private bool IsConfirmingDelete { get; set; } = false;
     private int? WorkInstructionToDeleteId { get; set; }
-
-   
+    private bool DisplayStepManager { get; set; } = false;
     
     private void InitiateDeleteInstruction(int instructionId)
     {
@@ -59,6 +68,11 @@
     {
         IsConfirmingDelete = false;
         WorkInstructionToDeleteId = null;
+    }
+
+    private void ShowStepManager()
+    {
+        DisplayStepManager = !DisplayStepManager;
     }
 
     private async Task ConfirmDeleteInstruction()

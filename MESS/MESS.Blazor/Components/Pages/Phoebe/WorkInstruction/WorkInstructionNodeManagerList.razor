@@ -1,0 +1,20 @@
+@using MESS.Data.Models
+
+
+
+<div class="container">
+    @foreach (var node in WorkInstructionNodes)
+    {
+        <div class="row align-items-start">
+            <div class="col">
+                <h2>Position</h2>
+                @node.Position
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
+}

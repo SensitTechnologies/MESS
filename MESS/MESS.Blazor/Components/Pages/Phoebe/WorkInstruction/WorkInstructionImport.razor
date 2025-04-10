@@ -10,7 +10,7 @@
             <h5 class="mb-0">Select Excel Files</h5>
         </div>
         <div class="card-body">
-            <InputFile OnChange="LoadFiles" multiple accept=".xlsx" class="form-control mb-3" />
+            <InputFile OnChange="LoadFiles" accept=".xlsx" class="form-control mb-3" />
 
             <div class="d-flex gap-2 mb-3">
                 <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || Files.Count == 0)">
