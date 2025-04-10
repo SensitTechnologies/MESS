@@ -49,6 +49,27 @@ public partial class WorkInstructionService : IWorkInstructionService
         _webHostEnvironment = webHostEnvironment;
     }
 
+    /// <summary>
+    /// Imports work instructions from an Excel file.
+    /// </summary>
+    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
+    /// <returns>
+    /// A <see cref="WorkInstructionImportResult"/> object containing:
+    /// - Success status
+    /// - Imported work instruction (if successful)
+    /// - Error details (if failed)
+    /// - The names of processed files
+    /// </returns>
+    /// <remarks>
+    /// The Excel file must follow a specific format with cells containing:
+    /// - B1: Work instruction title
+    /// - D1: Version and QR code requirement
+    /// - B2: Product name
+    /// - B3: Parts list (format: "(PART_NAME, PART_NUMBER), ...")
+    /// - Rows from 7 onwards: Steps with title, description, and media
+    /// 
+    /// Images found in the Excel file are extracted and saved to the web root directory.
+    /// </remarks>
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
@@ -207,6 +228,25 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <summary>
+    /// Converts rich text from an Excel cell into HTML format.
+    /// </summary>
+    /// <param name="cell">The Excel cell containing text to convert.</param>
+    /// <returns>
+    /// HTML-formatted string representing the cell's content. If the cell contains rich text,
+    /// the method generates HTML with appropriate styling to preserve formatting.
+    /// If the cell does not contain rich text, it returns the plain string value.
+    /// </returns>
+    /// <remarks>
+    /// Supported rich text attributes:
+    /// - Bold text is styled with font-weight: bold
+    /// - Italic text is styled with font-style: italic
+    /// - Font size is applied with font-size in points
+    /// - Font color is preserved
+    /// 
+    /// All text is HTML-encoded to prevent XSS vulnerabilities.
+    /// The result is wrapped in a div element.
+    /// </remarks>
     private string GetRichTextFromCell(IXLCell cell)
     {
         if (!cell.HasRichText)
@@ -244,8 +284,15 @@ public partial class WorkInstructionService : IWorkInstructionService
         return sb.ToString();
     }
 
-    // Expected string format is as follows:
-    // (PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), ...
+    /// <summary>
+    /// Extracts a list of parts from a formatted string.
+    /// </summary>
+    /// <param name="partsListString">String in format: "(PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), ..."</param>
+    /// <returns>List of Part objects if successful, null otherwise.</returns>
+    /// <remarks>
+    /// Uses regex to parse the parts list string and either retrieve existing parts
+    /// from the database or create new ones as needed.
+    /// </remarks>
     private async Task<List<Part>?> GetPartsListFromString(string partsListString)
     {
         try
@@ -293,6 +340,11 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <summary>
+    /// Retrieves an existing part from the database or creates a new one if it doesn't exist.
+    /// </summary>
+    /// <param name="partToAdd">The part to retrieve or create.</param>
+    /// <returns>The persisted part from the database, or null if an error occurs.</returns>
     private async Task<Part?> GetOrAddPart(Part partToAdd)
     {
         try
@@ -318,7 +370,11 @@ public partial class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
-
+    
+    /// <summary>
+    /// Retrieves all work instructions from the database.
+    /// </summary>
+    /// <returns>List of work instructions.</returns>
     public List<WorkInstruction> GetAll()
     {
         try
@@ -337,6 +393,13 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <summary>
+    /// Asynchronously retrieves all work instructions, using caching for performance.
+    /// </summary>
+    /// <returns>List of work instructions.</returns>
+    /// <remarks>
+    /// Results are cached for 15 minutes to improve performance.
+    /// </remarks>
     public async Task<List<WorkInstruction>> GetAllAsync()
     {
         if (_cache.TryGetValue(WORK_INSTRUCTION_CACHE_KEY, out List<WorkInstruction>? cachedWorkInstructionList) &&
@@ -359,10 +422,15 @@ public partial class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
-            throw;
+            return [];
         }
     }
     
+    /// <summary>
+    /// Retrieves a work instruction by its title.
+    /// </summary>
+    /// <param name="title">The title of the work instruction to retrieve.</param>
+    /// <returns>The work instruction if found, null otherwise.</returns>
 
     public WorkInstruction? GetByTitle(string title)
     {
@@ -380,6 +448,11 @@ public partial class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
+    /// <summary>
+    /// Retrieves a work instruction by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the work instruction to retrieve.</param>
+    /// <returns>The work instruction if found, null otherwise.</returns>
 
     public WorkInstruction? GetById(int id)
     {
@@ -396,6 +469,12 @@ public partial class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
+    
+    /// <summary>
+    /// Asynchronously retrieves a work instruction by its ID, including related nodes and parts.
+    /// </summary>
+    /// <param name="id">The ID of the work instruction to retrieve.</param>
+    /// <returns>The work instruction with its related data if found, null otherwise.</returns>
 
     public async Task<WorkInstruction?> GetByIdAsync(int id)
     {
@@ -421,6 +500,14 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <summary>
+    /// Creates a new work instruction in the database.
+    /// </summary>
+    /// <param name="workInstruction">The work instruction to create.</param>
+    /// <returns>True if creation was successful, false otherwise.</returns>
+    /// <remarks>
+    /// Validates the work instruction before saving and invalidates the cache after successful creation.
+    /// </remarks>
     public async Task<bool> Create(WorkInstruction workInstruction)
     {
         try
@@ -452,7 +539,16 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
-
+    
+    /// <summary>
+    /// Soft deletes a work instruction by setting its IsActive property to false.
+    /// </summary>
+    /// <param name="id">The ID of the work instruction to delete.</param>
+    /// <returns>True if deletion was successful, false otherwise.</returns>
+    /// <remarks>
+    /// This is a soft delete operation that marks the instruction as inactive rather than removing it.
+    /// The cache is invalidated after successful deletion.
+    /// </remarks>
     public async Task<bool> DeleteByIdAsync(int id)
     {
         try
@@ -482,6 +578,14 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <summary>
+    /// Updates an existing work instruction in the database.
+    /// </summary>
+    /// <param name="workInstruction">The work instruction with updated values.</param>
+    /// <returns>True if update was successful, false otherwise.</returns>
+    /// <remarks>
+    /// Verifies the work instruction exists before updating and invalidates the cache after successful update.
+    /// </remarks>
     public async Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction)
     {
         // if ID is 0 that means it has NOT been saved to the database
@@ -517,6 +621,9 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <summary>
+    /// Regex pattern for parsing parts list strings in the format "(PART_NAME, PART_NUMBER)"
+    /// </summary>
     [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
 }
