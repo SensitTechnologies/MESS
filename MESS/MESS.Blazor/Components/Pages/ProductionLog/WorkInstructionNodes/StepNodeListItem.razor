@@ -3,14 +3,35 @@
 @inject IProductionLogEventService ProductionLogEventService
 
 <div class="row">
-    <div class="col col-md-3 col-sm-12 col-3">
-        <p class="d-block mb-1">@((MarkupString)Step.Name)</p>
+    @* This stores the primary content i.e. the content that is always shown to the operator. The 'Name' field is always shown. *@
+    <div class="col col-md-6 col-sm-12 col-3 primary-content">
+        <div class="card">
+            <div class="card-body">
+                <p class="card-text d-block mb-1">@((MarkupString)Step.Name)</p>
+            </div>
+            @if (Step.PrimaryMedia is { Count: > 0 })
+            {
+                <img class="object-fit-scale card-img-bottom" src="@Step.PrimaryMedia?.FirstOrDefault()" alt="Step Image"/>
+            }
+        </div>
     </div>
-    <div class="col">
-        @if (Step.Body != null)
-        {
-        <p>@((MarkupString)Step.Body)</p>
-        }
+    
+    @* This stores the secondary content i.e. the content that is optional to be shown to the operator The 'Body' field is optional. *@
+    <div class="col col-md-6 secondary-content">
+        <div class="card">
+            <div class="card-body">
+                @if (Step.Body != null)
+                {
+                    <p>@((MarkupString)Step.Body)</p>
+                }
+            </div>
+            @if (Step.SecondaryMedia is { Count: > 0 })
+            {
+                <img class="object-fit-scale card-img-bottom " src="@Step.SecondaryMedia?.FirstOrDefault()" alt="Step Image"/>
+            }
+        </div>
+
+
     </div>
 </div>
 <div class="row mt-3">
@@ -42,11 +63,7 @@
     <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
     }
 </div>
-@if (Step.PrimaryMedia is { Count: > 0 })
-{
-    <div class="col col-5 col-md-5 col-sm-12 container">
-        <img src="@Step.PrimaryMedia?.FirstOrDefault()" alt="Step Image"/>
-    </div>
+
 
 
 
@@ -118,6 +135,4 @@
 
         SetSelectedButton(result.Value ? "Success" : "Failure");
     }
-}
-
 }
