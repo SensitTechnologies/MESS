@@ -147,8 +147,6 @@ public partial class WorkInstructionService : IWorkInstructionService
                     Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
                     Content = new List<string>(),
                     Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
-                    SubmitTime = DateTimeOffset.UtcNow,
-                    PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
                 };
                 
                 var pictures = worksheet.Pictures
