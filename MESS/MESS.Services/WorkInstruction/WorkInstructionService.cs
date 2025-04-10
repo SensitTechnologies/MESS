@@ -12,6 +12,7 @@ using Serilog;
 using System.Drawing;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
@@ -89,11 +90,23 @@ public partial class WorkInstructionService : IWorkInstructionService
             var worksheet = workbook.Worksheet(1);
             
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
+            var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
+            
+            // Check for pre-existing WorkInstruction that have matching title + version
+            var preexistingWorkInstruction = await _context.WorkInstructions
+                .Where(w => w.Title == workInstructionTitle && w.Version == versionString)
+                .AnyAsync();
+
+            if (preexistingWorkInstruction)
+            {
+                Log.Information("Unable to import Work Instruction. Pre-existing work instruction found for Title: {Title}, Version: {Version}. ", workInstructionTitle, versionString);
+                return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
+            }
             var partsRequired = worksheet.Cell(QR_CODE_REQUIRED_CELL).GetValue<bool>();
             
             var workInstruction = new WorkInstruction
             {
-                Title = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString(),
+                Title = workInstructionTitle,
                 Version = versionString,
                 Products = [],
                 Nodes = [],
@@ -112,6 +125,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             workInstruction.Products.Add(product);
 
+            // Create all steps within instruction
             // Add any required parts to the work instruction
             var partsNode = new PartNode();
             partsNode.NodeType = WorkInstructionNodeType.Part;
@@ -123,15 +137,18 @@ public partial class WorkInstructionService : IWorkInstructionService
                 workInstruction.Nodes.Add(partsNode);
             }
 
+
             // Start from row 7 (assuming header row is 6)
             var stepStartRow = STEP_START_ROW;
             while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
             {
                 var step = new Step
                 {
-                    Name = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN)),
+                    Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
                     Content = new List<string>(),
-                    Body = GetRichTextFromCell(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN))
+                    Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
+                    SubmitTime = DateTimeOffset.UtcNow,
+                    PartsNeeded = await GetPartsListFromString(worksheet.Cell(stepStartRow, STEP_PARTS_LIST_COLUMN).GetString()),
                 };
                 
                 var pictures = worksheet.Pictures
@@ -247,36 +264,96 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// All text is HTML-encoded to prevent XSS vulnerabilities.
     /// The result is wrapped in a div element.
     /// </remarks>
-    private string GetRichTextFromCell(IXLCell cell)
+    private string ProcessCellText(IXLCell cell, XLWorkbook workbook)
     {
-        if (!cell.HasRichText)
-        {
-            return cell.GetString();
-        }
-
         var sb = new StringBuilder();
         sb.Append("<div>");
 
-        foreach (var richText in cell.GetRichText())
-        {
-            var styles = new List<string>();
-
-            if (richText.Bold) styles.Add("font-weight: bold");
-            if (richText.Italic) styles.Add("font-style: italic");
-            // if (richText.Underlined) styles.Add("text-decoration: underline");
-            // if (richText.Strike) styles.Add("text-decoration: line-through");
-            if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
-            if (richText.FontColor != XLColor.NoColor) styles.Add($"color: {richText.FontColor}");
-
-            var text = WebUtility.HtmlEncode(richText.Text);
+        var hasHyperLink = cell.HasHyperlink;
+        string? hyperLinkUri = null;
         
-            if (styles.Any())
+        
+        if (hasHyperLink)
+        {
+            var hyperLink = cell.GetHyperlink();
+            hyperLinkUri = hyperLink.ExternalAddress.AbsoluteUri;
+        }
+
+        if (!cell.HasRichText)
+        {
+            string content = cell.GetString();
+
+            string cellColor = "";
+            
+            if (cell.Style.Font.FontColor.ColorType == XLColorType.Color)
             {
-                sb.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                var color = cell.Style.Font.FontColor.Color;
+                string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                cellColor = $"color: {hexColor};";
+            } else
+            {
+                var themeColor = workbook.Theme.ResolveThemeColor(cell.Style.Font.FontColor.ThemeColor);
+                cellColor = themeColor.Color.ToString();
+            }
+            
+            if (hasHyperLink)
+            {
+                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\" style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</a>");
             }
             else
             {
-                sb.Append(text);
+                sb.Append($"<span style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</span>");
+            }
+        }
+        else
+        {
+            StringBuilder richTextContent = new StringBuilder();
+            foreach (var richText in cell.GetRichText())
+            {
+                var styles = new List<string>();
+
+                if (richText.Bold) styles.Add("font-weight: bold");
+                if (richText.Italic) styles.Add("font-style: italic");
+                if (richText.Underline != XLFontUnderlineValues.None) styles.Add("text-decoration: underline");
+                if (richText.Strikethrough) styles.Add("text-decoration: line-through");
+                if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+
+                if (richText.FontColor != XLColor.NoColor && richText.FontColor.HasValue)
+                {
+                    if (richText.FontColor.ColorType == XLColorType.Color)
+                    {
+                        var color = richText.FontColor.Color;
+                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                        styles.Add($"color: {hexColor}");
+                    } 
+                    else if (richText.FontColor.ColorType == XLColorType.Theme)
+                    {
+                        var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
+                        var color = themeColor.Color;
+                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                        styles.Add($"color: {hexColor}");
+                    }
+                }
+                
+                var text = WebUtility.HtmlEncode(richText.Text);
+        
+                if (styles.Any())
+                {
+                    richTextContent.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                }
+                else
+                {
+                    richTextContent.Append(text);
+                }
+            }
+
+            if (hasHyperLink)
+            {
+                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\">{richTextContent}</a>");
+            }
+            else
+            {
+                sb.Append(richTextContent);
             }
         }
 

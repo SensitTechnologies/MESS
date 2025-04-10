@@ -7,7 +7,23 @@ This includes a default **Technician** account that is required to log in to MES
 ### **Change Default Technician Password.**
 
 
-### EF Core (Common Database Interactions)
+## Work Instruction Import
+
+### Currently Supported Rich-Text Features
+* Bold
+* Hyperlinks
+* Underline
+* Italics
+* Strikethrough
+* Colors (Only **Theme** and Direct **Font** Color. Index color currently NOT supported)
+
+### Not Supported Rich-Text Features
+* Fonts
+* Index colors
+* Formulas
+* Other more specific features.
+
+## EF Core (Common Database Interactions)
 **NOTE:** *For both of these commands you must be in the MESS.Data directory, otherwise you must specify the base project as well.*
 #### Migrations
 ```shell
