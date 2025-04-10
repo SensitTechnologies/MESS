@@ -14,10 +14,9 @@
         </div>
     }
     <ol class="step">
-        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes)
+        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == workInstructionNode.Id);
-
             // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
             if (workInstructionNode is Step workInstructionStep && workInstructionNode.NodeType == WorkInstructionNodeType.Step)
             {
