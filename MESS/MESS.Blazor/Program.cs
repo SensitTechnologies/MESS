@@ -11,6 +11,7 @@ using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
@@ -98,6 +99,11 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddAntiforgery();
+
+// Setup FluentUI
+builder.Services.AddFluentUIComponents();
+
+
 
 var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Warning;
 
