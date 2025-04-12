@@ -535,6 +535,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             var workInstructions = await _context.WorkInstructions
                 .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
                 .ToListAsync();
 
             // Cache data for 15 minutes

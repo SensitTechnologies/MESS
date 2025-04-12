@@ -17,31 +17,14 @@
         <WorkInstructionImport></WorkInstructionImport>
     </div>
     <div>
-        <table>
-            <thead>
-            <tr>
-                <th scope="col">
-                    #
-                </th>
-                <th scope="col">
-                    Title
-                </th>
-                <th scope="col">
-                    Version
-                </th>
-                <th scope="col">
-                    Actions
-                </th>
-            </tr>
-            </thead>
-            <tbody>
+        <FluentGrid Justify="JustifyContent.Center">
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
-                <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"></WorkInstructionTableRow>
+                <FluentGridItem xs="12">
+                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"></WorkInstructionTableRow>
+                </FluentGridItem>
             }
-            </tbody>
-        </table>
-
+        </FluentGrid>
     </div>
 
 </div>

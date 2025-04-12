@@ -2,16 +2,62 @@
 
 
 
-<div class="container">
-    @foreach (var node in WorkInstructionNodes)
-    {
-        <div class="row align-items-start">
-            <div class="col">
-                <h2>Position</h2>
-                @node.Position
-            </div>
-        </div>
-    }
+<div>
+    <FluentDataGrid Items="WorkInstructionNodes.AsQueryable()" MultiLine="true" ResizableColumns="true" AutoFit="true">
+        <PropertyColumn Property="@(n => n.Position)" Sortable="true" />
+        <PropertyColumn Property="@(n => n.NodeType.ToString())" Sortable="true" />
+        <TemplateColumn Title="Content">
+            <ChildContent>
+                @switch (context.NodeType)
+                {
+                case WorkInstructionNodeType.Part when context is PartNode partNode:
+                    @foreach (var part in partNode.Parts)
+                    {
+                        <div class="part-node">
+                            <div><strong>Serial Number:</strong> @part.PartNumber</div>
+                            <div><strong>Part Name:</strong> @part.PartName</div>
+                        </div>
+                    }
+                break;
+
+                case WorkInstructionNodeType.Step when context is Step stepNode:
+                <div class="step-node">
+                    <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
+                    <div class="step-body"><strong>Body:</strong>
+                        @if (stepNode.Body != null)
+                        {
+                            @((MarkupString)stepNode.Body)
+                        }
+                    </div>
+          
+                    @foreach (var pMedia in stepNode.PrimaryMedia)
+                    {
+                        <div class="image-node">
+                            <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid" />
+                        </div>
+                    }
+
+                    @foreach (var sMedia in stepNode.SecondaryMedia)
+                    {
+                        <div class="image-node">
+                            <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid" />
+                        </div>
+                    }
+                </div>
+                break;
+
+                default:
+                    <div>Unknown node type: @context.NodeType</div>
+                break;
+                }
+            </ChildContent>
+        </TemplateColumn>
+        <TemplateColumn Title="Actions">
+            <button class="btn btn-sm btn-primary">Edit</button>
+            <button class="btn btn-sm btn-danger">Delete</button>
+        </TemplateColumn>
+        
+    </FluentDataGrid>
 </div>
 
 @code {

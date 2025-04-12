@@ -4,7 +4,8 @@
 
 @if (WorkInstruction != null)
 {
-    <tr>
+    <FluentGrid Justify="JustifyContent.Center">
+    <FluentGridItem>
         <th scope="row">@RowNumber</th>
         <td>
             <input type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
@@ -37,11 +38,12 @@
                 Save Changes
             </button>
         </td>
-    </tr>
+    </FluentGridItem>
     @if (DisplayStepManager)
     {
         <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes" />
     }
+    </FluentGrid>
 }
 
 @code {
