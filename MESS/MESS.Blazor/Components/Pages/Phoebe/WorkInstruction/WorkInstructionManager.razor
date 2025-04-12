@@ -21,7 +21,7 @@
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
                 <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"></WorkInstructionTableRow>
+                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate"></WorkInstructionTableRow>
                 </FluentGridItem>
             }
         </FluentGrid>
@@ -59,11 +59,6 @@
             await DisplayAlert("An error occurred while saving changes");
         }
     }
-
-    private async Task Delete(int id)
-    {
-        await WorkInstructionService.DeleteByIdAsync(id);
-    }
     
     private async Task DisplayAlert(string message)
     {
@@ -75,4 +70,10 @@
         StateHasChanged();
     }
 
+    private Task HandleDuplicate(WorkInstruction newInstruction)
+    {
+        WorkInstructions.Add(newInstruction);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 }

@@ -10,15 +10,27 @@
             <FluentGridItem>
                 <th scope="row">@RowNumber</th>
                 <td>
-                    <input type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
+                    <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
                 </td>
                 <td>
-                    <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
+                    <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
                 </td>
                 <td>
-                    <button disabled="@(!IsEditable)" type="button" class="btn @(IsEditable ? "btn-outline-info" : "btn-outline-secondary")" @onclick="ShowStepManager">
-                        Edit
-                    </button>
+                    @if (IsEditable)
+                    {
+                        <button type="button" class="btn btn-outline-success" @onclick="ShowStepManager">
+                            Edit Actions
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" @onclick="DeleteWorkInstruction">
+                            Delete
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-primary" @onclick="DuplicateWorkInstruction">
+                            Duplicate
+                        </button>
+                    }
                     <button type="button" class="@(WorkInstruction.IsActive ? "btn-danger" : "btn-success") btn" @onclick="() => WorkInstruction.IsActive = !WorkInstruction.IsActive">
                         @if (WorkInstruction.IsActive)
                         {
@@ -52,6 +64,9 @@
     public EventCallback<WorkInstruction> SaveChanges { get; set; }
     [Parameter]
     public required WorkInstruction WorkInstruction { get; set; }
+    [Parameter]
+    public EventCallback<WorkInstruction> OnDuplicate { get; set; }
+    
     private bool IsEditable { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -68,4 +83,31 @@
     {
         DisplayStepManager = !DisplayStepManager;
     }
+
+    private async Task DuplicateWorkInstruction()
+    {
+        var newInstruction = await WorkInstructionService.DuplicateAsync(WorkInstruction);
+
+        if (newInstruction != null)
+        {
+            await OnDuplicate.InvokeAsync(newInstruction);
+            await DisplayAlert.InvokeAsync($"Work Instruction: {newInstruction.Title} duplicated successfully");
+        }
+        else
+        {
+            await DisplayAlert.InvokeAsync("Failed to duplicate work instruction.");
+        }
+    }
+
+    /// Only Delete a Work Instruction if it does not have any associated Production Logs
+    private async Task DeleteWorkInstruction()
+    {
+        if (!IsEditable)
+        {
+            Log.Information("Attempt to delete Work Instruction: {WorkInstructionTitle} with ID: {ID},  Failed since it is not editable.", WorkInstruction.Title, WorkInstruction.Id);
+            return;
+        }
+        await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
+    }
+
 }
