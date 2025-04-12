@@ -8,60 +8,63 @@
             @foreach (var node in WorkInstructionNodes)
             {
                 <FluentGridItem xs="12">
+                    <FluentCard>
                     <FluentGrid>
-                        
-                    <FluentGridItem xs="1">
-                        @node.Position
-                    </FluentGridItem>
-                    <FluentGridItem xs="1">
-                        @node.NodeType.ToString()
-                    </FluentGridItem>
-                    <FluentGridItem xs="9">
-                    @switch (node.NodeType)
-                    {
-                        case WorkInstructionNodeType.Part when node is PartNode partNode:
-                            @foreach (var part in partNode.Parts)
+                            
+                        <FluentGridItem xs="1">
+                            @node.Position
+                        </FluentGridItem>
+                        <FluentGridItem xs="1">
+                            @node.NodeType.ToString()
+                        </FluentGridItem>
+                        <FluentGridItem xs="9">
+                            @switch (node.NodeType)
                             {
-                                <div class="part-node">
-                                    <div><strong>Serial Number:</strong> @part.PartNumber</div>
-                                    <div><strong>Part Name:</strong> @part.PartName</div>
-                                </div>
-                            }
-
-                            break;
-
-                        case WorkInstructionNodeType.Step when node is Step stepNode:
-                            <div class="step-node">
-                                <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
-                                <div class="step-body"><strong>Body:</strong>
-                                    @if (stepNode.Body != null)
+                                case WorkInstructionNodeType.Part when node is PartNode partNode:
+                                    @foreach (var part in partNode.Parts)
                                     {
-                                        @((MarkupString)stepNode.Body)
+                                        <div class="part-node">
+                                            <div><strong>Serial Number:</strong> @part.PartNumber</div>
+                                            <div><strong>Part Name:</strong> @part.PartName</div>
+                                        </div>
                                     }
-                                </div>
 
-                                @foreach (var pMedia in stepNode.PrimaryMedia)
-                                {
-                                    <div class="image-node">
-                                        <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid"/>
+                                    break;
+
+                                case WorkInstructionNodeType.Step when node is Step stepNode:
+                                    <div class="step-node">
+                                        <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
+                                        <div class="step-body"><strong>Body:</strong>
+                                            @if (stepNode.Body != null)
+                                            {
+                                                @((MarkupString)stepNode.Body)
+                                            }
+                                        </div>
+
+                                        @foreach (var pMedia in stepNode.PrimaryMedia)
+                                        {
+                                            <div class="image-node">
+                                                <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid"/>
+                                            </div>
+                                        }
+
+                                        @foreach (var sMedia in stepNode.SecondaryMedia)
+                                        {
+                                            <div class="image-node">
+                                                <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid"/>
+                                            </div>
+                                        }
                                     </div>
-                                }
+                                    break;
 
-                                @foreach (var sMedia in stepNode.SecondaryMedia)
-                                {
-                                    <div class="image-node">
-                                        <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid"/>
-                                    </div>
-                                }
-                            </div>
-                            break;
-
-                        default:
-                            <div>Unknown node type: @node.NodeType</div>
-                            break;
-                    }
-                    </FluentGridItem>
+                                default:
+                                    <div>Unknown node type: @node.NodeType</div>
+                                    break;
+                            }
+                        </FluentGridItem>
+                        
                     </FluentGrid>
+                        </FluentCard>
                 </FluentGridItem>
             }
         </FluentGrid>
