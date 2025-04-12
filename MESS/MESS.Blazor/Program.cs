@@ -32,6 +32,19 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 
 });
 
+builder.Services.AddDbContextFactory<ApplicationContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
+
+    options.UseSqlServer(connectionString, options =>
+    {
+        options.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    });
+}, ServiceLifetime.Scoped);
+
 // Adding Separate DbContext for Identity
 builder.Services.AddDbContext<UserContext>(options =>
 {

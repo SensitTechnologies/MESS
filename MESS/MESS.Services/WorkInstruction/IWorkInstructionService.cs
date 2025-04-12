@@ -6,6 +6,7 @@ using Data.Models;
 
 public interface IWorkInstructionService
 {
+    public Task<bool> IsEditable(WorkInstruction workInstruction);
     public Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects

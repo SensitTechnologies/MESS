@@ -22,6 +22,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     private readonly IProductService _productService;
     private readonly IMemoryCache _cache;
     private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
 
     // The following attributes define the current expected XLSX structure as of 3/28/2025
     private const string INSTRUCTION_TITLE_CELL = "B1";
@@ -42,12 +43,48 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
 
-    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment)
+    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
     {
         _context = context;
         _productService = productService;
         _cache = cache;
         _webHostEnvironment = webHostEnvironment;
+        _contextFactory = contextFactory;
+    }
+
+    /// <summary>
+    /// Determines whether the specified work instruction is editable.
+    /// A work instruction is considered non-editable if it has associated production logs.
+    /// </summary>
+    /// <param name="workInstruction">The work instruction to evaluate.</param>
+    /// <returns>
+    /// A boolean value indicating whether the work instruction is editable.
+    /// True if editable (i.e., no production logs exist for it); otherwise, false.
+    /// </returns>
+    public async Task<bool> IsEditable(WorkInstruction workInstruction)
+    {
+        if (workInstruction is not { Id: > 0 })
+        {
+            Log.Warning("Cannot check editability: Work instruction is null or has invalid ID");
+            return false;
+        }
+        
+        try
+        {
+            await using var localContext = await _contextFactory.CreateDbContextAsync();
+            
+            // Check if any production logs reference this work instruction. If so the Instruction is not editable.
+            var hasProductionLogs = await localContext.ProductionLogs
+                .AsNoTracking()
+                .AnyAsync(p => p.WorkInstruction != null && p.WorkInstruction.Id == workInstruction.Id);
+
+            return !hasProductionLogs;
+        }
+        catch (Exception e)
+        {
+            Log.Information("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
+            return false;
+        }
     }
 
     /// <summary>
@@ -134,6 +171,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             if (partsList != null)
             {
                 partsNode.Parts.AddRange(partsList);
+                // Making PartsNode position 0 since there is no inherent way to get the desired position from
+                // an Excel spreadsheet. It is possible, but with the ability to alter Node positions this feature
+                // was placed on the backlog.
+                partsNode.Position = 0;
                 workInstruction.Nodes.Add(partsNode);
             }
 
@@ -645,7 +686,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
-            workInstruction.IsActive = true;
+            workInstruction.IsActive = false;
             await _context.WorkInstructions.AddAsync(workInstruction);
             await _context.SaveChangesAsync();
             

@@ -16,7 +16,7 @@
                     <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
                 </td>
                 <td>
-                    <button type="button" class="btn btn-info" @onclick="ShowStepManager">
+                    <button disabled="@(!IsEditable)" type="button" class="btn @(IsEditable ? "btn-outline-info" : "btn-outline-secondary")" @onclick="ShowStepManager">
                         Edit
                     </button>
                     <button type="button" class="@(WorkInstruction.IsActive ? "btn-danger" : "btn-success") btn" @onclick="() => WorkInstruction.IsActive = !WorkInstruction.IsActive">
@@ -52,6 +52,13 @@
     public EventCallback<WorkInstruction> SaveChanges { get; set; }
     [Parameter]
     public required WorkInstruction WorkInstruction { get; set; }
+    private bool IsEditable { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsEditable = await WorkInstructionService.IsEditable(WorkInstruction);
+        await base.OnInitializedAsync();
+    }
 
     private bool IsConfirmingDelete { get; set; } = false;
     private int? WorkInstructionToDeleteId { get; set; }
