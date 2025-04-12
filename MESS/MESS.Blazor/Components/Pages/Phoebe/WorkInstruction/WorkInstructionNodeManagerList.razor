@@ -3,75 +3,125 @@
 
 
 <div>
-    <FluentDragContainer TItem="object">
+    <FluentDragContainer TItem="WorkInstructionNode" OnDropEnd="OnDropEnd">
         <FluentGrid Justify="JustifyContent.Center">
-            @foreach (var node in WorkInstructionNodes)
+            @foreach (var node in WorkInstructionNodes.OrderBy(n => n.Position))
             {
                 <FluentGridItem xs="12">
-                    <FluentCard>
-                    <FluentGrid>
-                            
-                        <FluentGridItem xs="1">
-                            @node.Position
-                        </FluentGridItem>
-                        <FluentGridItem xs="1">
-                            @node.NodeType.ToString()
-                        </FluentGridItem>
-                        <FluentGridItem xs="9">
-                            @switch (node.NodeType)
-                            {
-                                case WorkInstructionNodeType.Part when node is PartNode partNode:
-                                    @foreach (var part in partNode.Parts)
+                    <FluentDropZone Id="@node.Id.ToString()" Item="node" TItem="WorkInstructionNode" Draggable="true" Droppable="true">
+                        <FluentCard>
+                            <FluentGrid>
+
+                                <FluentGridItem xs="1">
+                                    @node.Position
+                                </FluentGridItem>
+                                <FluentGridItem xs="1">
+                                    @node.NodeType.ToString()
+                                </FluentGridItem>
+                                <FluentGridItem xs="9">
+                                    @switch (node.NodeType)
                                     {
-                                        <div class="part-node">
-                                            <div><strong>Serial Number:</strong> @part.PartNumber</div>
-                                            <div><strong>Part Name:</strong> @part.PartName</div>
-                                        </div>
-                                    }
-
-                                    break;
-
-                                case WorkInstructionNodeType.Step when node is Step stepNode:
-                                    <div class="step-node">
-                                        <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
-                                        <div class="step-body"><strong>Body:</strong>
-                                            @if (stepNode.Body != null)
+                                        case WorkInstructionNodeType.Part when node is PartNode partNode:
+                                            @foreach (var part in partNode.Parts)
                                             {
-                                                @((MarkupString)stepNode.Body)
+                                                <div class="part-node">
+                                                    <div><strong>Serial Number:</strong> @part.PartNumber</div>
+                                                    <div><strong>Part Name:</strong> @part.PartName</div>
+                                                </div>
                                             }
-                                        </div>
 
-                                        @foreach (var pMedia in stepNode.PrimaryMedia)
-                                        {
-                                            <div class="image-node">
-                                                <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid"/>
+                                            break;
+
+                                        case WorkInstructionNodeType.Step when node is Step stepNode:
+                                            <div class="step-node">
+                                                <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
+                                                <div class="step-body"><strong>Body:</strong>
+                                                    @if (stepNode.Body != null)
+                                                    {
+                                                        @((MarkupString)stepNode.Body)
+                                                    }
+                                                </div>
+
+                                                @foreach (var pMedia in stepNode.PrimaryMedia)
+                                                {
+                                                    <div class="image-node">
+                                                        <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid"/>
+                                                    </div>
+                                                }
+
+                                                @foreach (var sMedia in stepNode.SecondaryMedia)
+                                                {
+                                                    <div class="image-node">
+                                                        <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid"/>
+                                                    </div>
+                                                }
                                             </div>
-                                        }
+                                            break;
 
-                                        @foreach (var sMedia in stepNode.SecondaryMedia)
-                                        {
-                                            <div class="image-node">
-                                                <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid"/>
-                                            </div>
-                                        }
-                                    </div>
-                                    break;
+                                        default:
+                                            <div>Unknown node type: @node.NodeType</div>
+                                            break;
+                                    }
+                                </FluentGridItem>
 
-                                default:
-                                    <div>Unknown node type: @node.NodeType</div>
-                                    break;
-                            }
-                        </FluentGridItem>
-                        
-                    </FluentGrid>
+                            </FluentGrid>
+
                         </FluentCard>
+                    </FluentDropZone>
                 </FluentGridItem>
             }
         </FluentGrid>
     </FluentDragContainer>
+    <div>
+        <FluentButton Appearance="Appearance.Accent">Save Order</FluentButton>
+    </div>
 </div>
 
 @code {
     [Parameter]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
+    // private bool hasOrderChanged = false;
+
+    private void OnDropEnd(FluentDragEventArgs<WorkInstructionNode> obj)
+    {
+        var targetPosition = obj.Target.Item.Position;
+        var sourcePosition = obj.Source.Item.Position;
+        
+        // Don't do anything if dropped in same position
+        if (targetPosition == sourcePosition) return;
+        
+        // Reorder nodes
+        if (targetPosition > sourcePosition)
+        {
+            // Moving down - shift items in between up
+            foreach (var node in WorkInstructionNodes.Where(n => n.Position > sourcePosition && n.Position <= targetPosition))
+            {
+                node.Position--;
+            }
+        }
+        else
+        {
+            // Moving up - shift items in between down
+            foreach (var node in WorkInstructionNodes.Where(n => n.Position >= targetPosition && n.Position < sourcePosition))
+            {
+                node.Position++;
+            }
+        }
+
+        // Set new position for dragged item
+        var sourceNode = obj.Source.Item;
+        sourceNode.Position = targetPosition;
+        
+        // hasOrderChanged = true;
+        StateHasChanged();
+    }
+    
+    // private async Task SaveNodeOrder()
+    // {
+    //     if (hasOrderChanged)
+    //     {
+    //         await OnOrderChanged.InvokeAsync(WorkInstructionNodes);
+    //         hasOrderChanged = false;
+    //     }
+    // }
 }
