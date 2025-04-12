@@ -293,8 +293,9 @@ public partial class WorkInstructionService : IWorkInstructionService
                 await ProcessStepMedia(worksheet, step, stepStartRow);
                 
                 // Step extends WorkInstructionNode for ordering purposes
-                // Calculation 0 Indexes the step order. 1st step has position 0.
-                step.Position = stepStartRow - STEP_START_ROW;
+                // Calculation 0 Indexes the step order. 1st step has position 1 if there are parts, otherwise position 0.
+                var rowPositionCalculation = stepStartRow - STEP_START_ROW;
+                step.Position = partsList != null ? rowPositionCalculation + 1 : rowPositionCalculation;
                 step.NodeType = WorkInstructionNodeType.Step;
                 workInstruction.Nodes.Add(step);
                 stepStartRow++;
