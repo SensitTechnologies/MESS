@@ -3,48 +3,21 @@
 @using MESS.Services.WorkInstruction
 @inject IWorkInstructionService WorkInstructionService
 
-<div class="container mt-4">
-    <h1>Work Instruction Import</h1>
-
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Select Excel Files</h5>
-        </div>
-        <div class="card-body">
-            <InputFile OnChange="LoadFiles" accept=".xlsx" class="form-control mb-3" />
-
-            <div class="d-flex gap-2 mb-3">
-                <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || Files.Count == 0)">
-                    Import Files
-                </button>
-                
-            </div>
-
-            @if (Files.Count > 0)
-            {
-            <div class="alert alert-info">
-                @Files.Count file(s) selected
-            </div>
-            }
-            @if (FileStatus == ImportStatus.Error)
-            {
-                <div class="alert alert-danger">
-                    @StatusMessage
-                </div>
-            } else if (FileStatus == ImportStatus.Complete)
-            {
-                <div class="alert alert-success mt-3">
-                    Import completed! Successfully imported @Files.Count file(s).
-                </div>
-            }
-        </div>
+<FluentCard Width="400" Class="m-0 w-100">
+    <div class="d-flex align-items-center">
+        <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || Files.Count == 0)">
+            Import File
+        </button>
+        <InputFile OnChange="LoadFiles" accept=".xlsx" class="form-control mb-3"/>
     </div>
-</div>
+</FluentCard>
 
 
 @code {
     [Parameter]
     public EventCallback<WorkInstruction> OnImportComplete { get; set; }
+    [Parameter]
+    public EventCallback<string> DisplayAlert { get; set; }
     
     private List<IBrowserFile> Files { get; set; } = [];
     private bool IsImporting { get; set; }
@@ -62,6 +35,7 @@
         if (importResult is { Status: ImportStatus.Error, ImportError: not null })
         {
             StatusMessage = importResult.ImportError.ToString();
+            await DisplayAlert.InvokeAsync(StatusMessage);
         }
 
         IsImporting = importResult is {Status: ImportStatus.Pending};

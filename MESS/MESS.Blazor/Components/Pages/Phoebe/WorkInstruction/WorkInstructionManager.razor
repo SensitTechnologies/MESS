@@ -14,9 +14,6 @@
         </div>
     }
     <div>
-        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
-    </div>
-    <div>
         <FluentGrid Justify="JustifyContent.Center">
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
@@ -26,8 +23,20 @@
             }
         </FluentGrid>
     </div>
-
 </div>
+<FluentFooter Class="fixed-bottom">
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Left">
+
+            </FluentStack>
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Right">
+                <WorkInstructionImport OnImportComplete="HandleImportComplete" DisplayAlert="DisplayAlert"/>
+            </FluentStack>
+        </FluentStack>
+    </FluentCard>
+</FluentFooter>
+
 
 @code {
     private List<WorkInstruction> WorkInstructions { get; set; } = [];
