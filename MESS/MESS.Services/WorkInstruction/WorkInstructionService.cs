@@ -82,18 +82,50 @@ public partial class WorkInstructionService : IWorkInstructionService
                     await _context.WorkInstructions.AddAsync(newWorkInstruction);
                     await _context.SaveChangesAsync();
 
-                    // Shallow copying Products
                     foreach (var product in workInstructionToDuplicate.Products)
                     {
                         newWorkInstruction.Products.Add(product);
                     }
 
-                    // Deep copy nodes
                     foreach (var originalNode in workInstructionToDuplicate.Nodes)
                     {
-                        // Your existing node duplication logic
-                        // ...
-                        // The implementation is correct, just kept here for brevity
+                        WorkInstructionNode newNode;
+            
+                        if (originalNode is Step originalStep)
+                        {
+                            var newStep = new Step
+                            {
+                                Name = originalStep.Name,
+                                Body = originalStep.Body,
+                                Position = originalStep.Position,
+                                NodeType = originalStep.NodeType,
+                                PrimaryMedia = [..originalStep.PrimaryMedia],
+                                SecondaryMedia = [..originalStep.SecondaryMedia]
+                            };
+                            
+                            newNode = newStep;
+                        }
+                        else if (originalNode is PartNode originalPartNode)
+                        {
+                            var newPartNode = new PartNode
+                            {
+                                Position = originalPartNode.Position,
+                                NodeType = originalPartNode.NodeType
+                            };
+                
+                            foreach (var part in originalPartNode.Parts)
+                            {
+                                newPartNode.Parts.Add(part);
+                            }
+                
+                            newNode = newPartNode;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+            
+                        newWorkInstruction.Nodes.Add(newNode);
                     }
 
                     await _context.SaveChangesAsync();
