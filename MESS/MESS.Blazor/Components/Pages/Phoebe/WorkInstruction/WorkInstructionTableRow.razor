@@ -19,23 +19,16 @@
                     <button type="button" class="btn btn-info" @onclick="ShowStepManager">
                         Edit
                     </button>
-                    @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
-                    {
-                        <div class="confirm-delete mt-2">
-                            <span>Are you sure?</span>
-                            <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
-                            <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
-                        </div>
-                    }
-                    else
-                    {
-                        <button type="button"
-                                class="btn btn-warning"
-                                @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
-                            Delete
-                        </button>
-                    }
-
+                    <button type="button" class="@(WorkInstruction.IsActive ? "btn-danger" : "btn-success") btn" @onclick="() => WorkInstruction.IsActive = !WorkInstruction.IsActive">
+                        @if (WorkInstruction.IsActive)
+                        {
+                            <p>Hide</p>
+                        }
+                        else
+                        {
+                            <p>Show</p>
+                        }
+                    </button>
                     <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
                         Save Changes
                     </button>
@@ -64,63 +57,8 @@
     private int? WorkInstructionToDeleteId { get; set; }
     private bool DisplayStepManager { get; set; } = false;
     
-    private void InitiateDeleteInstruction(int instructionId)
-    {
-        WorkInstructionToDeleteId = instructionId;
-        IsConfirmingDelete = true;
-    }
-
-    private void CancelDeleteInstruction()
-    {
-        IsConfirmingDelete = false;
-        WorkInstructionToDeleteId = null;
-    }
-
     private void ShowStepManager()
     {
         DisplayStepManager = !DisplayStepManager;
     }
-
-    private async Task ConfirmDeleteInstruction()
-    {
-        if (WorkInstruction == null)
-        {
-            return;
-        }
-
-        try
-        {
-            var result = await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
-            
-            if (result)
-            {
-                await DisplayAlert.InvokeAsync($"User {WorkInstruction.Title} has been deleted");
-            }
-            else
-            {
-                await DisplayAlert.InvokeAsync($"Failed to delete Work Instruction: {WorkInstruction.Title} with ID: {WorkInstruction.Id}");
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            await DisplayAlert.InvokeAsync($"Error deleting user: {e.Message}");
-        }
-        finally
-        {
-            IsConfirmingDelete = false;
-            WorkInstructionToDeleteId = null;
-        }
-    }
-
-    private void DeleteWorkInstructionAsync()
-    {
-        if (WorkInstruction == null)
-        {
-            return;
-        }
-
-        InitiateDeleteInstruction(WorkInstruction.Id);
-    }
-
 }
