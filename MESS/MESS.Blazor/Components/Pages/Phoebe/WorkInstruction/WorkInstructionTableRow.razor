@@ -66,6 +66,8 @@
     public required WorkInstruction WorkInstruction { get; set; }
     [Parameter]
     public EventCallback<WorkInstruction> OnDuplicate { get; set; }
+    [Parameter]
+    public EventCallback<WorkInstruction> OnDelete { get; set; }
     
     private bool IsEditable { get; set; }
 
@@ -105,9 +107,19 @@
         if (!IsEditable)
         {
             Log.Information("Attempt to delete Work Instruction: {WorkInstructionTitle} with ID: {ID},  Failed since it is not editable.", WorkInstruction.Title, WorkInstruction.Id);
+            await DisplayAlert.InvokeAsync($"Unable to delete WorkInstruction: {WorkInstruction.Title}, as it is not editable.");
             return;
         }
-        await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
+        var deletionResult = await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
+        if (deletionResult)
+        {
+            await OnDelete.InvokeAsync(WorkInstruction);
+            await DisplayAlert.InvokeAsync($"Successfully deleted WorkInstruction: {WorkInstruction.Title}.");
+        }
+        else
+        {
+            await DisplayAlert.InvokeAsync($"Unable to delete WorkInstruction: {WorkInstruction.Title}. Please contact the administrator or check the Log files.");
+        }
     }
 
 }

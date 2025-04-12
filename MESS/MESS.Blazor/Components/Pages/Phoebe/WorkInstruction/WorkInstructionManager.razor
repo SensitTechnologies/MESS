@@ -21,7 +21,7 @@
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
                 <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate"></WorkInstructionTableRow>
+                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"></WorkInstructionTableRow>
                 </FluentGridItem>
             }
         </FluentGrid>
@@ -73,6 +73,13 @@
     private Task HandleDuplicate(WorkInstruction newInstruction)
     {
         WorkInstructions.Add(newInstruction);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDelete(WorkInstruction workInstructionToRemove)
+    {
+        WorkInstructions.Remove(workInstructionToRemove);
         StateHasChanged();
         return Task.CompletedTask;
     }
