@@ -5,44 +5,47 @@
 @if (WorkInstruction != null)
 {
     <FluentGrid Justify="JustifyContent.Center">
-    <FluentGridItem>
-        <th scope="row">@RowNumber</th>
-        <td>
-            <input type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
-        </td>
-        <td>
-            <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
-        </td>
-        <td>
-            <button type="button" class="btn btn-info" @onclick="ShowStepManager">
-                Edit
-            </button>
-            @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
-            {
-                <div class="confirm-delete mt-2">
-                    <span>Are you sure?</span>
-                    <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
-                    <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
-                </div>
-            }
-            else
-            {
-                <button type="button"
-                        class="btn btn-warning"
-                        @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
-                    Delete
-                </button>
-            }
+            <div>
+            <FluentGridItem>
+                <th scope="row">@RowNumber</th>
+                <td>
+                    <input type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
+                </td>
+                <td>
+                    <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-info" @onclick="ShowStepManager">
+                        Edit
+                    </button>
+                    @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
+                    {
+                        <div class="confirm-delete mt-2">
+                            <span>Are you sure?</span>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
+                            <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="btn btn-warning"
+                                @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
+                            Delete
+                        </button>
+                    }
 
-            <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
-                Save Changes
-            </button>
-        </td>
-    </FluentGridItem>
-    @if (DisplayStepManager)
-    {
-        <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes" />
-    }
+                    <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
+                        Save Changes
+                    </button>
+                </td>
+            </FluentGridItem>
+            @if (DisplayStepManager)
+            {
+                <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes"/>
+            }
+            </div>
+        
     </FluentGrid>
 }
 
