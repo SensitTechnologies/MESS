@@ -72,7 +72,7 @@
             }
         </FluentGrid>
     </FluentDragContainer>
-    <div>
+    <div class="mt-3 text-center">
         <FluentButton Appearance="Appearance.Accent">Save Order</FluentButton>
     </div>
 </div>
@@ -80,7 +80,6 @@
 @code {
     [Parameter]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
-    // private bool hasOrderChanged = false;
 
     private void OnDropEnd(FluentDragEventArgs<WorkInstructionNode> obj)
     {
@@ -112,16 +111,7 @@
         var sourceNode = obj.Source.Item;
         sourceNode.Position = targetPosition;
         
-        // hasOrderChanged = true;
         StateHasChanged();
     }
     
-    // private async Task SaveNodeOrder()
-    // {
-    //     if (hasOrderChanged)
-    //     {
-    //         await OnOrderChanged.InvokeAsync(WorkInstructionNodes);
-    //         hasOrderChanged = false;
-    //     }
-    // }
 }
