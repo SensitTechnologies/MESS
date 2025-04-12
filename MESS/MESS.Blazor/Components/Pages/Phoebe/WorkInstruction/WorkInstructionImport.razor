@@ -1,4 +1,5 @@
 @using MESS.Data.DTO
+@using MESS.Data.Models
 @using MESS.Services.WorkInstruction
 @inject IWorkInstructionService WorkInstructionService
 
@@ -42,6 +43,9 @@
 
 
 @code {
+    [Parameter]
+    public EventCallback<WorkInstruction> OnImportComplete { get; set; }
+    
     private List<IBrowserFile> Files { get; set; } = [];
     private bool IsImporting { get; set; }
     private string? StatusMessage { get; set; }
@@ -66,7 +70,7 @@
         {
             IsImporting = false;
             ImportComplete = true;
-
+            await OnImportComplete.InvokeAsync(importResult.WorkInstruction);
         }
     }
 

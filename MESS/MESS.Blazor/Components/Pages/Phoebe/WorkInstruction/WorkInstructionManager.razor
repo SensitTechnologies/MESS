@@ -14,7 +14,7 @@
         </div>
     }
     <div>
-        <WorkInstructionImport></WorkInstructionImport>
+        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
     </div>
     <div>
         <FluentGrid Justify="JustifyContent.Center">
@@ -83,4 +83,11 @@
         StateHasChanged();
         return Task.CompletedTask;
     }
+
+    private async Task HandleImportComplete(WorkInstruction importedWorkInstruction)
+    {
+        WorkInstructions.Add(importedWorkInstruction);
+        await DisplayAlert($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}");
+    }
+
 }
