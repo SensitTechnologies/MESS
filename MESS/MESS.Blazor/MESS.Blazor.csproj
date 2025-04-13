@@ -52,6 +52,10 @@
     <ItemGroup>
         <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\Create.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\Index.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\ProductDetails.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\WorkInstructionSelector.razor" />
     </ItemGroup>
 
     <ItemGroup>
@@ -82,5 +86,12 @@
 
     <ItemGroup>
         <Folder Include="wwwroot\WorkInstructionImages\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\Create.razor" />
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\Index.razor" />
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\ProductDetails.razor" />
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\WorkInstructionSelector.razor" />
     </ItemGroup>
 </Project>
