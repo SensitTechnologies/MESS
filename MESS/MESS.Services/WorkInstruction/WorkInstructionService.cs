@@ -867,12 +867,22 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         try
         {
-            // verify that the WorkInstruction already exists in the database
-            var existingWorkInstruction = await _context.WorkInstructions.FindAsync(workInstruction.Id);
+            // verify that the WorkInstruction already exists in the database without querying database
+            var exists = await _context.WorkInstructions
+                .AsNoTracking()
+                .AnyAsync(w => w.Id == workInstruction.Id);
 
-            if (existingWorkInstruction == null)
+            if (!exists)
             {
                 return false;
+            }
+            
+            var existingEntry = _context.ChangeTracker.Entries<WorkInstruction>()
+                .FirstOrDefault(e => e.Entity.Id == workInstruction.Id);
+
+            if (existingEntry != null)
+            {
+                existingEntry.State = EntityState.Detached;
             }
             
             Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
