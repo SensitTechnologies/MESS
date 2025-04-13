@@ -6,8 +6,10 @@
 @inject IWorkInstructionService WorkInstructionService
 @inject IToastService ToastService
 
-<div class="container justify-content-center">
-    <div>
+
+    <div class="container justify-content-center">
+        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
+        
         <FluentGrid Justify="JustifyContent.Center">
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
@@ -17,24 +19,10 @@
             }
         </FluentGrid>
     </div>
-</div>
-<FluentFooter Class="fixed-bottom">
-    <FluentCard>
-        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Left">
-
-            </FluentStack>
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Right">
-                <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
-            </FluentStack>
-        </FluentStack>
-    </FluentCard>
-</FluentFooter>
 
 
 @code {
     private List<WorkInstruction> WorkInstructions { get; set; } = [];
-    private string? AlertMessage { get; set; }
     
     protected override async Task OnInitializedAsync()
     {
