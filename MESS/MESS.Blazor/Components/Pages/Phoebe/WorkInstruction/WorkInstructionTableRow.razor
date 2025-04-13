@@ -2,6 +2,7 @@
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
 
 @if (WorkInstruction != null)
 {
@@ -59,8 +60,6 @@
     [Parameter]
     public required int RowNumber { get; set; }
     [Parameter]
-    public EventCallback<string> DisplayAlert { get; set; }
-    [Parameter]
     public EventCallback<WorkInstruction> SaveChanges { get; set; }
     [Parameter]
     public required WorkInstruction WorkInstruction { get; set; }
@@ -93,11 +92,11 @@
         if (newInstruction != null)
         {
             await OnDuplicate.InvokeAsync(newInstruction);
-            await DisplayAlert.InvokeAsync($"Work Instruction: {newInstruction.Title} duplicated successfully");
+            ToastService.ShowSuccess($"Work Instruction: {newInstruction.Title} duplicated successfully");
         }
         else
         {
-            await DisplayAlert.InvokeAsync("Failed to duplicate work instruction.");
+            ToastService.ShowError("Failed to duplicate work instruction.");
         }
     }
 
@@ -107,18 +106,18 @@
         if (!IsEditable)
         {
             Log.Information("Attempt to delete Work Instruction: {WorkInstructionTitle} with ID: {ID},  Failed since it is not editable.", WorkInstruction.Title, WorkInstruction.Id);
-            await DisplayAlert.InvokeAsync($"Unable to delete WorkInstruction: {WorkInstruction.Title}, as it is not editable.");
+            ToastService.ShowError($"Unable to delete WorkInstruction: {WorkInstruction.Title}, as it is not editable.");
             return;
         }
         var deletionResult = await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
         if (deletionResult)
         {
             await OnDelete.InvokeAsync(WorkInstruction);
-            await DisplayAlert.InvokeAsync($"Successfully deleted WorkInstruction: {WorkInstruction.Title}.");
+            ToastService.ShowSuccess($"Successfully deleted WorkInstruction: {WorkInstruction.Title}.");
         }
         else
         {
-            await DisplayAlert.InvokeAsync($"Unable to delete WorkInstruction: {WorkInstruction.Title}. Please contact the administrator or check the Log files.");
+            ToastService.ShowError($"Unable to delete WorkInstruction: {WorkInstruction.Title}. Please contact the administrator or check the Log files.");
         }
     }
 

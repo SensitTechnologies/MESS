@@ -110,7 +110,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                             var newPartNode = new PartNode
                             {
                                 Position = originalPartNode.Position,
-                                NodeType = originalPartNode.NodeType
+                                NodeType = originalPartNode.NodeType,
+                                Parts = []
                             };
                 
                             foreach (var part in originalPartNode.Parts)

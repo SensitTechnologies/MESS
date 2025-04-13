@@ -2,6 +2,7 @@
 @using MESS.Data.Models
 @using MESS.Services.WorkInstruction
 @inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
 
 <FluentCard Width="400" Class="m-0 w-100">
     <div class="d-flex align-items-center">
@@ -16,8 +17,6 @@
 @code {
     [Parameter]
     public EventCallback<WorkInstruction> OnImportComplete { get; set; }
-    [Parameter]
-    public EventCallback<string> DisplayAlert { get; set; }
     
     private List<IBrowserFile> Files { get; set; } = [];
     private bool IsImporting { get; set; }
@@ -35,7 +34,7 @@
         if (importResult is { Status: ImportStatus.Error, ImportError: not null })
         {
             StatusMessage = importResult.ImportError.ToString();
-            await DisplayAlert.InvokeAsync(StatusMessage);
+            ToastService.ShowError(StatusMessage, 10000);
         }
 
         IsImporting = importResult is {Status: ImportStatus.Pending};
@@ -44,7 +43,12 @@
         {
             IsImporting = false;
             ImportComplete = true;
+            if (importResult.WorkInstruction == null)
+            {
+                return;
+            }
             await OnImportComplete.InvokeAsync(importResult.WorkInstruction);
+            ToastService.ShowSuccess($"Successfully Imported WorkInstruction: {importResult.WorkInstruction.Title}. Version: {importResult.WorkInstruction.Version}", 3000);
         }
     }
 

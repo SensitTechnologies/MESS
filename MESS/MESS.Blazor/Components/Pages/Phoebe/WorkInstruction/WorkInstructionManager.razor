@@ -4,21 +4,15 @@
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
 
 <div class="container justify-content-center">
-    @if (AlertMessage?.Length > 0)
-    {
-        <div class="alert alert-info alert-dismissible fade show" role="alert">
-            @AlertMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
     <div>
         <FluentGrid Justify="JustifyContent.Center">
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
                 <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"></WorkInstructionTableRow>
+                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"></WorkInstructionTableRow>
                 </FluentGridItem>
             }
         </FluentGrid>
@@ -31,7 +25,7 @@
 
             </FluentStack>
             <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Right">
-                <WorkInstructionImport OnImportComplete="HandleImportComplete" DisplayAlert="DisplayAlert"/>
+                <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
             </FluentStack>
         </FluentStack>
     </FluentCard>
@@ -52,7 +46,7 @@
         if (instruction is { Title: {Length: <= 0 } })
         {
             Log.Information("Attempted Work Instruction save changes with empty or null Title, for instruction ID: {InstructionId}", instruction.Id);
-            await DisplayAlert("A Work Instruction must have a title.");
+            ToastService.ShowError("A Work Instruction must have a title.");
             return;
         }
 
@@ -65,18 +59,8 @@
         catch (Exception e)
         {
             Log.Error("Error saving Work Instruction changes: {errorMessage}", e.Message);
-            await DisplayAlert("An error occurred while saving changes");
+            ToastService.ShowError("An error occurred while saving changes");
         }
-    }
-    
-    private async Task DisplayAlert(string message)
-    {
-        AlertMessage = message;
-
-        await Task.Delay(2000);
-        AlertMessage = string.Empty;
-        
-        StateHasChanged();
     }
 
     private Task HandleDuplicate(WorkInstruction newInstruction)
@@ -89,14 +73,15 @@
     private Task HandleDelete(WorkInstruction workInstructionToRemove)
     {
         WorkInstructions.Remove(workInstructionToRemove);
+        ToastService.ShowInfo($"Work Instruction: {workInstructionToRemove.Title} Deleted.");
         StateHasChanged();
         return Task.CompletedTask;
     }
 
-    private async Task HandleImportComplete(WorkInstruction importedWorkInstruction)
+    private void HandleImportComplete(WorkInstruction importedWorkInstruction)
     {
         WorkInstructions.Add(importedWorkInstruction);
-        await DisplayAlert($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}");
+        ToastService.ShowSuccess($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}", 3000);
     }
 
 }
