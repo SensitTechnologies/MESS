@@ -6,52 +6,55 @@
 
 @if (WorkInstruction != null)
 {
-    <FluentGrid Justify="JustifyContent.Center">
-            <div>
-            <FluentGridItem>
-                <th scope="row">@RowNumber</th>
-                <td>
-                    <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
-                </td>
-                <td>
-                    <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
-                </td>
-                <td>
-                    @if (IsEditable)
-                    {
-                        <button type="button" class="btn btn-outline-success" @onclick="ShowStepManager">
-                            Edit Actions
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" @onclick="DeleteWorkInstruction">
-                            Delete
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-outline-primary" @onclick="DuplicateWorkInstruction">
-                            Duplicate
-                        </button>
-                    }
-                    <button type="button" class="@(WorkInstruction.IsActive ? "btn-danger" : "btn-success") btn" @onclick="() => WorkInstruction.IsActive = !WorkInstruction.IsActive">
-                        @if (WorkInstruction.IsActive)
+    <FluentGrid Class="w-100" Spacing="4" Justify="JustifyContent.SpaceEvenly">
+            <FluentGridItem xs="12">
+                <div class="row w-100 align-items-center">
+                    <div class="col-4">
+                        <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
+                    </div>
+                    <div class="col-2">
+                        <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
+                    </div>
+                    <div class="col-6">
+                        <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Orientation="Orientation.Horizontal">
+                            
+                        @if (IsEditable)
                         {
-                            <p>Hide</p>
+                            <button type="button" class="btn btn-secondary btn-outline-secondary" @onclick="ShowStepManager">
+                                Edit Actions
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" @onclick="DeleteWorkInstruction">
+                                Delete
+                            </button>
                         }
                         else
                         {
-                            <p>Show</p>
+                            <button type="button" class="btn btn-outline-primary" @onclick="DuplicateWorkInstruction">
+                                Duplicate
+                            </button>
                         }
-                    </button>
-                    <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
-                        Save Changes
-                    </button>
-                </td>
+                        <button type="button" class="btn btn-outline-info" @onclick="() => WorkInstruction.IsActive = !WorkInstruction.IsActive">
+                            @if (WorkInstruction.IsActive)
+                            {
+                                @("Hide")
+                            }
+                            else
+                            {
+                                @("Show")
+                            }
+                        </button>
+                        <FluentDivider/>
+                        <button type="button" class="btn btn-outline-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
+                            Save
+                        </button>
+                        </FluentStack>
+                    </div>
+                </div>
             </FluentGridItem>
             @if (DisplayStepManager)
             {
                 <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes"/>
             }
-            </div>
         
     </FluentGrid>
 }

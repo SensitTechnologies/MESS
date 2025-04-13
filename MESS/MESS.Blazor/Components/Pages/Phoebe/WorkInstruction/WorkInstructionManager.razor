@@ -10,7 +10,18 @@
     <div class="container justify-content-center">
         <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
         
-        <FluentGrid Justify="JustifyContent.Center">
+        <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                <FluentLabel>
+                    Title
+                </FluentLabel>
+                <FluentLabel>
+                    Version
+                </FluentLabel>
+                <FluentLabel>
+                    Actions
+                </FluentLabel>
+            </FluentStack>
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
                 <FluentGridItem xs="12">
@@ -43,6 +54,7 @@
             // Only have to account for updates here since a work instruction can currently
             // only be created via importation as of 4/3/2025.
             await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
+            ToastService.ShowSuccess($"Work Instruction: {instruction.Title} Version: {instruction.Version}, was successfully saved.");
         }
         catch (Exception e)
         {
