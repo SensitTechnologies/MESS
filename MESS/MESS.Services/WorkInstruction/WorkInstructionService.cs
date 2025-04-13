@@ -867,33 +867,34 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         try
         {
-            // verify that the WorkInstruction already exists in the database without querying database
-            var exists = await _context.WorkInstructions
-                .AsNoTracking()
-                .AnyAsync(w => w.Id == workInstruction.Id);
-
-            if (!exists)
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                return false;
-            }
-            
-            var existingEntry = _context.ChangeTracker.Entries<WorkInstruction>()
-                .FirstOrDefault(e => e.Entity.Id == workInstruction.Id);
+                // verify that the WorkInstruction already exists in the database without querying database
+                var exists = await _context.WorkInstructions
+                    .AsNoTracking()
+                    .AnyAsync(w => w.Id == workInstruction.Id);
 
-            if (existingEntry != null)
-            {
-                existingEntry.State = EntityState.Detached;
-            }
-            
-            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+                if (!exists)
+                {
+                    return false;
+                }
+                
+                var existingEntry = _context.ChangeTracker.Entries<WorkInstruction>()
+                    .FirstOrDefault(e => e.Entity.Id == workInstruction.Id);
 
-            _context.WorkInstructions.Update(workInstruction);
-            await _context.SaveChangesAsync();
-            
-            // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            
-            return true;
+                if (existingEntry != null)
+                {
+                    existingEntry.State = EntityState.Detached;
+                }
+                
+                _context.WorkInstructions.Update(workInstruction);
+                await _context.SaveChangesAsync();
+                
+                // Invalidate cache so that on next request users retrieve the latest data
+                _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+                Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+                return true;
+            });
         }
         catch (Exception e)
         {
