@@ -1,17 +1,23 @@
 @using MESS.Data.Models
 
-
-
 <div>
     <FluentDragContainer TItem="WorkInstructionNode" OnDropEnd="OnDropEnd">
         <FluentGrid Justify="JustifyContent.Center">
+            @* Placing drop zone here to account for the 1st step not having a drop zone above it from the previous Action *@
+            <FluentGridItem Justify="JustifyContent.Center" xs="12">
+                <FluentDropZone Class="w-100" Id="dropzone-top" Draggable="false" Droppable="true">
+                    <FluentCard Class="w-100 container">
+                        <div class="d-flex justify-content-center align-items-center" style="height: 100%;">+</div>
+                    </FluentCard>
+                </FluentDropZone>
+            </FluentGridItem>
             @foreach (var node in WorkInstructionNodes.OrderBy(n => n.Position))
             {
                 <FluentGridItem xs="12">
-                    <FluentDropZone Id="@node.Id.ToString()" Item="node" TItem="WorkInstructionNode" Draggable="true" Droppable="true">
+
+                    <FluentDropZone Id="@($"dropzone-node-{node.Id}")" Item="node" TItem="WorkInstructionNode" Draggable="true" Droppable="false">
                         <FluentCard>
                             <FluentGrid>
-
                                 <FluentGridItem xs="1">
                                     @node.Position
                                 </FluentGridItem>
@@ -69,6 +75,13 @@
                         </FluentCard>
                     </FluentDropZone>
                 </FluentGridItem>
+                <FluentGridItem xs="12" Justify="JustifyContent.Center">
+                    <FluentDropZone Class="w-100" Id="@($"dropzone-below-{node.Id}")" Draggable="false" Droppable="true">
+                        <FluentCard Class="w-100 container">
+                            <div class="d-flex justify-content-center align-items-center" style="height: 100%;">+</div>
+                        </FluentCard>
+                    </FluentDropZone>
+                </FluentGridItem>
             }
         </FluentGrid>
     </FluentDragContainer>
@@ -77,38 +90,66 @@
 @code {
     [Parameter]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
-
+    
     private void OnDropEnd(FluentDragEventArgs<WorkInstructionNode> obj)
     {
-        var targetPosition = obj.Target.Item.Position;
-        var sourcePosition = obj.Source.Item.Position;
-        
-        // Don't do anything if dropped in same position
-        if (targetPosition == sourcePosition) return;
-        
-        // Reorder nodes
-        if (targetPosition > sourcePosition)
+        var sourceNode = obj.Source.Item;
+        var oldPosition = sourceNode.Position;
+        var targetId = obj.Target.Id;
+
+        int newPosition;
+
+        if (targetId == "dropzone-top")
         {
-            // Moving down - shift items in between up
-            foreach (var node in WorkInstructionNodes.Where(n => n.Position > sourcePosition && n.Position <= targetPosition))
+            newPosition = 0;
+        } else if (targetId != null && targetId.StartsWith("dropzone-below-"))
+        {
+            string nodeIdStr = targetId.Substring("dropzone-below-".Length);
+            if (int.TryParse(nodeIdStr, out int nodeId))
             {
-                node.Position--;
+                var targetNode = WorkInstructionNodes.FirstOrDefault(n => n.Id == nodeId);
+                if (targetNode != null)
+                {
+                    newPosition = targetNode.Position + 1;
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                return;
             }
         }
         else
         {
-            // Moving up - shift items in between down
-            foreach (var node in WorkInstructionNodes.Where(n => n.Position >= targetPosition && n.Position < sourcePosition))
+            return;
+        }
+        
+        // Skip if dropping in original position or right after original position
+        if (newPosition == oldPosition || newPosition == oldPosition + 1)
+            return;
+        
+        if (newPosition > oldPosition)
+        {
+            foreach (var node in WorkInstructionNodes
+                         .Where(n => n.Position > oldPosition && n.Position < newPosition))
+            {
+                node.Position--;
+            }
+            sourceNode.Position = newPosition - 1;
+        }
+        else
+        {
+            foreach (var node in WorkInstructionNodes
+                         .Where(n => n.Position >= newPosition && n.Position < oldPosition))
             {
                 node.Position++;
             }
+            sourceNode.Position = newPosition;
         }
 
-        // Set new position for dragged item
-        var sourceNode = obj.Source.Item;
-        sourceNode.Position = targetPosition;
-        
         StateHasChanged();
     }
-    
 }
