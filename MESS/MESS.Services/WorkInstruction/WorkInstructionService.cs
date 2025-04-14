@@ -865,35 +865,63 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             return false;
         }
+        
         try
         {
             return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                // verify that the WorkInstruction already exists in the database without querying database
-                var exists = await _context.WorkInstructions
-                    .AsNoTracking()
-                    .AnyAsync(w => w.Id == workInstruction.Id);
-
-                if (!exists)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
+                    var existingWorkInstruction = await _context.WorkInstructions
+                        .Include(w => w.Nodes)
+                        .ThenInclude(n => ((PartNode)n).Parts)
+                        .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
+
+                    if (existingWorkInstruction == null)
+                    {
+                        return false;
+                    }
+
+                    _context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
+
+                    // Update any applicable nodes
+                    foreach (var newNode in workInstruction.Nodes)
+                    {
+                        var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+
+                        if (existingNode != null)
+                        {
+                            if (newNode is PartNode && existingNode is PartNode)
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                            else if (newNode is Step && existingNode is Step)
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                            else
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                        }
+                    }
+
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+                    Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
+                        workInstruction.Id);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    await transaction.RollbackAsync();
+                    Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
                     return false;
                 }
-                
-                var existingEntry = _context.ChangeTracker.Entries<WorkInstruction>()
-                    .FirstOrDefault(e => e.Entity.Id == workInstruction.Id);
-
-                if (existingEntry != null)
-                {
-                    existingEntry.State = EntityState.Detached;
-                }
-                
-                _context.WorkInstructions.Update(workInstruction);
-                await _context.SaveChangesAsync();
-                
-                // Invalidate cache so that on next request users retrieve the latest data
-                _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-                Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
-                return true;
             });
         }
         catch (Exception e)
