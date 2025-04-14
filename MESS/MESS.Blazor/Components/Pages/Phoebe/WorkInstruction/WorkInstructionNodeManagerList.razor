@@ -1,10 +1,11 @@
 @using MESS.Data.Models
+@inject IJSRuntime JSRuntime
 
 <div>
     <FluentDragContainer TItem="WorkInstructionNode" OnDropEnd="OnDropEnd">
         <FluentGrid Justify="JustifyContent.Center">
             @* Placing drop zone here to account for the 1st step not having a drop zone above it from the previous Action *@
-            <FluentGridItem Justify="JustifyContent.Center" xs="12">
+            <FluentGridItem Justify="JustifyContent.Center" xs="7" sm="12" md="12" lg="12">
                 <FluentDropZone Class="w-100" Id="dropzone-top" Draggable="false" Droppable="true">
                     <FluentCard Class="w-100 container">
                         <div class="d-flex justify-content-center align-items-center" style="height: 100%;">+</div>
@@ -13,7 +14,7 @@
             </FluentGridItem>
             @foreach (var node in WorkInstructionNodes.OrderBy(n => n.Position))
             {
-                <FluentGridItem xs="12">
+                <FluentGridItem xs="7" sm="12" md="12" lg="12">
 
                     <FluentDropZone Id="@($"dropzone-node-{node.Id}")" Item="node" TItem="WorkInstructionNode" Draggable="true" Droppable="false">
                         <FluentCard>
@@ -75,7 +76,7 @@
                         </FluentCard>
                     </FluentDropZone>
                 </FluentGridItem>
-                <FluentGridItem xs="12" Justify="JustifyContent.Center">
+                <FluentGridItem xs="7" sm="12" md="12" lg="12" Justify="JustifyContent.Center">
                     <FluentDropZone Class="w-100" Id="@($"dropzone-below-{node.Id}")" Draggable="false" Droppable="true">
                         <FluentCard Class="w-100 container">
                             <div class="d-flex justify-content-center align-items-center" style="height: 100%;">+</div>
@@ -90,6 +91,14 @@
 @code {
     [Parameter]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("initializeDragScrolling");
+        }
+    }
     
     private void OnDropEnd(FluentDragEventArgs<WorkInstructionNode> obj)
     {
