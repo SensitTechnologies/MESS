@@ -157,6 +157,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             if (productId < 0)
             {
                 ActiveWorkInstruction = null;
+                await SetActiveWorkInstruction(-1);
                 return;
             }
             
