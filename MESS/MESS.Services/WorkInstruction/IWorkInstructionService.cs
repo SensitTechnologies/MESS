@@ -7,6 +7,23 @@ using Data.Models;
 public interface IWorkInstructionService
 {
     /// <summary>
+    /// Exports a work instruction to an Excel (XLSX) file in the same format as import.
+    /// </summary>
+    /// <param name="workInstructionToExport">The work instruction to be exported to Excel.</param>
+    /// <returns>
+    /// The file path of the generated Excel file as a string if successful; otherwise, null.
+    /// </returns>
+    /// <remarks>
+    /// The Excel file will include:
+    /// - Work instruction title and version in the header
+    /// - Product information
+    /// - Parts list information
+    /// - A table of steps with their titles, descriptions, and references to media files
+    /// 
+    /// The file will be saved with a filename based on the work instruction title and a timestamp.
+    /// </remarks>
+    public string? ExportToXlsx(WorkInstruction workInstructionToExport);
+    /// <summary>
     /// Creates a duplicate of an existing work instruction with a unique title.
     /// </summary>
     /// <param name="workInstructionToDuplicate">The work instruction to duplicate.</param>

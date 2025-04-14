@@ -52,6 +52,127 @@ public partial class WorkInstructionService : IWorkInstructionService
         _contextFactory = contextFactory;
     }
 
+    public string? ExportToXlsx(WorkInstruction workInstructionToExport)
+    {
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("Work Instruction");
+
+            // Set basic data in the header
+            worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
+            worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
+            worksheet.Cell(QR_CODE_REQUIRED_CELL).Value = workInstructionToExport.PartsRequired;
+            
+            // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
+            if (workInstructionToExport.Products.Count > 0)
+            {
+                var productNames = string.Join(", ", workInstructionToExport.Products.Select(p => p.Name));
+                worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
+            }
+            
+            // Build parts list string in format "(PART_NAME, PART_NUMBER), ..."
+            var partNodes = workInstructionToExport.Nodes
+                .Where(n => n is PartNode)
+                .Cast<PartNode>()
+                .ToList();
+            
+            if (partNodes.Count > 0)
+            {
+                var allParts = partNodes.SelectMany(pn => pn.Parts).ToList();
+                var partsListStrings = allParts.Select(p => $"({p.PartName}, {p.PartNumber})");
+                worksheet.Cell(STEPS_PARTS_LIST_CELL).Value = string.Join(", ", partsListStrings);
+            }
+            
+            // Setup headers
+            var headerRange = worksheet.Range("A1:E5");
+            headerRange.Style.Font.Bold = true;
+            worksheet.Cell("A1").Value = "Title:";
+            worksheet.Cell("C1").Value = "Version:";
+            worksheet.Cell("A2").Value = "Product:";
+            worksheet.Cell("C2").Value = "QR Code Required:";
+            worksheet.Cell("A3").Value = "Required Parts:";
+            
+            // Step Header row. With bold.
+            var currentRow = 6;
+            worksheet.Cell(currentRow, 1).Value = "#";
+            worksheet.Cell(currentRow, 2).Value = "Title";
+            worksheet.Cell(currentRow, 3).Value = "Description";
+            worksheet.Cell(currentRow, 4).Value = "Primary Media";
+            worksheet.Cell(currentRow, 5).Value = "Secondary Media";
+            worksheet.Range(currentRow, 1, currentRow, 5).Style.Font.Bold = true;
+
+            var stepNodes = workInstructionToExport.Nodes
+                .Where(n => n is Step)
+                .Cast<Step>()
+                .OrderBy(s => s.Position)
+                .ToList();
+
+            currentRow++;
+            var stepNumber = 1;
+        
+            foreach (var step in stepNodes)
+            {
+                worksheet.Cell(currentRow, 1).Value = stepNumber++;
+                worksheet.Cell(currentRow, 2).Value = StripHtmlTags(step.Name);
+                worksheet.Cell(currentRow, 3).Value = StripHtmlTags(step.Body);
+            
+                // Handle primary media
+                if (step.PrimaryMedia.Count > 0)
+                {
+                    worksheet.Cell(currentRow, 4).Value = string.Join(", ", step.PrimaryMedia);
+                }
+            
+                // Handle secondary media
+                if (step.SecondaryMedia.Count > 0)
+                {
+                    worksheet.Cell(currentRow, 5).Value = string.Join(", ", step.SecondaryMedia);
+                }
+            
+                currentRow++;
+            }
+            
+            // Auto-fit column widths
+            worksheet.Columns().AdjustToContents();
+        
+            // Create directory for exports if it doesn't exist
+            var exportDir = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionExports");
+            if (!Directory.Exists(exportDir))
+            {
+                Directory.CreateDirectory(exportDir);
+            }
+        
+            // Save the workbook
+            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+            var safeTitle = string.Join("_", workInstructionToExport.Title.Split(Path.GetInvalidFileNameChars()));
+            var fileName = $"{safeTitle}_{timestamp}.xlsx";
+            var filePath = Path.Combine(exportDir, fileName);
+        
+            workbook.SaveAs(filePath);
+        
+            Log.Information("Successfully exported work instruction '{Title}' to '{FilePath}'", 
+                workInstructionToExport.Title, filePath);
+            
+            return filePath;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to export work instruction: {workInstructionTitle} to xlsx. Exception type: {exceptionType}", workInstructionToExport.Title, e.GetType());
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// Removes HTML tags from a string via Regex.
+    /// </summary>
+    private static string StripHtmlTags(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+        
+        return RemoveHTMLRegex().Replace(input, string.Empty);
+    }
+
     public async Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate)
     {
         if (workInstructionToDuplicate == null)
@@ -912,4 +1033,6 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </summary>
     [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
+    [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
+    private static partial System.Text.RegularExpressions.Regex RemoveHTMLRegex();
 }
