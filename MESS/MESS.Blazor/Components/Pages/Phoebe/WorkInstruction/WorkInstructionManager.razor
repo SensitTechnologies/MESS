@@ -80,7 +80,6 @@
     private Task HandleDelete(WorkInstruction workInstructionToRemove)
     {
         WorkInstructions.Remove(workInstructionToRemove);
-        ToastService.ShowInfo($"Work Instruction: {workInstructionToRemove.Title} Deleted.");
         StateHasChanged();
         return Task.CompletedTask;
     }
