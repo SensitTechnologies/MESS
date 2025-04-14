@@ -84,7 +84,12 @@ public partial class WorkInstructionService : IWorkInstructionService
 
                     foreach (var product in workInstructionToDuplicate.Products)
                     {
-                        newWorkInstruction.Products.Add(product);
+                        var trackedProduct = await _context.Products.FindAsync(product.Id);
+                        if (trackedProduct != null)
+                        {
+                            trackedProduct.WorkInstructions?.Add(workInstructionToDuplicate);
+                            newWorkInstruction.Products.Add(trackedProduct);
+                        }
                     }
 
                     foreach (var originalNode in workInstructionToDuplicate.Nodes)
