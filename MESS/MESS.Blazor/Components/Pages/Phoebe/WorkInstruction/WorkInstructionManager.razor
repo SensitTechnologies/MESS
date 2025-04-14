@@ -53,8 +53,15 @@
         {
             // Only have to account for updates here since a work instruction can currently
             // only be created via importation as of 4/3/2025.
-            await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
-            ToastService.ShowSuccess($"Work Instruction: {instruction.Title} Version: {instruction.Version}, was successfully saved.");
+            var saveResult = await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
+            if (saveResult)
+            {
+                ToastService.ShowSuccess($"Work Instruction: {instruction.Title} Version: {instruction.Version}, was successfully saved.");
+            }
+            else
+            {
+                ToastService.ShowError($"Unable to save Work Instruction: {instruction.Title}. Please check the log file for more information.");
+            }
         }
         catch (Exception e)
         {
