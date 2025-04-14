@@ -4,12 +4,9 @@
 @inject IToastService ToastService
 @inject IJSRuntime JsRuntime
 
-<FluentCard>
-    <button type="button" @onclick="DownloadWorkInstruction">
-        
-    </button>
-</FluentCard>
-
+<button class="btn btn-outline-secondary" type="button" @onclick="DownloadWorkInstruction">
+    Download
+</button>
 
 @code {
     [Parameter]
