@@ -85,8 +85,6 @@ public partial class WorkInstructionService : IWorkInstructionService
             }
             
             // Setup headers
-            var headerRange = worksheet.Range("A1:E5");
-            headerRange.Style.Font.Bold = true;
             worksheet.Cell("A1").Value = "Title:";
             worksheet.Cell("C1").Value = "Version:";
             worksheet.Cell("A2").Value = "Product:";
@@ -100,7 +98,6 @@ public partial class WorkInstructionService : IWorkInstructionService
             worksheet.Cell(currentRow, 3).Value = "Description";
             worksheet.Cell(currentRow, 4).Value = "Primary Media";
             worksheet.Cell(currentRow, 5).Value = "Secondary Media";
-            worksheet.Range(currentRow, 1, currentRow, 5).Style.Font.Bold = true;
 
             var stepNodes = workInstructionToExport.Nodes
                 .Where(n => n is Step)
