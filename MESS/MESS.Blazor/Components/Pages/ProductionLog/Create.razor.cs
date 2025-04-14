@@ -329,7 +329,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
         
         await PrintQRCode();
-        
+        ToastService.ShowSuccess("Successfully Created Production Log", 3000);
         
         // Create any associated SerialNumberLogs
         await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);
