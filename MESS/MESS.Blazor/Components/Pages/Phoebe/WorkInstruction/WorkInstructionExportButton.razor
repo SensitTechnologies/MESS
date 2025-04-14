@@ -1,0 +1,45 @@
+﻿@using MESS.Data.Models
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
+@inject IJSRuntime JsRuntime
+
+<FluentCard>
+    <button type="button" @onclick="DownloadWorkInstruction">
+        
+    </button>
+</FluentCard>
+
+
+@code {
+    [Parameter]
+    public required WorkInstruction WorkInstruction { get; set; }
+    
+    private async Task DownloadWorkInstruction()
+    {
+        try
+        {
+            var workInstructionPath = WorkInstructionService.ExportToXlsx(WorkInstruction);
+
+            if (string.IsNullOrEmpty(workInstructionPath))
+            {
+                ToastService.ShowError($"Unable to Download Work Instruction: {WorkInstruction.Title}. Please try again.");
+                return;
+            }
+
+            using var fileStream = File.OpenRead(workInstructionPath);
+            using var streamRef = new DotNetStreamReference(stream: fileStream);
+            
+            // Sanitize filename - remove invalid characters
+            var fileName = string.Join("_", (WorkInstruction.Title + WorkInstruction.Version).Split(Path.GetInvalidFileNameChars()));
+            fileName = $"{fileName}.xlsx";
+            
+            await JsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error downloading file: {ex.Message}");
+        }
+    }
+
+}
