@@ -6,8 +6,50 @@ using Data.Models;
 
 public interface IWorkInstructionService
 {
+    /// <summary>
+    /// Creates a duplicate of an existing work instruction with a unique title.
+    /// </summary>
+    /// <param name="workInstructionToDuplicate">The work instruction to duplicate.</param>
+    /// <returns>
+    /// The task result contains the newly created work instruction if successful; otherwise, null.
+    /// </returns>
+    /// <remarks>
+    /// The duplicate will have the same version, products, and nodes (steps and parts) as the original.
+    /// Its title will be the original title with a "-copy-[timestamp]" suffix.
+    /// The duplicate will be created with IsActive set to false.
+    /// </remarks>
     public Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate);
+    /// <summary>
+    /// Determines whether the specified work instruction is editable.
+    /// A work instruction is considered non-editable if it has associated production logs.
+    /// </summary>
+    /// <param name="workInstruction">The work instruction to evaluate.</param>
+    /// <returns>
+    /// A boolean value indicating whether the work instruction is editable.
+    /// True if editable (i.e., no production logs exist for it); otherwise, false.
+    /// </returns>
     public Task<bool> IsEditable(WorkInstruction workInstruction);
+    /// <summary>
+    /// Imports work instructions from an Excel file.
+    /// </summary>
+    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
+    /// <returns>
+    /// A <see cref="WorkInstructionImportResult"/> object containing:
+    /// - Success status
+    /// - Imported work instruction (if successful)
+    /// - Error details (if failed)
+    /// - The names of processed files
+    /// </returns>
+    /// <remarks>
+    /// The Excel file must follow a specific format with cells containing:
+    /// - B1: Work instruction title
+    /// - D1: Version and QR code requirement
+    /// - B2: Product name
+    /// - B3: Parts list (format: "(PART_NAME, PART_NUMBER), ...")
+    /// - Rows from 7 onwards: Steps with title, description, and media
+    /// 
+    /// Images found in the Excel file are extracted and saved to the web root directory.
+    /// </remarks>
     public Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects

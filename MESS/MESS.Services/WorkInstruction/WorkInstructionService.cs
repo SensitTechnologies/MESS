@@ -158,16 +158,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
-
-    /// <summary>
-    /// Determines whether the specified work instruction is editable.
-    /// A work instruction is considered non-editable if it has associated production logs.
-    /// </summary>
-    /// <param name="workInstruction">The work instruction to evaluate.</param>
-    /// <returns>
-    /// A boolean value indicating whether the work instruction is editable.
-    /// True if editable (i.e., no production logs exist for it); otherwise, false.
-    /// </returns>
+    
     public async Task<bool> IsEditable(WorkInstruction workInstruction)
     {
         if (workInstruction is not { Id: > 0 })
@@ -193,28 +184,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
-
-    /// <summary>
-    /// Imports work instructions from an Excel file.
-    /// </summary>
-    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
-    /// <returns>
-    /// A <see cref="WorkInstructionImportResult"/> object containing:
-    /// - Success status
-    /// - Imported work instruction (if successful)
-    /// - Error details (if failed)
-    /// - The names of processed files
-    /// </returns>
-    /// <remarks>
-    /// The Excel file must follow a specific format with cells containing:
-    /// - B1: Work instruction title
-    /// - D1: Version and QR code requirement
-    /// - B2: Product name
-    /// - B3: Parts list (format: "(PART_NAME, PART_NUMBER), ...")
-    /// - Rows from 7 onwards: Steps with title, description, and media
-    /// 
-    /// Images found in the Excel file are extracted and saved to the web root directory.
-    /// </remarks>
+    
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
