@@ -28,7 +28,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
-    private const string QR_CODE_REQUIRED_CELL = "D1";
+    private const string QR_CODE_REQUIRED_CELL = "D2";
     private const string STEPS_PARTS_LIST_CELL = "B3";
     
     
@@ -114,8 +114,13 @@ public partial class WorkInstructionService : IWorkInstructionService
             foreach (var step in stepNodes)
             {
                 worksheet.Cell(currentRow, 1).Value = stepNumber++;
+                
+                // Currently just stripping the html off of the steps to get the content out.
                 worksheet.Cell(currentRow, 2).Value = StripHtmlTags(step.Name);
                 worksheet.Cell(currentRow, 3).Value = StripHtmlTags(step.Body);
+                
+                // ApplyFormattingToCells(worksheet.Cell(currentRow, 2), step.Name); 
+                // ApplyFormattingToCells(worksheet.Cell(currentRow, 3), step.Body);
             
                 // Handle primary media
                 if (step.PrimaryMedia.Count > 0)
@@ -163,9 +168,36 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
     
     /// <summary>
-    /// Removes HTML tags from a string via Regex.
+    /// 
     /// </summary>
-    private static string StripHtmlTags(string? input)
+    /// <param name="cell"></param>
+    /// <param name="htmlContent"></param>
+    /// <returns></returns>
+    private void ApplyFormattingToCells(IXLCell cell, string? htmlContent)
+    {
+        if (string.IsNullOrEmpty(htmlContent))
+        {
+            return;
+        }
+
+        htmlContent = htmlContent.Trim();
+        
+        // Remove div wrapper as it should never have any styles associated with it
+        if (htmlContent.StartsWith("<div>") && htmlContent.EndsWith("</div>"))
+        {
+            htmlContent = htmlContent.Substring(5, htmlContent.Length - 11);
+        }
+
+        var plainText = StripHtmlTags(htmlContent);
+        cell.Value = plainText;
+        
+        // TODO finish full implementation
+    }
+
+    /// <summary>
+    /// Removes HTML tags from a string.
+    /// </summary>
+    private string StripHtmlTags(string? input)
     {
         if (string.IsNullOrEmpty(input))
             return string.Empty;
@@ -1035,4 +1067,5 @@ public partial class WorkInstructionService : IWorkInstructionService
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
     [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
     private static partial System.Text.RegularExpressions.Regex RemoveHTMLRegex();
+
 }
