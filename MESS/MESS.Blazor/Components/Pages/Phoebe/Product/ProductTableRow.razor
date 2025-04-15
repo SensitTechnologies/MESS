@@ -1,0 +1,34 @@
+@using MESS.Data.Models
+@using MESS.Services.Product
+@inject IProductService ProductService
+@inject NavigationManager NavigationManager
+
+<tr>
+    <td>
+        <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" />
+    </td>
+    <td>
+        <InputCheckbox id="isActive" @bind-Value="Product.IsActive" class="form-check-input" />
+    </td>
+    <td>
+        <WorkInstructionSelector @bind-SelectedInstructions="Product.WorkInstructions" />
+    </td>
+    <td>
+        <button class="btn btn-primary btn-sm" @onclick="HandleSubmit">@(IsNewProduct ? "Create Product" : "Create New Product from Edited Data")</button>
+    </td>
+</tr>
+
+@code {
+    [Parameter]
+    public required Product Product { get; set; }
+
+    [Parameter]
+    public EventCallback<Product> OnSubmit { get; set; }
+
+    private bool IsNewProduct => Product.Id == 0;
+
+    private async Task HandleSubmit()
+    {
+        await OnSubmit.InvokeAsync(Product);
+    }
+}
