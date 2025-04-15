@@ -62,6 +62,7 @@
       <None Update="Resources\MESSRTFTest.xlsx">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
     </ItemGroup>
 
     <ItemGroup>
@@ -89,7 +90,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <AdditionalFiles Include="Components\Pages\Phoebe\Product\Create.razor" />
       <AdditionalFiles Include="Components\Pages\Phoebe\Product\Index.razor" />
       <AdditionalFiles Include="Components\Pages\Phoebe\Product\ProductDetails.razor" />
       <AdditionalFiles Include="Components\Pages\Phoebe\Product\WorkInstructionSelector.razor" />
