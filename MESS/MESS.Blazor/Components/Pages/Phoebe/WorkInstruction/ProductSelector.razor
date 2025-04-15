@@ -1,23 +1,25 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
-
-@if (AllProducts == null)
-{
-    <div class="text-muted">Loading products...</div>
-}
-else
-{
-    @foreach (var product in AllProducts)
+<div class="list-group scrollable-checkbox-container">
+    @if (AllProducts == null)
     {
-        <label class="list-group-item">
-            <input type="checkbox"
-                   class="form-check-input me-1"
-                   checked="@IsProductSelected(product.Id)"
-                   @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)" />
-            @($"{product.Name}")
-        </label>
+        <div class="text-muted">Loading products...</div>
     }
-}
+    else
+    {
+        @foreach (var product in AllProducts)
+        {
+            <label class="list-group-item">
+                <input type="checkbox"
+                       class="form-check-input me-1"
+                       checked="@IsProductSelected(product.Id)"
+                       @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)" />
+                @($"{product.Name}")
+            </label>
+        }
+    }
+</div>
+
 
 @code {
     [Parameter] public WorkInstruction WorkInstruction { get; set; } = default!;
