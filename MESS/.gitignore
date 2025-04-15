@@ -12,6 +12,9 @@
 # image files
 MESS.Blazor/wwwroot/WorkInstructionImages
 
+# work instruction exports
+MESS.Blazor/wwwroot/WorkInstructionExports
+
 # User-specific files
 *.rsuser
 *.suo
