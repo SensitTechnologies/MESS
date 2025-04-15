@@ -217,45 +217,21 @@ h1:focus {
     }
 }
 
-.navbar {
-    background-color: #000000 !important;
-    border-bottom: 2px solid #000000;
-}
-
-.navbar-brand {
-    display: flex;
-    align-items: center;
-    font-weight: bold;
-}
-
-.navbar-brand img.logo {    
-    height: 1.7rem; 
-    width: 4.5rem;
-    margin-right: 10px; 
-}
-
-.navbar .navbar-nav .nav-link {
-    color: #ffffff;
-}
-.navbar .navbar-nav .nav-link:hover {
-    color: #d6a100;
-    text-decoration: underline;
-}
-
-
-.navbar .navbar-toggler-icon {
-    background-color: #000000;
-}
-
 .darkmode {
-    background-color: #1e1e1e;
+    background-color: transparent;
     outline: none;
     color: #ffd502;
     position: fixed;
-    right: 20px;
+    width: 30px;
+    height: 30px;
+    right: 18px;
+    top: 20px;
 }
 
 .darkmode .darkmode-button {
+    position: fixed;
+    right: 27px;
+    top: 27px;
     border: none;
     outline: none;
     background: none;
@@ -275,4 +251,13 @@ h1:focus {
         top: 15px; 
         right: 15px;
     }
+}
+
+table tbody tr {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+}
+
+td {
+    white-space: nowrap;
 }

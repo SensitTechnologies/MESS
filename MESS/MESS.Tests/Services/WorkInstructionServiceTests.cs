@@ -19,5 +19,5 @@ public class WorkInstructionServiceTests
         //     var filePath = Path.Combine("./Resources/", "MESSRTFTest.xlsx");
         //     service.ImportFromXlsx(filePath);
         // }
+        }
     }
-}

@@ -9,29 +9,10 @@
 
 <div class="page">
     <main>
-        <div class="top-row px-4">
-            <NavLink class="btn btn-outline-secondary text-decoration-none" href="" Match="NavLinkMatch.All">
-                <span>Home</span>
-            </NavLink>
-            <NavLink class="btn btn-outline-secondary text-decoration-none" href="products" Match="NavLinkMatch.All">
-                Products
-            </NavLink>
-            <NavLink class="btn btn-outline-secondary text-decoration-none" href="workInstruction" Match="NavLinkMatch.All">
-                <span>Work Instruction</span>
-            </NavLink>
-            <NavLink class="btn btn-outline-secondary text-decoration-none" href="production-log" Match="NavLinkMatch.All">
-                <span>Production Log</span>
-            </NavLink>
-            <AuthorizeView Roles="Technician">
-                <NavLink class="btn btn-outline-secondary text-decoration-none" href="dashboard" Match="NavLinkMatch.All">
-                    <span>Phoebe</span>
-                </NavLink>
-            </AuthorizeView>
-            <DarkModeButton></DarkModeButton>
-        </div>
-        
+        <DropdownMenu></DropdownMenu>
         <article class="content px-4 mx-auto">
             @Body
+            <DarkModeButton></DarkModeButton>
         </article>
     </main>
 </div>

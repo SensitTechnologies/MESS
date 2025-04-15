@@ -3,12 +3,6 @@
 @inject IProductionLogEventService ProductionLogEventService
 
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
-    <CreateHeaderCard Title="Product">
-        <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
-    </CreateHeaderCard>
-    <CreateHeaderCard Title="Work Instruction">
-        <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
-    </CreateHeaderCard>
     <CreateHeaderCard Title="Operator">
         @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
         {
@@ -26,9 +20,13 @@
             <LineOperatorSelect LineOperators="@LineOperators" OnLineOperatorSelected="@OnLineOperatorSelected"/>
         }
     </CreateHeaderCard>
-    
+    <CreateHeaderCard Title="Product">
+        <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
+    </CreateHeaderCard>
+    <CreateHeaderCard Title="Work Instruction">
+        <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
+    </CreateHeaderCard>
     <ImageDisplayRadioButton></ImageDisplayRadioButton>
-    
 </div>
 
 @code {
