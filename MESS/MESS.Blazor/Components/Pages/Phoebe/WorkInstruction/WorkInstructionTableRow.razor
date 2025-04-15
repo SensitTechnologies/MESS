@@ -1,8 +1,10 @@
 @using MESS.Data.Models
+@using MESS.Services.Product
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IWorkInstructionService WorkInstructionService
 @inject IToastService ToastService
+@inject IProductService ProductService
 
 @if (WorkInstruction != null)
 {
@@ -43,7 +45,12 @@
                                 @("Show")
                             }
                         </button>
-                        <FluentDivider/>
+                        
+                            <ProductSelector WorkInstruction="WorkInstruction"
+                                             AllProducts="_allProducts"
+                                             OnProductsChanged="UpdateProducts" />
+
+                            <FluentDivider/>
                         <button type="button" class="btn btn-outline-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
                             Save
                         </button>
@@ -74,11 +81,13 @@
     public EventCallback<WorkInstruction> OnDelete { get; set; }
     
     private bool IsEditable { get; set; }
+    private List<Product>? _allProducts;
 
     protected override async Task OnInitializedAsync()
     {
         IsEditable = await WorkInstructionService.IsEditable(WorkInstruction);
         await base.OnInitializedAsync();
+        _allProducts = (await ProductService.GetAllProductsAsync()).ToList();
     }
 
     private bool IsConfirmingDelete { get; set; } = false;
@@ -125,5 +134,17 @@
             ToastService.ShowError($"Unable to delete WorkInstruction: {WorkInstruction.Title}. Please contact the administrator or check the Log files.");
         }
     }
+
+    private EventCallback<List<Product>> UpdateProductsCallback =>
+        EventCallback.Factory.Create<List<Product>>(this, selectedProducts => UpdateProducts(selectedProducts));
+
+    private void UpdateProducts(List<Product> selectedProducts)
+    {
+        WorkInstruction.Products = selectedProducts; 
+    }
+
+
+
+
 
 }
