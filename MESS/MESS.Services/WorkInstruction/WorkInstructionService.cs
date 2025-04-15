@@ -212,37 +212,57 @@ public partial class WorkInstructionService : IWorkInstructionService
 
         try
         {
+            _context.ChangeTracker.Clear();
+            
             // Use the execution strategy pattern instead of manual transactions
             return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
+                    var freshWorkInstruction = await _context.WorkInstructions
+                        .Include(w => w.Products)
+                        .Include(w => w.Nodes)
+                        .ThenInclude(partNode => ((PartNode)partNode).Parts)
+                        .FirstOrDefaultAsync(w => w.Id == workInstructionToDuplicate.Id);
+
+                    if (freshWorkInstruction == null)
+                    {
+                        return null;
+                    }
+                    
                     var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
-                    var copiedTitle = $"{workInstructionToDuplicate.Title}-copy-{timestamp}";
+                    var copiedTitle = $"{freshWorkInstruction.Title}-copy-{timestamp}";
 
                     var newWorkInstruction = new WorkInstruction
                     {
                         Title = copiedTitle,
-                        Version = workInstructionToDuplicate.Version,
+                        Version = freshWorkInstruction.Version,
                         IsActive = false,
-                        PartsRequired = workInstructionToDuplicate.PartsRequired
+                        PartsRequired = freshWorkInstruction.PartsRequired
                     };
 
                     await _context.WorkInstructions.AddAsync(newWorkInstruction);
                     await _context.SaveChangesAsync();
 
-                    foreach (var product in workInstructionToDuplicate.Products)
+                    foreach (var product in freshWorkInstruction.Products)
                     {
-                        var trackedProduct = await _context.Products.FindAsync(product.Id);
+                        var trackedProduct = await _context.Products
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(p => p.Id == product.Id);
+                        
                         if (trackedProduct != null)
                         {
-                            trackedProduct.WorkInstructions?.Add(workInstructionToDuplicate);
-                            newWorkInstruction.Products.Add(trackedProduct);
+                            var attachedProduct = await _context.Products.FindAsync(product.Id);
+                            if (attachedProduct != null)
+                            {
+                                attachedProduct.WorkInstructions?.Add(newWorkInstruction);
+                                newWorkInstruction.Products.Add(attachedProduct);
+                            }
                         }
                     }
 
-                    foreach (var originalNode in workInstructionToDuplicate.Nodes)
+                    foreach (var originalNode in freshWorkInstruction.Nodes)
                     {
                         WorkInstructionNode newNode;
             
@@ -290,7 +310,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
 
                     Log.Information("Successfully duplicated WorkInstruction {OriginalId} to new ID {NewId}",
-                        workInstructionToDuplicate.Id, newWorkInstruction.Id);
+                        freshWorkInstruction.Id, newWorkInstruction.Id);
 
                     return newWorkInstruction;
                 }
