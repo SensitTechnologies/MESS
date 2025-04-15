@@ -134,6 +134,7 @@ public class ProductService : IProductService
         try
         {
             return await _context.Products
+                .AsNoTracking()
                 .Include(p => p.WorkInstructions)
                 .ToListAsync();
         }
