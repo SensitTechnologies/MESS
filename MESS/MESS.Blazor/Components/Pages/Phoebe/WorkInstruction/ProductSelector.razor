@@ -1,0 +1,56 @@
+@using MESS.Data.Models
+@using MESS.Services.Product
+
+@if (AllProducts == null)
+{
+    <div class="text-muted">Loading products...</div>
+}
+else
+{
+    @foreach (var product in AllProducts)
+    {
+        <label class="list-group-item">
+            <input type="checkbox"
+                   class="form-check-input me-1"
+                   checked="@IsProductSelected(product.Id)"
+                   @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)" />
+            @($"{product.Name}")
+        </label>
+    }
+}
+
+@code {
+    [Parameter] public WorkInstruction WorkInstruction { get; set; } = default!;
+    [Parameter] public required List<Product> AllProducts { get; set; }
+    [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
+
+    private bool IsProductSelected(int productId)
+    {
+        return WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
+    }
+
+    private async Task ToggleProductSelection(Product product, bool isChecked)
+    {
+        WorkInstruction.Products ??= new();
+
+        if (isChecked)
+        {
+            if (WorkInstruction.Products.All(p => p.Id != product.Id))
+            {
+                WorkInstruction.Products.Add(product);
+            }
+        }
+        else
+        {
+            WorkInstruction.Products.RemoveAll(p => p.Id == product.Id);
+        }
+
+        await OnProductsChanged.InvokeAsync(WorkInstruction.Products);
+    }
+    
+    private void OnSelectionChanged()
+    {
+        var selectedProducts = AllProducts.Where(p => p.IsActive).ToList();
+        OnProductsChanged.InvokeAsync(selectedProducts); // Only passing selected products.
+    }
+}
