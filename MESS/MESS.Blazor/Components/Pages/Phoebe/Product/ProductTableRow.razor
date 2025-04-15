@@ -11,7 +11,7 @@
         <InputCheckbox id="isActive" @bind-Value="Product.IsActive" class="form-check-input" />
     </td>
     <td>
-        <WorkInstructionSelector @bind-SelectedInstructions="Product.WorkInstructions" />
+        <WorkInstructionSelector @bind-SelectedInstructions="Product.WorkInstructions" AllInstructions="AllInstructions"/>
     </td>
     <td>
         <button class="btn btn-primary btn-sm" @onclick="HandleSubmit">@(IsNewProduct ? "Create Product" : "Create New Product from Edited Data")</button>
@@ -24,6 +24,9 @@
 
     [Parameter]
     public EventCallback<Product> OnSubmit { get; set; }
+    
+    [Parameter]
+    public List<WorkInstruction>? AllInstructions { get; set; } = [];
 
     private bool IsNewProduct => Product.Id == 0;
 

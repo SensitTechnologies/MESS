@@ -2,9 +2,11 @@
 @attribute [Authorize(Roles = "Technician")]
 @using MESS.Data.Models
 @using MESS.Services.Product
+@using MESS.Services.WorkInstruction
 @using Microsoft.AspNetCore.Authorization
 @using Serilog
 @inject IProductService ProductService
+@inject IWorkInstructionService WorkInstructionService
 
 <PageTitle>Product List</PageTitle>
 
@@ -28,9 +30,9 @@ else
         <tbody>
         @foreach (var product in Products)
         {
-            <ProductTableRow Product="product" OnSubmit="HandleSubmitProduct" />
+            <ProductTableRow Product="product" OnSubmit="HandleSubmitProduct" AllInstructions="_allInstructions"/>
         }
-        <ProductTableRow Product="_newProduct" OnSubmit="HandleSubmitProduct" />
+        <ProductTableRow Product="_newProduct" OnSubmit="HandleSubmitProduct" AllInstructions="_allInstructions" />
         </tbody>
     </table>
 }
@@ -38,10 +40,12 @@ else
 @code {
     private List<Product> Products { get; set; } = new List<Product>();
     private Product _newProduct = new Product { Name = "", IsActive = true };
+    private List<WorkInstruction>? _allInstructions;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadProducts();
+        _allInstructions = await WorkInstructionService.GetAllAsync();
     }
 
     private async Task LoadProducts()
