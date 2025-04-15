@@ -1,0 +1,164 @@
+@using MESS.Data.Models
+@inject IJSRuntime JSRuntime
+
+<div>
+    <FluentDragContainer TItem="WorkInstructionNode" OnDropEnd="OnDropEnd">
+        <FluentGrid Justify="JustifyContent.Center">
+            @* Placing drop zone here to account for the 1st step not having a drop zone above it from the previous Action *@
+            <FluentGridItem Justify="JustifyContent.Center" xs="7" sm="12" md="12" lg="12">
+                <FluentDropZone Class="w-100" Id="dropzone-top" Draggable="false" Droppable="true">
+                    <FluentCard Class="w-100 container">
+                        <div class="d-flex justify-content-center align-items-center" style="height: 100%;">+</div>
+                    </FluentCard>
+                </FluentDropZone>
+            </FluentGridItem>
+            @foreach (var node in WorkInstructionNodes.OrderBy(n => n.Position))
+            {
+                <FluentGridItem xs="7" sm="12" md="12" lg="12">
+
+                    <FluentDropZone Id="@($"dropzone-node-{node.Id}")" Item="node" TItem="WorkInstructionNode" Draggable="true" Droppable="false">
+                        <FluentCard>
+                            <FluentGrid>
+                                <FluentGridItem xs="1">
+                                    @node.Position
+                                </FluentGridItem>
+                                <FluentGridItem xs="1">
+                                    @node.NodeType.ToString()
+                                </FluentGridItem>
+                                <FluentGridItem xs="9">
+                                    @switch (node.NodeType)
+                                    {
+                                        case WorkInstructionNodeType.Part when node is PartNode partNode:
+                                            @foreach (var part in partNode.Parts)
+                                            {
+                                                <div class="part-node">
+                                                    <div><strong>Serial Number:</strong> @part.PartNumber</div>
+                                                    <div><strong>Part Name:</strong> @part.PartName</div>
+                                                </div>
+                                            }
+
+                                            break;
+
+                                        case WorkInstructionNodeType.Step when node is Step stepNode:
+                                            <div class="step-node">
+                                                <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
+                                                <div class="step-body"><strong>Body:</strong>
+                                                    @if (stepNode.Body != null)
+                                                    {
+                                                        @((MarkupString)stepNode.Body)
+                                                    }
+                                                </div>
+
+                                                @foreach (var pMedia in stepNode.PrimaryMedia)
+                                                {
+                                                    <div class="image-node">
+                                                        <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid"/>
+                                                    </div>
+                                                }
+
+                                                @foreach (var sMedia in stepNode.SecondaryMedia)
+                                                {
+                                                    <div class="image-node">
+                                                        <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid"/>
+                                                    </div>
+                                                }
+                                            </div>
+                                            break;
+
+                                        default:
+                                            <div>Unknown node type: @node.NodeType</div>
+                                            break;
+                                    }
+                                </FluentGridItem>
+
+                            </FluentGrid>
+
+                        </FluentCard>
+                    </FluentDropZone>
+                </FluentGridItem>
+                <FluentGridItem xs="7" sm="12" md="12" lg="12" Justify="JustifyContent.Center">
+                    <FluentDropZone Class="w-100" Id="@($"dropzone-below-{node.Id}")" Draggable="false" Droppable="true">
+                        <FluentCard Class="w-100 container">
+                            <div class="d-flex justify-content-center align-items-center" style="height: 100%;">+</div>
+                        </FluentCard>
+                    </FluentDropZone>
+                </FluentGridItem>
+            }
+        </FluentGrid>
+    </FluentDragContainer>
+</div>
+
+@code {
+    [Parameter]
+    public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("initializeDragScrolling");
+        }
+    }
+    
+    private void OnDropEnd(FluentDragEventArgs<WorkInstructionNode> obj)
+    {
+        var sourceNode = obj.Source.Item;
+        var oldPosition = sourceNode.Position;
+        var targetId = obj.Target.Id;
+
+        int newPosition;
+
+        if (targetId == "dropzone-top")
+        {
+            newPosition = 0;
+        } else if (targetId != null && targetId.StartsWith("dropzone-below-"))
+        {
+            string nodeIdStr = targetId.Substring("dropzone-below-".Length);
+            if (int.TryParse(nodeIdStr, out int nodeId))
+            {
+                var targetNode = WorkInstructionNodes.FirstOrDefault(n => n.Id == nodeId);
+                if (targetNode != null)
+                {
+                    newPosition = targetNode.Position + 1;
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
+        else
+        {
+            return;
+        }
+        
+        // Skip if dropping in original position or right after original position
+        if (newPosition == oldPosition || newPosition == oldPosition + 1)
+            return;
+        
+        if (newPosition > oldPosition)
+        {
+            foreach (var node in WorkInstructionNodes
+                         .Where(n => n.Position > oldPosition && n.Position < newPosition))
+            {
+                node.Position--;
+            }
+            sourceNode.Position = newPosition - 1;
+        }
+        else
+        {
+            foreach (var node in WorkInstructionNodes
+                         .Where(n => n.Position >= newPosition && n.Position < oldPosition))
+            {
+                node.Position++;
+            }
+            sourceNode.Position = newPosition;
+        }
+
+        StateHasChanged();
+    }
+}

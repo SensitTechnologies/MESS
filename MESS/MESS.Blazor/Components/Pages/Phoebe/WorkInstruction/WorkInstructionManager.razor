@@ -4,47 +4,35 @@
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
 
-<div class="container justify-content-center">
-    @if (AlertMessage?.Length > 0)
-    {
-        <div class="alert alert-info alert-dismissible fade show" role="alert">
-            @AlertMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-    <div>
-        <table>
-            <thead>
-            <tr>
-                <th scope="col">
-                    #
-                </th>
-                <th scope="col">
+
+    <div class="container justify-content-center">
+        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
+        <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                <FluentLabel>
                     Title
-                </th>
-                <th scope="col">
+                </FluentLabel>
+                <FluentLabel>
                     Version
-                </th>
-            </tr>
-            </thead>
-            <tbody>
+                </FluentLabel>
+                <FluentLabel>
+                    Actions
+                </FluentLabel>
+            </FluentStack>
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
-                <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"></WorkInstructionTableRow>
+                <FluentGridItem xs="12">
+                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"></WorkInstructionTableRow>
+                </FluentGridItem>
             }
-            </tbody>
-        </table>
+        </FluentGrid>
+    </div>
 
-    </div>
-    <div>
-        <WorkInstructionImport></WorkInstructionImport>
-    </div>
-</div>
 
 @code {
     private List<WorkInstruction> WorkInstructions { get; set; } = [];
-    private string? AlertMessage { get; set; }
     
     protected override async Task OnInitializedAsync()
     {
@@ -56,7 +44,7 @@
         if (instruction is { Title: {Length: <= 0 } })
         {
             Log.Information("Attempted Work Instruction save changes with empty or null Title, for instruction ID: {InstructionId}", instruction.Id);
-            await DisplayAlert("A Work Instruction must have a title.");
+            ToastService.ShowError("A Work Instruction must have a title.");
             return;
         }
 
@@ -64,28 +52,41 @@
         {
             // Only have to account for updates here since a work instruction can currently
             // only be created via importation as of 4/3/2025.
-            await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
+            var saveResult = await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
+            if (saveResult)
+            {
+                ToastService.ShowSuccess($"Work Instruction: {instruction.Title} Version: {instruction.Version}, was successfully saved.");
+            }
+            else
+            {
+                ToastService.ShowError($"Unable to save Work Instruction: {instruction.Title}. Please check the log file for more information.");
+            }
         }
         catch (Exception e)
         {
             Log.Error("Error saving Work Instruction changes: {errorMessage}", e.Message);
-            await DisplayAlert("An error occurred while saving changes");
+            ToastService.ShowError("An error occurred while saving changes");
         }
     }
 
-    private async Task Delete(int id)
+    private Task HandleDuplicate(WorkInstruction newInstruction)
     {
-        await WorkInstructionService.DeleteByIdAsync(id);
-    }
-    
-    private async Task DisplayAlert(string message)
-    {
-        AlertMessage = message;
-
-        await Task.Delay(2000);
-        AlertMessage = string.Empty;
-        
+        WorkInstructions.Add(newInstruction);
         StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDelete(WorkInstruction workInstructionToRemove)
+    {
+        WorkInstructions.Remove(workInstructionToRemove);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void HandleImportComplete(WorkInstruction importedWorkInstruction)
+    {
+        WorkInstructions.Add(importedWorkInstruction);
+        ToastService.ShowSuccess($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}", 3000);
     }
 
 }

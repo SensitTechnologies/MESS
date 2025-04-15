@@ -22,12 +22,13 @@ public partial class WorkInstructionService : IWorkInstructionService
     private readonly IProductService _productService;
     private readonly IMemoryCache _cache;
     private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
 
     // The following attributes define the current expected XLSX structure as of 3/28/2025
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
-    private const string QR_CODE_REQUIRED_CELL = "D1";
+    private const string QR_CODE_REQUIRED_CELL = "D2";
     private const string STEPS_PARTS_LIST_CELL = "B3";
     
     
@@ -36,41 +37,304 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const int STEP_START_COLUMN = 1;
     private const int STEP_TITLE_COLUMN = 2;
     private const int STEP_DESCRIPTION_COLUMN = 3;
-    private const int STEP_PARTS_LIST_COLUMN = 4;
-    private const int STEP_MEDIA_COLUMN = 5;
+    private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
+    private const int STEP_SECONDARY_MEDIA_COLUMN = 5;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
 
-    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment)
+    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
     {
         _context = context;
         _productService = productService;
         _cache = cache;
         _webHostEnvironment = webHostEnvironment;
+        _contextFactory = contextFactory;
+    }
+
+    public string? ExportToXlsx(WorkInstruction workInstructionToExport)
+    {
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("Work Instruction");
+
+            // Set basic data in the header
+            worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
+            worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
+            worksheet.Cell(QR_CODE_REQUIRED_CELL).Value = workInstructionToExport.PartsRequired;
+            
+            // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
+            if (workInstructionToExport.Products.Count > 0)
+            {
+                var productNames = string.Join(", ", workInstructionToExport.Products.Select(p => p.Name));
+                worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
+            }
+            
+            // Build parts list string in format "(PART_NAME, PART_NUMBER), ..."
+            var partNodes = workInstructionToExport.Nodes
+                .Where(n => n is PartNode)
+                .Cast<PartNode>()
+                .ToList();
+            
+            if (partNodes.Count > 0)
+            {
+                var allParts = partNodes.SelectMany(pn => pn.Parts).ToList();
+                var partsListStrings = allParts.Select(p => $"({p.PartName}, {p.PartNumber})");
+                worksheet.Cell(STEPS_PARTS_LIST_CELL).Value = string.Join(", ", partsListStrings);
+            }
+            
+            // Setup headers
+            worksheet.Cell("A1").Value = "Title:";
+            worksheet.Cell("C1").Value = "Version:";
+            worksheet.Cell("A2").Value = "Product:";
+            worksheet.Cell("C2").Value = "QR Code Required:";
+            worksheet.Cell("A3").Value = "Required Parts:";
+            
+            // Step Header row. With bold.
+            var currentRow = 6;
+            worksheet.Cell(currentRow, 1).Value = "#";
+            worksheet.Cell(currentRow, 2).Value = "Title";
+            worksheet.Cell(currentRow, 3).Value = "Description";
+            worksheet.Cell(currentRow, 4).Value = "Primary Media";
+            worksheet.Cell(currentRow, 5).Value = "Secondary Media";
+
+            var stepNodes = workInstructionToExport.Nodes
+                .Where(n => n is Step)
+                .Cast<Step>()
+                .OrderBy(s => s.Position)
+                .ToList();
+
+            currentRow++;
+            var stepNumber = 1;
+        
+            foreach (var step in stepNodes)
+            {
+                worksheet.Cell(currentRow, 1).Value = stepNumber++;
+                
+                // Currently just stripping the html off of the steps to get the content out.
+                worksheet.Cell(currentRow, 2).Value = StripHtmlTags(step.Name);
+                worksheet.Cell(currentRow, 3).Value = StripHtmlTags(step.Body);
+                
+                // ApplyFormattingToCells(worksheet.Cell(currentRow, 2), step.Name); 
+                // ApplyFormattingToCells(worksheet.Cell(currentRow, 3), step.Body);
+            
+                // Handle primary media
+                if (step.PrimaryMedia.Count > 0)
+                {
+                    worksheet.Cell(currentRow, 4).Value = string.Join(", ", step.PrimaryMedia);
+                }
+            
+                // Handle secondary media
+                if (step.SecondaryMedia.Count > 0)
+                {
+                    worksheet.Cell(currentRow, 5).Value = string.Join(", ", step.SecondaryMedia);
+                }
+            
+                currentRow++;
+            }
+            
+            // Auto-fit column widths
+            worksheet.Columns().AdjustToContents();
+        
+            // Create directory for exports if it doesn't exist
+            var exportDir = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionExports");
+            if (!Directory.Exists(exportDir))
+            {
+                Directory.CreateDirectory(exportDir);
+            }
+        
+            // Save the workbook
+            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+            var safeTitle = string.Join("_", workInstructionToExport.Title.Split(Path.GetInvalidFileNameChars()));
+            var fileName = $"{safeTitle}_{timestamp}.xlsx";
+            var filePath = Path.Combine(exportDir, fileName);
+        
+            workbook.SaveAs(filePath);
+        
+            Log.Information("Successfully exported work instruction '{Title}' to '{FilePath}'", 
+                workInstructionToExport.Title, filePath);
+            
+            return filePath;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to export work instruction: {workInstructionTitle} to xlsx. Exception type: {exceptionType}", workInstructionToExport.Title, e.GetType());
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <param name="htmlContent"></param>
+    /// <returns></returns>
+    private void ApplyFormattingToCells(IXLCell cell, string? htmlContent)
+    {
+        if (string.IsNullOrEmpty(htmlContent))
+        {
+            return;
+        }
+
+        htmlContent = htmlContent.Trim();
+        
+        // Remove div wrapper as it should never have any styles associated with it
+        if (htmlContent.StartsWith("<div>") && htmlContent.EndsWith("</div>"))
+        {
+            htmlContent = htmlContent.Substring(5, htmlContent.Length - 11);
+        }
+
+        var plainText = StripHtmlTags(htmlContent);
+        cell.Value = plainText;
+        
+        // TODO finish full implementation
     }
 
     /// <summary>
-    /// Imports work instructions from an Excel file.
+    /// Removes HTML tags from a string.
     /// </summary>
-    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
-    /// <returns>
-    /// A <see cref="WorkInstructionImportResult"/> object containing:
-    /// - Success status
-    /// - Imported work instruction (if successful)
-    /// - Error details (if failed)
-    /// - The names of processed files
-    /// </returns>
-    /// <remarks>
-    /// The Excel file must follow a specific format with cells containing:
-    /// - B1: Work instruction title
-    /// - D1: Version and QR code requirement
-    /// - B2: Product name
-    /// - B3: Parts list (format: "(PART_NAME, PART_NUMBER), ...")
-    /// - Rows from 7 onwards: Steps with title, description, and media
-    /// 
-    /// Images found in the Excel file are extracted and saved to the web root directory.
-    /// </remarks>
+    private string StripHtmlTags(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+        
+        return RemoveHTMLRegex().Replace(input, string.Empty);
+    }
+
+    public async Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate)
+    {
+        if (workInstructionToDuplicate == null)
+        {
+            Log.Warning("Cannot duplicate null work instruction");
+            return null;
+        }
+
+        try
+        {
+            // Use the execution strategy pattern instead of manual transactions
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+                    var copiedTitle = $"{workInstructionToDuplicate.Title}-copy-{timestamp}";
+
+                    var newWorkInstruction = new WorkInstruction
+                    {
+                        Title = copiedTitle,
+                        Version = workInstructionToDuplicate.Version,
+                        IsActive = false,
+                        PartsRequired = workInstructionToDuplicate.PartsRequired
+                    };
+
+                    await _context.WorkInstructions.AddAsync(newWorkInstruction);
+                    await _context.SaveChangesAsync();
+
+                    foreach (var product in workInstructionToDuplicate.Products)
+                    {
+                        var trackedProduct = await _context.Products.FindAsync(product.Id);
+                        if (trackedProduct != null)
+                        {
+                            trackedProduct.WorkInstructions?.Add(workInstructionToDuplicate);
+                            newWorkInstruction.Products.Add(trackedProduct);
+                        }
+                    }
+
+                    foreach (var originalNode in workInstructionToDuplicate.Nodes)
+                    {
+                        WorkInstructionNode newNode;
+            
+                        if (originalNode is Step originalStep)
+                        {
+                            var newStep = new Step
+                            {
+                                Name = originalStep.Name,
+                                Body = originalStep.Body,
+                                Position = originalStep.Position,
+                                NodeType = originalStep.NodeType,
+                                PrimaryMedia = [..originalStep.PrimaryMedia],
+                                SecondaryMedia = [..originalStep.SecondaryMedia]
+                            };
+                            
+                            newNode = newStep;
+                        }
+                        else if (originalNode is PartNode originalPartNode)
+                        {
+                            var newPartNode = new PartNode
+                            {
+                                Position = originalPartNode.Position,
+                                NodeType = originalPartNode.NodeType,
+                                Parts = []
+                            };
+                
+                            foreach (var part in originalPartNode.Parts)
+                            {
+                                newPartNode.Parts.Add(part);
+                            }
+                
+                            newNode = newPartNode;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+            
+                        newWorkInstruction.Nodes.Add(newNode);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+
+                    Log.Information("Successfully duplicated WorkInstruction {OriginalId} to new ID {NewId}",
+                        workInstructionToDuplicate.Id, newWorkInstruction.Id);
+
+                    return newWorkInstruction;
+                }
+                catch (Exception e)
+                {
+                    await transaction.RollbackAsync();
+                    Log.Error("An exception occurred while duplicating the work instruction: {Message}", e.Message);
+                    return null;
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            Log.Error("Failed to execute duplication strategy: {Message}", e.Message);
+            return null;
+        }
+    }
+    
+    public async Task<bool> IsEditable(WorkInstruction workInstruction)
+    {
+        if (workInstruction is not { Id: > 0 })
+        {
+            Log.Warning("Cannot check editability: Work instruction is null or has invalid ID");
+            return false;
+        }
+        
+        try
+        {
+            await using var localContext = await _contextFactory.CreateDbContextAsync();
+            
+            // Check if any production logs reference this work instruction. If so the Instruction is not editable.
+            var hasProductionLogs = await localContext.ProductionLogs
+                .AsNoTracking()
+                .AnyAsync(p => p.WorkInstruction != null && p.WorkInstruction.Id == workInstruction.Id);
+
+            return !hasProductionLogs;
+        }
+        catch (Exception e)
+        {
+            Log.Information("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
+            return false;
+        }
+    }
+    
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
@@ -134,6 +398,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             if (partsList != null)
             {
                 partsNode.Parts.AddRange(partsList);
+                // Making PartsNode position 0 since there is no inherent way to get the desired position from
+                // an Excel spreadsheet. It is possible, but with the ability to alter Node positions this feature
+                // was placed on the backlog.
+                partsNode.Position = 0;
                 workInstruction.Nodes.Add(partsNode);
             }
 
@@ -145,42 +413,15 @@ public partial class WorkInstructionService : IWorkInstructionService
                 var step = new Step
                 {
                     Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
-                    Content = new List<string>(),
                     Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
                 };
                 
-                var pictures = worksheet.Pictures
-                    .Where(p => p.TopLeftCell.Address.RowNumber == stepStartRow 
-                                && p.TopLeftCell.Address.ColumnNumber == STEP_MEDIA_COLUMN)
-                    .ToList();
+                await ProcessStepMedia(worksheet, step, stepStartRow);
                 
-                foreach (var picture in pictures)
-                {
-                    var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
-
-                    var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
-
-                    var imagePath = Path.Combine(imageDir, fileName);
-                    
-                    // Verify that directory exists. If not create it.
-                    if (!Directory.Exists(imageDir))
-                    {
-                        Directory.CreateDirectory(imageDir);
-                    }
-                    
-                    using (var ms = new MemoryStream())
-                    {
-                        await picture.ImageStream.CopyToAsync(ms);
-                        var imageBytes = ms.ToArray();
-                        await File.WriteAllBytesAsync(imagePath, imageBytes);
-                    }
-                    
-                    step.Content.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
-                }
-            
                 // Step extends WorkInstructionNode for ordering purposes
-                // Calculation 0 Indexes the step order. 1st step has position 0.
-                step.Position = stepStartRow - STEP_START_ROW;
+                // Calculation 0 Indexes the step order. 1st step has position 1 if there are parts, otherwise position 0.
+                var rowPositionCalculation = stepStartRow - STEP_START_ROW;
+                step.Position = partsList != null ? rowPositionCalculation + 1 : rowPositionCalculation;
                 step.NodeType = WorkInstructionNodeType.Step;
                 workInstruction.Nodes.Add(step);
                 stepStartRow++;
@@ -240,6 +481,82 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             errorResult.ImportError = error;
             return errorResult;
+        }
+    }
+
+    /// <summary>
+    /// Processes media (images) associated with a step in a work instruction from an Excel worksheet.
+    /// </summary>
+    /// <param name="worksheet">The Excel worksheet containing the step data.</param>
+    /// <param name="step">The step object to which the media will be added.</param>
+    /// <param name="row">The row number in the worksheet corresponding to the step.</param>
+    /// <remarks>
+    /// This method extracts images from specific columns in the worksheet, saves them to the server, 
+    /// and associates their paths with the step object. It handles both primary and secondary media.
+    /// </remarks>
+    /// <exception cref="Exception">
+    /// Logs any exceptions that occur during the processing of step media, such as file I/O errors or 
+    /// issues with the Excel worksheet structure.
+    /// </exception>
+    private async Task ProcessStepMedia(IXLWorksheet worksheet, Step step, int row)
+    {
+        try
+        {
+            var primaryPictures = worksheet.Pictures
+                .Where(p => p.TopLeftCell.Address.RowNumber == row 
+                            && p.TopLeftCell.Address.ColumnNumber == STEP_PRIMARY_MEDIA_COLUMN)
+                .ToList();
+                
+            var secondaryPictures = worksheet.Pictures
+                .Where(p => p.TopLeftCell.Address.RowNumber == row 
+                            && p.TopLeftCell.Address.ColumnNumber == STEP_SECONDARY_MEDIA_COLUMN)
+                .ToList();
+            
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+            
+            // Verify that directory exists. If not create it.
+            if (!Directory.Exists(imageDir))
+            {
+                Directory.CreateDirectory(imageDir);
+            }
+            
+            foreach (var picture in primaryPictures)
+            {
+                var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+                
+                var imagePath = Path.Combine(imageDir, fileName);
+                    
+                
+                using (var ms = new MemoryStream())
+                {
+                    await picture.ImageStream.CopyToAsync(ms);
+                    var imageBytes = ms.ToArray();
+                    await File.WriteAllBytesAsync(imagePath, imageBytes);
+                }
+                
+                step.PrimaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
+            }
+            
+            foreach (var picture in secondaryPictures)
+            {
+                var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+                
+                var imagePath = Path.Combine(imageDir, fileName);
+                    
+                
+                using (var ms = new MemoryStream())
+                {
+                    await picture.ImageStream.CopyToAsync(ms);
+                    var imageBytes = ms.ToArray();
+                    await File.WriteAllBytesAsync(imagePath, imageBytes);
+                }
+                
+                step.SecondaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Information("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
         }
     }
 
@@ -487,6 +804,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             var workInstructions = await _context.WorkInstructions
                 .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
                 .ToListAsync();
 
             // Cache data for 15 minutes
@@ -596,7 +914,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
-            workInstruction.IsActive = true;
+            workInstruction.IsActive = false;
             await _context.WorkInstructions.AddAsync(workInstruction);
             await _context.SaveChangesAsync();
             
@@ -616,12 +934,11 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
     
     /// <summary>
-    /// Soft deletes a work instruction by setting its IsActive property to false.
+    /// Deletes a Work Instruction from the database if there are no Production log relationships.
     /// </summary>
     /// <param name="id">The ID of the work instruction to delete.</param>
     /// <returns>True if deletion was successful, false otherwise.</returns>
     /// <remarks>
-    /// This is a soft delete operation that marks the instruction as inactive rather than removing it.
     /// The cache is invalidated after successful deletion.
     /// </remarks>
     public async Task<bool> DeleteByIdAsync(int id)
@@ -635,7 +952,12 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
-            workInstruction.IsActive = false;
+            if (!await IsEditable(workInstruction))
+            {
+                return false;
+            }
+
+            _context.WorkInstructions.Remove(workInstruction);
             await _context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
@@ -668,25 +990,64 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             return false;
         }
+        
         try
         {
-            // verify that the WorkInstruction already exists in the database
-            var existingWorkInstruction = await _context.WorkInstructions.FindAsync(workInstruction.Id);
-
-            if (existingWorkInstruction == null)
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                return false;
-            }
-            
-            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var existingWorkInstruction = await _context.WorkInstructions
+                        .Include(w => w.Nodes)
+                        .ThenInclude(n => ((PartNode)n).Parts)
+                        .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
 
-            _context.WorkInstructions.Update(workInstruction);
-            await _context.SaveChangesAsync();
-            
-            // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            
-            return true;
+                    if (existingWorkInstruction == null)
+                    {
+                        return false;
+                    }
+
+                    _context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
+
+                    // Update any applicable nodes
+                    foreach (var newNode in workInstruction.Nodes)
+                    {
+                        var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+
+                        if (existingNode != null)
+                        {
+                            if (newNode is PartNode && existingNode is PartNode)
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                            else if (newNode is Step && existingNode is Step)
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                            else
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                        }
+                    }
+
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+                    Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
+                        workInstruction.Id);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    await transaction.RollbackAsync();
+                    Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
+                    return false;
+                }
+            });
         }
         catch (Exception e)
         {
@@ -701,4 +1062,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </summary>
     [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
+    [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
+    private static partial System.Text.RegularExpressions.Regex RemoveHTMLRegex();
+
 }

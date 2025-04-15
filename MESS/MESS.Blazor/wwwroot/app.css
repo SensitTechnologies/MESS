@@ -50,6 +50,7 @@ body.dark-mode .list-group.container {
     color: #000000;
     border: 1px solid #ffd502;
     padding: 10px;
+    list-style-type: none;
 }
 
 body.dark-mode .step {

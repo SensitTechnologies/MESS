@@ -13,11 +13,10 @@
             <label for="productSerialNumber">Product Serial Number:</label>
         </div>
     }
-    <ol class="step">
-        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes)
+    <ul class="step">
+        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == workInstructionNode.Id);
-
             // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
             if (workInstructionNode is Step workInstructionStep && workInstructionNode.NodeType == WorkInstructionNodeType.Step)
             {
@@ -31,16 +30,20 @@
                     };
                     ProductionLog.LogSteps.Add(logStep);
                 }
-                <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep"/>
+                <li class="mb-3">
+                    <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep"/>
+                </li>
             }
             else if (workInstructionNode is PartNode workInstructionPart && workInstructionNode.NodeType == WorkInstructionNodeType.Part)
             {
-                <PartNodeListItem PartNode="workInstructionPart" ProductSerialNumber="@ProductSerialNumber"/>
+                <li class="mb-3">
+                    <PartNodeListItem PartNode="workInstructionPart" ProductSerialNumber="@ProductSerialNumber"/>
+                </li>
             }
             
             
         }
-    </ol>
+    </ul>
 }
 
 @code {

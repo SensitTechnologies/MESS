@@ -1,106 +1,129 @@
 @using MESS.Data.Models
 @using MESS.Services.WorkInstruction
+@using Serilog
 @inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
 
 @if (WorkInstruction != null)
 {
-    <tr>
-        <th scope="row">@RowNumber</th>
-        <td>
-            <input type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
-        </td>
-        <td>
-            <input type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
-        </td>
-        @if (IsConfirmingDelete && WorkInstructionToDeleteId == WorkInstruction.Id)
-        {
-            <div class="confirm-delete mt-2">
-                <span>Are you sure?</span>
-                <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteInstruction">Yes</button>
-                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteInstruction">No</button>
-            </div>
-        }
-        else
-        {
-            <button type="button"
-                    class="btn btn-warning"
-                    @onclick="() => InitiateDeleteInstruction(WorkInstruction.Id)">
-                Delete
-            </button>
-        }
-        <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
-            Save Changes
-        </button>
-    </tr>
+    <FluentGrid Class="w-100" Spacing="4" Justify="JustifyContent.SpaceEvenly">
+            <FluentGridItem xs="12">
+                <div class="row w-100 align-items-center">
+                    <div class="col-4">
+                        <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
+                    </div>
+                    <div class="col-2">
+                        <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
+                    </div>
+                    <div class="col-6">
+                        <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Orientation="Orientation.Horizontal">
+                            
+                        @if (IsEditable)
+                        {
+                            <button type="button" class="btn btn-secondary btn-outline-secondary" @onclick="ShowStepManager">
+                                Edit Actions
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" @onclick="DeleteWorkInstruction">
+                                Delete
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-primary" @onclick="DuplicateWorkInstruction">
+                                Duplicate
+                            </button>
+                        }
+                        <button type="button" class="btn btn-outline-info" @onclick="() => WorkInstruction.IsActive = !WorkInstruction.IsActive">
+                            @if (WorkInstruction.IsActive)
+                            {
+                                @("Hide")
+                            }
+                            else
+                            {
+                                @("Show")
+                            }
+                        </button>
+                        <FluentDivider/>
+                        <button type="button" class="btn btn-outline-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
+                            Save
+                        </button>
+                        <FluentDivider />
+                        <WorkInstructionExportButton WorkInstruction="WorkInstruction"/>
+                        </FluentStack>
+                    </div>
+                </div>
+            </FluentGridItem>
+            @if (DisplayStepManager)
+            {
+                <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes"/>
+            }
+        
+    </FluentGrid>
 }
 
 @code {
     [Parameter]
     public required int RowNumber { get; set; }
     [Parameter]
-    public EventCallback<string> DisplayAlert { get; set; }
-    [Parameter]
     public EventCallback<WorkInstruction> SaveChanges { get; set; }
     [Parameter]
     public required WorkInstruction WorkInstruction { get; set; }
+    [Parameter]
+    public EventCallback<WorkInstruction> OnDuplicate { get; set; }
+    [Parameter]
+    public EventCallback<WorkInstruction> OnDelete { get; set; }
+    
+    private bool IsEditable { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsEditable = await WorkInstructionService.IsEditable(WorkInstruction);
+        await base.OnInitializedAsync();
+    }
 
     private bool IsConfirmingDelete { get; set; } = false;
     private int? WorkInstructionToDeleteId { get; set; }
-
-   
+    private bool DisplayStepManager { get; set; } = false;
     
-    private void InitiateDeleteInstruction(int instructionId)
+    private void ShowStepManager()
     {
-        WorkInstructionToDeleteId = instructionId;
-        IsConfirmingDelete = true;
+        DisplayStepManager = !DisplayStepManager;
     }
 
-    private void CancelDeleteInstruction()
+    private async Task DuplicateWorkInstruction()
     {
-        IsConfirmingDelete = false;
-        WorkInstructionToDeleteId = null;
-    }
+        var newInstruction = await WorkInstructionService.DuplicateAsync(WorkInstruction);
 
-    private async Task ConfirmDeleteInstruction()
-    {
-        if (WorkInstruction == null)
+        if (newInstruction != null)
         {
+            await OnDuplicate.InvokeAsync(newInstruction);
+            ToastService.ShowSuccess($"Work Instruction: {newInstruction.Title} duplicated successfully");
+        }
+        else
+        {
+            ToastService.ShowError("Failed to duplicate work instruction.");
+        }
+    }
+
+    /// Only Delete a Work Instruction if it does not have any associated Production Logs
+    private async Task DeleteWorkInstruction()
+    {
+        if (!IsEditable)
+        {
+            Log.Information("Attempt to delete Work Instruction: {WorkInstructionTitle} with ID: {ID},  Failed since it is not editable.", WorkInstruction.Title, WorkInstruction.Id);
+            ToastService.ShowError($"Unable to delete WorkInstruction: {WorkInstruction.Title}, as it is not editable.");
             return;
         }
-
-        try
+        var deletionResult = await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
+        if (deletionResult)
         {
-            var result = await WorkInstructionService.DeleteByIdAsync(WorkInstruction.Id);
-            
-            if (result)
-            {
-                await DisplayAlert.InvokeAsync($"User {WorkInstruction.Title} has been deleted");
-            }
-            else
-            {
-                await DisplayAlert.InvokeAsync($"Failed to delete Work Instruction: {WorkInstruction.Title} with ID: {WorkInstruction.Id}");
-            }
+            await OnDelete.InvokeAsync(WorkInstruction);
+            ToastService.ShowSuccess($"Successfully deleted WorkInstruction: {WorkInstruction.Title}.");
         }
-        catch (Exception e)
+        else
         {
-            Console.WriteLine(e);
-            await DisplayAlert.InvokeAsync($"Error deleting user: {e.Message}");
+            ToastService.ShowError($"Unable to delete WorkInstruction: {WorkInstruction.Title}. Please contact the administrator or check the Log files.");
         }
-        finally
-        {
-            IsConfirmingDelete = false;
-            WorkInstructionToDeleteId = null;
-        }
-    }
-
-    private void DeleteWorkInstructionAsync()
-    {
-        if (WorkInstruction == null)
-        {
-            return;
-        }
-
-        InitiateDeleteInstruction(WorkInstruction.Id);
     }
 
 }
