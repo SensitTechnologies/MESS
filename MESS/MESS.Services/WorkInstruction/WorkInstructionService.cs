@@ -901,7 +901,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var workInstruction = await _context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
-                .FirstAsync(w => w.Id == id);
+                .FirstOrDefaultAsync(w => w.Id == id);
             
             return workInstruction;
         }
@@ -1020,7 +1020,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
                     var existingWorkInstruction = await _context.WorkInstructions
