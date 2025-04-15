@@ -1,3 +1,6 @@
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject NavigationManager Navigation
+
 <div class="toast-container position-fixed top-50 start-50 translate-middle p-3 @(IsVisible ? "d-block" : "d-none")" data-bs-autohide="true" data-bs-delay="5000">
     <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header">
@@ -52,5 +55,6 @@
     {
         Close();
         await OnSubmit.InvokeAsync(true);
+        Navigation.NavigateTo(Navigation.Uri, forceLoad:true);
     }
 }
