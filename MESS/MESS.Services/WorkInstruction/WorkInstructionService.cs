@@ -965,7 +965,9 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var workInstruction = await _context.WorkInstructions.FindAsync(id);
+            var workInstruction = await _context.WorkInstructions
+                .Include(w => w.Nodes)
+                .FirstOrDefaultAsync(w => w.Id == id);
             
             if (workInstruction == null)
             {
@@ -976,6 +978,9 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 return false;
             }
+            
+            // Remove associated Work Instruction Nodes first
+            _context.WorkInstructionNodes.RemoveRange(workInstruction.Nodes);
 
             _context.WorkInstructions.Remove(workInstruction);
             await _context.SaveChangesAsync();
