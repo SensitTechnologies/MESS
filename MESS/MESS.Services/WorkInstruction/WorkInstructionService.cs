@@ -28,7 +28,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
-    private const string QR_CODE_REQUIRED_CELL = "D1";
+    private const string QR_CODE_REQUIRED_CELL = "D2";
     private const string STEPS_PARTS_LIST_CELL = "B3";
     
     
@@ -50,6 +50,156 @@ public partial class WorkInstructionService : IWorkInstructionService
         _cache = cache;
         _webHostEnvironment = webHostEnvironment;
         _contextFactory = contextFactory;
+    }
+
+    public string? ExportToXlsx(WorkInstruction workInstructionToExport)
+    {
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.AddWorksheet("Work Instruction");
+
+            // Set basic data in the header
+            worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
+            worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
+            worksheet.Cell(QR_CODE_REQUIRED_CELL).Value = workInstructionToExport.PartsRequired;
+            
+            // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
+            if (workInstructionToExport.Products.Count > 0)
+            {
+                var productNames = string.Join(", ", workInstructionToExport.Products.Select(p => p.Name));
+                worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
+            }
+            
+            // Build parts list string in format "(PART_NAME, PART_NUMBER), ..."
+            var partNodes = workInstructionToExport.Nodes
+                .Where(n => n is PartNode)
+                .Cast<PartNode>()
+                .ToList();
+            
+            if (partNodes.Count > 0)
+            {
+                var allParts = partNodes.SelectMany(pn => pn.Parts).ToList();
+                var partsListStrings = allParts.Select(p => $"({p.PartName}, {p.PartNumber})");
+                worksheet.Cell(STEPS_PARTS_LIST_CELL).Value = string.Join(", ", partsListStrings);
+            }
+            
+            // Setup headers
+            worksheet.Cell("A1").Value = "Title:";
+            worksheet.Cell("C1").Value = "Version:";
+            worksheet.Cell("A2").Value = "Product:";
+            worksheet.Cell("C2").Value = "QR Code Required:";
+            worksheet.Cell("A3").Value = "Required Parts:";
+            
+            // Step Header row. With bold.
+            var currentRow = 6;
+            worksheet.Cell(currentRow, 1).Value = "#";
+            worksheet.Cell(currentRow, 2).Value = "Title";
+            worksheet.Cell(currentRow, 3).Value = "Description";
+            worksheet.Cell(currentRow, 4).Value = "Primary Media";
+            worksheet.Cell(currentRow, 5).Value = "Secondary Media";
+
+            var stepNodes = workInstructionToExport.Nodes
+                .Where(n => n is Step)
+                .Cast<Step>()
+                .OrderBy(s => s.Position)
+                .ToList();
+
+            currentRow++;
+            var stepNumber = 1;
+        
+            foreach (var step in stepNodes)
+            {
+                worksheet.Cell(currentRow, 1).Value = stepNumber++;
+                
+                // Currently just stripping the html off of the steps to get the content out.
+                worksheet.Cell(currentRow, 2).Value = StripHtmlTags(step.Name);
+                worksheet.Cell(currentRow, 3).Value = StripHtmlTags(step.Body);
+                
+                // ApplyFormattingToCells(worksheet.Cell(currentRow, 2), step.Name); 
+                // ApplyFormattingToCells(worksheet.Cell(currentRow, 3), step.Body);
+            
+                // Handle primary media
+                if (step.PrimaryMedia.Count > 0)
+                {
+                    worksheet.Cell(currentRow, 4).Value = string.Join(", ", step.PrimaryMedia);
+                }
+            
+                // Handle secondary media
+                if (step.SecondaryMedia.Count > 0)
+                {
+                    worksheet.Cell(currentRow, 5).Value = string.Join(", ", step.SecondaryMedia);
+                }
+            
+                currentRow++;
+            }
+            
+            // Auto-fit column widths
+            worksheet.Columns().AdjustToContents();
+        
+            // Create directory for exports if it doesn't exist
+            var exportDir = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionExports");
+            if (!Directory.Exists(exportDir))
+            {
+                Directory.CreateDirectory(exportDir);
+            }
+        
+            // Save the workbook
+            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+            var safeTitle = string.Join("_", workInstructionToExport.Title.Split(Path.GetInvalidFileNameChars()));
+            var fileName = $"{safeTitle}_{timestamp}.xlsx";
+            var filePath = Path.Combine(exportDir, fileName);
+        
+            workbook.SaveAs(filePath);
+        
+            Log.Information("Successfully exported work instruction '{Title}' to '{FilePath}'", 
+                workInstructionToExport.Title, filePath);
+            
+            return filePath;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to export work instruction: {workInstructionTitle} to xlsx. Exception type: {exceptionType}", workInstructionToExport.Title, e.GetType());
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <param name="htmlContent"></param>
+    /// <returns></returns>
+    private void ApplyFormattingToCells(IXLCell cell, string? htmlContent)
+    {
+        if (string.IsNullOrEmpty(htmlContent))
+        {
+            return;
+        }
+
+        htmlContent = htmlContent.Trim();
+        
+        // Remove div wrapper as it should never have any styles associated with it
+        if (htmlContent.StartsWith("<div>") && htmlContent.EndsWith("</div>"))
+        {
+            htmlContent = htmlContent.Substring(5, htmlContent.Length - 11);
+        }
+
+        var plainText = StripHtmlTags(htmlContent);
+        cell.Value = plainText;
+        
+        // TODO finish full implementation
+    }
+
+    /// <summary>
+    /// Removes HTML tags from a string.
+    /// </summary>
+    private string StripHtmlTags(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+        
+        return RemoveHTMLRegex().Replace(input, string.Empty);
     }
 
     public async Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate)
@@ -84,7 +234,12 @@ public partial class WorkInstructionService : IWorkInstructionService
 
                     foreach (var product in workInstructionToDuplicate.Products)
                     {
-                        newWorkInstruction.Products.Add(product);
+                        var trackedProduct = await _context.Products.FindAsync(product.Id);
+                        if (trackedProduct != null)
+                        {
+                            trackedProduct.WorkInstructions?.Add(workInstructionToDuplicate);
+                            newWorkInstruction.Products.Add(trackedProduct);
+                        }
                     }
 
                     foreach (var originalNode in workInstructionToDuplicate.Nodes)
@@ -153,16 +308,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
-
-    /// <summary>
-    /// Determines whether the specified work instruction is editable.
-    /// A work instruction is considered non-editable if it has associated production logs.
-    /// </summary>
-    /// <param name="workInstruction">The work instruction to evaluate.</param>
-    /// <returns>
-    /// A boolean value indicating whether the work instruction is editable.
-    /// True if editable (i.e., no production logs exist for it); otherwise, false.
-    /// </returns>
+    
     public async Task<bool> IsEditable(WorkInstruction workInstruction)
     {
         if (workInstruction is not { Id: > 0 })
@@ -188,28 +334,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
-
-    /// <summary>
-    /// Imports work instructions from an Excel file.
-    /// </summary>
-    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
-    /// <returns>
-    /// A <see cref="WorkInstructionImportResult"/> object containing:
-    /// - Success status
-    /// - Imported work instruction (if successful)
-    /// - Error details (if failed)
-    /// - The names of processed files
-    /// </returns>
-    /// <remarks>
-    /// The Excel file must follow a specific format with cells containing:
-    /// - B1: Work instruction title
-    /// - D1: Version and QR code requirement
-    /// - B2: Product name
-    /// - B3: Parts list (format: "(PART_NAME, PART_NUMBER), ...")
-    /// - Rows from 7 onwards: Steps with title, description, and media
-    /// 
-    /// Images found in the Excel file are extracted and saved to the web root directory.
-    /// </remarks>
+    
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
@@ -865,25 +990,64 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             return false;
         }
+        
         try
         {
-            // verify that the WorkInstruction already exists in the database
-            var existingWorkInstruction = await _context.WorkInstructions.FindAsync(workInstruction.Id);
-
-            if (existingWorkInstruction == null)
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                return false;
-            }
-            
-            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var existingWorkInstruction = await _context.WorkInstructions
+                        .Include(w => w.Nodes)
+                        .ThenInclude(n => ((PartNode)n).Parts)
+                        .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
 
-            _context.WorkInstructions.Update(workInstruction);
-            await _context.SaveChangesAsync();
-            
-            // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            
-            return true;
+                    if (existingWorkInstruction == null)
+                    {
+                        return false;
+                    }
+
+                    _context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
+
+                    // Update any applicable nodes
+                    foreach (var newNode in workInstruction.Nodes)
+                    {
+                        var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+
+                        if (existingNode != null)
+                        {
+                            if (newNode is PartNode && existingNode is PartNode)
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                            else if (newNode is Step && existingNode is Step)
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                            else
+                            {
+                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                            }
+                        }
+                    }
+
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+                    Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
+                        workInstruction.Id);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    await transaction.RollbackAsync();
+                    Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
+                    return false;
+                }
+            });
         }
         catch (Exception e)
         {
@@ -898,4 +1062,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </summary>
     [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
+    [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
+    private static partial System.Text.RegularExpressions.Regex RemoveHTMLRegex();
+
 }
