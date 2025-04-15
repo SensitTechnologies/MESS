@@ -47,7 +47,7 @@
                         </button>
                         
                             <ProductSelector WorkInstruction="WorkInstruction"
-                                             AllProducts="_allProducts"
+                                             AllProducts="AllProducts"
                                              OnProductsChanged="UpdateProducts" />
 
                             <FluentDivider/>
@@ -79,15 +79,16 @@
     public EventCallback<WorkInstruction> OnDuplicate { get; set; }
     [Parameter]
     public EventCallback<WorkInstruction> OnDelete { get; set; }
+    [Parameter] 
+    public required List<Product> AllProducts { get; set; }
     
     private bool IsEditable { get; set; }
-    private List<Product>? _allProducts;
 
     protected override async Task OnInitializedAsync()
     {
         IsEditable = await WorkInstructionService.IsEditable(WorkInstruction);
         await base.OnInitializedAsync();
-        _allProducts = (await ProductService.GetAllProductsAsync()).ToList();
+        
     }
 
     private bool IsConfirmingDelete { get; set; } = false;
