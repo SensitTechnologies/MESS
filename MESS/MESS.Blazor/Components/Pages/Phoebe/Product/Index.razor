@@ -63,17 +63,16 @@ else
             }
             else
             {
-                var newProduct = new Product
-                {
-                    Name = product.Name,
-                    IsActive = product.IsActive,
-                    WorkInstructions = product.WorkInstructions
-                };
-                await ProductService.AddProductAsync(newProduct);  // Create a new product from modified data
+                await ProductService.DuplicateProductAsync(product);  // Create a new product from modified data
             }
 
             // Reload products after submission
             await LoadProducts();
+
+            _newProduct = new Product
+            {
+                Name = ""
+            };
 
             // Log the success of the operation
             Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);

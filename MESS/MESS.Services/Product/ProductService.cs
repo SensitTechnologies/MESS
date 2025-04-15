@@ -14,7 +14,61 @@ public class ProductService : IProductService
     {
         _context = context;
     }
-    
+
+    public async Task DuplicateProductAsync(Product productToDuplicate)
+    {
+        try
+        {
+            _context.ChangeTracker.Clear();
+            await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var newProduct = new Product
+                    {
+                        Name = productToDuplicate.Name,
+                        IsActive = productToDuplicate.IsActive,
+                        WorkInstructions = new List<WorkInstruction>()
+                    };
+
+                    await _context.Products.AddAsync(newProduct);
+                    await _context.SaveChangesAsync();
+
+                    if (productToDuplicate.WorkInstructions != null)
+                    {
+                        foreach (var workInstruction in productToDuplicate.WorkInstructions)
+                        {
+                            var associatedWorkInstruction = await _context.WorkInstructions
+                                .AsNoTracking()
+                                .FirstOrDefaultAsync(wi => wi.Id == workInstruction.Id);
+                            if (associatedWorkInstruction != null)
+                            {
+                                newProduct.WorkInstructions.Add(associatedWorkInstruction);
+                                associatedWorkInstruction.Products.Add(newProduct);
+                            }
+                            
+                        }
+                    }
+                    
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    
+                    Log.Information("Product: {ProductName} Duplicated Successfully", newProduct.Name);
+                }
+                catch (Exception e)
+                {
+                    await transaction.RollbackAsync();
+                    Log.Information("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            Log.Information("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+        }
+    }
+
     public async Task AddProductAsync(Product product)
     {
         try
