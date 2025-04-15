@@ -3,8 +3,8 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using Microsoft.AspNetCore.Authorization
+@using Serilog
 @inject IProductService ProductService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Product List</PageTitle>
 
@@ -12,43 +12,32 @@
 
 @if (Products.Count == 0)
 {
-    <p>Loading... No products currently available.</p>
+    <p>No products currently available.</p>
 }
 else
 {
     <table class="table table-striped">
         <thead>
         <tr>
-            <th>ID</th>
             <th>Name</th>
             <th>Active</th>
+            <th>Work Instructions</th>
             <th>Actions</th>
         </tr>
         </thead>
         <tbody>
         @foreach (var product in Products)
         {
-            <tr>
-                <td>@product.Id </td>
-                <td>
-                    @product.Name
-                    <ProductDetails Product="product" />
-                </td>
-                <td>@(product.IsActive ? "Yes" : "No")</td>
-                <td>
-                    <button class="btn btn-primary btn-sm" @onclick="() => EditProduct(product.Id)">Edit</button>
-                    <button class="btn btn-warning btn-sm" @onclick="() => RemoveProduct(product.Id)">Delete</button>
-                </td>
-            </tr>
+            <ProductTableRow Product="product" OnSubmit="HandleSubmitProduct" />
         }
+        <ProductTableRow Product="_newProduct" OnSubmit="HandleSubmitProduct" />
         </tbody>
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToCreate">Create New Product</button>
-
 @code {
-    private List<Product> Products { get; set; } = new();
+    private List<Product> Products { get; set; } = new List<Product>();
+    private Product _newProduct = new Product { Name = "", IsActive = true };
 
     protected override async Task OnInitializedAsync()
     {
@@ -60,19 +49,39 @@ else
         Products = (await ProductService.GetAllProductsAsync()).ToList();
     }
 
-    private void GoToCreate()
+    private async Task HandleSubmitProduct(Product product)
     {
-        NavigationManager.NavigateTo("/products/create");
-    }
+        try
+        {
+            // Log the start of the submission process
+            Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
 
-    private void EditProduct(int id)
-    {
-        NavigationManager.NavigateTo($"/products/edit/{id}");
-    }
+            // Check if it's a new product or a modified product (which is actually a new product)
+            if (product.Id == 0) 
+            {
+                await ProductService.AddProductAsync(product);  // Create new product
+            }
+            else
+            {
+                var newProduct = new Product
+                {
+                    Name = product.Name,
+                    IsActive = product.IsActive,
+                    WorkInstructions = product.WorkInstructions
+                };
+                await ProductService.AddProductAsync(newProduct);  // Create a new product from modified data
+            }
 
-    private async Task RemoveProduct(int id)
-    {
-        await ProductService.RemoveProductAsync(id);
-        await LoadProducts(); // Refresh the list after deletion
+            // Reload products after submission
+            await LoadProducts();
+
+            // Log the success of the operation
+            Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+        }
+        catch (Exception ex)
+        {
+            // Log the exception using Serilog
+            Log.Error(ex, "Error occurred while submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+        }
     }
 }
