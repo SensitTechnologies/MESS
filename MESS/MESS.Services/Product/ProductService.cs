@@ -48,7 +48,6 @@ public class ProductService : IProductService
             return null;
         }
     }
-
     
     public async Task<Product?> FindByTitleAsync(string title)
     {
@@ -67,7 +66,7 @@ public class ProductService : IProductService
             return null;
         }
     }
-
+    
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
         try
