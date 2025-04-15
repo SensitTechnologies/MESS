@@ -19,6 +19,13 @@ public class ProductService : IProductService
     {
         try
         {
+            if (product.WorkInstructions != null)
+            {
+                product.WorkInstructions = await _context.WorkInstructions
+                    .Where(wi => wi.Products.Contains(product))
+                    .ToListAsync();
+            }
+            
             await _context.Products.AddAsync(product);
             await _context.SaveChangesAsync();
             
