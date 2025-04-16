@@ -12,6 +12,10 @@ internal enum Status
     InProgress,
     Completed
 }
+/// <summary>
+/// Represents the Create component for managing production logs.
+/// This component handles the creation, modification, and submission of production logs.
+/// </summary>
 public partial class Create : ComponentBase, IAsyncDisposable
 {
     private string Title = "Add";
