@@ -1,0 +1,90 @@
+@page "/products"
+@attribute [Authorize(Roles = "Technician")]
+@using MESS.Data.Models
+@using MESS.Services.Product
+@using MESS.Services.WorkInstruction
+@using Microsoft.AspNetCore.Authorization
+@using Serilog
+@inject IProductService ProductService
+@inject IWorkInstructionService WorkInstructionService
+
+<PageTitle>Product List</PageTitle>
+
+<h3>Product List</h3>
+
+@if (Products.Count == 0)
+{
+    <p>No products currently available.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Active</th>
+            <th>Work Instructions</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var product in Products)
+        {
+            <ProductTableRow Product="product" OnSubmit="HandleSubmitProduct" AllInstructions="_allInstructions"/>
+        }
+        <ProductTableRow Product="_newProduct" OnSubmit="HandleSubmitProduct" AllInstructions="_allInstructions" />
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Product> Products { get; set; } = new List<Product>();
+    private Product _newProduct = new Product { Name = "", IsActive = true };
+    private List<WorkInstruction>? _allInstructions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+        _allInstructions = await WorkInstructionService.GetAllAsync();
+    }
+
+    private async Task LoadProducts()
+    {
+        Products = (await ProductService.GetAllProductsAsync()).ToList();
+    }
+
+    private async Task HandleSubmitProduct(Product product)
+    {
+        try
+        {
+            // Log the start of the submission process
+            Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+
+            // Check if it's a new product or a modified product (which is actually a new product)
+            if (product.Id == 0) 
+            {
+                await ProductService.AddProductAsync(product);  // Create new product
+            }
+            else
+            {
+                await ProductService.DuplicateProductAsync(product);  // Create a new product from modified data
+            }
+
+            // Reload products after submission
+            await LoadProducts();
+
+            _newProduct = new Product
+            {
+                Name = ""
+            };
+
+            // Log the success of the operation
+            Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+        }
+        catch (Exception ex)
+        {
+            // Log the exception using Serilog
+            Log.Error(ex, "Error occurred while submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+        }
+    }
+}

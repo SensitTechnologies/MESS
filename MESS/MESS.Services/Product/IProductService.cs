@@ -4,6 +4,7 @@ using Data.Models;
 
 public interface IProductService
 {
+    Task DuplicateProductAsync(Product productToDuplicate);
     /// <summary>
     /// Adds a new product to the database.
     /// </summary>
