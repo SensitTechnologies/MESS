@@ -34,6 +34,7 @@
 @code {
     private List<WorkInstruction> WorkInstructions { get; set; } = [];
     
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         WorkInstructions = await WorkInstructionService.GetAllAsync();

@@ -15,6 +15,10 @@
 
 
 @code {
+    /// <summary>
+    /// Event callback triggered when the import process is complete.
+    /// Passes the imported <see cref="WorkInstruction"/> as a parameter.
+    /// </summary>
     [Parameter]
     public EventCallback<WorkInstruction> OnImportComplete { get; set; }
     

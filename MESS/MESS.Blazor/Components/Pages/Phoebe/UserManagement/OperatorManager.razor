@@ -61,6 +61,7 @@
     private List<UserRoleDto> ApplicationUserDtoList { get; set; } = [];
     private string? AlertMessage { get; set; }
 
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         var applicationUsers = await ApplicationUserService.GetAllAsync();

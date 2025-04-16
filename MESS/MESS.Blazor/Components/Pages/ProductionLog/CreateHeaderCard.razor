@@ -8,10 +8,19 @@
 
 
 @code {
+    /// <summary>
+    /// A string value for the Title field displayed in the card header.
+    /// </summary>
     [Parameter]
     public string? Title { get; set; }
     
+    /// <summary>
+    /// The main text content displayed in the card body.
+    /// </summary>
     [Parameter]
     public string? Text { get; set; }
+    /// <summary>
+    /// Additional content to be rendered inside the card body.
+    /// </summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }
