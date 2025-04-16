@@ -2,6 +2,9 @@ namespace MESS.Services.Product;
 
 using Data.Models;
 
+/// <summary>
+/// Interface for managing product-related operations in the database.
+/// </summary>
 public interface IProductService
 {
     /// <summary>
@@ -21,8 +24,7 @@ public interface IProductService
     /// <summary>
     /// Finds the 1st product with the given title.
     /// If given a version string it will find the first Product that has the
-    /// given Title & Version match.
-    ///
+    /// given Title and Version match.
     /// Includes related WorkInstructions and WorkStations.
     /// </summary>
     /// <param name="title">The ID of the product to find.</param>
