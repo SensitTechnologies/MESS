@@ -17,6 +17,7 @@ on:
     
 env:
   DOTNET_VERSION: '9.0.200' # Current as of 4/16/2025
+  SOLUTION_PATH: './MESS/MESS.sln'
 
 jobs:
   build-and-test:
@@ -34,8 +35,8 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test ${{ env.SOLUTION_PATH }} --no-build --verbosity normal
