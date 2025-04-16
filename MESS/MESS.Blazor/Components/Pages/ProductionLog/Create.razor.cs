@@ -24,7 +24,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private Product? ActiveProduct { get; set; }
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
-    
+    /// <summary>
+    /// Represents the current production log being created or modified.
+    /// This object holds all the details of the production log.
+    /// </summary>
     protected ProductionLog ProductionLog = new();
     
     private List<Product>? Products { get; set; }
@@ -37,6 +40,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         IsLoading = true;
@@ -81,6 +85,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         IsLoading = false;
     }
     
+    /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -265,6 +270,19 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
     }
 
+    /// <summary>
+    /// Handles the submission of the production log. 
+    /// Validates if all required parts have serial numbers before proceeding.
+    /// If parts are missing serial numbers, prompts the user for confirmation.
+    /// </summary>
+    /// <remarks>
+    /// - If `ActiveWorkInstruction` is null, the method exits early.
+    /// - Calculates the total number of parts needed based on the active work instruction.
+    /// - Compares the count of serial numbers logged with the total parts needed.
+    /// - If all parts have serial numbers, proceeds to complete the submission.
+    /// - Otherwise, displays a confirmation modal to the user.
+    /// </remarks>
+    /// <returns>An asynchronous operation.</returns>
     protected async Task HandleSubmit()
     {
         if (ActiveWorkInstruction == null)
@@ -434,6 +452,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
     }
     
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         SerializationService.CurrentSerialNumberLogChanged -= HandleSerialNumberLogsChanged;

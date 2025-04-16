@@ -23,18 +23,32 @@
 </div>
 
 @code {
+    /// <summary>
+    /// The list of products to display in the dropdown.
+    /// </summary>
     [Parameter]
     public List<Product>? Products { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when a product is selected.
+    /// The selected product's ID is passed as an argument.
+    /// </summary>
     [Parameter]
     public EventCallback<int> OnProductSelected { get; set; }
+
+    /// <summary>
+    /// A value indicating whether the dropdown is disabled.
+    /// </summary>
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         ProductionLogEventService.ProductDetailsChanged += StateHasChanged;
     }
-
+    
+    /// <inheritdoc />
     public void Dispose()
     {
         ProductionLogEventService.ProductDetailsChanged -= StateHasChanged;
