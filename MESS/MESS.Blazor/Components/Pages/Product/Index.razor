@@ -49,6 +49,7 @@ else
 @code {
     private List<Product> Products { get; set; } = new();
 
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         await LoadProducts();
