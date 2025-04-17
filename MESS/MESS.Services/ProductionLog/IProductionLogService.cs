@@ -1,5 +1,9 @@
 ﻿namespace MESS.Services.ProductionLog;
 using Data.Models;
+/// <summary>
+/// Interface for managing ProductionLog operations, including retrieval, creation, 
+/// updating, and deletion of ProductionLog objects.
+/// </summary>
 public interface IProductionLogService
 {
     /// <summary>
