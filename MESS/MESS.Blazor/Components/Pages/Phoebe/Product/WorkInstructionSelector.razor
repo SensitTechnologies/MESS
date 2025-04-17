@@ -38,13 +38,21 @@
 </div>
 
 @code {
-    
+    /// <summary>
+    /// Gets or sets the list of selected work instructions.
+    /// </summary>
     [Parameter]
     public List<WorkInstruction>? SelectedInstructions { get; set; } = [];
 
+    /// <summary>
+    /// Event callback triggered when the selected work instructions change.
+    /// </summary>
     [Parameter]
     public EventCallback<List<WorkInstruction>> SelectedInstructionsChanged { get; set; }
-    
+
+    /// <summary>
+    /// Gets or sets the list of all available work instructions.
+    /// </summary>
     [Parameter]
     public List<WorkInstruction>? AllInstructions { get; set; } = [];
 

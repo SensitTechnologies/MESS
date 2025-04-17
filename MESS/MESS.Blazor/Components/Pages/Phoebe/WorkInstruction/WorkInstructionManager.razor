@@ -39,6 +39,7 @@
     private List<WorkInstruction> WorkInstructions { get; set; } = [];
     private List<Product>? AllProducts { get; set; }
     
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         WorkInstructions = await WorkInstructionService.GetAllAsync();

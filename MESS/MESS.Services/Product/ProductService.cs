@@ -5,16 +5,20 @@ using Serilog;
 namespace MESS.Services.Product;
 
 using Data.Models;
-
+/// <inheritdoc />
 public class ProductService : IProductService
 {
     private readonly ApplicationContext _context;
-
+    /// <summary>
+    /// Instantiates a new instance of the <see cref="ProductService"/> class.
+    /// </summary>
+    /// <param name="context">The application database context used for data operations.</param>
     public ProductService(ApplicationContext context)
     {
         _context = context;
     }
-
+    
+    /// <inheritdoc />
     public async Task DuplicateProductAsync(Product productToDuplicate)
     {
         try
@@ -69,6 +73,7 @@ public class ProductService : IProductService
         }
     }
 
+    /// <inheritdoc />
     public async Task AddProductAsync(Product product)
     {
         try
@@ -91,6 +96,7 @@ public class ProductService : IProductService
         }
     }
     
+    /// <inheritdoc />
     public async Task<Product?> FindProductByIdAsync(int id)
     {
         try
@@ -110,6 +116,7 @@ public class ProductService : IProductService
         }
     }
     
+    /// <inheritdoc />
     public async Task<Product?> FindByTitleAsync(string title)
     {
         try
@@ -128,6 +135,7 @@ public class ProductService : IProductService
         }
     }
     
+    /// <inheritdoc />
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
         try
@@ -144,6 +152,7 @@ public class ProductService : IProductService
         }
     }
 
+    /// <inheritdoc />
     public async Task ModifyProductAsync(Product product)
     {
         try
@@ -158,6 +167,7 @@ public class ProductService : IProductService
         
     }
 
+    /// <inheritdoc />
     public async Task RemoveProductAsync(int id)
     {
         var product = await _context.Products.FindAsync(id);

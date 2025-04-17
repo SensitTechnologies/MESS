@@ -75,12 +75,24 @@
 
 
 @code {
+    /// <summary>
+    /// Represents the step data for the current work instruction.
+    /// </summary>
     [Parameter]
     public required Step Step { get; set;}
+    /// <summary>
+    /// Represents the production log step associated with the current step.
+    /// </summary>
     [Parameter]
     public required ProductionLogStep LogStep { get; set;}
-    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+    /// <summary>
+    /// Event callback triggered when the step is completed.
+    /// The tuple contains the production log step and a nullable boolean indicating success or failure.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         if (!LogStep.Success.HasValue)

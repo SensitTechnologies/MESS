@@ -5,32 +5,20 @@ using Serilog;
 namespace MESS.Services.ProductionLog;
 using Data.Models;
 
+/// <inheritdoc />
 public class ProductionLogService : IProductionLogService
 {
     private readonly ApplicationContext _context;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProductionLogService"/> class.
+    /// </summary>
+    /// <param name="context">The application database context used for accessing production logs.</param>
     public ProductionLogService(ApplicationContext context)
     {
         _context = context;
     }
-    public List<ProductionLog> GetAll()
-    {
-        try
-        {
-            return _context.ProductionLogs
-                .Include(p => p.WorkInstruction)
-                .ThenInclude(w => w!.Nodes)
-                .Include(p => p.LogSteps)
-                .ToList();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to GetAll Production Logs, in ProductionLogService");
-            return [];
-        }
-        
-    }
     
+    /// <inheritdoc />
     public async Task<List<ProductionLog>?> GetAllAsync()
     {
         try
@@ -49,24 +37,8 @@ public class ProductionLogService : IProductionLogService
             return new List<ProductionLog>();
         }
     }
-    
 
-    public ProductionLog? GetById(int id)
-    {
-        try
-        {
-            var productionLog = _context.ProductionLogs.Find(id);
-
-            return productionLog;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to GetById with ID: {productionLogId} in Production Logs, in ProductionLogService", id);
-            return null;
-        }
-    }
-
+    /// <inheritdoc />
     public async Task<ProductionLog?> GetByIdAsync(int id)
     {
         try
@@ -88,6 +60,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
+    /// <inheritdoc />
     public async Task<int> CreateAsync(ProductionLog productionLog)
     {
         try
@@ -126,6 +99,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> DeleteAsync(int id)
     {
         try
@@ -150,6 +124,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> UpdateAsync(ProductionLog existingProductionLog)
     {
         try
@@ -173,6 +148,7 @@ public class ProductionLogService : IProductionLogService
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds)
     {
         try

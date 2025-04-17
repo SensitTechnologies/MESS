@@ -5,16 +5,22 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 namespace MESS.Services.SessionManager;
 using Data.Models;
 
+/// <inheritdoc />
 public class SessionManager : ISessionManager
 {
     private readonly ProtectedSessionStorage _protectedSessionStorage;
     private const string PRODUCTION_LOG_SESSION_KEY = "CURRENT_PRODUCTION_LOGS";
 
+    /// <summary>
+    /// Instantiates a new instance of <see cref="ISessionManager"/>.
+    /// </summary>
+    /// <param name="protectedSessionStorage">An instance of the browsers <see cref="ProtectedSessionStorage"/></param>
     public SessionManager(ProtectedSessionStorage protectedSessionStorage)
     {
         _protectedSessionStorage = protectedSessionStorage;
     }
 
+    /// <inheritdoc />
     public async Task AddProductionLogAsync(int log)
     {
         var logs = await GetProductionLogIdsAsync();
@@ -26,6 +32,7 @@ public class SessionManager : ISessionManager
         await _protectedSessionStorage.SetAsync(PRODUCTION_LOG_SESSION_KEY, logs);
     }
 
+    /// <inheritdoc />
     public async Task<List<int>?> GetProductionLogIdsAsync()
     {
         try
@@ -41,6 +48,7 @@ public class SessionManager : ISessionManager
 
     }
 
+    /// <inheritdoc />
     public async Task ClearProductionLogsAsync()
     {
         try

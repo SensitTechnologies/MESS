@@ -62,12 +62,27 @@
 }
 
 @code {
+    /// <summary>
+    /// Row number of the user in the table.
+    /// </summary>
     [Parameter]
     public required int RowNumber { get; set; }
+
+    /// <summary>
+    /// The UserRoleDto containing user and role information.
+    /// </summary>
     [Parameter]
     public required UserRoleDto UserRoleDto { get; set; }
+
+    /// <summary>
+    /// Event callback to display an alert message.
+    /// </summary>
     [Parameter]
     public EventCallback<string> DisplayAlert { get; set; }
+
+    /// <summary>
+    /// Event callback to save changes made to the user.
+    /// </summary>
     [Parameter]
     public EventCallback<ApplicationUser> SaveChanges { get; set; }
     private ApplicationUser? User { get; set; }
@@ -81,6 +96,7 @@
     private bool IsTechnician { get; set; }
     private bool IsAdmin { get; set; }
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         User = UserRoleDto.User;

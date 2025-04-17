@@ -22,8 +22,19 @@
 
 
 @code {
+    /// <summary>
+    /// The work instruction associated with the product selection.
+    /// </summary>
     [Parameter] public WorkInstruction WorkInstruction { get; set; } = default!;
+
+    /// <summary>
+    /// The list of all available products.
+    /// </summary>
     [Parameter] public required List<Product> AllProducts { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the selected products change.
+    /// </summary>
     [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     private bool IsProductSelected(int productId)

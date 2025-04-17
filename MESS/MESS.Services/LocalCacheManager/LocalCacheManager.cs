@@ -1,4 +1,4 @@
-﻿﻿using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using MESS.Data.DTO;
 
@@ -6,6 +6,7 @@ namespace MESS.Services.BrowserCacheManager;
 
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Data.Models;
+/// <inheritdoc />
 public class LocalCacheManager : ILocalCacheManager
 {
     private const string IsWorkflowActiveKey = "IS_WORKFLOW_ACTIVE";
@@ -16,11 +17,13 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ActiveWorkStationKey = "LAST_KNOWN_WORK_STATION";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
+    /// <inheritdoc />
     public LocalCacheManager(ProtectedLocalStorage protectedLocalStorage)
     {
         _protectedLocalStorage = protectedLocalStorage;
     }
 
+    /// <inheritdoc />
     public async Task SetNewProductionLogFormAsync(ProductionLog? productionLog)
     {
         try
@@ -61,6 +64,7 @@ public class LocalCacheManager : ILocalCacheManager
         return productionLogFormDto;
     }
 
+    /// <inheritdoc />
     public async Task<ProductionLogFormDTO> GetProductionLogFormAsync()
     {
         try
@@ -81,6 +85,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    /// <inheritdoc />
     public async Task SetActiveProductAsync(Product product)
     {
         try
@@ -101,6 +106,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    /// <inheritdoc />
     public async Task<CacheDTO> GetActiveProductAsync()
     {
         try
@@ -120,6 +126,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    /// <inheritdoc />
     public async Task<int> GetActiveWorkInstructionIdAsync()
     {
         try
@@ -140,6 +147,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
     
+    /// <inheritdoc />
     public async Task SetActiveWorkInstructionIdAsync(int workInstructionId)
     {
         try
@@ -153,6 +161,7 @@ public class LocalCacheManager : ILocalCacheManager
     }
     
 
+    /// <inheritdoc />
     public async Task SetIsWorkflowActiveAsync(bool inActive)
     {
         try
@@ -165,6 +174,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> GetWorkflowActiveStatusAsync()
     {
         try
@@ -185,6 +195,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
 
+    /// <inheritdoc />
     public async Task ResetCachedValuesAsync()
     {
         try
