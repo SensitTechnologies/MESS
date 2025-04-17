@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Identity;
 namespace MESS.Services.ApplicationUser;
 using Data.Models;
 
+/// <summary>
+/// Interface for managing application user-related operations.
+/// Provides methods for user authentication, retrieval, and management.
+/// </summary>
 public interface IApplicationUserService
 {
     /// <summary>
@@ -21,24 +25,25 @@ public interface IApplicationUserService
     /// <param name="roleName">The name of the role.</param>
     /// <returns>A list of users in the specified role.</returns>
     public Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName);
-    //<summary>
-    // Retrieves a list of all ApplicationUsers currently registered
-    //</summary>
-    //<returns>List of ApplicationUser objects</returns>
+    ///<summary>
+    /// Retrieves a list of all ApplicationUsers currently registered
+    ///</summary>
+    ///<returns>List of ApplicationUser objects</returns>
     public Task<List<ApplicationUser>> GetAllAsync();
     
-    //<summary>
-    // Retrieves a ApplicationUser by id number
-    //</summary>
-    //<returns>ApplicationUser object</returns>
+    ///<summary>
+    /// Retrieves a ApplicationUser by id number
+    ///</summary>
+    ///<returns>ApplicationUser object</returns>
     public Task<ApplicationUser?> GetByIdAsync(string id);
 
+    /// <summary>
+    /// Determines if the given user is currently persisted within the database.
+    /// </summary>
+    /// <param name="user">An <see cref="ApplicationUser"/> object. </param>
+    /// <returns></returns>
     public Task<bool?> IsNewUser(ApplicationUser user);
     
-    //<summary>
-    // Retrieves a ApplicationUser by last name
-    //</summary>
-    //<returns>ApplicationUser object</returns>
     /// <summary>
     /// Retrieves an ApplicationUser by last name.
     /// </summary>
@@ -60,22 +65,22 @@ public interface IApplicationUserService
     /// <returns>An ApplicationUser object if found, otherwise null.</returns>
     public Task<ApplicationUser?> GetByEmailAsync(string email);
     
-    //<summary>
-    // Creates a ApplicationUser object and saves it to the database
-    //</summary>
-    //<returns>ApplicationUser object</returns>
+    ///<summary>
+    /// Creates a ApplicationUser object and saves it to the database
+    ///</summary>
+    ///<returns>ApplicationUser object</returns>
     public Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser);
     
-    //<summary>
-    // Updates a ApplicationUser currently in the database
-    //</summary>
-    //<returns>Updated ApplicationUser object</returns>
+    ///<summary>
+    /// Updates a ApplicationUser currently in the database
+    ///</summary>
+    ///<returns>Updated ApplicationUser object</returns>
     public Task<bool> UpdateApplicationUser(ApplicationUser ApplicationUser);
     
-    //<summary>
-    // Deletes a ApplicationUser currently in the database
-    //</summary>
-    //<returns>Deleted ApplicationUser boolean</returns>
+    ///<summary>
+    /// Deletes a ApplicationUser currently in the database
+    ///</summary>
+    ///<returns>Deleted ApplicationUser boolean</returns>
     public Task<bool> DeleteApplicationUser(string id);
     
 }
