@@ -57,12 +57,19 @@
         <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Create.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\WorkStation\Index.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\WorkInstruction\Index.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\WorkInstruction\Index.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\Create.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\Index.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\ProductDetails.razor" />
+        <_ContentIncludedByDefault Remove="Components\Pages\Product\WorkInstructionSelector.razor" />
+
     </ItemGroup>
 
     <ItemGroup>
       <None Update="Resources\MESSRTFTest.xlsx">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
     </ItemGroup>
 
     <ItemGroup>
@@ -88,5 +95,12 @@
 
     <ItemGroup>
         <Folder Include="wwwroot\WorkInstructionImages\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\Index.razor" />
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\ProductDetails.razor" />
+      <AdditionalFiles Include="Components\Pages\Phoebe\Product\WorkInstructionSelector.razor" />
+      <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
     </ItemGroup>
 </Project>
