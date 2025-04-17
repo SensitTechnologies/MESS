@@ -1,3 +1,4 @@
+using Microsoft.Playwright;
 using Microsoft.Playwright.Xunit;
 
 namespace MESS.Tests.UI_Testing.ProductionLog.EndToEnd;
@@ -10,10 +11,13 @@ public class ProductionLogCreationE2ETests : PageTest
         var page = await Page.Context.NewPageAsync();
 
         await page.GotoAsync("https://localhost:7152");
-        await page.GetByText("").SelectOptionAsync("TechnicianUser");
+        await page.GetByPlaceholder("Search or select an operator...").FillAsync("technician@mess.com");
+        await page.Keyboard.PressAsync("Tab");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Login" }).ClickAsync();
+
         await Page.Context.StorageStateAsync(new()
         {
-            Path = "../../../playwright/.auth/state.json"
+            Path = "../../../UI_Testing/Playwright/.auth/state.json"
         });
     }
     
