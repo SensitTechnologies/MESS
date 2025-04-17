@@ -9,6 +9,9 @@
 # log files
 /Logs
 
+# Playwright files
+MESS.Tests/UI_Testing/Playwright/.auth
+
 # image files
 MESS.Blazor/wwwroot/WorkInstructionImages
 
