@@ -99,7 +99,6 @@
 
     <ItemGroup>
       <AdditionalFiles Include="Components\Pages\Phoebe\Product\Index.razor" />
-      <AdditionalFiles Include="Components\Pages\Phoebe\Product\ProductDetails.razor" />
       <AdditionalFiles Include="Components\Pages\Phoebe\Product\WorkInstructionSelector.razor" />
       <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
     </ItemGroup>

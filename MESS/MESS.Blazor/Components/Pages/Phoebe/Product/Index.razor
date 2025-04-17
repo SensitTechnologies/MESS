@@ -41,7 +41,7 @@ else
     private List<Product> Products { get; set; } = new List<Product>();
     private Product _newProduct = new Product { Name = "", IsActive = true };
     private List<WorkInstruction>? _allInstructions;
-
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         await LoadProducts();

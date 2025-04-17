@@ -19,12 +19,21 @@
 </tr>
 
 @code {
+    /// <summary>
+    /// The product being managed in the table row.
+    /// </summary>
     [Parameter]
     public required Product Product { get; set; }
 
+    /// <summary>
+    /// Event callback triggered when the product is submitted.
+    /// </summary>
     [Parameter]
     public EventCallback<Product> OnSubmit { get; set; }
-    
+
+    /// <summary>
+    /// A list of all available work instructions to be displayed in the selector.
+    /// </summary>
     [Parameter]
     public List<WorkInstruction>? AllInstructions { get; set; } = [];
 
