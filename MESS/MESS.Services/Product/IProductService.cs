@@ -7,8 +7,12 @@ using Data.Models;
 /// </summary>
 public interface IProductService
 {
-    Task DuplicateProductAsync(Product productToDuplicate);
     /// <summary>
+    /// Creates a duplicate of the specified product in the database.
+    /// </summary>
+    /// <param name="productToDuplicate">The product to duplicate.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task DuplicateProductAsync(Product productToDuplicate);    /// <summary>
     /// Adds a new product to the database.
     /// </summary>
     /// <param name="product">The product to add.</param>
