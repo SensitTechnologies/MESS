@@ -2,9 +2,17 @@ namespace MESS.Services.Product;
 
 using Data.Models;
 
+/// <summary>
+/// Interface for managing product-related operations in the database.
+/// </summary>
 public interface IProductService
 {
     /// <summary>
+    /// Creates a duplicate of the specified product in the database.
+    /// </summary>
+    /// <param name="productToDuplicate">The product to duplicate.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task DuplicateProductAsync(Product productToDuplicate);    /// <summary>
     /// Adds a new product to the database.
     /// </summary>
     /// <param name="product">The product to add.</param>
@@ -21,8 +29,7 @@ public interface IProductService
     /// <summary>
     /// Finds the 1st product with the given title.
     /// If given a version string it will find the first Product that has the
-    /// given Title & Version match.
-    ///
+    /// given Title and Version match.
     /// Includes related WorkInstructions and WorkStations.
     /// </summary>
     /// <param name="title">The ID of the product to find.</param>

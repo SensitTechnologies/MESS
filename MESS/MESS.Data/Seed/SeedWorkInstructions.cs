@@ -3,9 +3,15 @@ using MESS.Data.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MESS.Data.Seed;
-
+/// <summary>
+/// Provides methods to seed sample work instructions into the database.
+/// </summary>
 public static class SeedWorkInstructions
 {
+    /// <summary>
+    /// Seeder to generate sample work instructions for a new project. 
+    /// </summary>
+    /// <param name="serviceProvider"></param>
     public static void Seed(IServiceProvider serviceProvider)
     {
         var context = serviceProvider.GetRequiredService<ApplicationContext>();

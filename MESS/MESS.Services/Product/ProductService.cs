@@ -5,20 +5,86 @@ using Serilog;
 namespace MESS.Services.Product;
 
 using Data.Models;
-
+/// <inheritdoc />
 public class ProductService : IProductService
 {
     private readonly ApplicationContext _context;
-
+    /// <summary>
+    /// Instantiates a new instance of the <see cref="ProductService"/> class.
+    /// </summary>
+    /// <param name="context">The application database context used for data operations.</param>
     public ProductService(ApplicationContext context)
     {
         _context = context;
     }
     
+    /// <inheritdoc />
+    public async Task DuplicateProductAsync(Product productToDuplicate)
+    {
+        try
+        {
+            _context.ChangeTracker.Clear();
+            await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var newProduct = new Product
+                    {
+                        Name = productToDuplicate.Name,
+                        IsActive = productToDuplicate.IsActive,
+                        WorkInstructions = new List<WorkInstruction>()
+                    };
+
+                    await _context.Products.AddAsync(newProduct);
+                    await _context.SaveChangesAsync();
+
+                    if (productToDuplicate.WorkInstructions != null)
+                    {
+                        foreach (var workInstruction in productToDuplicate.WorkInstructions)
+                        {
+                            var associatedWorkInstruction = await _context.WorkInstructions
+                                .AsNoTracking()
+                                .FirstOrDefaultAsync(wi => wi.Id == workInstruction.Id);
+                            if (associatedWorkInstruction != null)
+                            {
+                                newProduct.WorkInstructions.Add(associatedWorkInstruction);
+                                associatedWorkInstruction.Products.Add(newProduct);
+                            }
+                            
+                        }
+                    }
+                    
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    
+                    Log.Information("Product: {ProductName} Duplicated Successfully", newProduct.Name);
+                }
+                catch (Exception e)
+                {
+                    await transaction.RollbackAsync();
+                    Log.Information("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            Log.Information("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+        }
+    }
+
+    /// <inheritdoc />
     public async Task AddProductAsync(Product product)
     {
         try
         {
+            if (product.WorkInstructions != null)
+            {
+                product.WorkInstructions = await _context.WorkInstructions
+                    .Where(wi => wi.Products.Contains(product))
+                    .ToListAsync();
+            }
+            
             await _context.Products.AddAsync(product);
             await _context.SaveChangesAsync();
             
@@ -30,6 +96,7 @@ public class ProductService : IProductService
         }
     }
     
+    /// <inheritdoc />
     public async Task<Product?> FindProductByIdAsync(int id)
     {
         try
@@ -48,8 +115,8 @@ public class ProductService : IProductService
             return null;
         }
     }
-
     
+    /// <inheritdoc />
     public async Task<Product?> FindByTitleAsync(string title)
     {
         try
@@ -67,12 +134,14 @@ public class ProductService : IProductService
             return null;
         }
     }
-
+    
+    /// <inheritdoc />
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
         try
         {
             return await _context.Products
+                .AsNoTracking()
                 .Include(p => p.WorkInstructions)
                 .ToListAsync();
         }
@@ -83,6 +152,7 @@ public class ProductService : IProductService
         }
     }
 
+    /// <inheritdoc />
     public async Task ModifyProductAsync(Product product)
     {
         try
@@ -97,6 +167,7 @@ public class ProductService : IProductService
         
     }
 
+    /// <inheritdoc />
     public async Task RemoveProductAsync(int id)
     {
         var product = await _context.Products.FindAsync(id);

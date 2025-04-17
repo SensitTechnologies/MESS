@@ -79,6 +79,7 @@
     private bool IsDropdownVisible { get; set; }
     private ElementReference _dropdownContainer;
 
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         ApplicationUsers = await ApplicationUserService.GetAllAsync();

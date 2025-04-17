@@ -1,8 +1,10 @@
 @using MESS.Data.Models
+@using MESS.Services.Product
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IWorkInstructionService WorkInstructionService
 @inject IToastService ToastService
+@inject IProductService ProductService
 
 @if (WorkInstruction != null)
 {
@@ -43,7 +45,12 @@
                                 @("Show")
                             }
                         </button>
-                        <FluentDivider/>
+                        
+                            <ProductSelector WorkInstruction="WorkInstruction"
+                                             AllProducts="AllProducts"
+                                             OnProductsChanged="UpdateProducts" />
+
+                            <FluentDivider/>
                         <button type="button" class="btn btn-outline-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
                             Save
                         </button>
@@ -62,23 +69,47 @@
 }
 
 @code {
+    /// <summary>
+    /// The row number of the work instruction table.
+    /// </summary>
     [Parameter]
     public required int RowNumber { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when a work instruction is saved.
+    /// </summary>
     [Parameter]
     public EventCallback<WorkInstruction> SaveChanges { get; set; }
+
+    /// <summary>
+    /// The work instruction associated with this table row.
+    /// </summary>
     [Parameter]
     public required WorkInstruction WorkInstruction { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the work instruction is duplicated.
+    /// </summary>
     [Parameter]
     public EventCallback<WorkInstruction> OnDuplicate { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the work instruction is deleted.
+    /// </summary>
     [Parameter]
     public EventCallback<WorkInstruction> OnDelete { get; set; }
+    /// A list of all available <see cref="Product"/>s
+    [Parameter] 
+    public required List<Product> AllProducts { get; set; }
     
     private bool IsEditable { get; set; }
 
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         IsEditable = await WorkInstructionService.IsEditable(WorkInstruction);
         await base.OnInitializedAsync();
+        
     }
 
     private bool IsConfirmingDelete { get; set; } = false;
@@ -125,5 +156,17 @@
             ToastService.ShowError($"Unable to delete WorkInstruction: {WorkInstruction.Title}. Please contact the administrator or check the Log files.");
         }
     }
+
+    private EventCallback<List<Product>> UpdateProductsCallback =>
+        EventCallback.Factory.Create<List<Product>>(this, selectedProducts => UpdateProducts(selectedProducts));
+
+    private void UpdateProducts(List<Product> selectedProducts)
+    {
+        WorkInstruction.Products = selectedProducts; 
+    }
+
+
+
+
 
 }

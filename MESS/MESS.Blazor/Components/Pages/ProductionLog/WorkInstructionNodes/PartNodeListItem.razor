@@ -8,15 +8,25 @@
 }
 
 @code {
+    /// <summary>
+    /// The product serial number associated with the part node.
+    /// This value can be null since the Product Serial Number may change during
+    /// the lifecycle of the Production Log Creation.
+    /// </summary>
     [Parameter]
     public string? ProductSerialNumber { get; set; }
+
+    /// <summary>
+    /// The part node that contains the parts to be displayed.
+    /// This parameter is required.
+    /// </summary>
     [Parameter]
-    public required PartNode PartNode { get; set; } 
+    public required PartNode PartNode { get; set; }
     
     private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
     private bool _initialized = false;
 
-    
+    /// <inheritdoc />
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
@@ -28,6 +38,7 @@
         }
     }
     
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         base.OnParametersSet();

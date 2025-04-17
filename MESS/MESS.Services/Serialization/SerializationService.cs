@@ -5,19 +5,26 @@ using Serilog;
 
 namespace MESS.Services.Serialization;
 
+/// <inheritdoc />
 public class SerializationService : ISerializationService
 {
     private readonly ApplicationContext _context;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SerializationService"/> class.
+    /// </summary>
+    /// <param name="context">The application database context used for data operations.</param>
     public SerializationService(ApplicationContext context)
     {
         _context = context;
     }
 
+    /// <inheritdoc />
     public event Action? CurrentSerialNumberLogChanged;
+    /// <inheritdoc />
     public event Action? CurrentProductNumberChanged;
     private string? _currentProductNumber;
 
+    /// <inheritdoc />
     public string? CurrentProductNumber
     {
         get => _currentProductNumber;
@@ -29,6 +36,7 @@ public class SerializationService : ISerializationService
     }
 
     private List<SerialNumberLog> _currentSerialNumberLogs = [];
+    /// <inheritdoc />
     public List<SerialNumberLog> CurrentSerialNumberLogs
     {
         get => _currentSerialNumberLogs;
@@ -39,6 +47,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> SaveCurrentSerialNumberLogsAsync(int productionLogId)
     {
         try
@@ -67,6 +76,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<SerialNumberLog>?> GetAllAsync()
     {
         try
@@ -85,6 +95,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> CreateAsync(SerialNumberLog serialNumberLog)
     {
         try
@@ -100,6 +111,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> CreateRangeAsync(List<SerialNumberLog> serialNumberLogs)
     {
         try
@@ -122,6 +134,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> UpdateAsync(SerialNumberLog serialNumberLog)
     {
         try
@@ -137,6 +150,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> DeleteAsync(int serialNumberLogId)
     {
         try

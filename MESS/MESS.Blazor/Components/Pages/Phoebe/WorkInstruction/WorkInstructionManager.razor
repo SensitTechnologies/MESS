@@ -1,9 +1,11 @@
 @page "/WorkInstructionManager"
 @using MESS.Data.DTO
 @using MESS.Data.Models
+@using MESS.Services.Product
 @using MESS.Services.WorkInstruction
 @using Serilog
 @inject IWorkInstructionService WorkInstructionService
+@inject IProductService ProductService
 @inject IToastService ToastService
 
 
@@ -24,7 +26,9 @@
             @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
             {
                 <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"></WorkInstructionTableRow>
+                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" 
+                                             OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"
+                                             AllProducts="AllProducts"></WorkInstructionTableRow>
                 </FluentGridItem>
             }
         </FluentGrid>
@@ -33,10 +37,13 @@
 
 @code {
     private List<WorkInstruction> WorkInstructions { get; set; } = [];
+    private List<Product>? AllProducts { get; set; }
     
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         WorkInstructions = await WorkInstructionService.GetAllAsync();
+        AllProducts = (await ProductService.GetAllProductsAsync()).ToList();
     }
     
     private async Task SaveChanges(WorkInstruction instruction)

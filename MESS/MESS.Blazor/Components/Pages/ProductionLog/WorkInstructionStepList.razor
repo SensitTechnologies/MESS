@@ -47,10 +47,20 @@
 }
 
 @code {
+    /// <summary>
+    /// The active work instruction being processed.
+    /// </summary>
     [Parameter] public required WorkInstruction ActiveWorkInstruction { get; set; }
 
+    /// <summary>
+    /// The production log associated with the current work instruction.
+    /// </summary>
     [Parameter] public required ProductionLog ProductionLog { get; set; }
 
+    /// <summary>
+    /// Event callback triggered when a step is completed.
+    /// The tuple contains the production log step and an optional boolean indicating completion status.
+    /// </summary>
     [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
 
     private string? ProductSerialNumber { get; set; }

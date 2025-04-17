@@ -8,6 +8,7 @@ namespace MESS.Services.ApplicationUser;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
 
+/// <inheritdoc cref="IApplicationUserService"/>
 public class ApplicationUserService : IApplicationUserService
 {
     private readonly UserContext _context;
@@ -15,13 +16,17 @@ public class ApplicationUserService : IApplicationUserService
     private readonly SignInManager<ApplicationUser> _signInManager;
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
-    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+    
+    /// <inheritdoc cref="IApplicationUserService"/>
+    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager)
     {
         _context = context;
         _userManager = userManager;
         _signInManager = signInManager;
     }
 
+    /// <inheritdoc />
     public async Task SignOutAsync()
     {
         try
@@ -33,7 +38,8 @@ public class ApplicationUserService : IApplicationUserService
             Console.WriteLine(e);
         }
     }
-
+    
+    /// <inheritdoc />
     public async Task<bool> SignInAsync(string email)
     {
         try
@@ -50,6 +56,7 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName)
     {
         try
@@ -64,17 +71,20 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<ApplicationUser>> GetAllAsync()
     {
         return await _context.Users.ToListAsync();
     }
 
+    /// <inheritdoc />
     public async Task<ApplicationUser?> GetByIdAsync(string id)
     {
         var ApplicationUser = await _context.Users.FindAsync(id);
         return ApplicationUser;
     }
 
+    /// <inheritdoc />
     public async Task<bool?> IsNewUser(ApplicationUser user)
     {
         try
@@ -95,12 +105,14 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<ApplicationUser?> GetByLastNameAsync(string lastName)
     {
         var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.LastName == lastName);
         return ApplicationUser;
     }
 
+    /// <inheritdoc />
     public async Task<ApplicationUser?> GetByUserNameAsync(string userName)
     {
         try
@@ -115,6 +127,7 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<ApplicationUser?> GetByEmailAsync(string email)
     {
         try
@@ -129,6 +142,7 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser)
     {
         try
@@ -152,6 +166,7 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> UpdateApplicationUser(ApplicationUser applicationUser)
     {
         try
@@ -190,6 +205,7 @@ public class ApplicationUserService : IApplicationUserService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> DeleteApplicationUser(string id)
     {
         var ApplicationUser = await _context.Users.FindAsync(id);

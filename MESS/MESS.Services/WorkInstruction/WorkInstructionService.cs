@@ -16,6 +16,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
+/// <inheritdoc />
 public partial class WorkInstructionService : IWorkInstructionService
 {
     private readonly ApplicationContext _context;
@@ -43,6 +44,14 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
+    /// </summary>
+    /// <param name="context">The application database context used for data access.</param>
+    /// <param name="productService">The service for managing product-related operations.</param>
+    /// <param name="cache">The memory cache for caching work instructions.</param>
+    /// <param name="webHostEnvironment">The hosting environment for accessing web root paths.</param>
+    /// <param name="contextFactory">The factory for creating database contexts.</param>
     public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
     {
         _context = context;
@@ -52,6 +61,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         _contextFactory = contextFactory;
     }
 
+    /// <inheritdoc />
     public string? ExportToXlsx(WorkInstruction workInstructionToExport)
     {
         try
@@ -202,6 +212,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         return RemoveHTMLRegex().Replace(input, string.Empty);
     }
 
+    /// <inheritdoc />
     public async Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate)
     {
         if (workInstructionToDuplicate == null)
@@ -329,6 +340,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
     
+    /// <inheritdoc />
     public async Task<bool> IsEditable(WorkInstruction workInstruction)
     {
         if (workInstruction is not { Id: > 0 })
@@ -355,6 +367,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
     
+    /// <inheritdoc />
     public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
     {
         try
@@ -583,7 +596,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// <summary>
     /// Converts rich text from an Excel cell into HTML format.
     /// </summary>
-    /// <param name="cell">The Excel cell containing text to convert.</param>
+    /// <param name="cell">The Excel cell <see cref="IXLCell"/> containing text to convert.</param>
+    /// <param name="workbook">The Excel Workbook <see cref="XLWorkbook"/> containing text to convert.</param>
     /// <returns>
     /// HTML-formatted string representing the cell's content. If the cell contains rich text,
     /// the method generates HTML with appropriate styling to preserve formatting.
@@ -901,7 +915,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var workInstruction = await _context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
-                .FirstAsync(w => w.Id == id);
+                .FirstOrDefaultAsync(w => w.Id == id);
             
             return workInstruction;
         }
@@ -1020,7 +1034,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
                     var existingWorkInstruction = await _context.WorkInstructions

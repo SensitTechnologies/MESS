@@ -3,26 +3,54 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Data.Context;
 
+/// <inheritdoc />
 public class ApplicationContext : DbContext
 {
+    /// <inheritdoc />
     public ApplicationContext()
     {
         
     }
+    /// <inheritdoc />
     public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
     {
         
     }
-
+    
+    /// <summary>
+    /// DbSet for WorkInstructions.
+    /// </summary>
     public virtual DbSet<WorkInstruction> WorkInstructions { get; set; } = null!;
+    /// <summary>
+    /// DbSet for Steps.
+    /// </summary>
     public virtual DbSet<Step> Steps { get; set; } = null!;
+    /// <summary>
+    /// DbSet for WorkInstructionNodes.
+    /// </summary>
     public virtual DbSet<WorkInstructionNode> WorkInstructionNodes { get; set; } = null!;
+    /// <summary>
+    /// DbSet for PartNodes.
+    /// </summary>
     public virtual DbSet<PartNode> PartNodes { get; set; } = null!;
+    /// <summary>
+    /// DbSet for SerialNumberLogs.
+    /// </summary>
     public virtual DbSet<SerialNumberLog> SerialNumberLogs { get; set; } = null!;
+    /// <summary>
+    /// DbSet for ProductionLogs.
+    /// </summary>
     public virtual DbSet<ProductionLog> ProductionLogs { get; set; } = null!;
+    /// <summary>
+    /// DbSet for Products.
+    /// </summary>
     public virtual DbSet<Product> Products { get; set; } = null!;
+    /// <summary>
+    /// DbSet for Parts.
+    /// </summary>
     public virtual DbSet<Part> Parts { get; set; } = null!;
-
+    
+    /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -45,13 +73,15 @@ public class ApplicationContext : DbContext
             .HasForeignKey("WorkInstructionId")
             .IsRequired(false);
     }
-
+    
+    /// <inheritdoc />
     public override int SaveChanges()
     {
         UpdateAuditFields();
         return base.SaveChanges();
     }
     
+    /// <inheritdoc />
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         UpdateAuditFields();

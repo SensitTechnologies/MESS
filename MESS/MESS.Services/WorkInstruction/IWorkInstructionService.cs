@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Components.Forms;
 namespace MESS.Services.WorkInstruction;
 using Data.Models;
 
+/// <summary>
+/// Interface for managing work instructions, including operations such as export, import, duplication, 
+/// retrieval, creation, deletion, and updates.
+/// </summary>
 public interface IWorkInstructionService
 {
     /// <summary>

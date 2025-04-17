@@ -6,7 +6,7 @@
 <div>
     @if (WorkInstructions != null)
     {
-        <select id="workInstruction-select" class="form-select" @onchange="async e => await OnWorkInstructionSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
+        <select id="workInstruction-select" style="max-width: 250px;" class="text-truncate form-select" @onchange="async e => await OnWorkInstructionSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
             @{
                 var selectedWorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
                 var isDefaultSelected = string.IsNullOrEmpty(selectedWorkInstructionName);
@@ -14,7 +14,7 @@
                 @foreach (var workInstruction in WorkInstructions)
                 {
                     var isSelected = workInstruction.Title == selectedWorkInstructionName;
-                    <option selected="@isSelected" value="@workInstruction.Id">@workInstruction.Title</option>
+                    <option class="w-50 text-truncate" selected="@isSelected" value="@workInstruction.Id">@workInstruction.Title</option>
                 }
             }
         </select>
@@ -23,17 +23,27 @@
 
 
 @code {
+    /// <summary>
+    /// Gets or sets the list of work instructions to display in the dropdown.
+    /// </summary>
     [Parameter]
     public List<WorkInstruction>? WorkInstructions { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when a work instruction is selected.
+    /// The selected work instruction's ID is passed as an argument.
+    /// </summary>
     [Parameter]
     public EventCallback<int> OnWorkInstructionSelected { get; set; }
     
+    /// <inheritdoc />
     protected override Task OnInitializedAsync()
     {
         ProductionLogEventService.WorkInstructionDetailsChanged += StateHasChanged;
         return base.OnInitializedAsync();
     }
-
+    
+    /// <inheritdoc />
     public void Dispose()
     {
         ProductionLogEventService.ProductDetailsChanged -= StateHasChanged;
