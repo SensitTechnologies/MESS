@@ -1,0 +1,30 @@
+﻿using Microsoft.Playwright;
+using System.Threading.Tasks;
+
+namespace MESS.Tests.UI_Testing.Setup;
+
+public class AuthFixture : IAsyncLifetime
+{
+    public string StorageStatePath { get; } = "../../../UI_Testing/Playwright/.auth/state.json";
+
+    public async Task InitializeAsync()
+    {
+        // Setup browser and authenticate
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync();
+        var context = await browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+
+        await page.GotoAsync("https://localhost:7152");
+        await page.GetByPlaceholder("Search or select an operator...").FillAsync("technician@mess.com");
+        await page.Keyboard.PressAsync("Tab");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Login" }).ClickAsync();
+
+        await context.StorageStateAsync(new()
+        {
+            Path = StorageStatePath
+        });
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
+}

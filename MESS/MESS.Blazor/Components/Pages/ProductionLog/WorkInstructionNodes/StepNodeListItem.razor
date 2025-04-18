@@ -67,7 +67,7 @@
 <div class="d-inline-flex">
     @if (ShowOptionalNotesField)
     {
-    <InputTextArea class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
+        <InputTextArea data-testid="optional-notes" class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
     }
 </div>
 
