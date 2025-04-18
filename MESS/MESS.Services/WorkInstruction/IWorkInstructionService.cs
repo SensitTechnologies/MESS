@@ -73,11 +73,6 @@ public interface IWorkInstructionService
     /// </remarks>
     public Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files);
     /// <summary>
-    /// Retrieves a List of WorkInstruction objects
-    /// </summary>
-    /// <returns>List of WorkInstruction objects</returns>
-    public List<WorkInstruction> GetAll();
-    /// <summary>
     /// Retrieves a List of WorkInstruction objects asynchronously
     /// </summary>
     /// <returns>List of WorkInstruction objects</returns>
@@ -89,12 +84,6 @@ public interface IWorkInstructionService
     /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
 
     public WorkInstruction? GetByTitle(string title);
-    /// <summary>
-    /// Retrieves a WorkInstruction by its ID
-    /// </summary>
-    /// <param name="id">The ID of the WorkInstruction to retrieve.</param>
-    /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
-    public WorkInstruction? GetById(int id);
     /// <summary>
     /// Retrieves a WorkInstruction by its ID.
     /// </summary>
