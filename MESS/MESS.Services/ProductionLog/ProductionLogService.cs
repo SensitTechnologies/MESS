@@ -68,6 +68,23 @@ public class ProductionLogService : IProductionLogService
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             
+
+
+            if (productionLog.Product is { Id: > 0 })
+            {
+                context.Entry(productionLog.Product).State = EntityState.Unchanged;
+            }
+            
+            if (productionLog.WorkInstruction is { Id: > 0 })
+            {
+                context.Entry(productionLog.WorkInstruction).State = EntityState.Unchanged;
+                
+                foreach (var node in productionLog.WorkInstruction.Nodes.Where(node => node.Id > 0))
+                {
+                    context.Entry(node).State = EntityState.Unchanged;
+                }
+            }
+            
             productionLog.CreatedOn = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             
@@ -79,6 +96,10 @@ public class ProductionLogService : IProductionLogService
                 foreach (var logStep in productionLog.LogSteps)
                 {
                     logStep.ProductionLogId = productionLog.Id;
+                    if (logStep.WorkInstructionStep is { Id: > 0 })
+                    {
+                        context.Entry(logStep.WorkInstructionStep).State = EntityState.Unchanged;
+                    }
                 }
                 await context.SaveChangesAsync();
             }
