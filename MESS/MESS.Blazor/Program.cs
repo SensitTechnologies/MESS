@@ -123,12 +123,6 @@ using (var scope = app.Services.CreateScope())
 {
     var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
     await roleInit.InitializeAsync();
-}
-
-using (var scope = app.Services.CreateScope())
-{
-    var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
-    await roleInit.InitializeAsync();
     
     // Seed default technician
     await InitialUserSeed.SeedDefaultUserAsync(scope.ServiceProvider);
