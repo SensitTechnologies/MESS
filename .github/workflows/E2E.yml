@@ -41,7 +41,7 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"${{ secrets.TEST_DB_PASSWORD }}\" -Q \"SELECT 1\" || exit 1"
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q \"SELECT 1\" || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -72,7 +72,7 @@ jobs:
         dotnet ef database update --context ApplicationContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
         dotnet ef database update --context UserContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
       env:
-        ConnectionStrings__MESSConnection: "Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True"
+        ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
       
     - name: Build
       run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore
@@ -83,10 +83,10 @@ jobs:
         sleep 10 # Give the server time to start
       env:
         ASPNETCORE_ENVIRONMENT: Test
-        ConnectionStrings__MESSConnection: "Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True"
+        ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
     
     - name: Run E2E tests
       run: dotnet test ./MESS/MESS.Tests --filter "FullyQualifiedName~UI_Testing.ProductionLog.EndToEnd" --verbosity normal
       env:
         ASPNETCORE_ENVIRONMENT: Test
-        ConnectionStrings__MESSConnection: "Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True"
+        ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
