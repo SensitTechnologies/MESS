@@ -12,7 +12,10 @@ public class AuthFixture : IAsyncLifetime
         // Setup browser and authenticate
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync();
-        var context = await browser.NewContextAsync();
+        var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true
+        });
         var page = await context.NewPageAsync();
 
         await page.GotoAsync("https://localhost:7152");
