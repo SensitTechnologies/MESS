@@ -18,7 +18,8 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
     {
         var context = await Browser.NewContextAsync(new()
         {
-            StorageStatePath = _authFixture.StorageStatePath
+            StorageStatePath = _authFixture.StorageStatePath,
+            IgnoreHTTPSErrors = true
         });
 
         var page = await context.NewPageAsync();
