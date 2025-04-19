@@ -61,14 +61,6 @@ jobs:
       
     - name: Ensure Playwright browsers are installed
       run: ./MESS/MESS.Tests/bin/Debug/net9.0/playwright.ps1 install --with-deps
-
-    - name: Wait for SQL Server
-      run: |
-        for i in {1..30}; do
-          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${{ secrets.TEST_DB_PASSWORD }} -Q "SELECT 1" && break
-          echo "Waiting for SQL Server to be available..."
-          sleep 5
-        done
           
     - name: Apply migrations
       run: |
