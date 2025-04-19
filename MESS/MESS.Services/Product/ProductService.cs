@@ -8,14 +8,14 @@ using Data.Models;
 /// <inheritdoc />
 public class ProductService : IProductService
 {
-    private readonly ApplicationContext _context;
+    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     /// <summary>
     /// Instantiates a new instance of the <see cref="ProductService"/> class.
     /// </summary>
-    /// <param name="context">The application database context used for data operations.</param>
-    public ProductService(ApplicationContext context)
+    /// <param name="contextFactory">The application database context used for data operations.</param>
+    public ProductService(IDbContextFactory<ApplicationContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
     
     /// <inheritdoc />
@@ -23,49 +23,37 @@ public class ProductService : IProductService
     {
         try
         {
-            _context.ChangeTracker.Clear();
-            await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var newProduct = new Product
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                Name = productToDuplicate.Name,
+                IsActive = productToDuplicate.IsActive,
+                WorkInstructions = new List<WorkInstruction>()
+            };
+
+            await context.Products.AddAsync(newProduct);
+            await context.SaveChangesAsync();
+
+            if (productToDuplicate.WorkInstructions != null)
+            {
+                foreach (var workInstruction in productToDuplicate.WorkInstructions)
                 {
-                    var newProduct = new Product
+                    var associatedWorkInstruction = await context.WorkInstructions
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(wi => wi.Id == workInstruction.Id);
+                    if (associatedWorkInstruction != null)
                     {
-                        Name = productToDuplicate.Name,
-                        IsActive = productToDuplicate.IsActive,
-                        WorkInstructions = new List<WorkInstruction>()
-                    };
-
-                    await _context.Products.AddAsync(newProduct);
-                    await _context.SaveChangesAsync();
-
-                    if (productToDuplicate.WorkInstructions != null)
-                    {
-                        foreach (var workInstruction in productToDuplicate.WorkInstructions)
-                        {
-                            var associatedWorkInstruction = await _context.WorkInstructions
-                                .AsNoTracking()
-                                .FirstOrDefaultAsync(wi => wi.Id == workInstruction.Id);
-                            if (associatedWorkInstruction != null)
-                            {
-                                newProduct.WorkInstructions.Add(associatedWorkInstruction);
-                                associatedWorkInstruction.Products.Add(newProduct);
-                            }
-                            
-                        }
+                        newProduct.WorkInstructions.Add(associatedWorkInstruction);
+                        associatedWorkInstruction.Products.Add(newProduct);
                     }
                     
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-                    
-                    Log.Information("Product: {ProductName} Duplicated Successfully", newProduct.Name);
                 }
-                catch (Exception e)
-                {
-                    await transaction.RollbackAsync();
-                    Log.Information("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
-                }
-            });
+            }
+            
+            await context.SaveChangesAsync();
+            
+            Log.Information("Product: {ProductName} Duplicated Successfully", newProduct.Name);
         }
         catch (Exception e)
         {
@@ -78,15 +66,10 @@ public class ProductService : IProductService
     {
         try
         {
-            if (product.WorkInstructions != null)
-            {
-                product.WorkInstructions = await _context.WorkInstructions
-                    .Where(wi => wi.Products.Contains(product))
-                    .ToListAsync();
-            }
+            await using var context = await _contextFactory.CreateDbContextAsync();
             
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
+            await context.Products.AddAsync(product);
+            await context.SaveChangesAsync();
             
             Log.Information("Product successfully created. ID: {ProductID}", product.Id);
         }
@@ -101,7 +84,9 @@ public class ProductService : IProductService
     {
         try
         {
-            var product = await _context.Products
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var product = await context.Products
                 .Include(p => p.WorkInstructions)
                 .FirstOrDefaultAsync(p => p.Id == id);
             
@@ -121,7 +106,8 @@ public class ProductService : IProductService
     {
         try
         {
-            var product = await _context.Products
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var product = await context.Products
                 .FirstOrDefaultAsync(p => p.Name == title);
             
             Log.Information("Product found. Title: {ProductTitle}", product?.Name);
@@ -140,8 +126,8 @@ public class ProductService : IProductService
     {
         try
         {
-            return await _context.Products
-                .AsNoTracking()
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Products
                 .Include(p => p.WorkInstructions)
                 .ToListAsync();
         }
@@ -157,8 +143,9 @@ public class ProductService : IProductService
     {
         try
         {
-            _context.Products.Update(product);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.Products.Update(product);
+            await context.SaveChangesAsync();
         }
         catch (Exception e)
         {
@@ -170,11 +157,13 @@ public class ProductService : IProductService
     /// <inheritdoc />
     public async Task RemoveProductAsync(int id)
     {
-        var product = await _context.Products.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var product = await context.Products.FindAsync(id);
         if (product != null)
         {
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            context.Products.Remove(product);
+            await context.SaveChangesAsync();
             
             Log.Information("Product successfully removed. ID: {ProductId}", product.Id);
         }

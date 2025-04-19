@@ -8,14 +8,14 @@ using Data.Models;
 /// <inheritdoc />
 public class ProductionLogService : IProductionLogService
 {
-    private readonly ApplicationContext _context;
+    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     /// <summary>
     /// Initializes a new instance of the <see cref="ProductionLogService"/> class.
     /// </summary>
-    /// <param name="context">The application database context used for accessing production logs.</param>
-    public ProductionLogService(ApplicationContext context)
+    /// <param name="contextFactory">The application database context used for accessing production logs.</param>
+    public ProductionLogService(IDbContextFactory<ApplicationContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
     
     /// <inheritdoc />
@@ -23,7 +23,8 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            return await _context.ProductionLogs
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.ProductionLogs
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
@@ -32,8 +33,7 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to GetAllAsync Production Logs, in ProductionLogService");
+            Log.Warning("Exception thrown when attempting to GetAllAsync Production Logs, in ProductionLogService: Exception Type: {exceptionType}", e.GetType());
             return new List<ProductionLog>();
         }
     }
@@ -43,7 +43,8 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            var productionLog = await _context.ProductionLogs
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var productionLog = await context.ProductionLogs
                 .Include(p => p.LogSteps)
                 .ThenInclude(p => p.WorkInstructionStep)
                 .Include(w => w.WorkInstruction)
@@ -65,26 +66,42 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            if (productionLog.WorkInstruction != null)
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+
+
+            if (productionLog.Product is { Id: > 0 })
             {
-                productionLog.WorkInstruction = await _context.WorkInstructions
-                    .FindAsync(productionLog.WorkInstruction.Id);
+                context.Entry(productionLog.Product).State = EntityState.Unchanged;
+            }
+            
+            if (productionLog.WorkInstruction is { Id: > 0 })
+            {
+                context.Entry(productionLog.WorkInstruction).State = EntityState.Unchanged;
+                
+                foreach (var node in productionLog.WorkInstruction.Nodes.Where(node => node.Id > 0))
+                {
+                    context.Entry(node).State = EntityState.Unchanged;
+                }
             }
             
             productionLog.CreatedOn = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             
-            await _context.ProductionLogs.AddAsync(productionLog);
-            
-            await _context.SaveChangesAsync();
+            await context.ProductionLogs.AddAsync(productionLog);
+            await context.SaveChangesAsync();
 
             if (productionLog.LogSteps is {Count: > 0})
             {
                 foreach (var logStep in productionLog.LogSteps)
                 {
                     logStep.ProductionLogId = productionLog.Id;
+                    if (logStep.WorkInstructionStep is { Id: > 0 })
+                    {
+                        context.Entry(logStep.WorkInstructionStep).State = EntityState.Unchanged;
+                    }
                 }
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             
             Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
@@ -104,15 +121,16 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
-            var productionLogToDelete = _context.ProductionLogs.Find(id);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var productionLogToDelete = await context.ProductionLogs.FindAsync(id);
             
             if (productionLogToDelete == null)
             {
                 return false;
             }
             
-            _context.ProductionLogs.Remove(productionLogToDelete);
-            await _context.SaveChangesAsync();
+            context.ProductionLogs.Remove(productionLogToDelete);
+            await context.SaveChangesAsync();
             
             Log.Information("Production Log with ID: {productionLogId}, successfully deleted.", id);
             return true;
@@ -133,9 +151,11 @@ public class ProductionLogService : IProductionLogService
             {
                 return false;
             }
+            
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            _context.ProductionLogs.Update(existingProductionLog);
-            await _context.SaveChangesAsync();
+            context.ProductionLogs.Update(existingProductionLog);
+            await context.SaveChangesAsync();
             
             Log.Information("Production Log with ID: {productionLogId}, successfully updated.", existingProductionLog.Id);
 
@@ -157,8 +177,9 @@ public class ProductionLogService : IProductionLogService
             {
                 return [];
             }
-            
-            return await _context.ProductionLogs
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.ProductionLogs
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)

@@ -19,7 +19,6 @@ using MESS.Data.Models;
 /// <inheritdoc />
 public partial class WorkInstructionService : IWorkInstructionService
 {
-    private readonly ApplicationContext _context;
     private readonly IProductService _productService;
     private readonly IMemoryCache _cache;
     private readonly IWebHostEnvironment _webHostEnvironment;
@@ -47,14 +46,12 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
     /// </summary>
-    /// <param name="context">The application database context used for data access.</param>
     /// <param name="productService">The service for managing product-related operations.</param>
     /// <param name="cache">The memory cache for caching work instructions.</param>
     /// <param name="webHostEnvironment">The hosting environment for accessing web root paths.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
-    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
+    public WorkInstructionService(IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
     {
-        _context = context;
         _productService = productService;
         _cache = cache;
         _webHostEnvironment = webHostEnvironment;
@@ -223,15 +220,16 @@ public partial class WorkInstructionService : IWorkInstructionService
 
         try
         {
-            _context.ChangeTracker.Clear();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.ChangeTracker.Clear();
             
             // Use the execution strategy pattern instead of manual transactions
-            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            return await context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = await context.Database.BeginTransactionAsync();
                 try
                 {
-                    var freshWorkInstruction = await _context.WorkInstructions
+                    var freshWorkInstruction = await context.WorkInstructions
                         .Include(w => w.Products)
                         .Include(w => w.Nodes)
                         .ThenInclude(partNode => ((PartNode)partNode).Parts)
@@ -253,18 +251,18 @@ public partial class WorkInstructionService : IWorkInstructionService
                         PartsRequired = freshWorkInstruction.PartsRequired
                     };
 
-                    await _context.WorkInstructions.AddAsync(newWorkInstruction);
-                    await _context.SaveChangesAsync();
+                    await context.WorkInstructions.AddAsync(newWorkInstruction);
+                    await context.SaveChangesAsync();
 
                     foreach (var product in freshWorkInstruction.Products)
                     {
-                        var trackedProduct = await _context.Products
+                        var trackedProduct = await context.Products
                             .AsNoTracking()
                             .FirstOrDefaultAsync(p => p.Id == product.Id);
                         
                         if (trackedProduct != null)
                         {
-                            var attachedProduct = await _context.Products.FindAsync(product.Id);
+                            var attachedProduct = await context.Products.FindAsync(product.Id);
                             if (attachedProduct != null)
                             {
                                 attachedProduct.WorkInstructions?.Add(newWorkInstruction);
@@ -315,7 +313,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                         newWorkInstruction.Nodes.Add(newNode);
                     }
 
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
                     _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
@@ -372,6 +370,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             if (files.Count == 0)
             {
                 Log.Warning("No files provided for import.");
@@ -390,7 +389,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
             
             // Check for pre-existing WorkInstruction that have matching title + version
-            var preexistingWorkInstruction = await _context.WorkInstructions
+            var preexistingWorkInstruction = await context.WorkInstructions
                 .Where(w => w.Title == workInstructionTitle && w.Version == versionString)
                 .AnyAsync();
 
@@ -775,7 +774,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var part = await _context.Parts.FirstOrDefaultAsync(p =>
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var part = await context.Parts.FirstOrDefaultAsync(p =>
                 p.PartName == partToAdd.PartName &&
                 p.PartNumber == partToAdd.PartNumber);
 
@@ -786,36 +786,14 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return part;
             }
             
-            await _context.Parts.AddAsync(partToAdd);
-            await _context.SaveChangesAsync();
+            await context.Parts.AddAsync(partToAdd);
+            await context.SaveChangesAsync();
             return partToAdd;
         }
         catch (Exception e)
         {
             Log.Warning("Exception when adding part: {Message}", e.Message);
             return null;
-        }
-    }
-    
-    /// <summary>
-    /// Retrieves all work instructions from the database.
-    /// </summary>
-    /// <returns>List of work instructions.</returns>
-    public List<WorkInstruction> GetAll()
-    {
-        try
-        {
-            var workInstructions = _context.WorkInstructions
-                .Include(w => w.Nodes)
-                .ToList();
-
-            return workInstructions;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAll Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
-            return [];
         }
     }
 
@@ -836,7 +814,8 @@ public partial class WorkInstructionService : IWorkInstructionService
         
         try
         {
-            var workInstructions = await _context.WorkInstructions
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var workInstructions = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .ToListAsync();
@@ -863,40 +842,18 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var workInstruction = _context.WorkInstructions
+            using var context =  _contextFactory.CreateDbContext();
+            var workInstruction = context.WorkInstructions
                 .FirstOrDefault(w => w.Title == title);
 
             return workInstruction;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Warning("Exception: {exceptionType} thrown when attempting to GetByTitle with Title: {title}, in WorkInstructionService", e.GetBaseException().ToString(), title);
             return null;
         }
     }
-    /// <summary>
-    /// Retrieves a work instruction by its ID.
-    /// </summary>
-    /// <param name="id">The ID of the work instruction to retrieve.</param>
-    /// <returns>The work instruction if found, null otherwise.</returns>
-
-    public WorkInstruction? GetById(int id)
-    {
-        try
-        {
-            var workInstruction = _context.WorkInstructions.Find(id);
-
-            return workInstruction;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetById with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
-            return null;
-        }
-    }
-    
     /// <summary>
     /// Asynchronously retrieves a work instruction by its ID, including related nodes and parts.
     /// </summary>
@@ -912,7 +869,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return null;
             }
             
-            var workInstruction = await _context.WorkInstructions
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var workInstruction = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .FirstOrDefaultAsync(w => w.Id == id);
@@ -939,9 +897,10 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             // Validate WorkInstruction
             var workInstructionValidator = new WorkInstructionValidator();
-            var validationResult = workInstructionValidator.Validate(workInstruction);
+            var validationResult = await workInstructionValidator.ValidateAsync(workInstruction);
 
             if (!validationResult.IsValid)
             {
@@ -949,8 +908,8 @@ public partial class WorkInstructionService : IWorkInstructionService
             }
 
             workInstruction.IsActive = false;
-            await _context.WorkInstructions.AddAsync(workInstruction);
-            await _context.SaveChangesAsync();
+            await context.WorkInstructions.AddAsync(workInstruction);
+            await context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
@@ -979,7 +938,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var workInstruction = await _context.WorkInstructions
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var workInstruction = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .FirstOrDefaultAsync(w => w.Id == id);
             
@@ -994,10 +954,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             }
             
             // Remove associated Work Instruction Nodes first
-            _context.WorkInstructionNodes.RemoveRange(workInstruction.Nodes);
+            context.WorkInstructionNodes.RemoveRange(workInstruction.Nodes);
 
-            _context.WorkInstructions.Remove(workInstruction);
-            await _context.SaveChangesAsync();
+            context.WorkInstructions.Remove(workInstruction);
+            await context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
@@ -1030,68 +990,54 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
         
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
         try
         {
-            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            var existingWorkInstruction = await context.WorkInstructions
+                .Include(w => w.Nodes)
+                .ThenInclude(n => ((PartNode)n).Parts)
+                .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
+
+            if (existingWorkInstruction == null)
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                return false;
+            }
+
+            context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
+
+            // Update any applicable nodes
+            foreach (var newNode in workInstruction.Nodes)
+            {
+                var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+
+                if (existingNode != null)
                 {
-                    var existingWorkInstruction = await _context.WorkInstructions
-                        .Include(w => w.Nodes)
-                        .ThenInclude(n => ((PartNode)n).Parts)
-                        .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
-
-                    if (existingWorkInstruction == null)
+                    if (newNode is PartNode && existingNode is PartNode)
                     {
-                        return false;
+                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
                     }
-
-                    _context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
-
-                    // Update any applicable nodes
-                    foreach (var newNode in workInstruction.Nodes)
+                    else if (newNode is Step && existingNode is Step)
                     {
-                        var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
-
-                        if (existingNode != null)
-                        {
-                            if (newNode is PartNode && existingNode is PartNode)
-                            {
-                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                            }
-                            else if (newNode is Step && existingNode is Step)
-                            {
-                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                            }
-                            else
-                            {
-                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                            }
-                        }
+                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
                     }
-
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-                    Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
-                        workInstruction.Id);
-                    return true;
+                    else
+                    {
+                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                    }
                 }
-                catch (Exception e)
-                {
-                    await transaction.RollbackAsync();
-                    Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
-                    return false;
-                }
-            });
+            }
+            
+            await context.SaveChangesAsync();
+
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
+                workInstruction.Id);
+            return true;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to UpdateWorkInstructionAsync with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), workInstruction.Id);
+            Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
             return false;
         }
     }
