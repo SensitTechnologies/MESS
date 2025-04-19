@@ -55,6 +55,9 @@ jobs:
 
     - name: Restore dependencies
       run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build
+      run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore
       
     - name: Ensure Playwright browsers are installed
       run: ./MESS/MESS.Tests/bin/Debug/net9.0/playwright.ps1 install --with-deps
@@ -74,9 +77,6 @@ jobs:
         dotnet ef database update --context UserContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
       env:
         ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
-      
-    - name: Build
-      run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore
 
     - name: Create and start web application
       run: |
