@@ -57,9 +57,7 @@ jobs:
       run: dotnet restore ${{ env.SOLUTION_PATH }}
       
     - name: Ensure Playwright browsers are installed
-      run: |
-        dotnet tool install --global Microsoft.Playwright.CLI
-        playwright install --with-deps
+      run: ./MESS/MESS.Tests/bin/Debug/net9.0/playwright.ps1 install --with-deps
 
     - name: Wait for SQL Server
       run: |
