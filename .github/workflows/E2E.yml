@@ -69,7 +69,13 @@ jobs:
         dotnet ef database update --context UserContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
       env:
         ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
-
+    
+    - name: Setup dev certificates
+      run: |
+        dotnet dev-certs https --clean
+        dotnet dev-certs https --trust
+        dotnet dev-certs https
+    
     - name: Create and start web application
       run: |
         dotnet run --project ./MESS/MESS.Blazor --urls=https://localhost:7152 &
