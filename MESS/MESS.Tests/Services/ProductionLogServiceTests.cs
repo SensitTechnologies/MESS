@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Services.ProductionLog;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace MESS.Tests.Services.ProductionLog;
@@ -8,11 +9,11 @@ using Data.Models;
 public class ProductionLogServiceTests
 {
     private readonly ProductionLogService _productionLogService;
-    private readonly Mock<ApplicationContext> _mockContext;
+    private readonly Mock<IDbContextFactory<ApplicationContext>> _mockDbContextFactory;
 
     public ProductionLogServiceTests()
     {
-        _mockContext = new Mock<ApplicationContext>();
-        _productionLogService = new ProductionLogService(_mockContext.Object);
+        _mockDbContextFactory = new Mock<IDbContextFactory<ApplicationContext>>();
+        _productionLogService = new ProductionLogService(_mockDbContextFactory.Object);
     }
 }
