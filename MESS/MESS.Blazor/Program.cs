@@ -118,16 +118,21 @@ Log.Logger = new LoggerConfiguration()
 
 var app = builder.Build();
 
-// Initializes the roles if they are not already created in the database
+// Seed data
 using (var scope = app.Services.CreateScope())
 {
+    // Initializes the roles if they are not already created in the database
     var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
     await roleInit.InitializeAsync();
     
     // Seed default technician
     await InitialUserSeed.SeedDefaultUserAsync(scope.ServiceProvider);
     
+    // Seeds default data
+    SeedWorkInstructions.Seed(scope.ServiceProvider);
 }
+
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
