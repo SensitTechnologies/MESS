@@ -23,6 +23,17 @@ public class AuthFixture : IAsyncLifetime
         await page.Keyboard.PressAsync("Tab");
         await page.GetByRole(AriaRole.Button, new() { Name = "Login" }).ClickAsync();
 
+        // Create storage path if not already available
+        var directoryPath = Path.GetDirectoryName(StorageStatePath);
+
+        if (!Directory.Exists(directoryPath))
+        {
+            if (directoryPath != null)
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+        }
+        
         await context.StorageStateAsync(new()
         {
             Path = StorageStatePath
