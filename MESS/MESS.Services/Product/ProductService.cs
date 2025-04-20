@@ -57,7 +57,7 @@ public class ProductService : IProductService
         }
         catch (Exception e)
         {
-            Log.Information("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+            Log.Warning("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
         }
     }
 
@@ -75,7 +75,7 @@ public class ProductService : IProductService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "An error occured while adding product");
+            Log.Warning(ex, "An error occured while adding product");
         }
     }
     
@@ -149,7 +149,7 @@ public class ProductService : IProductService
         }
         catch (Exception e)
         {
-            Log.Error(e, "Exception occured while modifying product. Product ID: {inputId}", product.Id);
+            Log.Warning(e, "Exception occured while modifying product. Product ID: {inputId}", product.Id);
         }
         
     }
