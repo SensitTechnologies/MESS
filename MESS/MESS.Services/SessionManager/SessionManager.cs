@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Serilog;
 
 namespace MESS.Services.SessionManager;
 using Data.Models;
@@ -42,10 +43,9 @@ public class SessionManager : ISessionManager
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception Caught when trying to GetProductionLogIdsAsync: Exception: {Exception}", e.ToString());
             return [];
         }
-
     }
 
     /// <inheritdoc />
@@ -57,7 +57,7 @@ public class SessionManager : ISessionManager
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception Caught when trying to ClearProductionLogsAsync: Exception: {Exception}", e.ToString());
         }
     }
 }
