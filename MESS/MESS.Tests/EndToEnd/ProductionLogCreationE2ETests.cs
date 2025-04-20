@@ -60,10 +60,6 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
             .ClickAsync();
         
         // Input text into notes field
-
-        
-        
-        
         
         // Submit
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions()
@@ -83,5 +79,32 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
         
         await page.CloseAsync();
         await context.CloseAsync();
+    }
+
+    [Fact]
+    public async Task CreateProductionLog_PartialPartNumberValues_CorrectlyShowsConfirmationAlert()
+    {
+        var context = await Browser.NewContextAsync(new()
+        {
+            StorageStatePath = _authFixture.StorageStatePath,
+            IgnoreHTTPSErrors = true
+        });
+
+        var page = await context.NewPageAsync();
+        
+        await page.GotoAsync("https://localhost:7152/production-log");
+        
+        await page.Locator("#product-select").SelectOptionAsync(new[] { "1" });
+        await page.SelectOptionAsync("#workInstruction-select", new []{ new SelectOptionValue { Index = 1} });
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Product Serial Number:" }).ClickAsync();
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Product Serial Number:" }).FillAsync("000");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Display Board Main Board 884-" }).ClickAsync();
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Display Board Main Board 884-" }).FillAsync("000");
+        await page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Test display. Failure Success" }).Locator("label").Nth(1).ClickAsync();
+        await page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Attach display board to main" }).Locator("label").Nth(1).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Submit Log" }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Alert)).ToBeVisibleAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Article)).ToBeVisibleAsync();
     }
 }
