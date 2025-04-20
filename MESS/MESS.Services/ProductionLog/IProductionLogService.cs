@@ -26,6 +26,12 @@ public interface IProductionLogService
     public Task<int> CreateAsync(ProductionLog productionLog);
 
     /// <summary>
+    /// Edits/Updates an existing ProductionLog object stored in the database Asynchronously
+    /// </summary>
+    /// <param name="existingProductionLog">The existing ProductionLog object</param>
+    /// <returns>boolean success/failure value</returns>
+    public Task<bool> UpdateAsync(ProductionLog existingProductionLog);
+    /// <summary>
     /// Retrieves a List of ProductionLog objects asynchronously from a list of IDs
     /// </summary>
     /// <param name="logIds">A list of integer production log ids</param>

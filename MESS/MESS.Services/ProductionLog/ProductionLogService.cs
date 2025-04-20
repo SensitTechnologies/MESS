@@ -37,6 +37,32 @@ public class ProductionLogService : IProductionLogService
             return new List<ProductionLog>();
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<bool> UpdateAsync(ProductionLog existingProductionLog)
+    {
+        try
+        {
+            if (existingProductionLog == null)
+            {
+                return false;
+            }
+            
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            context.ProductionLogs.Update(existingProductionLog);
+            await context.SaveChangesAsync();
+            
+            Log.Information("Production Log with ID: {productionLogId}, successfully updated.", existingProductionLog.Id);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {Exception}", existingProductionLog.Id, e.ToString());
+            return false;
+        }
+    }
 
     /// <inheritdoc />
     public async Task<ProductionLog?> GetByIdAsync(int id)
