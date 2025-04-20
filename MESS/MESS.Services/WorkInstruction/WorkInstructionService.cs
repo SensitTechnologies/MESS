@@ -206,7 +206,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         if (string.IsNullOrEmpty(input))
             return string.Empty;
         
-        return RemoveHTMLRegex().Replace(input, string.Empty);
+        return RemoveHtmlRegex().Replace(input, string.Empty);
     }
 
     /// <inheritdoc />
@@ -360,7 +360,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Information("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
+            Log.Warning("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
             return false;
         }
     }
@@ -588,7 +588,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Information("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
+            Log.Warning("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
         }
     }
 
@@ -612,101 +612,109 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// All text is HTML-encoded to prevent XSS vulnerabilities.
     /// The result is wrapped in a div element.
     /// </remarks>
-    private string ProcessCellText(IXLCell cell, XLWorkbook workbook)
+    private static string ProcessCellText(IXLCell cell, XLWorkbook workbook)
     {
-        var sb = new StringBuilder();
-        sb.Append("<div>");
-
-        var hasHyperLink = cell.HasHyperlink;
-        string? hyperLinkUri = null;
-        
-        
-        if (hasHyperLink)
+        try
         {
-            var hyperLink = cell.GetHyperlink();
-            hyperLinkUri = hyperLink.ExternalAddress.AbsoluteUri;
-        }
+            var sb = new StringBuilder();
+            sb.Append("<div>");
 
-        if (!cell.HasRichText)
-        {
-            string content = cell.GetString();
-
-            string cellColor = "";
+            var hasHyperLink = cell.HasHyperlink;
+            string? hyperLinkUri = null;
             
-            if (cell.Style.Font.FontColor.ColorType == XLColorType.Color)
-            {
-                var color = cell.Style.Font.FontColor.Color;
-                string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                cellColor = $"color: {hexColor};";
-            } else
-            {
-                var themeColor = workbook.Theme.ResolveThemeColor(cell.Style.Font.FontColor.ThemeColor);
-                cellColor = themeColor.Color.ToString();
-            }
             
             if (hasHyperLink)
             {
-                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\" style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</a>");
+                var hyperLink = cell.GetHyperlink();
+                hyperLinkUri = hyperLink.ExternalAddress.AbsoluteUri;
             }
-            else
-            {
-                sb.Append($"<span style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</span>");
-            }
-        }
-        else
-        {
-            StringBuilder richTextContent = new StringBuilder();
-            foreach (var richText in cell.GetRichText())
-            {
-                var styles = new List<string>();
 
-                if (richText.Bold) styles.Add("font-weight: bold");
-                if (richText.Italic) styles.Add("font-style: italic");
-                if (richText.Underline != XLFontUnderlineValues.None) styles.Add("text-decoration: underline");
-                if (richText.Strikethrough) styles.Add("text-decoration: line-through");
-                if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+            if (!cell.HasRichText)
+            {
+                var content = cell.GetString();
 
-                if (richText.FontColor != XLColor.NoColor && richText.FontColor.HasValue)
+                var cellColor = "";
+                
+                if (cell.Style.Font.FontColor.ColorType == XLColorType.Color)
                 {
-                    if (richText.FontColor.ColorType == XLColorType.Color)
-                    {
-                        var color = richText.FontColor.Color;
-                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                        styles.Add($"color: {hexColor}");
-                    } 
-                    else if (richText.FontColor.ColorType == XLColorType.Theme)
-                    {
-                        var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
-                        var color = themeColor.Color;
-                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                        styles.Add($"color: {hexColor}");
-                    }
+                    var color = cell.Style.Font.FontColor.Color;
+                    var hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                    cellColor = $"color: {hexColor};";
+                } else
+                {
+                    var themeColor = workbook.Theme.ResolveThemeColor(cell.Style.Font.FontColor.ThemeColor);
+                    cellColor = themeColor.Color.ToString();
                 }
                 
-                var text = WebUtility.HtmlEncode(richText.Text);
-        
-                if (styles.Any())
+                if (hasHyperLink)
                 {
-                    richTextContent.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                    sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\" style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</a>");
                 }
                 else
                 {
-                    richTextContent.Append(text);
+                    sb.Append($"<span style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</span>");
                 }
-            }
-
-            if (hasHyperLink)
-            {
-                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\">{richTextContent}</a>");
             }
             else
             {
-                sb.Append(richTextContent);
-            }
-        }
+                var richTextContent = new StringBuilder();
+                foreach (var richText in cell.GetRichText())
+                {
+                    var styles = new List<string>();
 
-        sb.Append("</div>");
-        return sb.ToString();
+                    if (richText.Bold) styles.Add("font-weight: bold");
+                    if (richText.Italic) styles.Add("font-style: italic");
+                    if (richText.Underline != XLFontUnderlineValues.None) styles.Add("text-decoration: underline");
+                    if (richText.Strikethrough) styles.Add("text-decoration: line-through");
+                    if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+
+                    if (richText.FontColor != XLColor.NoColor && richText.FontColor.HasValue)
+                    {
+                        if (richText.FontColor.ColorType == XLColorType.Color)
+                        {
+                            var color = richText.FontColor.Color;
+                            string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                            styles.Add($"color: {hexColor}");
+                        } 
+                        else if (richText.FontColor.ColorType == XLColorType.Theme)
+                        {
+                            var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
+                            var color = themeColor.Color;
+                            string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                            styles.Add($"color: {hexColor}");
+                        }
+                    }
+                    
+                    var text = WebUtility.HtmlEncode(richText.Text);
+            
+                    if (styles.Count > 0)
+                    {
+                        richTextContent.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                    }
+                    else
+                    {
+                        richTextContent.Append(text);
+                    }
+                }
+
+                if (hasHyperLink)
+                {
+                    sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\">{richTextContent}</a>");
+                }
+                else
+                {
+                    sb.Append(richTextContent);
+                }
+            }
+
+            sb.Append("</div>");
+            return sb.ToString();
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to ProcessCellText while trying to process a work instruction. Cell Address: {cellAddress}. Exception: {Exception}", cell.Address.ToString(), e.ToString());
+            return string.Empty;
+        }
     }
 
     /// <summary>
@@ -760,7 +768,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception Caught when attempting to use a Regex pattern on a Parts List on Work Instruction Import. Message: {Message}", e.Message);
+            Log.Warning("Exception Caught when attempting to use a Regex pattern on a Parts List on Work Instruction Import. Exception: {Exception}", e.ToString());
             return null;
         }
     }
@@ -779,20 +787,23 @@ public partial class WorkInstructionService : IWorkInstructionService
                 p.PartName == partToAdd.PartName &&
                 p.PartNumber == partToAdd.PartNumber);
 
-            // If a part does not exist in the database create it here
-            // and return with database generated ID
+
             if (part != null)
             {
+                Log.Information("GetOrAddPart: Successfully found pre-existing Part with ID: {ExistingPartID}", partToAdd.Id);
                 return part;
             }
             
+            // If a part does not exist in the database create it here
+            // and return with database generated ID
             await context.Parts.AddAsync(partToAdd);
             await context.SaveChangesAsync();
+            Log.Information("Successfully created a new Part with Name: {PartName}, and Number: {PartNumber}", partToAdd.PartName, partToAdd.PartNumber);
             return partToAdd;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception when adding part: {Message}", e.Message);
+            Log.Warning("Exception when adding part: {Exception}", e.ToString());
             return null;
         }
     }
@@ -823,11 +834,12 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Cache data for 15 minutes
             _cache.Set(WORK_INSTRUCTION_CACHE_KEY, workInstructions, TimeSpan.FromMinutes(15));
 
+            Log.Information("GetAllAsync Successfully retrieved a List of {WorkInstructionCount} WorkInstructions", workInstructions.Count);
             return workInstructions;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
+            Log.Warning("Exception thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService. Exception: {Exception}", e.ToString());
             return [];
         }
     }
@@ -846,6 +858,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var workInstruction = context.WorkInstructions
                 .FirstOrDefault(w => w.Title == title);
 
+            Log.Information("Successfully retrieved a WorkInstruction by title: {Title}", title);
             return workInstruction;
         }
         catch (Exception e)
@@ -879,8 +892,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
+            Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
             return null;
         }
     }
@@ -920,8 +932,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to Create a work instruction, in WorkInstructionService", e.GetBaseException().ToString());
+            Log.Warning("Exception thrown when attempting to Create a work instruction, in WorkInstructionService. Exception: {Exception}", e.ToString());
             return false;
         }
     }
@@ -968,8 +979,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to Delete a work instruction with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
+            Log.Warning("Exception thrown when attempting to Delete a work instruction with ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
             return false;
         }
     }
@@ -1037,7 +1047,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
+            Log.Warning("Exception caught when trying to update work instruction {Id}. Exception {Exception}", workInstruction.Id, e.ToString());
             return false;
         }
     }
@@ -1048,6 +1058,5 @@ public partial class WorkInstructionService : IWorkInstructionService
     [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
     [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
-    private static partial System.Text.RegularExpressions.Regex RemoveHTMLRegex();
-
+    private static partial System.Text.RegularExpressions.Regex RemoveHtmlRegex();
 }
