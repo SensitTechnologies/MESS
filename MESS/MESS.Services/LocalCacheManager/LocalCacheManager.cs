@@ -1,9 +1,11 @@
 ﻿using MESS.Data.DTO;
 using MESS.Services.BrowserCacheManager;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Serilog;
 
 namespace MESS.Services.LocalCacheManager;
 
+using Data.Models;
 /// <inheritdoc />
 public class LocalCacheManager : ILocalCacheManager
 {
@@ -26,7 +28,7 @@ public class LocalCacheManager : ILocalCacheManager
     }
 
     /// <inheritdoc />
-    public async Task SetNewProductionLogFormAsync(Data.Models.ProductionLog? productionLog)
+    public async Task SetNewProductionLogFormAsync(ProductionLog? productionLog)
     {
         try
         {
@@ -36,16 +38,17 @@ public class LocalCacheManager : ILocalCacheManager
                 return;
             }
 
+            Log.Information("Successfully Set New Production Log Form with ID: {PLogID}", productionLog.Id);
             var productionLogForm = MapProductionLogToDto(productionLog);
             await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to SetNewProductionLogFormAsync: {Exception}", e.ToString());
         }
     }
     
-    private static ProductionLogFormDTO MapProductionLogToDto(Data.Models.ProductionLog productionLog)
+    private static ProductionLogFormDTO MapProductionLogToDto(ProductionLog productionLog)
     {
         var productionLogFormDto = new ProductionLogFormDTO();
         foreach (var step in productionLog.LogSteps)
@@ -78,33 +81,34 @@ public class LocalCacheManager : ILocalCacheManager
                 return result.Value;
             }
 
+            Log.Information("Successfully retrieved ProductionLogFormAsync from local cache");
             return new ProductionLogFormDTO();
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to GetProductionLogFormAsync: {Exception}", e.ToString());
             return new ProductionLogFormDTO();
         }
     }
 
     /// <inheritdoc />
-    public async Task SetActiveProductAsync(Data.Models.Product product)
+    public async Task SetActiveProductAsync(Product product)
     {
         try
         {
             // map to DTO
-            var productDTO = new CacheDTO
+            var productDto = new CacheDTO
             {
                 Id = product.Id.ToString(),
                 Name = product.Name
             };
             
-            await _protectedLocalStorage.SetAsync(ACTIVE_PRODUCT_KEY, productDTO);
+            Log.Information("Successfully SetActiveProductAsync with ID: {ProductID}", product.Id);
+            await _protectedLocalStorage.SetAsync(ACTIVE_PRODUCT_KEY, productDto);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            Log.Warning("Exception caught when attempting to SetActiveProductAsync: {Exception}", e.ToString());
         }
     }
 
@@ -113,17 +117,18 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var t = await _protectedLocalStorage.GetAsync<CacheDTO>(ACTIVE_PRODUCT_KEY);
-            if (t is { Success: true, Value: not null })
+            var productCache = await _protectedLocalStorage.GetAsync<CacheDTO>(ACTIVE_PRODUCT_KEY);
+            if (productCache is { Success: true, Value: not null })
             {
-                return t.Value;
+                Log.Information("Successfully SetActiveProductAsync with ID: {ProductID}", productCache.Value.Id);
+                return productCache.Value;
             }
-
+            
             return new CacheDTO();
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to GetActiveProductAsync: {Exception}", e.ToString());
             return new CacheDTO();
         }
     }
@@ -133,18 +138,19 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<int>(ACTIVE_WORK_INSTRUCTION_KEY);
+            var workInstructionCache = await _protectedLocalStorage.GetAsync<int>(ACTIVE_WORK_INSTRUCTION_KEY);
 
-            if (result.Success)
+            if (workInstructionCache.Success)
             {
-                return result.Value;
+                Log.Information("Successfully Retrieved WorkInstructionIDAsync, ID: {WIID} from Local Cache", workInstructionCache.Value);
+                return workInstructionCache.Value;
             }
 
             return -1;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to GetActiveWorkInstructionIdAsync: {Exception}", e.ToString());
             return -1;
         }
     }
@@ -155,24 +161,26 @@ public class LocalCacheManager : ILocalCacheManager
         try
         {
             await _protectedLocalStorage.SetAsync(ACTIVE_WORK_INSTRUCTION_KEY, workInstructionId);
+            Log.Information("Successfully SetWorkInstructionIdAsync, ID: {WIID} to the Local Cache", workInstructionId);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to SetActiveWorkInstructionIdAsync: {Exception}", e.ToString());
         }
     }
     
 
     /// <inheritdoc />
-    public async Task SetIsWorkflowActiveAsync(bool inActive)
+    public async Task SetIsWorkflowActiveAsync(bool isActive)
     {
         try
         {
-            await _protectedLocalStorage.SetAsync(IS_WORKFLOW_ACTIVE_KEY, inActive);
+            await _protectedLocalStorage.SetAsync(IS_WORKFLOW_ACTIVE_KEY, isActive);
+            Log.Information("Successfully SetIsWorkflowActiveAsync, Value: {IsWorkFlowActiveValue} to the Local Cache", isActive);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to SetIsWorkflowActiveAsync: {Exception}", e.ToString());
         }
     }
 
@@ -192,7 +200,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to GetWorkflowActiveStatusAsync: {Exception}", e.ToString());
             return false;
         }
     }
@@ -206,10 +214,11 @@ public class LocalCacheManager : ILocalCacheManager
             await _protectedLocalStorage.DeleteAsync(ACTIVE_PRODUCT_KEY);
             await _protectedLocalStorage.DeleteAsync(ACTIVE_WORK_INSTRUCTION_KEY);
             await _protectedLocalStorage.DeleteAsync(IS_WORKFLOW_ACTIVE_KEY);
+            Log.Information("Successfully ResetCachedValuesAsync for the Local Cache");
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception caught when attempting to ResetCachedValuesAsync: {Exception}", e.ToString());
         }
     }
 
