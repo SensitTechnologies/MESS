@@ -33,7 +33,7 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception thrown when attempting to GetAllAsync Production Logs, in ProductionLogService: Exception Type: {exceptionType}", e.GetType());
+            Log.Warning("Exception thrown when attempting to GetAllAsync Production Logs, in ProductionLogService: Exception: {Exception}", e);
             return new List<ProductionLog>();
         }
     }
@@ -55,8 +55,7 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {productionLogId} in Production Logs, in ProductionLogService", id);
+            Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {productionLogId} in Production Logs, in ProductionLogService: {Exception}", id, e.ToString());
             return null;
         }
     }
@@ -110,61 +109,8 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception thrown when attempting to Create ProductionLog, in ProductionLogService");
+            Log.Warning("Exception thrown when attempting to CreateAsync ProductionLog, in ProductionLogService: {Exception}", e.ToString());
             return -1;
-        }
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> DeleteAsync(int id)
-    {
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var productionLogToDelete = await context.ProductionLogs.FindAsync(id);
-            
-            if (productionLogToDelete == null)
-            {
-                return false;
-            }
-            
-            context.ProductionLogs.Remove(productionLogToDelete);
-            await context.SaveChangesAsync();
-            
-            Log.Information("Production Log with ID: {productionLogId}, successfully deleted.", id);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception thrown when attempting to Delete by ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {ExceptionMessage}", id, e.Message);
-            return false;
-        }
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> UpdateAsync(ProductionLog existingProductionLog)
-    {
-        try
-        {
-            if (existingProductionLog == null)
-            {
-                return false;
-            }
-            
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
-            context.ProductionLogs.Update(existingProductionLog);
-            await context.SaveChangesAsync();
-            
-            Log.Information("Production Log with ID: {productionLogId}, successfully updated.", existingProductionLog.Id);
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {exceptionMessage}", existingProductionLog.Id, e.Message);
-            return false;
         }
     }
 
@@ -188,7 +134,7 @@ public class ProductionLogService : IProductionLogService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Exception thrown when attempting to GetProductionLogsByListOfIdsAsync, in ProductionLogService: {Exception}", e.ToString());
             return [];
         }
     }
