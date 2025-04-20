@@ -24,12 +24,6 @@ public interface IProductionLogService
     /// <param name="productionLog">ProductionLog</param>
     /// <returns>int value indicating the logs ID if successful or a -1 if an exception is thrown</returns>
     public Task<int> CreateAsync(ProductionLog productionLog);
-    /// <summary>
-    /// Deletes an existing ProductionLog object from the database
-    /// </summary>
-    /// <param name="id">integer ID value</param>
-    /// <returns>bool value indicating if the operation was successful</returns>
-    public Task<bool> DeleteAsync(int id);
 
     /// <summary>
     /// Edits/Updates an existing ProductionLog object stored in the database Asynchronously

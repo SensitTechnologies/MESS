@@ -5,6 +5,7 @@ using MESS.Data.Seed;
 using MESS.Services.Product;
 using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
+using MESS.Services.LocalCacheManager;
 using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
 using MESS.Services.SessionManager;

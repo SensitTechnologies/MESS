@@ -76,11 +76,4 @@ public interface IApplicationUserService
     ///</summary>
     ///<returns>Updated ApplicationUser object</returns>
     public Task<bool> UpdateApplicationUser(ApplicationUser ApplicationUser);
-    
-    ///<summary>
-    /// Deletes a ApplicationUser currently in the database
-    ///</summary>
-    ///<returns>Deleted ApplicationUser boolean</returns>
-    public Task<bool> DeleteApplicationUser(string id);
-    
 }

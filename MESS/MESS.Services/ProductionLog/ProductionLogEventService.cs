@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Serilog;
 
 namespace MESS.Services.ProductionLog;
 using Data.Models;
@@ -118,13 +119,12 @@ public class ProductionLogEventService : IProductionLogEventService
     {
         try
         {
-            CurrentProductionLog = productionLog ?? throw new ArgumentNullException(nameof(productionLog));
+            CurrentProductionLog = productionLog;
             await ChangeMadeToProductionLog();
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error setting production log: {ex.Message}");
-            throw;
+            Log.Warning("Exception thrown when attempting to SetCurrentProductionLog to ID: {ProductionLogId} Exception: {Exception}", productionLog.Id, ex.ToString());
         }
     }
 }
