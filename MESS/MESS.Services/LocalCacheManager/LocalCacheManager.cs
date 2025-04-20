@@ -1,41 +1,43 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using MESS.Data.DTO;
-
-namespace MESS.Services.BrowserCacheManager;
-
+﻿using MESS.Data.DTO;
+using MESS.Services.BrowserCacheManager;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using Data.Models;
+
+namespace MESS.Services.LocalCacheManager;
+
 /// <inheritdoc />
 public class LocalCacheManager : ILocalCacheManager
 {
-    private const string IsWorkflowActiveKey = "IS_WORKFLOW_ACTIVE";
-    private const string ActiveWorkInstructionKey = "LAST_KNOWN_WORK_INSTRUCTION_ID";
-    private const string ActiveProductKey = "LAST_KNOWN_ACTIVE_PRODUCT";
-    private const string ProductionLogFormKey = "PRODUCTION_LOG_FORM_PROGRESS";
-    private const string ActiveApplicationUserKey = "LAST_KNOWN_LINE_OPERATOR";
-    private const string ActiveWorkStationKey = "LAST_KNOWN_WORK_STATION";
+    private const string IS_WORKFLOW_ACTIVE_KEY = "IS_WORKFLOW_ACTIVE";
+    private const string ACTIVE_WORK_INSTRUCTION_KEY = "LAST_KNOWN_WORK_INSTRUCTION_ID";
+    private const string ACTIVE_PRODUCT_KEY = "LAST_KNOWN_ACTIVE_PRODUCT";
+    private const string PRODUCTION_LOG_FORM_KEY = "PRODUCTION_LOG_FORM_PROGRESS";
+    private const string ACTIVE_WORK_STATION_KEY = "LAST_KNOWN_WORK_STATION";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalCacheManager"/> class.
+    /// </summary>
+    /// <param name="protectedLocalStorage">
+    /// An instance of <see cref="ProtectedLocalStorage"/> used for managing local storage operations.
+    /// </param>
     public LocalCacheManager(ProtectedLocalStorage protectedLocalStorage)
     {
         _protectedLocalStorage = protectedLocalStorage;
     }
 
     /// <inheritdoc />
-    public async Task SetNewProductionLogFormAsync(ProductionLog? productionLog)
+    public async Task SetNewProductionLogFormAsync(Data.Models.ProductionLog? productionLog)
     {
         try
         {
             if (productionLog == null)
             {
-                await _protectedLocalStorage.DeleteAsync(ProductionLogFormKey);
+                await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_FORM_KEY);
                 return;
             }
 
             var productionLogForm = MapProductionLogToDto(productionLog);
-            await _protectedLocalStorage.SetAsync(ProductionLogFormKey, productionLogForm);
+            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
         }
         catch (Exception e)
         {
@@ -43,7 +45,7 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
     
-    private static ProductionLogFormDTO MapProductionLogToDto(ProductionLog productionLog)
+    private static ProductionLogFormDTO MapProductionLogToDto(Data.Models.ProductionLog productionLog)
     {
         var productionLogFormDto = new ProductionLogFormDTO();
         foreach (var step in productionLog.LogSteps)
@@ -69,7 +71,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<ProductionLogFormDTO>(ProductionLogFormKey);
+            var result = await _protectedLocalStorage.GetAsync<ProductionLogFormDTO>(PRODUCTION_LOG_FORM_KEY);
 
             if (result is { Success: true, Value: not null })
             {
@@ -86,7 +88,7 @@ public class LocalCacheManager : ILocalCacheManager
     }
 
     /// <inheritdoc />
-    public async Task SetActiveProductAsync(Product product)
+    public async Task SetActiveProductAsync(Data.Models.Product product)
     {
         try
         {
@@ -97,7 +99,7 @@ public class LocalCacheManager : ILocalCacheManager
                 Name = product.Name
             };
             
-            await _protectedLocalStorage.SetAsync(ActiveProductKey, productDTO);
+            await _protectedLocalStorage.SetAsync(ACTIVE_PRODUCT_KEY, productDTO);
         }
         catch (Exception e)
         {
@@ -111,7 +113,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var t = await _protectedLocalStorage.GetAsync<CacheDTO>(ActiveProductKey);
+            var t = await _protectedLocalStorage.GetAsync<CacheDTO>(ACTIVE_PRODUCT_KEY);
             if (t is { Success: true, Value: not null })
             {
                 return t.Value;
@@ -131,7 +133,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<int>(ActiveWorkInstructionKey);
+            var result = await _protectedLocalStorage.GetAsync<int>(ACTIVE_WORK_INSTRUCTION_KEY);
 
             if (result.Success)
             {
@@ -152,7 +154,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            await _protectedLocalStorage.SetAsync(ActiveWorkInstructionKey, workInstructionId);
+            await _protectedLocalStorage.SetAsync(ACTIVE_WORK_INSTRUCTION_KEY, workInstructionId);
         }
         catch (Exception e)
         {
@@ -166,7 +168,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            await _protectedLocalStorage.SetAsync(IsWorkflowActiveKey, inActive);
+            await _protectedLocalStorage.SetAsync(IS_WORKFLOW_ACTIVE_KEY, inActive);
         }
         catch (Exception e)
         {
@@ -179,7 +181,7 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<bool>(IsWorkflowActiveKey);
+            var result = await _protectedLocalStorage.GetAsync<bool>(IS_WORKFLOW_ACTIVE_KEY);
 
             if (!result.Success)
             {
@@ -200,10 +202,10 @@ public class LocalCacheManager : ILocalCacheManager
     {
         try
         {
-            await _protectedLocalStorage.DeleteAsync(ActiveWorkStationKey);
-            await _protectedLocalStorage.DeleteAsync(ActiveProductKey);
-            await _protectedLocalStorage.DeleteAsync(ActiveWorkInstructionKey);
-            await _protectedLocalStorage.DeleteAsync(IsWorkflowActiveKey);
+            await _protectedLocalStorage.DeleteAsync(ACTIVE_WORK_STATION_KEY);
+            await _protectedLocalStorage.DeleteAsync(ACTIVE_PRODUCT_KEY);
+            await _protectedLocalStorage.DeleteAsync(ACTIVE_WORK_INSTRUCTION_KEY);
+            await _protectedLocalStorage.DeleteAsync(IS_WORKFLOW_ACTIVE_KEY);
         }
         catch (Exception e)
         {
