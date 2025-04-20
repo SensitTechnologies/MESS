@@ -107,4 +107,20 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
         await page.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Article)).ToBeVisibleAsync();
     }
+
+    [Fact]
+    public async Task CreateProductionLogPage_Logout_CorrectlyRedirectsToLoginPage()
+    {
+        var context = await Browser.NewContextAsync(new()
+        {
+            StorageStatePath = _authFixture.StorageStatePath,
+            IgnoreHTTPSErrors = true
+        });
+
+        var page = await context.NewPageAsync();
+        
+        await page.GotoAsync("https://localhost:7152/production-log");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Logout" }).ClickAsync();
+        await Expect(page.Locator("div").Filter(new() { HasText = "Email: Login" }).Nth(3)).ToBeVisibleAsync();
+    }
 }
