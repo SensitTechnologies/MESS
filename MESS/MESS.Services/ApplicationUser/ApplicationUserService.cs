@@ -35,7 +35,7 @@ public class ApplicationUserService : IApplicationUserService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Unable to SignOutAsync in ApplicationUserService: Exception thrown: {Exception}", e.ToString());
         }
     }
     
@@ -51,7 +51,7 @@ public class ApplicationUserService : IApplicationUserService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Unable to SignInAsync with Email: {email} in ApplicationUserService: Exception thrown: {Exception}", email, e.ToString());
             return false;
         }
     }
@@ -66,7 +66,7 @@ public class ApplicationUserService : IApplicationUserService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Warning("Unable to GetUsersByRoleAsync with RoleName: {roleName} in ApplicationUserService: Exception thrown: {Exception}", roleName, e.ToString());
             return [];
         }
     }
@@ -74,14 +74,30 @@ public class ApplicationUserService : IApplicationUserService
     /// <inheritdoc />
     public async Task<List<ApplicationUser>> GetAllAsync()
     {
-        return await _context.Users.ToListAsync();
+        try
+        {
+            return await _context.Users.ToListAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to GetAllAsync in ApplicationUserService: Exception thrown: {Exception}", e.ToString());
+            return [];
+        }
     }
 
     /// <inheritdoc />
     public async Task<ApplicationUser?> GetByIdAsync(string id)
     {
-        var ApplicationUser = await _context.Users.FindAsync(id);
-        return ApplicationUser;
+        var applicationUser = await _context.Users.FindAsync(id);
+        if (applicationUser != null)
+        {
+            Log.Information("Retrieved Application User: {ApplicationUser}", applicationUser.ToString());
+        }
+        else
+        {
+            Log.Information("Unable to retrieve Application User with ID: {userId}", id);
+        }
+        return applicationUser;
     }
 
     /// <inheritdoc />
@@ -100,7 +116,7 @@ public class ApplicationUserService : IApplicationUserService
         }
         catch (Exception e)
         {
-            Log.Warning("Unable to determine if user is new Source: {ExceptionSource}", e.Source);
+            Log.Warning("Unable to determine if user is new: {Exception}", e.ToString());
             return null;
         }
     }
@@ -108,8 +124,16 @@ public class ApplicationUserService : IApplicationUserService
     /// <inheritdoc />
     public async Task<ApplicationUser?> GetByLastNameAsync(string lastName)
     {
-        var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.LastName == lastName);
-        return ApplicationUser;
+        try
+        {
+            var applicationUser = await _context.Users.FirstOrDefaultAsync(n => n.LastName == lastName);
+            return applicationUser;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to retrieve user by last name: {LastName}. Exception Thrown: {Exception}", lastName, e.ToString());
+            return null;
+        }
     }
 
     /// <inheritdoc />
@@ -117,12 +141,12 @@ public class ApplicationUserService : IApplicationUserService
     {
         try
         {
-            var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.UserName == userName);
-            return ApplicationUser;
+            var applicationUser = await _context.Users.FirstOrDefaultAsync(n => n.UserName == userName);
+            return applicationUser;
         }
         catch (Exception e)
         {
-            Log.Warning("Unable to find user with UserName: {Username}. Source: {ExceptionSource}", userName, e.Source);
+            Log.Warning("Unable to retrieve user with UserName: {Username}. Exception Thrown: {Exception}", userName, e);
             return null;
         }
     }
@@ -132,12 +156,12 @@ public class ApplicationUserService : IApplicationUserService
     {
         try
         {
-            var ApplicationUser = await _context.Users.FirstOrDefaultAsync(n => n.Email == email);
-            return ApplicationUser;
+            var applicationUser = await _context.Users.FirstOrDefaultAsync(n => n.Email == email);
+            return applicationUser;
         }
         catch (Exception e)
         {
-            Log.Warning("Unable to find user with Email: {Email}. Source: {ExceptionSource}", email, e.Source);
+            Log.Warning("Unable to find user with Email: {Email}. Exception Thrown: {Exception}", email, e.ToString());
             return null;
         }
     }
@@ -156,7 +180,7 @@ public class ApplicationUserService : IApplicationUserService
                 return IdentityResult.Success;
             }
             
-            Log.Error("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
+            Log.Warning("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
             return result;
         }
         catch (Exception ex)
@@ -204,34 +228,4 @@ public class ApplicationUserService : IApplicationUserService
             return false;
         }
     }
-
-    /// <inheritdoc />
-    public async Task<bool> DeleteApplicationUser(string id)
-    {
-        var ApplicationUser = await _context.Users.FindAsync(id);
-        
-        if (ApplicationUser == null)
-        {
-            return false; 
-        }
-        
-        // var relatedInstructions = await _context.WorkInstructions
-            // .Where(w => w.Operator != null && w.Operator.Id == id)  
-            // .ToListAsync();
-        
-        // if (relatedInstructions != null && relatedInstructions.Any())
-        // {
-            // foreach (var instruction in relatedInstructions)
-            // {
-                // instruction.Operator = null;  
-            // }
-        // }
-        await _context.SaveChangesAsync(); 
-
-        _context.Users.Remove(ApplicationUser);
-        await _context.SaveChangesAsync(); 
-
-        Log.Information("Successfully deleted ApplicationUser with ID {id}", ApplicationUser.Id);
-        return true;
-        }
-    }
+}
