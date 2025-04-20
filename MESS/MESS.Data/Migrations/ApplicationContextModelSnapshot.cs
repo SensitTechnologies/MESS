@@ -54,7 +54,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Parts");
+                    b.ToTable("Parts", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Product", b =>
@@ -88,7 +88,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLog", b =>
@@ -128,7 +128,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionId");
 
-                    b.ToTable("ProductionLogs");
+                    b.ToTable("ProductionLogs", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogStep", b =>
@@ -161,7 +161,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionStepId");
 
-                    b.ToTable("ProductionLogStep");
+                    b.ToTable("ProductionLogStep", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.SerialNumberLog", b =>
@@ -205,7 +205,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.ToTable("SerialNumberLogs");
+                    b.ToTable("SerialNumberLogs", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
@@ -245,7 +245,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WorkInstructions");
+                    b.ToTable("WorkInstructions", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstructionNode", b =>
@@ -269,7 +269,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionId");
 
-                    b.ToTable("WorkInstructionNodes");
+                    b.ToTable("WorkInstructionNodes", (string)null);
 
                     b.UseTptMappingStrategy();
                 });
@@ -286,7 +286,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("PartsId");
 
-                    b.ToTable("PartNodeParts");
+                    b.ToTable("PartNodeParts", (string)null);
                 });
 
             modelBuilder.Entity("ProductWorkInstruction", b =>
@@ -301,7 +301,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionsId");
 
-                    b.ToTable("ProductWorkInstruction");
+                    b.ToTable("ProductWorkInstruction", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.PartNode", b =>
