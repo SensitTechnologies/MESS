@@ -204,34 +204,5 @@ public class ApplicationUserService : IApplicationUserService
             return false;
         }
     }
-
-    /// <inheritdoc />
-    public async Task<bool> DeleteApplicationUser(string id)
-    {
-        var ApplicationUser = await _context.Users.FindAsync(id);
-        
-        if (ApplicationUser == null)
-        {
-            return false; 
-        }
-        
-        // var relatedInstructions = await _context.WorkInstructions
-            // .Where(w => w.Operator != null && w.Operator.Id == id)  
-            // .ToListAsync();
-        
-        // if (relatedInstructions != null && relatedInstructions.Any())
-        // {
-            // foreach (var instruction in relatedInstructions)
-            // {
-                // instruction.Operator = null;  
-            // }
-        // }
-        await _context.SaveChangesAsync(); 
-
-        _context.Users.Remove(ApplicationUser);
-        await _context.SaveChangesAsync(); 
-
-        Log.Information("Successfully deleted ApplicationUser with ID {id}", ApplicationUser.Id);
-        return true;
-        }
-    }
+    
+}
