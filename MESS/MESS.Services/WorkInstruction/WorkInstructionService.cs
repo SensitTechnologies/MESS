@@ -856,7 +856,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             using var context =  _contextFactory.CreateDbContext();
             var workInstruction = context.WorkInstructions
-                .FirstOrDefault(w => w.Title == title);
+                .FirstOrDefault(w => w.Title.ToUpper() == title.ToUpper());
 
             Log.Information("Successfully retrieved a WorkInstruction by title: {Title}", title);
             return workInstruction;
