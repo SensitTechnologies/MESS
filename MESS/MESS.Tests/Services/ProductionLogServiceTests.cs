@@ -146,4 +146,8 @@ public class ProductionLogServiceTests
         // Assert
         Assert.Equal(-1, result);
     }
+    
+    // TODO make a test where a step is clicked 'success' then unclicked to ensure it resets the time to default
+    // TODO make a test to ensure unclicked steps have default time
+
 }
