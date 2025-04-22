@@ -43,6 +43,74 @@ public class ProductionLogServiceTests
     }
     
     [Fact]
+    public async Task CreateLog_WithProduct_SetsProductCorrectly()
+    {
+        // Arrange
+        var service = MockProductionLogService();
+        var product = new Product { Name = "Test Product" };
+
+        await using (var context = new ApplicationContext(
+                         new DbContextOptionsBuilder<ApplicationContext>()
+                             .UseSqlite("Data Source=TestDatabase.db")
+                             .Options))
+        {
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+        }
+        
+        var productionLog = new ProductionLog { Product = product };
+
+        // Act
+        var createdId = await service.CreateAsync(productionLog);
+
+        // Assert
+        Assert.True(createdId > 0);
+    
+        // Verify the saved log
+        var savedLog = await service.GetByIdAsync(createdId);
+        Assert.NotNull(savedLog);
+        Assert.NotNull(savedLog.Product);
+        Assert.Equal(1, savedLog.Product.Id);
+    }
+    
+    [Fact]
+    public async Task CreateLog_WithWorkInstruction_SetsWorkInstructionCorrectly()
+    {
+        // Arrange
+        var service = MockProductionLogService();
+    
+        // Create a WorkInstruction and insert it into the database first
+        var workInstruction = new WorkInstruction
+        {
+            Title = "Test Instruction",
+            Nodes = [new Step() { Name = "Test Node" }]
+        };
+    
+        // Adding the Work Instruction to the database since CreateAsync pulls from the DB
+        await using (var context = new ApplicationContext(
+                   new DbContextOptionsBuilder<ApplicationContext>()
+                       .UseSqlite("Data Source=TestDatabase.db")
+                       .Options))
+        {
+            context.WorkInstructions.Add(workInstruction);
+            await context.SaveChangesAsync();
+        }
+    
+        var productionLog = new ProductionLog { WorkInstruction = workInstruction };
+
+        // Act
+        var createdId = await service.CreateAsync(productionLog);
+
+        // Assert
+        Assert.True(createdId > 0);
+
+        var savedLog = await service.GetByIdAsync(createdId);
+        Assert.NotNull(savedLog);
+        Assert.NotNull(savedLog.WorkInstruction);
+        Assert.Equal(1, savedLog.WorkInstruction.Id);
+    }
+    
+    [Fact]
     public async Task CreateLog_SetsTimestamps()
     {
         // Arrange
