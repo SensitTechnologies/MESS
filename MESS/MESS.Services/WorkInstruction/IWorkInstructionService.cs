@@ -53,7 +53,7 @@ public interface IWorkInstructionService
     /// <summary>
     /// Imports work instructions from an Excel file.
     /// </summary>
-    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
+    /// <param name="file">The Excel workbook to be imported.</param>
     /// <returns>
     /// A <see cref="WorkInstructionImportResult"/> object containing:
     /// - Success status
@@ -71,7 +71,7 @@ public interface IWorkInstructionService
     /// 
     /// Images found in the Excel file are extracted and saved to the web root directory.
     /// </remarks>
-    public Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files);
+    public Task<WorkInstructionImportResult> ImportFromXlsx(IBrowserFile file);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects asynchronously
     /// </summary>

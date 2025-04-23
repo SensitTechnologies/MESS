@@ -38,7 +38,7 @@ public class WorkInstructionImportResult
     /// <summary>
     /// Gets or sets the list of file names associated with the import operation.
     /// </summary>
-    public List<string> FileNames { get; set; } = [];
+    public string FileName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the status of the import operation.
@@ -61,15 +61,15 @@ public class WorkInstructionImportResult
     /// <summary>
     /// Creates a successful result for a work instruction import operation.
     /// </summary>
-    /// <param name="fileNames">The list of file names associated with the import.</param>
+    /// <param name="fileName">The file name associated with the import.</param>
     /// <param name="instruction">The successfully imported work instruction.</param>
     /// <returns>A <see cref="WorkInstructionImportResult"/> indicating success.</returns>
-    public static WorkInstructionImportResult Success(List<string> fileNames, WorkInstruction instruction)
+    public static WorkInstructionImportResult Success(string fileName, WorkInstruction instruction)
     {
         return new WorkInstructionImportResult
         {
             HasValue = true,
-            FileNames = fileNames,
+            FileName = fileName,
             WorkInstruction = instruction,
             Status = ImportStatus.Complete
         };
@@ -78,14 +78,14 @@ public class WorkInstructionImportResult
     /// <summary>
     /// Creates a failure result for a work instruction import operation.
     /// </summary>
-    /// <param name="fileNames">The list of file names associated with the failed import.</param>
+    /// <param name="fileName">The file name associated with the failed import.</param>
     /// <returns>A <see cref="WorkInstructionImportResult"/> indicating failure.</returns>
-    public static WorkInstructionImportResult Failure(List<string> fileNames)
+    public static WorkInstructionImportResult Failure(string fileName)
     {
         return new WorkInstructionImportResult
         {
             HasValue = false,
-            FileNames = fileNames,
+            FileName = fileName,
             Status = ImportStatus.Error
         };
     }

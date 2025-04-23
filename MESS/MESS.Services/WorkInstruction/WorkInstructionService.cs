@@ -28,7 +28,6 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
-    private const string QR_CODE_REQUIRED_CELL = "D2";
     private const string STEPS_PARTS_LIST_CELL = "B3";
     
     
@@ -69,7 +68,6 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Set basic data in the header
             worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
-            worksheet.Cell(QR_CODE_REQUIRED_CELL).Value = workInstructionToExport.PartsRequired;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
             if (workInstructionToExport.Products.Count > 0)
@@ -247,8 +245,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     {
                         Title = copiedTitle,
                         Version = freshWorkInstruction.Version,
-                        IsActive = false,
-                        PartsRequired = freshWorkInstruction.PartsRequired
+                        IsActive = false
                     };
 
                     await context.WorkInstructions.AddAsync(newWorkInstruction);
@@ -366,18 +363,12 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
     
     /// <inheritdoc />
-    public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
+    public async Task<WorkInstructionImportResult> ImportFromXlsx(IBrowserFile file)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            if (files.Count == 0)
-            {
-                Log.Warning("No files provided for import.");
-                return WorkInstructionImportResult.NoFilesProvided();
-            }
-            
-            var file = files.First();
+
             using var memoryStream = new MemoryStream();
             await file.OpenReadStream().CopyToAsync(memoryStream);
             memoryStream.Position = 0;
@@ -398,15 +389,13 @@ public partial class WorkInstructionService : IWorkInstructionService
                 Log.Information("Unable to import Work Instruction. Pre-existing work instruction found for Title: {Title}, Version: {Version}. ", workInstructionTitle, versionString);
                 return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
             }
-            var partsRequired = worksheet.Cell(QR_CODE_REQUIRED_CELL).GetValue<bool>();
             
             var workInstruction = new WorkInstruction
             {
                 Title = workInstructionTitle,
                 Version = versionString,
                 Products = [],
-                Nodes = [],
-                PartsRequired = partsRequired
+                Nodes = []
             };
             
             // Retrieve Product and assign relationship
@@ -416,7 +405,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             if (product == null)
             {
                 Log.Information("Product not found. Cannot create Work Instruction");
-                return WorkInstructionImportResult.NoProductFound(files.First().Name, productString);
+                return WorkInstructionImportResult.NoProductFound(file.Name, productString);
             }
             
             workInstruction.Products.Add(product);
@@ -458,27 +447,27 @@ public partial class WorkInstructionService : IWorkInstructionService
                 workInstruction.Nodes.Add(step);
                 stepStartRow++;
             }
-            
-            var fileNames = files.Select(browserFile => browserFile.Name).ToList();
+
+            var fileName = file.Name;
 
             if (await Create(workInstruction))
             {
                 Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
                 // Not invalidating cache here, since it gets invalidated on successful creation
-                return WorkInstructionImportResult.Success(fileNames, workInstruction);
+                return WorkInstructionImportResult.Success(fileName, workInstruction);
             }
 
-            return WorkInstructionImportResult.Failure(fileNames);
+            return WorkInstructionImportResult.Failure(fileName);
         }
         catch (Exception e)
         {
             Log.Error(e, "Failed to import WorkInstruction from uploaded Excel file");
-            var fileNames = files.Select(f => f.Name).ToList();
-            var errorResult = WorkInstructionImportResult.Failure(fileNames);
+            var fileName = file.Name;
+            var errorResult = WorkInstructionImportResult.Failure(fileName);
 
             var error = new ImportError
             {
-                File = fileNames.Count > 0 ? fileNames.First() : "Unknown",
+                File = string.IsNullOrEmpty(fileName) ? fileName : "Unknown",
                 Message = e.Message,
                 ErrorType = e.GetType().Name
             };
@@ -508,6 +497,10 @@ public partial class WorkInstructionService : IWorkInstructionService
                 case InvalidOperationException:
                     error.ErrorType = "Processing Error";
                     error.Message = "Failed to process file data";
+                    break;
+                default:
+                    error.ErrorType = $"Exception Thrown: {e.GetType()}";
+                    error.Message = "Please contact an admin.";
                     break;
             }
 
