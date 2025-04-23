@@ -13,11 +13,12 @@ namespace MESS.Tests.Services;
 
 public class WorkInstructionServiceTests
 {
+    private const string CONNECTION_STRING = "Data Source=WorkInstructionTestDatabase.db";
     private static WorkInstructionService MockWorkInstructionService ()
     {
         // Configure DbContextOptions to use SQLite with a file-based database
         var options = new DbContextOptionsBuilder<ApplicationContext>()
-            .UseSqlite("Data Source=TestDatabase.db")
+            .UseSqlite(CONNECTION_STRING)
             .Options;
 
         // Ensure the database is created before tests run
@@ -79,7 +80,7 @@ public class WorkInstructionServiceTests
         // Add the work instruction to the test database
         await using var context = new ApplicationContext(
             new DbContextOptionsBuilder<ApplicationContext>()
-                .UseSqlite("Data Source=TestDatabase.db")
+                .UseSqlite(CONNECTION_STRING)
                 .Options);
         context.WorkInstructions.Add(workInstruction);
         await context.SaveChangesAsync();

@@ -9,11 +9,12 @@ using Data.Models;
 
 public class ProductionLogServiceTests
 {
+    private const string CONNECTION_STRING = "Data Source=ProductionLogServiceTestDatabase.db";
     private static ProductionLogService MockProductionLogService ()
     {
         // Configure DbContextOptions to use SQLite with a file-based database
         var options = new DbContextOptionsBuilder<ApplicationContext>()
-            .UseSqlite("Data Source=TestDatabase.db")
+            .UseSqlite(CONNECTION_STRING)
             .Options;
 
         // Ensure the database is created before tests run
@@ -51,7 +52,7 @@ public class ProductionLogServiceTests
 
         await using (var context = new ApplicationContext(
                          new DbContextOptionsBuilder<ApplicationContext>()
-                             .UseSqlite("Data Source=TestDatabase.db")
+                             .UseSqlite(CONNECTION_STRING)
                              .Options))
         {
             context.Products.Add(product);
@@ -89,7 +90,7 @@ public class ProductionLogServiceTests
         // Adding the Work Instruction to the database since CreateAsync pulls from the DB
         await using (var context = new ApplicationContext(
                    new DbContextOptionsBuilder<ApplicationContext>()
-                       .UseSqlite("Data Source=TestDatabase.db")
+                       .UseSqlite(CONNECTION_STRING)
                        .Options))
         {
             context.WorkInstructions.Add(workInstruction);
