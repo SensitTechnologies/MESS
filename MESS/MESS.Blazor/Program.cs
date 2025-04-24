@@ -30,7 +30,7 @@ builder.Services.AddDbContextFactory<ApplicationContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(30),
             errorNumbersToAdd: null);
     });
-}, ServiceLifetime.Scoped);
+});
 
 // Adding Separate DbContext for Identity
 builder.Services.AddDbContext<UserContext>(options =>

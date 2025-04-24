@@ -776,15 +776,17 @@ public partial class WorkInstructionService : IWorkInstructionService
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var part = await context.Parts.FirstOrDefaultAsync(p =>
+            var existingPart = await context.Parts.FirstOrDefaultAsync(p =>
                 p.PartName == partToAdd.PartName &&
                 p.PartNumber == partToAdd.PartNumber);
 
 
-            if (part != null)
+            if (existingPart != null)
             {
-                Log.Information("GetOrAddPart: Successfully found pre-existing Part with ID: {ExistingPartID}", partToAdd.Id);
-                return part;
+                // Detach from context so that EF Core does not attempt to re-add it to the database
+                context.Entry(existingPart).State = EntityState.Unchanged;
+                Log.Information("GetOrAddPart: Successfully found pre-existing Part with ID: {ExistingPartID}", existingPart.Id);
+                return existingPart;
             }
             
             // If a part does not exist in the database create it here
@@ -912,6 +914,28 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
 
+            // Having to refetch data since we are using DbContextFactory and the change-tracker is reset on each instantiation
+            foreach (var product in workInstruction.Products.Where(product => product.Id > 0))
+            {
+                context.Attach(product);
+                context.Entry(product).State = EntityState.Unchanged;
+            }
+            
+            foreach (var node in workInstruction.Nodes)
+            {
+                if (node is not PartNode partNode)
+                {
+                    continue;
+                }
+                
+                foreach (var part in partNode.Parts.Where(p => p.Id > 0).ToList())
+                {
+                    // Attach existing part to the context
+                    context.Attach(part);
+                    context.Entry(part).State = EntityState.Unchanged;
+                }
+            }
+            
             workInstruction.IsActive = false;
             await context.WorkInstructions.AddAsync(workInstruction);
             await context.SaveChangesAsync();
