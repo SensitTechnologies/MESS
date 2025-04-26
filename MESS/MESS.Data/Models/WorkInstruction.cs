@@ -30,11 +30,6 @@ public class WorkInstruction : AuditableEntity
     public bool IsActive { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether parts are required for the work instruction.
-    /// </summary>
-    public bool PartsRequired { get; set; }
-
-    /// <summary>
     /// Gets or sets the list of nodes associated with the work instruction.
     /// </summary>
     public List<WorkInstructionNode> Nodes { get; set; } = [];

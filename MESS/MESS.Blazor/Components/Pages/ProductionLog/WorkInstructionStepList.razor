@@ -6,7 +6,7 @@
 
 @if (ActiveWorkInstruction != null && ProductionLog != null)
 {
-    @if (ActiveWorkInstruction.PartsRequired)
+    @if (ActiveWorkInstruction.Nodes.OfType<PartNode>().Any())
     {
         <div class="form-floating p-2 mb-2">
             <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="UpdateSerializationService"></InputText>

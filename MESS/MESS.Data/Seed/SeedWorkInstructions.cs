@@ -31,7 +31,6 @@ public static class SeedWorkInstructions
             {
                 Title = "ABC Subassembly",
                 IsActive = true,
-                PartsRequired = true,
                 Version = "1.2",
                 Nodes = new List<WorkInstructionNode>
                 {
