@@ -119,7 +119,7 @@
             if (AutoPlay)
             {
                 module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                    "import", "./js/carousel.js");
+                    "import", "./Carousel.razor.js");
                 await module.InvokeVoidAsync("initCarousel", Id, Interval);
             }
         }

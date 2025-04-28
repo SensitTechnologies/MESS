@@ -1,6 +1,7 @@
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @using Mono.TextTemplating
+@using MESS.Blazor.Components.Carousel
 @inject IProductionLogEventService ProductionLogEventService
 
 <div class="row">
@@ -10,32 +11,21 @@
             <div class="card-body">
                 <p class="card-text d-block mb-1">@((MarkupString)Step.Name)</p>
             </div>
-            @if (Step.PrimaryMedia is { Count: > 0 })
-            {
-                <img class="object-fit-scale card-img-bottom" src="@Step.PrimaryMedia?.FirstOrDefault()" alt="Step Image"/>
-            }
         </div>
     </div>
     
-    @* This stores the secondary content i.e. the content that is optional to be shown to the operator The 'Body' field is optional. *@
-    
-    @if (ShowDetails)
-    {
-        <div class="col col-md-6 secondary-content">
-            <div class="card">
-                <div class="card-body">
-                    @if (Step.Body != null)
-                    {
-                        <p>@((MarkupString)Step.Body)</p>
-                    }
-                </div>
-                @if (Step.SecondaryMedia is { Count: > 0 })
-                {
-                    <img class="object-fit-scale card-img-bottom " src="@Step.SecondaryMedia?.FirstOrDefault()" alt="Step Image"/>
-                }
+    <div class="col col-md-6 secondary-content">
+        <div class="card">
+            <div class="card-body">
+                <Carousel
+                    Images="@GetCombinedMedia()"
+                    AutoPlay="false"
+                    Interval="3000"
+                    ImageStyle="height: 400px; object-fit: cover;" />
             </div>
+
         </div>
-    }
+    </div>
     
 </div>
 <div class="row mt-3">
@@ -115,6 +105,25 @@
     {
         ShowDetails = !ShowDetails;
         StateHasChanged();
+    }
+    
+    private List<string> GetCombinedMedia()
+    {
+        var combinedMedia = new List<string>();
+    
+        // Add primary media if available
+        if (Step.PrimaryMedia.Count > 0)
+        {
+            combinedMedia.AddRange(Step.PrimaryMedia);
+        }
+    
+        // Add secondary media if available
+        if (Step.SecondaryMedia.Count > 0)
+        {
+            combinedMedia.AddRange(Step.SecondaryMedia);
+        }
+    
+        return combinedMedia;
     }
     
     private bool ShowOptionalNotesField { get; set; } = false;
