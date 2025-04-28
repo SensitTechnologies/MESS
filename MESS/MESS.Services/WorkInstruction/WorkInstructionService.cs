@@ -516,8 +516,23 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var isNotUnique = await context.WorkInstructions.AnyAsync(w => w.Title == workInstruction.Title && w.Version == workInstruction.Version);
-            return !isNotUnique;
+            var title = workInstruction.Title;
+            var version = workInstruction.Version;
+
+            var isUniqueCount = await context.WorkInstructions
+                .CountAsync(w => w.Title == title && w.Version == version);
+
+            if (isUniqueCount >= 1)
+            {
+                return false;
+            }
+            
+            if (isUniqueCount is 0)
+            {
+                return true;
+            }
+
+            return false;
         }
         catch (Exception e)
         {
@@ -1038,14 +1053,6 @@ public partial class WorkInstructionService : IWorkInstructionService
         await using var context = await _contextFactory.CreateDbContextAsync();
         try
         {
-            // Ensure updated Title + Version combination is unique. If count is > 0 it is not unique
-            var isUnique = await IsUnique(workInstruction);
-
-            if (!isUnique)
-            {
-                return false;
-            }
-            
             var existingWorkInstruction = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(n => ((PartNode)n).Parts)
@@ -1055,7 +1062,27 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 return false;
             }
-
+            
+            // Ensure updated Title + Version combination is unique. If count is > 0 it is not unique
+            if (string.Compare(existingWorkInstruction.Title, workInstruction.Title, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                var isUnique = await IsUnique(workInstruction);
+                if (!isUnique)
+                {
+                    return false;
+                }
+            }
+            
+            // If version is different ensure uniqueness
+            if (string.Compare(existingWorkInstruction.Version, workInstruction.Version, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                var isUnique = await IsUnique(workInstruction);
+                if (!isUnique)
+                {
+                    return false;
+                }
+            }
+            
             context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
 
             // Update any applicable nodes

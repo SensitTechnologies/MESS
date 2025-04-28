@@ -78,7 +78,8 @@ public interface IWorkInstructionService
     /// </summary>
     /// <param name="workInstruction">The WorkInstruction to check for uniqueness.</param>
     /// <returns>
-    /// True if the WorkInstruction is unique; otherwise, false.
+    /// True if the WorkInstruction is unique by counting the instances in the database. If there
+    /// are 0 or 1 instances of the Title, Version combination it is unique; otherwise, false.
     /// </returns>
     public Task<bool> IsUnique(WorkInstruction workInstruction);
 
