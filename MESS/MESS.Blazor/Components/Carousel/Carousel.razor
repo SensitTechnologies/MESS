@@ -1,0 +1,168 @@
+@using Serilog
+@inject IJSRuntime JSRuntime
+
+<div id="@Id" class="carousel slide @CssClass" data-bs-ride="@(AutoPlay ? "carousel" : "false")">
+    @if (ShowIndicators)
+    {
+        <div class="carousel-indicators">
+            @for (int i = 0; i < Images.Count; i++)
+            {
+                var index = i;
+                <button type="button" data-bs-target="#@Id" data-bs-slide-to="@i" class="@(ActiveIndex == i ? "active" : "")" 
+                        aria-current="@(ActiveIndex == i ? "true" : "false")" aria-label="Slide @(i+1)"
+                        @onclick="() => SetActiveIndex(index)"></button>
+            }
+        </div>
+    }
+
+    <div class="carousel-inner">
+        @for (int i = 0; i < Images.Count; i++)
+        {
+            <CarouselItem 
+                ImagePath="@Images[i]" 
+                IsActive="i == ActiveIndex"
+                AltText="@(GetAltText(i))"
+                Caption="@(i < Captions.Count ? Captions[i] : "")"
+                Title="@(i < Titles.Count ? Titles[i] : "")"
+                ImageStyle="@ImageStyle" />
+        }
+    </div>
+
+    @if (ShowControls)
+    {
+        <button class="carousel-control-prev" type="button" data-bs-target="#@Id" data-bs-slide="prev" @onclick="PreviousSlide">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#@Id" data-bs-slide="next" @onclick="NextSlide">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Collection of image paths to be displayed in the carousel.
+    /// </summary>
+    [Parameter]
+    public List<string> Images { get; set; } = new();
+
+    /// <summary>
+    /// Optional captions to display for each corresponding image in the carousel.
+    /// If fewer captions than images are provided, some images will have no caption.
+    /// </summary>
+    [Parameter]
+    public List<string> Captions { get; set; } = new();
+
+    /// <summary>
+    /// Optional titles to display for each corresponding image in the carousel.
+    /// If fewer titles than images are provided, some images will have no title.
+    /// </summary>
+    [Parameter]
+    public List<string> Titles { get; set; } = new();
+
+    /// <summary>
+    /// Determines whether the carousel should automatically cycle through images.
+    /// When true, sets the Bootstrap data-bs-ride attribute to "carousel".
+    /// </summary>
+    [Parameter]
+    public bool AutoPlay { get; set; } = false;
+
+    /// <summary>
+    /// Time in milliseconds between automatic slide transitions.
+    /// Only applies when AutoPlay is set to true.
+    /// </summary>
+    [Parameter]
+    public int Interval { get; set; } = 5000;
+
+    /// <summary>
+    /// Determines whether to display the previous and next navigation controls.
+    /// </summary>
+    [Parameter]
+    public bool ShowControls { get; set; } = true;
+
+    /// <summary>
+    /// Determines whether to display the indicator dots at the bottom of the carousel.
+    /// </summary>
+    [Parameter]
+    public bool ShowIndicators { get; set; } = true;
+
+    /// <summary>
+    /// Additional CSS classes to apply to the main carousel container.
+    /// </summary>
+    [Parameter]
+    public string CssClass { get; set; } = "";
+
+    /// <summary>
+    /// CSS styling to apply to the images within the carousel.
+    /// Default styling sets a fixed height and object-fit: cover.
+    /// </summary>
+    [Parameter]
+    public string ImageStyle { get; set; } = "height: 300px; object-fit: cover;";
+
+    /// <summary>
+    /// Unique identifier for the carousel DOM element.
+    /// Defaults to a generated GUID prefixed with "carousel_".
+    /// </summary>
+    [Parameter]
+    public string Id { get; set; } = $"carousel_{Guid.NewGuid():N}";
+
+    private int ActiveIndex { get; set; } = 0;
+    private IJSObjectReference? module;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (AutoPlay)
+            {
+                module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import", "./js/carousel.js");
+                await module.InvokeVoidAsync("initCarousel", Id, Interval);
+            }
+        }
+    }
+
+    private void NextSlide()
+    {
+        ActiveIndex = (ActiveIndex + 1) % Images.Count;
+        StateHasChanged();
+    }
+
+    private void PreviousSlide()
+    {
+        ActiveIndex = (ActiveIndex - 1 + Images.Count) % Images.Count;
+        StateHasChanged();
+    }
+
+    private void SetActiveIndex(int index)
+    {
+        ActiveIndex = index;
+        StateHasChanged();
+    }
+
+    private string GetAltText(int index)
+    {
+        return index < Captions.Count ? Captions[index] : $"Slide {index + 1}";
+    }
+
+    /// <summary>
+    /// Dispose of JS Interop
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (module is not null)
+            {
+                await module.DisposeAsync();
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Information($"JS Interop Exception: {e.Message}");
+        }
+    }
+}
