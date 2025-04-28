@@ -509,6 +509,23 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> IsUnique(WorkInstruction workInstruction)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var isNotUnique = await context.WorkInstructions.AnyAsync(w => w.Title == workInstruction.Title && w.Version == workInstruction.Version);
+            return !isNotUnique;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to determine if WorkInstruction with Title: {Title}, and Version: {Version} is unique. Exception thrown: {Exception}", workInstruction.Title, workInstruction.Version, e.ToString());
+            return false;
+        }
+    }
+
     /// <summary>
     /// Processes media (images) associated with a step in a work instruction from an Excel worksheet.
     /// </summary>
@@ -1021,6 +1038,14 @@ public partial class WorkInstructionService : IWorkInstructionService
         await using var context = await _contextFactory.CreateDbContextAsync();
         try
         {
+            // Ensure updated Title + Version combination is unique. If count is > 0 it is not unique
+            var isUnique = await IsUnique(workInstruction);
+
+            if (!isUnique)
+            {
+                return false;
+            }
+            
             var existingWorkInstruction = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(n => ((PartNode)n).Parts)

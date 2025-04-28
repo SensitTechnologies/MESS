@@ -59,6 +59,15 @@
         {
             // Only have to account for updates here since a work instruction can currently
             // only be created via importation as of 4/3/2025.
+            var isUnique = await WorkInstructionService.IsUnique(instruction);
+
+            if (!isUnique)
+            {
+                ToastService.ShowError($"Current Work Instruction Title: {instruction.Title} & Version: {instruction.Version} Combination are not unique. Please change them and try again.");
+                return;
+            }
+            
+            
             var saveResult = await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
             if (saveResult)
             {
