@@ -110,7 +110,8 @@ var logLevel = builder.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEv
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File(new JsonFormatter(), "Logs/MESS_Blazor_Warning_Log.json", restrictedToMinimumLevel: LogEventLevel.Warning)
+    .WriteTo.File("Logs/MESS_Blazor_Error.logs", restrictedToMinimumLevel: LogEventLevel.Error, rollingInterval: RollingInterval.Month)
+    .WriteTo.File("Logs/MESS_Blazor_Warning.logs", restrictedToMinimumLevel: LogEventLevel.Warning, rollingInterval: RollingInterval.Day)
     .WriteTo.File("Logs/MESS_Blazor_All.logs",
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}}",
         rollingInterval: RollingInterval.Day)
