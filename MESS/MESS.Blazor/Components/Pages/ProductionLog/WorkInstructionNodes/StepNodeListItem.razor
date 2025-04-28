@@ -9,7 +9,19 @@
     <div class="col col-md-6 col-sm-12 col-3 primary-content">
         <div class="card">
             <div class="card-body">
-                <p class="card-text d-block mb-1">@((MarkupString)Step.Name)</p>
+                <p class="card-text d-block mb-1">
+                    
+                    @* Replace text with extra details i.e. body text *@
+                    @switch (ShowDetails)
+                    {
+                        case false:
+                            @((MarkupString)Step.Name)
+                            break;
+                        case true when Step.Body != null:
+                            @((MarkupString)Step.Body)
+                            break;
+                    }
+                </p>
             </div>
         </div>
     </div>
