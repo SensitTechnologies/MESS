@@ -1,4 +1,6 @@
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <div class="toast-container position-fixed top-50 start-50 translate-middle p-3 @(IsVisible ? "d-block" : "d-none")" data-bs-autohide="true" data-bs-delay="5000">
     <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
@@ -17,42 +19,40 @@
     </div>
 </div>
 
+@if (saveAlert)
+{
+    <div class="alert alert-success" role="alert">
+        Production log saved successfully.
+    </div>
+}
+
 @code {
-    /// <summary>
-    /// Determines whether or not the confirmation modal is visible.
-    /// </summary>
-    [Parameter] 
+    [Parameter]
     public bool IsVisible { get; set; }
 
-    /// <summary>
-    /// Event callback that is invoked when the visibility state changes.
-    /// </summary>
     [Parameter]
     public EventCallback<bool> IsVisibleChanged { get; set; }
 
-    /// <summary>
-    /// The text displayed in the modal header.
-    /// </summary>
     [Parameter]
     public string? HeaderText { get; set; }
 
-    /// <summary>
-    /// The text displayed in the modal body.
-    /// </summary>
     [Parameter]
     public string? BodyText { get; set; }
     
-    /// <summary>
-    /// Event callback that is invoked when the modal is submitted.
-    /// </summary>
     [Parameter]
     public EventCallback<bool> OnSubmit { get; set; }
 
-    /// <summary>
-    /// Shows the confirmation modal with the specified body and header text.
-    /// </summary>
-    /// <param name="bodyText">The text to display in the modal body.</param>
-    /// <param name="headerText">Optional text to display in the modal header.</param>
+    private bool saveAlert = false;
+
+    private async Task showSaveAlert()
+    {
+        saveAlert = true;
+        await Task.Delay(3000);
+        saveAlert = false;
+        StateHasChanged();
+    }
+
+
     public void Show(string bodyText, string headerText = "")
     {
         HeaderText = headerText;
@@ -73,5 +73,7 @@
     {
         Close();
         await OnSubmit.InvokeAsync(true);
+        Navigation.NavigateTo(Navigation.Uri, forceLoad:true);
+        await showSaveAlert();
     }
 }
