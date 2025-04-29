@@ -822,6 +822,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var workInstructions = await context.WorkInstructions
+                .Include(w => w.Products)
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .ToListAsync();
