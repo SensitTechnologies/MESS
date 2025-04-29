@@ -16,7 +16,7 @@ public class ApplicationUserService : IApplicationUserService
     private readonly SignInManager<ApplicationUser> _signInManager;
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
-    
+
     /// <inheritdoc cref="IApplicationUserService"/>
     public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager)
@@ -109,6 +109,8 @@ public class ApplicationUserService : IApplicationUserService
             {
                 return null;
             }
+            
+            _context.ChangeTracker.Clear();
 
             var existingUser = await _context.Users.FindAsync(user.Id);
 
