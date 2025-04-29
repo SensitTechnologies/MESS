@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Moq;
 
@@ -34,6 +35,7 @@ public class ProductionLogCreationTests : TestContext
     private readonly Mock<ISessionManager> _sessionManagerMock;
     private readonly Mock<IJSRuntime> _jsRuntimeMock;
     private readonly Mock<IJSObjectReference> _jsModuleMock;
+    private readonly Mock<IToastService> _toastServiceMock;
 
     public ProductionLogCreationTests()
     {
@@ -48,6 +50,7 @@ public class ProductionLogCreationTests : TestContext
         _sessionManagerMock = new Mock<ISessionManager>();
         _jsRuntimeMock = new Mock<IJSRuntime>();
         _jsModuleMock = new Mock<IJSObjectReference>();
+        _toastServiceMock = new Mock<IToastService>();
             
         Services.AddSingleton(_productionLogServiceMock.Object);
         Services.AddSingleton(_workInstructionServiceMock.Object);
@@ -59,6 +62,7 @@ public class ProductionLogCreationTests : TestContext
         Services.AddSingleton<AuthenticationStateProvider>(_authProviderMock.Object);
         Services.AddSingleton(_sessionManagerMock.Object);
         Services.AddSingleton(_jsRuntimeMock.Object);
+        Services.AddSingleton(_toastServiceMock.Object);
             
         _jsRuntimeMock.Setup(js => js.InvokeAsync<IJSObjectReference>(
             "import", It.IsAny<object[]>())).ReturnsAsync(_jsModuleMock.Object);

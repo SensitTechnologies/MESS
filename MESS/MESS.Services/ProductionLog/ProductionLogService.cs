@@ -92,6 +92,12 @@ public class ProductionLogService : IProductionLogService
     {
         try
         {
+            if (productionLog.WorkInstruction != null)
+            {
+                productionLog.WorkInstruction = await _context.WorkInstructions
+                    .FindAsync(productionLog.WorkInstruction.Id);
+            }
+            
             productionLog.CreatedOn = DateTimeOffset.UtcNow;
             productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
             
