@@ -7,11 +7,7 @@
     
     <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
     <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
-    <AuthorizeView Roles="Technician">
-        <NavLink class="btn btn-outline-secondary text-decoration-none" href="/Dashboard" Match="NavLinkMatch.All">
-            Phoebe
-        </NavLink>
-    </AuthorizeView>
+
 </div>
 
 @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))

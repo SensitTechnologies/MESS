@@ -10,6 +10,14 @@
 <div class="page">
     <main>
         <article class="content px-4 mx-auto">
+            <AuthorizeView Roles="Technician">
+                <NavLink class="btn btn-outline-secondary text-decoration-none" href="/Dashboard" Match="NavLinkMatch.All">
+                    Phoebe
+                </NavLink>
+                <NavLink class="btn btn-outline-secondary text-decoration-none" href="/production-log" Match="NavLinkMatch.All">
+                    Production Log
+                </NavLink>
+            </AuthorizeView>
             @Body
             <DarkModeButton></DarkModeButton>
         </article>
