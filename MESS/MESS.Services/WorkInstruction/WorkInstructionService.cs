@@ -1023,6 +1023,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         try
         {
             var existingWorkInstruction = await context.WorkInstructions
+                .Include(w => w.Products)
                 .Include(w => w.Nodes)
                 .ThenInclude(n => ((PartNode)n).Parts)
                 .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
@@ -1034,6 +1035,22 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
 
+            // Update Product Relationships
+            existingWorkInstruction.Products.RemoveAll(product =>
+                !workInstruction.Products.Exists(p => p.Id == product.Id));
+            
+            // Insert any new Products
+            foreach (var newProduct in workInstruction.Products)
+            {
+                var existingProduct = existingWorkInstruction.Products.FirstOrDefault(p =>
+                    p.Id == newProduct.Id);
+                
+                if (existingProduct == null)
+                {
+                    existingWorkInstruction.Products.Add(newProduct);
+                }
+            }
+            
             // Update any applicable nodes
             foreach (var newNode in workInstruction.Nodes)
             {
@@ -1065,6 +1082,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
             Log.Warning("Exception caught when trying to update work instruction {Id}. Exception {Exception}", workInstruction.Id, e.ToString());
             return false;
         }
