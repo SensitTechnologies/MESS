@@ -14,16 +14,16 @@
                     <div class="col-4">
                         <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Title" @bind:event="oninput"/>
                     </div>
-                    <div class="col-2">
+                    <div class="col-1">
                         <input disabled="@(!IsEditable)" type="text" class="form-control" @bind="WorkInstruction.Version" @bind:event="oninput"/>
                     </div>
-                    <div class="col-6">
-                        <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Orientation="Orientation.Horizontal">
+                    <div class="col-7">
+                        <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Orientation="Orientation.Horizontal" Wrap="true">
                             
                         @if (IsEditable)
                         {
                             <button type="button" class="btn btn-secondary btn-outline-secondary" @onclick="ShowStepManager">
-                                Edit Actions
+                                Edit
                             </button>
                             <button type="button" class="btn btn-outline-danger" @onclick="DeleteWorkInstruction">
                                 Delete
