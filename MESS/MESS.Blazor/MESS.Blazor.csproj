@@ -62,6 +62,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="wwwroot\WorkInstructionExports\" />
       <Folder Include="wwwroot\WorkInstructionImages\" />
     </ItemGroup>
     
