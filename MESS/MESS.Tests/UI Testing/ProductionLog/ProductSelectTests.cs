@@ -1,11 +1,21 @@
 ﻿using Bunit;
 using MESS.Blazor.Components.Pages.ProductionLog;
 using MESS.Data.Models;
+using MESS.Services.ProductionLog;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace MESS.Tests.UI_Testing.ProductionLog;
 public class ProductSelectTests : TestContext
 {
+    private readonly Mock<IProductionLogEventService> _mockProductionLogEventService;
+    public ProductSelectTests()
+    {
+        _mockProductionLogEventService = new Mock<IProductionLogEventService>();
+        Services.AddSingleton(_mockProductionLogEventService.Object);
+    }
+    
     [Fact]
     public void ProductSelectComponentFiresOnProductSelectedEvent()
     {
