@@ -6,19 +6,23 @@
 
 <FluentCard Width="400" Class="m-0 w-100">
     <div class="d-flex align-items-center">
-        <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || Files.Count == 0)">
+        <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || File == null)">
             Import File
         </button>
-        <InputFile OnChange="LoadFiles" accept=".xlsx" class="form-control mb-3"/>
+        <InputFile OnChange="LoadFile" accept=".xlsx" class="form-control mb-3"/>
     </div>
 </FluentCard>
 
 
 @code {
+    /// <summary>
+    /// Event callback triggered when the import process is complete.
+    /// Passes the imported <see cref="WorkInstruction"/> as a parameter.
+    /// </summary>
     [Parameter]
     public EventCallback<WorkInstruction> OnImportComplete { get; set; }
     
-    private List<IBrowserFile> Files { get; set; } = [];
+    private IBrowserFile? File { get; set; }
     private bool IsImporting { get; set; }
     private string? StatusMessage { get; set; }
     private ImportStatus? FileStatus { get; set; }
@@ -28,7 +32,16 @@
     {
         IsImporting = true;
         ImportComplete = false;
-        var importResult = await WorkInstructionService.ImportFromXlsx(Files);
+
+        if (File == null)
+        {
+            IsImporting = false;
+            ImportComplete = true;
+            ToastService.ShowError("File is null. Please try again.");
+            return;
+        }
+        
+        var importResult = await WorkInstructionService.ImportFromXlsx(File);
 
         FileStatus = importResult.Status;
         if (importResult is { Status: ImportStatus.Error, ImportError: not null })
@@ -52,9 +65,9 @@
         }
     }
 
-    private void LoadFiles(InputFileChangeEventArgs obj)
+    private void LoadFile(InputFileChangeEventArgs obj)
     {
-        Files.Add(obj.File);
+        File = obj.File;
     }
 
 }

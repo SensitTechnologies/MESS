@@ -31,19 +31,45 @@ else
 }
 
 @code {
+    /// <summary>
+    /// Gets or sets the list of available products.
+    /// </summary>
     [Parameter]
     public List<Product>? Products { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when a product is selected.
+    /// </summary>
     [Parameter]
     public EventCallback<int> OnProductSelected { get; set; }
-    
+
+    /// <summary>
+    /// Gets or sets the list of available work instructions.
+    /// </summary>
     [Parameter]
     public List<WorkInstruction>? WorkInstructions { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when a work instruction is selected.
+    /// </summary>
     [Parameter]
     public EventCallback<int> OnWorkInstructionSelected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of available line operators.
+    /// </summary>
     [Parameter]
     public List<ApplicationUser>? LineOperators { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when a line operator is selected.
+    /// </summary>
     [Parameter]
     public EventCallback<string> OnLineOperatorSelected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active line operator.
+    /// </summary>
     [Parameter]
     public string? ActiveLineOperator { get; set; }
 }

@@ -1,0 +1,91 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: E2E Test with Test Database
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: # Only runs when a file ending in any of these markers is changed
+    - '**.cs'
+    - '**.csproj'
+    - '**.cshtml'
+    - '**.razor'
+    - '**.js'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+    - '**.cs'
+    - '**.csproj'
+    - '**.cshtml'
+    - '**.razor'
+    - '**.js'
+
+    
+env:
+  DOTNET_VERSION: '9.0.200' # Current as of 4/19/2025
+  SOLUTION_PATH: './MESS/MESS.sln'
+
+jobs:
+  End-To-End-Tests:
+    timeout-minutes: 30
+    name: build-and-test-${{matrix.os}}
+    runs-on: ${{ matrix.os }} # Run on Ubuntu. Not Windows. Not MacOS
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest # SQL Server 2022
+        env:
+          MSSQL_SA_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build
+      run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore
+      
+    - name: Ensure Playwright browsers are installed
+      run: ./MESS/MESS.Tests/bin/Debug/net9.0/playwright.ps1 install --with-deps
+          
+    - name: Apply migrations
+      run: |
+        dotnet tool install --global dotnet-ef
+        dotnet ef database update --context ApplicationContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
+        dotnet ef database update --context UserContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
+      env:
+        ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
+    
+    - name: Setup dev certificates
+      run: |
+        dotnet dev-certs https --clean
+        dotnet dev-certs https --trust
+        dotnet dev-certs https
+    
+    - name: Create and start web application
+      run: |
+        dotnet run --project ./MESS/MESS.Blazor --urls=https://localhost:7152 &
+        sleep 10 # Give the server time to start
+      env:
+        ASPNETCORE_ENVIRONMENT: Test
+        ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
+    
+    - name: Run E2E tests
+      run: dotnet test ./MESS/MESS.Tests --filter "FullyQualifiedName~UI_Testing.ProductionLog.EndToEnd" --verbosity normal
+      env:
+        ASPNETCORE_ENVIRONMENT: Test
+        ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True

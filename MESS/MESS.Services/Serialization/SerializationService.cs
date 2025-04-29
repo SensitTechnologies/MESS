@@ -5,19 +5,26 @@ using Serilog;
 
 namespace MESS.Services.Serialization;
 
+/// <inheritdoc />
 public class SerializationService : ISerializationService
 {
-    private readonly ApplicationContext _context;
-
-    public SerializationService(ApplicationContext context)
+    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SerializationService"/> class.
+    /// </summary>
+    /// <param name="contextFactory">The application database context used for data operations.</param>
+    public SerializationService(IDbContextFactory<ApplicationContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
+    /// <inheritdoc />
     public event Action? CurrentSerialNumberLogChanged;
+    /// <inheritdoc />
     public event Action? CurrentProductNumberChanged;
     private string? _currentProductNumber;
 
+    /// <inheritdoc />
     public string? CurrentProductNumber
     {
         get => _currentProductNumber;
@@ -29,6 +36,7 @@ public class SerializationService : ISerializationService
     }
 
     private List<SerialNumberLog> _currentSerialNumberLogs = [];
+    /// <inheritdoc />
     public List<SerialNumberLog> CurrentSerialNumberLogs
     {
         get => _currentSerialNumberLogs;
@@ -39,6 +47,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> SaveCurrentSerialNumberLogsAsync(int productionLogId)
     {
         try
@@ -67,11 +76,14 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<SerialNumberLog>?> GetAllAsync()
     {
         try
         {
-            var logList = await _context.SerialNumberLogs
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var logList = await context.SerialNumberLogs
                 .Include(l => l.Part)
                 .ToListAsync();
 
@@ -79,18 +91,20 @@ public class SerializationService : ISerializationService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Warning("Exception caught while attempting to Get All SerialNumberLogs Async: {ExceptionMessage}", e.Message);
             return null;
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> CreateAsync(SerialNumberLog serialNumberLog)
     {
         try
         {
-            await _context.SerialNumberLogs.AddAsync(serialNumberLog);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            await context.SerialNumberLogs.AddAsync(serialNumberLog);
+            await context.SaveChangesAsync();
             return true;
         }
         catch (Exception e)
@@ -100,6 +114,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> CreateRangeAsync(List<SerialNumberLog> serialNumberLogs)
     {
         try
@@ -109,9 +124,10 @@ public class SerializationService : ISerializationService
                 Log.Warning("Attempted to add range of serialNumberLogs with {LogCount} logs", serialNumberLogs.Count);
                 return false;
             }
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            await _context.SerialNumberLogs.AddRangeAsync(serialNumberLogs);
-            await _context.SaveChangesAsync();
+            await context.SerialNumberLogs.AddRangeAsync(serialNumberLogs);
+            await context.SaveChangesAsync();
 
             return true;
         }
@@ -122,12 +138,15 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> UpdateAsync(SerialNumberLog serialNumberLog)
     {
         try
         {
-            _context.SerialNumberLogs.Update(serialNumberLog);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            context.SerialNumberLogs.Update(serialNumberLog);
+            await context.SaveChangesAsync();
             return true;
         }
         catch (Exception e)
@@ -137,6 +156,7 @@ public class SerializationService : ISerializationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> DeleteAsync(int serialNumberLogId)
     {
         try
@@ -146,8 +166,9 @@ public class SerializationService : ISerializationService
                 Log.Error("Attempted to delete SerialNumberLog with invalid ID: {ID}", serialNumberLogId);
                 return false;
             }
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var serialNumberLogToDelete = await _context.SerialNumberLogs.FindAsync(serialNumberLogId);
+            var serialNumberLogToDelete = await context.SerialNumberLogs.FindAsync(serialNumberLogId);
 
             if (serialNumberLogToDelete == null)
             {
@@ -155,8 +176,8 @@ public class SerializationService : ISerializationService
                 return false;
             }
             
-            _context.SerialNumberLogs.Remove(serialNumberLogToDelete);
-            await _context.SaveChangesAsync();
+            context.SerialNumberLogs.Remove(serialNumberLogToDelete);
+            await context.SaveChangesAsync();
 
             return true;
         }

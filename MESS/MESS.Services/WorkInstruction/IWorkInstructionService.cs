@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Components.Forms;
 namespace MESS.Services.WorkInstruction;
 using Data.Models;
 
+/// <summary>
+/// Interface for managing work instructions, including operations such as export, import, duplication, 
+/// retrieval, creation, deletion, and updates.
+/// </summary>
 public interface IWorkInstructionService
 {
     /// <summary>
@@ -49,7 +53,7 @@ public interface IWorkInstructionService
     /// <summary>
     /// Imports work instructions from an Excel file.
     /// </summary>
-    /// <param name="files">List of browser files where the first file will be processed as an Excel workbook.</param>
+    /// <param name="file">The Excel workbook to be imported.</param>
     /// <returns>
     /// A <see cref="WorkInstructionImportResult"/> object containing:
     /// - Success status
@@ -67,12 +71,7 @@ public interface IWorkInstructionService
     /// 
     /// Images found in the Excel file are extracted and saved to the web root directory.
     /// </remarks>
-    public Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files);
-    /// <summary>
-    /// Retrieves a List of WorkInstruction objects
-    /// </summary>
-    /// <returns>List of WorkInstruction objects</returns>
-    public List<WorkInstruction> GetAll();
+    public Task<WorkInstructionImportResult> ImportFromXlsx(IBrowserFile file);
     /// <summary>
     /// Retrieves a List of WorkInstruction objects asynchronously
     /// </summary>
@@ -85,12 +84,6 @@ public interface IWorkInstructionService
     /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
 
     public WorkInstruction? GetByTitle(string title);
-    /// <summary>
-    /// Retrieves a WorkInstruction by its ID
-    /// </summary>
-    /// <param name="id">The ID of the WorkInstruction to retrieve.</param>
-    /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
-    public WorkInstruction? GetById(int id);
     /// <summary>
     /// Retrieves a WorkInstruction by its ID.
     /// </summary>

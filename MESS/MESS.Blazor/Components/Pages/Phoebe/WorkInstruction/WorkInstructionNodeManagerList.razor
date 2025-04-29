@@ -89,9 +89,16 @@
 </div>
 
 @code {
+    /// <summary>
+    /// A list of work instruction nodes to be displayed and managed in the component.
+    /// </summary>
+    /// <remarks>
+    /// This parameter is required and is used as the data source for the drag-and-drop functionality.
+    /// </remarks>
     [Parameter]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
     
+    /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)

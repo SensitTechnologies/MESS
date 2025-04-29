@@ -16,9 +16,9 @@ using Microsoft.Extensions.Primitives;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
+/// <inheritdoc />
 public partial class WorkInstructionService : IWorkInstructionService
 {
-    private readonly ApplicationContext _context;
     private readonly IProductService _productService;
     private readonly IMemoryCache _cache;
     private readonly IWebHostEnvironment _webHostEnvironment;
@@ -28,7 +28,6 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string INSTRUCTION_TITLE_CELL = "B1";
     private const string VERSION_CELL = "D1";
     private const string PRODUCT_NAME_CELL = "B2";
-    private const string QR_CODE_REQUIRED_CELL = "D2";
     private const string STEPS_PARTS_LIST_CELL = "B3";
     
     
@@ -43,15 +42,22 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
 
-    public WorkInstructionService(ApplicationContext context, IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
+    /// </summary>
+    /// <param name="productService">The service for managing product-related operations.</param>
+    /// <param name="cache">The memory cache for caching work instructions.</param>
+    /// <param name="webHostEnvironment">The hosting environment for accessing web root paths.</param>
+    /// <param name="contextFactory">The factory for creating database contexts.</param>
+    public WorkInstructionService(IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
     {
-        _context = context;
         _productService = productService;
         _cache = cache;
         _webHostEnvironment = webHostEnvironment;
         _contextFactory = contextFactory;
     }
 
+    /// <inheritdoc />
     public string? ExportToXlsx(WorkInstruction workInstructionToExport)
     {
         try
@@ -62,7 +68,6 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Set basic data in the header
             worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
-            worksheet.Cell(QR_CODE_REQUIRED_CELL).Value = workInstructionToExport.PartsRequired;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
             if (workInstructionToExport.Products.Count > 0)
@@ -199,9 +204,10 @@ public partial class WorkInstructionService : IWorkInstructionService
         if (string.IsNullOrEmpty(input))
             return string.Empty;
         
-        return RemoveHTMLRegex().Replace(input, string.Empty);
+        return RemoveHtmlRegex().Replace(input, string.Empty);
     }
 
+    /// <inheritdoc />
     public async Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate)
     {
         if (workInstructionToDuplicate == null)
@@ -212,15 +218,16 @@ public partial class WorkInstructionService : IWorkInstructionService
 
         try
         {
-            _context.ChangeTracker.Clear();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.ChangeTracker.Clear();
             
             // Use the execution strategy pattern instead of manual transactions
-            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            return await context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = await context.Database.BeginTransactionAsync();
                 try
                 {
-                    var freshWorkInstruction = await _context.WorkInstructions
+                    var freshWorkInstruction = await context.WorkInstructions
                         .Include(w => w.Products)
                         .Include(w => w.Nodes)
                         .ThenInclude(partNode => ((PartNode)partNode).Parts)
@@ -238,22 +245,21 @@ public partial class WorkInstructionService : IWorkInstructionService
                     {
                         Title = copiedTitle,
                         Version = freshWorkInstruction.Version,
-                        IsActive = false,
-                        PartsRequired = freshWorkInstruction.PartsRequired
+                        IsActive = false
                     };
 
-                    await _context.WorkInstructions.AddAsync(newWorkInstruction);
-                    await _context.SaveChangesAsync();
+                    await context.WorkInstructions.AddAsync(newWorkInstruction);
+                    await context.SaveChangesAsync();
 
                     foreach (var product in freshWorkInstruction.Products)
                     {
-                        var trackedProduct = await _context.Products
+                        var trackedProduct = await context.Products
                             .AsNoTracking()
                             .FirstOrDefaultAsync(p => p.Id == product.Id);
                         
                         if (trackedProduct != null)
                         {
-                            var attachedProduct = await _context.Products.FindAsync(product.Id);
+                            var attachedProduct = await context.Products.FindAsync(product.Id);
                             if (attachedProduct != null)
                             {
                                 attachedProduct.WorkInstructions?.Add(newWorkInstruction);
@@ -304,7 +310,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                         newWorkInstruction.Nodes.Add(newNode);
                     }
 
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
                     _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
@@ -329,6 +335,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
     
+    /// <inheritdoc />
     public async Task<bool> IsEditable(WorkInstruction workInstruction)
     {
         if (workInstruction is not { Id: > 0 })
@@ -350,22 +357,18 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Information("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
+            Log.Warning("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
             return false;
         }
     }
     
-    public async Task<WorkInstructionImportResult> ImportFromXlsx(List<IBrowserFile> files)
+    /// <inheritdoc />
+    public async Task<WorkInstructionImportResult> ImportFromXlsx(IBrowserFile file)
     {
         try
         {
-            if (files.Count == 0)
-            {
-                Log.Warning("No files provided for import.");
-                return WorkInstructionImportResult.NoFilesProvided();
-            }
-            
-            var file = files.First();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
             using var memoryStream = new MemoryStream();
             await file.OpenReadStream().CopyToAsync(memoryStream);
             memoryStream.Position = 0;
@@ -377,7 +380,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
             
             // Check for pre-existing WorkInstruction that have matching title + version
-            var preexistingWorkInstruction = await _context.WorkInstructions
+            var preexistingWorkInstruction = await context.WorkInstructions
                 .Where(w => w.Title == workInstructionTitle && w.Version == versionString)
                 .AnyAsync();
 
@@ -386,15 +389,13 @@ public partial class WorkInstructionService : IWorkInstructionService
                 Log.Information("Unable to import Work Instruction. Pre-existing work instruction found for Title: {Title}, Version: {Version}. ", workInstructionTitle, versionString);
                 return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
             }
-            var partsRequired = worksheet.Cell(QR_CODE_REQUIRED_CELL).GetValue<bool>();
             
             var workInstruction = new WorkInstruction
             {
                 Title = workInstructionTitle,
                 Version = versionString,
                 Products = [],
-                Nodes = [],
-                PartsRequired = partsRequired
+                Nodes = []
             };
             
             // Retrieve Product and assign relationship
@@ -404,7 +405,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             if (product == null)
             {
                 Log.Information("Product not found. Cannot create Work Instruction");
-                return WorkInstructionImportResult.NoProductFound(files.First().Name, productString);
+                return WorkInstructionImportResult.NoProductFound(file.Name, productString);
             }
             
             workInstruction.Products.Add(product);
@@ -446,27 +447,27 @@ public partial class WorkInstructionService : IWorkInstructionService
                 workInstruction.Nodes.Add(step);
                 stepStartRow++;
             }
-            
-            var fileNames = files.Select(browserFile => browserFile.Name).ToList();
+
+            var fileName = file.Name;
 
             if (await Create(workInstruction))
             {
                 Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
                 // Not invalidating cache here, since it gets invalidated on successful creation
-                return WorkInstructionImportResult.Success(fileNames, workInstruction);
+                return WorkInstructionImportResult.Success(fileName, workInstruction);
             }
 
-            return WorkInstructionImportResult.Failure(fileNames);
+            return WorkInstructionImportResult.Failure(fileName);
         }
         catch (Exception e)
         {
             Log.Error(e, "Failed to import WorkInstruction from uploaded Excel file");
-            var fileNames = files.Select(f => f.Name).ToList();
-            var errorResult = WorkInstructionImportResult.Failure(fileNames);
+            var fileName = file.Name;
+            var errorResult = WorkInstructionImportResult.Failure(fileName);
 
             var error = new ImportError
             {
-                File = fileNames.Count > 0 ? fileNames.First() : "Unknown",
+                File = string.IsNullOrEmpty(fileName) ? fileName : "Unknown",
                 Message = e.Message,
                 ErrorType = e.GetType().Name
             };
@@ -496,6 +497,10 @@ public partial class WorkInstructionService : IWorkInstructionService
                 case InvalidOperationException:
                     error.ErrorType = "Processing Error";
                     error.Message = "Failed to process file data";
+                    break;
+                default:
+                    error.ErrorType = $"Exception Thrown: {e.GetType()}";
+                    error.Message = "Please contact an admin.";
                     break;
             }
 
@@ -576,14 +581,15 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Information("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
+            Log.Warning("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
         }
     }
 
     /// <summary>
     /// Converts rich text from an Excel cell into HTML format.
     /// </summary>
-    /// <param name="cell">The Excel cell containing text to convert.</param>
+    /// <param name="cell">The Excel cell <see cref="IXLCell"/> containing text to convert.</param>
+    /// <param name="workbook">The Excel Workbook <see cref="XLWorkbook"/> containing text to convert.</param>
     /// <returns>
     /// HTML-formatted string representing the cell's content. If the cell contains rich text,
     /// the method generates HTML with appropriate styling to preserve formatting.
@@ -599,101 +605,109 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// All text is HTML-encoded to prevent XSS vulnerabilities.
     /// The result is wrapped in a div element.
     /// </remarks>
-    private string ProcessCellText(IXLCell cell, XLWorkbook workbook)
+    private static string ProcessCellText(IXLCell cell, XLWorkbook workbook)
     {
-        var sb = new StringBuilder();
-        sb.Append("<div>");
-
-        var hasHyperLink = cell.HasHyperlink;
-        string? hyperLinkUri = null;
-        
-        
-        if (hasHyperLink)
+        try
         {
-            var hyperLink = cell.GetHyperlink();
-            hyperLinkUri = hyperLink.ExternalAddress.AbsoluteUri;
-        }
+            var sb = new StringBuilder();
+            sb.Append("<div>");
 
-        if (!cell.HasRichText)
-        {
-            string content = cell.GetString();
-
-            string cellColor = "";
+            var hasHyperLink = cell.HasHyperlink;
+            string? hyperLinkUri = null;
             
-            if (cell.Style.Font.FontColor.ColorType == XLColorType.Color)
-            {
-                var color = cell.Style.Font.FontColor.Color;
-                string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                cellColor = $"color: {hexColor};";
-            } else
-            {
-                var themeColor = workbook.Theme.ResolveThemeColor(cell.Style.Font.FontColor.ThemeColor);
-                cellColor = themeColor.Color.ToString();
-            }
             
             if (hasHyperLink)
             {
-                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\" style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</a>");
+                var hyperLink = cell.GetHyperlink();
+                hyperLinkUri = hyperLink.ExternalAddress.AbsoluteUri;
             }
-            else
-            {
-                sb.Append($"<span style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</span>");
-            }
-        }
-        else
-        {
-            StringBuilder richTextContent = new StringBuilder();
-            foreach (var richText in cell.GetRichText())
-            {
-                var styles = new List<string>();
 
-                if (richText.Bold) styles.Add("font-weight: bold");
-                if (richText.Italic) styles.Add("font-style: italic");
-                if (richText.Underline != XLFontUnderlineValues.None) styles.Add("text-decoration: underline");
-                if (richText.Strikethrough) styles.Add("text-decoration: line-through");
-                if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+            if (!cell.HasRichText)
+            {
+                var content = cell.GetString();
 
-                if (richText.FontColor != XLColor.NoColor && richText.FontColor.HasValue)
+                var cellColor = "";
+                
+                if (cell.Style.Font.FontColor.ColorType == XLColorType.Color)
                 {
-                    if (richText.FontColor.ColorType == XLColorType.Color)
-                    {
-                        var color = richText.FontColor.Color;
-                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                        styles.Add($"color: {hexColor}");
-                    } 
-                    else if (richText.FontColor.ColorType == XLColorType.Theme)
-                    {
-                        var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
-                        var color = themeColor.Color;
-                        string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                        styles.Add($"color: {hexColor}");
-                    }
+                    var color = cell.Style.Font.FontColor.Color;
+                    var hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                    cellColor = $"color: {hexColor};";
+                } else
+                {
+                    var themeColor = workbook.Theme.ResolveThemeColor(cell.Style.Font.FontColor.ThemeColor);
+                    cellColor = themeColor.Color.ToString();
                 }
                 
-                var text = WebUtility.HtmlEncode(richText.Text);
-        
-                if (styles.Any())
+                if (hasHyperLink)
                 {
-                    richTextContent.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                    sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\" style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</a>");
                 }
                 else
                 {
-                    richTextContent.Append(text);
+                    sb.Append($"<span style=\"{cellColor}\">{WebUtility.HtmlEncode(content)}</span>");
                 }
-            }
-
-            if (hasHyperLink)
-            {
-                sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\">{richTextContent}</a>");
             }
             else
             {
-                sb.Append(richTextContent);
-            }
-        }
+                var richTextContent = new StringBuilder();
+                foreach (var richText in cell.GetRichText())
+                {
+                    var styles = new List<string>();
 
-        sb.Append("</div>");
-        return sb.ToString();
+                    if (richText.Bold) styles.Add("font-weight: bold");
+                    if (richText.Italic) styles.Add("font-style: italic");
+                    if (richText.Underline != XLFontUnderlineValues.None) styles.Add("text-decoration: underline");
+                    if (richText.Strikethrough) styles.Add("text-decoration: line-through");
+                    if (richText.FontSize > 0) styles.Add($"font-size: {richText.FontSize}pt");
+
+                    if (richText.FontColor != XLColor.NoColor && richText.FontColor.HasValue)
+                    {
+                        if (richText.FontColor.ColorType == XLColorType.Color)
+                        {
+                            var color = richText.FontColor.Color;
+                            string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                            styles.Add($"color: {hexColor}");
+                        } 
+                        else if (richText.FontColor.ColorType == XLColorType.Theme)
+                        {
+                            var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
+                            var color = themeColor.Color;
+                            string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                            styles.Add($"color: {hexColor}");
+                        }
+                    }
+                    
+                    var text = WebUtility.HtmlEncode(richText.Text);
+            
+                    if (styles.Count > 0)
+                    {
+                        richTextContent.Append($"<span style=\"{string.Join(";", styles)}\">{text}</span>");
+                    }
+                    else
+                    {
+                        richTextContent.Append(text);
+                    }
+                }
+
+                if (hasHyperLink)
+                {
+                    sb.Append($"<a href=\"{hyperLinkUri}\" target=\"_blank\">{richTextContent}</a>");
+                }
+                else
+                {
+                    sb.Append(richTextContent);
+                }
+            }
+
+            sb.Append("</div>");
+            return sb.ToString();
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to ProcessCellText while trying to process a work instruction. Cell Address: {cellAddress}. Exception: {Exception}", cell.Address.ToString(), e.ToString());
+            return string.Empty;
+        }
     }
 
     /// <summary>
@@ -747,7 +761,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception Caught when attempting to use a Regex pattern on a Parts List on Work Instruction Import. Message: {Message}", e.Message);
+            Log.Warning("Exception Caught when attempting to use a Regex pattern on a Parts List on Work Instruction Import. Exception: {Exception}", e.ToString());
             return null;
         }
     }
@@ -761,47 +775,31 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var part = await _context.Parts.FirstOrDefaultAsync(p =>
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var existingPart = await context.Parts.FirstOrDefaultAsync(p =>
                 p.PartName == partToAdd.PartName &&
                 p.PartNumber == partToAdd.PartNumber);
 
-            // If a part does not exist in the database create it here
-            // and return with database generated ID
-            if (part != null)
+
+            if (existingPart != null)
             {
-                return part;
+                // Detach from context so that EF Core does not attempt to re-add it to the database
+                context.Entry(existingPart).State = EntityState.Unchanged;
+                Log.Information("GetOrAddPart: Successfully found pre-existing Part with ID: {ExistingPartID}", existingPart.Id);
+                return existingPart;
             }
             
-            await _context.Parts.AddAsync(partToAdd);
-            await _context.SaveChangesAsync();
+            // If a part does not exist in the database create it here
+            // and return with database generated ID
+            await context.Parts.AddAsync(partToAdd);
+            await context.SaveChangesAsync();
+            Log.Information("Successfully created a new Part with Name: {PartName}, and Number: {PartNumber}", partToAdd.PartName, partToAdd.PartNumber);
             return partToAdd;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception when adding part: {Message}", e.Message);
+            Log.Warning("Exception when adding part: {Exception}", e.ToString());
             return null;
-        }
-    }
-    
-    /// <summary>
-    /// Retrieves all work instructions from the database.
-    /// </summary>
-    /// <returns>List of work instructions.</returns>
-    public List<WorkInstruction> GetAll()
-    {
-        try
-        {
-            var workInstructions = _context.WorkInstructions
-                .Include(w => w.Nodes)
-                .ToList();
-
-            return workInstructions;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAll Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
-            return [];
         }
     }
 
@@ -822,7 +820,8 @@ public partial class WorkInstructionService : IWorkInstructionService
         
         try
         {
-            var workInstructions = await _context.WorkInstructions
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var workInstructions = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .ToListAsync();
@@ -830,11 +829,12 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Cache data for 15 minutes
             _cache.Set(WORK_INSTRUCTION_CACHE_KEY, workInstructions, TimeSpan.FromMinutes(15));
 
+            Log.Information("GetAllAsync Successfully retrieved a List of {WorkInstructionCount} WorkInstructions", workInstructions.Count);
             return workInstructions;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService", e.GetBaseException().ToString());
+            Log.Warning("Exception thrown when attempting to GetAllAsync Work Instructions, in WorkInstructionService. Exception: {Exception}", e.ToString());
             return [];
         }
     }
@@ -849,40 +849,19 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var workInstruction = _context.WorkInstructions
-                .FirstOrDefault(w => w.Title == title);
+            using var context =  _contextFactory.CreateDbContext();
+            var workInstruction = context.WorkInstructions
+                .FirstOrDefault(w => w.Title.ToUpper() == title.ToUpper());
 
+            Log.Information("Successfully retrieved a WorkInstruction by title: {Title}", title);
             return workInstruction;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Warning("Exception: {exceptionType} thrown when attempting to GetByTitle with Title: {title}, in WorkInstructionService", e.GetBaseException().ToString(), title);
             return null;
         }
     }
-    /// <summary>
-    /// Retrieves a work instruction by its ID.
-    /// </summary>
-    /// <param name="id">The ID of the work instruction to retrieve.</param>
-    /// <returns>The work instruction if found, null otherwise.</returns>
-
-    public WorkInstruction? GetById(int id)
-    {
-        try
-        {
-            var workInstruction = _context.WorkInstructions.Find(id);
-
-            return workInstruction;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetById with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
-            return null;
-        }
-    }
-    
     /// <summary>
     /// Asynchronously retrieves a work instruction by its ID, including related nodes and parts.
     /// </summary>
@@ -898,7 +877,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return null;
             }
             
-            var workInstruction = await _context.WorkInstructions
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var workInstruction = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .FirstOrDefaultAsync(w => w.Id == id);
@@ -907,8 +887,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
+            Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
             return null;
         }
     }
@@ -925,18 +904,41 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             // Validate WorkInstruction
             var workInstructionValidator = new WorkInstructionValidator();
-            var validationResult = workInstructionValidator.Validate(workInstruction);
+            var validationResult = await workInstructionValidator.ValidateAsync(workInstruction);
 
             if (!validationResult.IsValid)
             {
                 return false;
             }
 
+            // Having to refetch data since we are using DbContextFactory and the change-tracker is reset on each instantiation
+            foreach (var product in workInstruction.Products.Where(product => product.Id > 0))
+            {
+                context.Attach(product);
+                context.Entry(product).State = EntityState.Unchanged;
+            }
+            
+            foreach (var node in workInstruction.Nodes)
+            {
+                if (node is not PartNode partNode)
+                {
+                    continue;
+                }
+                
+                foreach (var part in partNode.Parts.Where(p => p.Id > 0).ToList())
+                {
+                    // Attach existing part to the context
+                    context.Attach(part);
+                    context.Entry(part).State = EntityState.Unchanged;
+                }
+            }
+            
             workInstruction.IsActive = false;
-            await _context.WorkInstructions.AddAsync(workInstruction);
-            await _context.SaveChangesAsync();
+            await context.WorkInstructions.AddAsync(workInstruction);
+            await context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
@@ -947,8 +949,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to Create a work instruction, in WorkInstructionService", e.GetBaseException().ToString());
+            Log.Warning("Exception thrown when attempting to Create a work instruction, in WorkInstructionService. Exception: {Exception}", e.ToString());
             return false;
         }
     }
@@ -965,7 +966,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     {
         try
         {
-            var workInstruction = await _context.WorkInstructions
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var workInstruction = await context.WorkInstructions
                 .Include(w => w.Nodes)
                 .FirstOrDefaultAsync(w => w.Id == id);
             
@@ -980,10 +982,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             }
             
             // Remove associated Work Instruction Nodes first
-            _context.WorkInstructionNodes.RemoveRange(workInstruction.Nodes);
+            context.WorkInstructionNodes.RemoveRange(workInstruction.Nodes);
 
-            _context.WorkInstructions.Remove(workInstruction);
-            await _context.SaveChangesAsync();
+            context.WorkInstructions.Remove(workInstruction);
+            await context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
@@ -994,8 +996,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to Delete a work instruction with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), id);
+            Log.Warning("Exception thrown when attempting to Delete a work instruction with ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
             return false;
         }
     }
@@ -1016,68 +1017,54 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
         
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
         try
         {
-            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            var existingWorkInstruction = await context.WorkInstructions
+                .Include(w => w.Nodes)
+                .ThenInclude(n => ((PartNode)n).Parts)
+                .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
+
+            if (existingWorkInstruction == null)
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                return false;
+            }
+
+            context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
+
+            // Update any applicable nodes
+            foreach (var newNode in workInstruction.Nodes)
+            {
+                var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+
+                if (existingNode != null)
                 {
-                    var existingWorkInstruction = await _context.WorkInstructions
-                        .Include(w => w.Nodes)
-                        .ThenInclude(n => ((PartNode)n).Parts)
-                        .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
-
-                    if (existingWorkInstruction == null)
+                    if (newNode is PartNode && existingNode is PartNode)
                     {
-                        return false;
+                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
                     }
-
-                    _context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
-
-                    // Update any applicable nodes
-                    foreach (var newNode in workInstruction.Nodes)
+                    else if (newNode is Step && existingNode is Step)
                     {
-                        var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
-
-                        if (existingNode != null)
-                        {
-                            if (newNode is PartNode && existingNode is PartNode)
-                            {
-                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                            }
-                            else if (newNode is Step && existingNode is Step)
-                            {
-                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                            }
-                            else
-                            {
-                                _context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                            }
-                        }
+                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
                     }
-
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-                    Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
-                        workInstruction.Id);
-                    return true;
+                    else
+                    {
+                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
+                    }
                 }
-                catch (Exception e)
-                {
-                    await transaction.RollbackAsync();
-                    Log.Error(e, "Failed to update work instruction {Id}", workInstruction.Id);
-                    return false;
-                }
-            });
+            }
+            
+            await context.SaveChangesAsync();
+
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
+                workInstruction.Id);
+            return true;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Warning("Exception: {exceptionType} thrown when attempting to UpdateWorkInstructionAsync with ID: {id}, in WorkInstructionService", e.GetBaseException().ToString(), workInstruction.Id);
+            Log.Warning("Exception caught when trying to update work instruction {Id}. Exception {Exception}", workInstruction.Id, e.ToString());
             return false;
         }
     }
@@ -1088,6 +1075,5 @@ public partial class WorkInstructionService : IWorkInstructionService
     [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
     [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
-    private static partial System.Text.RegularExpressions.Regex RemoveHTMLRegex();
-
+    private static partial System.Text.RegularExpressions.Regex RemoveHtmlRegex();
 }

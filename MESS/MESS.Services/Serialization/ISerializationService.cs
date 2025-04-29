@@ -2,10 +2,25 @@
 
 namespace MESS.Services.Serialization;
 
+/// <summary>
+/// Interface for serialization services, providing methods and events
+/// for managing serial number logs and product numbers.
+/// </summary>
 public interface ISerializationService
 {
+    /// <summary>
+    /// Event triggered when the current serial number log changes.
+    /// </summary>
     public event Action? CurrentSerialNumberLogChanged;
+
+    /// <summary>
+    /// Event triggered when the current product number changes.
+    /// </summary>
     public event Action? CurrentProductNumberChanged;
+
+    /// <summary>
+    /// Gets or sets the current product number.
+    /// </summary>
     public string? CurrentProductNumber { get; set; }
     /// <summary>
     /// A List of the Current Serial Number Logs for a given Work Instruction Request.

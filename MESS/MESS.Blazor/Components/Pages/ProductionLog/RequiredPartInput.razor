@@ -7,9 +7,17 @@
 </div>
 
 @code {
+    /// <summary>
+    /// The active serial number log.
+    /// This parameter is required.
+    /// </summary>
     [Parameter]
     public required SerialNumberLog ActiveSerialNumberLog { get; set; }
-    
+
+    /// <summary>
+    /// The callback to be invoked after the serial number input is updated.
+    /// This parameter is required.
+    /// </summary>
     [Parameter]
     public required EventCallback<SerialNumberLog> AfterSerialNumberInput { get; set; }
 }

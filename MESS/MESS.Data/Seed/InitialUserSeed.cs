@@ -3,12 +3,17 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MESS.Data.Seed;
-
 /// <summary>
-/// Creates a default user with Technician permissions to account for Database wipes.
+/// Provides methods for seeding initial user data into the database.
 /// </summary>
 public static class InitialUserSeed
 {
+    /// <summary>
+    /// Seeds a default user with Technician permissions if the user does not already exist.
+    /// NOTE: The password of this user should be changed as soon as possible once the application is running.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider used to resolve dependencies.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public static async Task SeedDefaultUserAsync(IServiceProvider serviceProvider)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();

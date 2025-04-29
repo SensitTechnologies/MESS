@@ -5,6 +5,7 @@ using MESS.Data.Seed;
 using MESS.Services.Product;
 using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
+using MESS.Services.LocalCacheManager;
 using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
@@ -18,20 +19,6 @@ using Serilog.Formatting.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<ApplicationContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
-    
-    options.UseSqlServer(connectionString, options =>
-    {
-        options.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null);
-    });
-
-});
-
 builder.Services.AddDbContextFactory<ApplicationContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
@@ -43,7 +30,7 @@ builder.Services.AddDbContextFactory<ApplicationContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(30),
             errorNumbersToAdd: null);
     });
-}, ServiceLifetime.Scoped);
+});
 
 // Adding Separate DbContext for Identity
 builder.Services.AddDbContext<UserContext>(options =>
@@ -132,22 +119,21 @@ Log.Logger = new LoggerConfiguration()
 
 var app = builder.Build();
 
-// Initializes the roles if they are not already created in the database
+// Seed data
 using (var scope = app.Services.CreateScope())
 {
-    var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
-    await roleInit.InitializeAsync();
-}
-
-using (var scope = app.Services.CreateScope())
-{
+    // Initializes the roles if they are not already created in the database
     var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializer>();
     await roleInit.InitializeAsync();
     
     // Seed default technician
     await InitialUserSeed.SeedDefaultUserAsync(scope.ServiceProvider);
     
+    // Seeds default data
+    SeedWorkInstructions.Seed(scope.ServiceProvider);
 }
+
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

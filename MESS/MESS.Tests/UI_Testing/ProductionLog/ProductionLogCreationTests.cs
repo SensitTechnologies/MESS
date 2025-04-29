@@ -11,6 +11,7 @@ using MESS.Services.Serialization;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -104,7 +105,7 @@ public class ProductionLogCreationTests : TestContext
     }
     
     [Fact]
-    public void CannotSubmitWhenNoActiveWorkInstruction()
+    public void Create_OnlyWorkInstructionSelected_DoesNotCreateLog()
     {
         // Arrange
         var authContext = this.AddTestAuthorization();

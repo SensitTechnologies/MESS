@@ -5,36 +5,88 @@ using Serilog;
 namespace MESS.Services.Product;
 
 using Data.Models;
-
+/// <inheritdoc />
 public class ProductService : IProductService
 {
-    private readonly ApplicationContext _context;
-
-    public ProductService(ApplicationContext context)
+    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
+    /// <summary>
+    /// Instantiates a new instance of the <see cref="ProductService"/> class.
+    /// </summary>
+    /// <param name="contextFactory">The application database context used for data operations.</param>
+    public ProductService(IDbContextFactory<ApplicationContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
     
+    /// <inheritdoc />
+    public async Task DuplicateProductAsync(Product productToDuplicate)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var newProduct = new Product
+            {
+                Name = productToDuplicate.Name,
+                IsActive = productToDuplicate.IsActive,
+                WorkInstructions = new List<WorkInstruction>()
+            };
+
+            await context.Products.AddAsync(newProduct);
+            await context.SaveChangesAsync();
+
+            if (productToDuplicate.WorkInstructions != null)
+            {
+                foreach (var workInstruction in productToDuplicate.WorkInstructions)
+                {
+                    var associatedWorkInstruction = await context.WorkInstructions
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(wi => wi.Id == workInstruction.Id);
+                    if (associatedWorkInstruction != null)
+                    {
+                        newProduct.WorkInstructions.Add(associatedWorkInstruction);
+                        associatedWorkInstruction.Products.Add(newProduct);
+                    }
+                    
+                }
+            }
+            
+            await context.SaveChangesAsync();
+            
+            Log.Information("Product: {ProductName} Duplicated Successfully", newProduct.Name);
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+        }
+    }
+
+    /// <inheritdoc />
     public async Task AddProductAsync(Product product)
     {
         try
         {
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            await context.Products.AddAsync(product);
+            await context.SaveChangesAsync();
             
             Log.Information("Product successfully created. ID: {ProductID}", product.Id);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "An error occured while adding product");
+            Log.Warning(ex, "An error occured while adding product");
         }
     }
     
+    /// <inheritdoc />
     public async Task<Product?> FindProductByIdAsync(int id)
     {
         try
         {
-            var product = await _context.Products
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var product = await context.Products
                 .Include(p => p.WorkInstructions)
                 .FirstOrDefaultAsync(p => p.Id == id);
             
@@ -49,11 +101,13 @@ public class ProductService : IProductService
         }
     }
     
+    /// <inheritdoc />
     public async Task<Product?> FindByTitleAsync(string title)
     {
         try
         {
-            var product = await _context.Products
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var product = await context.Products
                 .FirstOrDefaultAsync(p => p.Name == title);
             
             Log.Information("Product found. Title: {ProductTitle}", product?.Name);
@@ -67,11 +121,13 @@ public class ProductService : IProductService
         }
     }
     
+    /// <inheritdoc />
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
         try
         {
-            return await _context.Products
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Products
                 .Include(p => p.WorkInstructions)
                 .ToListAsync();
         }
@@ -82,27 +138,32 @@ public class ProductService : IProductService
         }
     }
 
+    /// <inheritdoc />
     public async Task ModifyProductAsync(Product product)
     {
         try
         {
-            _context.Products.Update(product);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.Products.Update(product);
+            await context.SaveChangesAsync();
         }
         catch (Exception e)
         {
-            Log.Error(e, "Exception occured while modifying product. Product ID: {inputId}", product.Id);
+            Log.Warning(e, "Exception occured while modifying product. Product ID: {inputId}", product.Id);
         }
         
     }
 
+    /// <inheritdoc />
     public async Task RemoveProductAsync(int id)
     {
-        var product = await _context.Products.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var product = await context.Products.FindAsync(id);
         if (product != null)
         {
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            context.Products.Remove(product);
+            await context.SaveChangesAsync();
             
             Log.Information("Product successfully removed. ID: {ProductId}", product.Id);
         }
