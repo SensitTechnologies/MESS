@@ -29,34 +29,34 @@ body.light-mode .table.table-striped tbody tr {
 body.dark-mode .table,
 body.dark-mode .table th,
 body.dark-mode .table td {
-    background-color: #1e1e1e; 
+    background-color: transparent; 
     color: #ffffff; 
-    border: 1px solid #ffd502;
+    border: 1px solid #a8a8a8;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode .table.table-striped tbody tr {
-    background-color: #505050; 
+body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
+    background-color: #151515; 
 }
 
 body.dark-mode .list-group.container {
     color: #ffffff;
     background-color: #1e1e1e;
-    border: 1px solid #ffd502;
+    border: 1px solid rgba(255, 213, 2, 0);
 }
 
 .step {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0);
     color: #000000;
-    border: 1px solid #ffd502;
+    border: 1px solid rgba(255, 213, 2, 0);
     padding: 10px;
     list-style-type: none;
 }
 
 body.dark-mode .step {
-    background-color: #1e1e1e;
+    background-color: rgba(54, 54, 54, 0);
     color: #ffffff;
-    border: 1px solid #ffd502;
+    border: 1px solid rgba(255, 213, 2, 0);
     padding: 10px;
 }
 
@@ -76,6 +76,18 @@ body.dark-mode .step {
     color: #ffffff;
 }
 
+.dark-mode .card {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19);
+}
+
+.dark-mode .form-floating .form-control { 
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19);
+}
+
 .main {
     flex: 1;
 }
@@ -86,19 +98,24 @@ a, .btn-link {
 
 .btn-primary {
     color: #020000;
-    background-color: #fffef8;
+    background-color: #ffd502;
     border-color: #c37f00;
 }
 
 .btn {
-    background-color: #ffffff;
+    background-color: #ffd502;
     color: #020000;
     border: 3px solid #ffd502;
     margin: 5px;
 }
 .btn:hover {
-    background-color: #ffffff;
-    color: #d6a100;
+    background-color: rgba(255, 213, 2, 0);
+    color: #000000;
+}
+
+.dark-mode .btn:hover {
+    background-color: rgba(54, 54, 54, 0);
+    color: #ffffff;
 }
 
 .btn-checkbox {
@@ -111,6 +128,7 @@ a, .btn-link {
     background-color: #020000;
     border: 3px solid red;
 }
+
 
 .btn-success{
     color: #4aff00;
@@ -169,43 +187,6 @@ h1:focus {
     margin-bottom: 4px;
 }
 
-.info-card {
-    background-color: #000000;
-    color: #ffffff;
-    border-radius: 0.5rem;
-    border-left: 4px solid #d6a100;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-    min-width: 200px;
-    transition: all 0.2s ease;
-}
-
-.info-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
-}
-
-.info-card .card-body {
-    padding: 1.25rem;
-}
-
-.info-card .card-title {
-    color: #d6a100;
-    font-size: 1rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
-}
-
-.info-card .card-text {
-    font-weight: 600;
-    color: #212529;
-    margin-bottom: 0;
-}
-
-.product-card { border-left-color: #d6a100; }
-.workstation-card { border-left-color: #d6a100; }
-.operator-card { border-left-color: #d6a100; }
 
 @media (max-width: 768px) {
     .header-container {
@@ -239,6 +220,11 @@ h1:focus {
     color: inherit;
 }
 
+.darkmode .step-node {
+    background-color: #2c2c2c;
+    color: #ffffff;
+}
+
 .toggle-images {
     top: 10px;
     right: 5px;
@@ -251,6 +237,14 @@ h1:focus {
         top: 15px; 
         right: 15px;
     }
+}
+
+.custom-label::after {
+    background-color: transparent !important;
+}
+
+.label::after {
+    background-color: inherit !important;
 }
 
 table tbody tr {

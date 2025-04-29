@@ -1,5 +1,6 @@
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
-@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <div class="toast-container position-fixed top-50 start-50 translate-middle p-3 @(IsVisible ? "d-block" : "d-none")" data-bs-autohide="true" data-bs-delay="5000">
     <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
@@ -17,6 +18,13 @@
         </div>
     </div>
 </div>
+
+@if (saveAlert)
+{
+    <div class="alert alert-success" role="alert">
+        Production log saved successfully.
+    </div>
+}
 
 @code {
     /// <summary>
@@ -49,6 +57,17 @@
     [Parameter]
     public EventCallback<bool> OnSubmit { get; set; }
 
+    private bool saveAlert = false;
+
+    private async Task showSaveAlert()
+    {
+        saveAlert = true;
+        await Task.Delay(3000);
+        saveAlert = false;
+        StateHasChanged();
+    }
+
+
     /// <summary>
     /// Shows the confirmation modal with the specified body and header text.
     /// </summary>
@@ -75,5 +94,6 @@
         Close();
         await OnSubmit.InvokeAsync(true);
         await JsRuntime.InvokeVoidAsync("ScrollToTop");
+        await showSaveAlert();
     }
 }
