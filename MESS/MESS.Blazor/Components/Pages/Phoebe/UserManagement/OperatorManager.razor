@@ -10,6 +10,7 @@
 @inject AuthenticationStateProvider AuthProvider
 @inject IApplicationUserService ApplicationUserService
 @inject UserManager<ApplicationUser> UserManager
+@inject IToastService ToastService
 
 <div class="container justify-content-center">
     <h1 class="mb-4">
@@ -106,10 +107,12 @@
             {
                 user.UserName = user.UserName is {Length: >= 0} ? user.UserName : user.Email;
                 await ApplicationUserService.AddApplicationUser(user);
+                ToastService.ShowSuccess($"Successfully Created User: {user.UserName}");
             }
             else
             {
                 await ApplicationUserService.UpdateApplicationUser(user);
+                ToastService.ShowSuccess($"Successfully Updated User: {user.UserName}");
             }
         }
         catch (Exception e)
