@@ -6,13 +6,6 @@
 
 @if (ActiveWorkInstruction != null && ProductionLog != null)
 {
-    @if (ActiveWorkInstruction.PartsRequired)
-    {
-        <div class="form-floating p-2 mb-2">
-            <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="UpdateSerializationService"></InputText>
-            <label for="productSerialNumber">Product Serial Number:</label>
-        </div>
-    }
     <ul class="step">
         @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
         {
@@ -40,8 +33,13 @@
                     <PartNodeListItem PartNode="workInstructionPart" ProductSerialNumber="@ProductSerialNumber"/>
                 </li>
             }
-            
-            
+        }
+        @if (ActiveWorkInstruction.PartsRequired)
+        {
+            <div class="form-floating p-2 mb-2">
+                <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="UpdateSerializationService"></InputText>
+                <label for="productSerialNumber">Product Serial Number:</label>
+            </div>
         }
     </ul>
 }
