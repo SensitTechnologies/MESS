@@ -16,6 +16,9 @@
         <div class="card-body p-4">
             <AuthorizeView>
                 <Authorized>
+                    <NavLink class="btn btn-outline-secondary text-decoration-none" href="/production-log" Match="NavLinkMatch.All">
+                        Production Log
+                    </NavLink>
                     <div class="text-center mb-3">
                         <p>You are logged in as: <strong>@context.User.Identity?.Name</strong></p>
                         <form method="post" action="/api/auth/logout">
