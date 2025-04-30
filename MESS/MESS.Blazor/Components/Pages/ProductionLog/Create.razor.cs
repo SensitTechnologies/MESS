@@ -36,6 +36,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private List<Product>? Products { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
+    private List<WorkInstruction>? ActiveProductWorkInstructionList { get; set; }
     
     private string? ActiveLineOperator { get; set; }
     private string? ProductSerialNumber { get; set; }
@@ -50,7 +51,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         IsLoading = true;
         ProductionLogEventService.DisableAutoSave();
         await LoadProducts();
-        await LoadWorkInstructions();
         await GetInProgressAsync();
 
         var cachedForm = await LoadCachedForm();
@@ -140,10 +140,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
             await SetSelectedWorkInstructionId(null);
             ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
         }
-        if (WorkInstructions != null)
+        if (ActiveProductWorkInstructionList != null)
         {
-            var workInstruction = WorkInstructions.FirstOrDefault(p => p.Id == workInstructionId);
-
+            var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
+            
             if (workInstruction?.Products == null)
             {
                 return;
@@ -166,18 +166,21 @@ public partial class Create : ComponentBase, IAsyncDisposable
             if (productId < 0)
             {
                 ActiveWorkInstruction = null;
+                ActiveProductWorkInstructionList = null;
                 await SetActiveWorkInstruction(-1);
                 return;
             }
             
             var product = Products.FirstOrDefault(p => p.Id == productId);
 
+            // The chosen product does not have any Work Instructions
             if (product?.WorkInstructions == null)
             {
                 return;
             }
 
             ActiveProduct = product;
+            ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions;
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
             await SetActiveWorkInstruction(-1);
             
@@ -238,20 +241,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         catch (Exception e)
         {
             Log.Error("Error loading products for the Create view: {Message}", e.Message);
-        }
-    }
-    
-    
-    private async Task LoadWorkInstructions()
-    {
-        try
-        {
-            var workInstructionsList = await WorkInstructionService.GetAllAsync();
-            WorkInstructions = workInstructionsList.ToList();
-        }
-        catch (Exception e)
-        {
-            Log.Error("Error loading work instructions: {Message}", e.Message);
         }
     }
     
