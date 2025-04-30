@@ -27,13 +27,13 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
         await page.GotoAsync("https://localhost:7152/production-log");
         
         // Select Product
-        await page.SelectOptionAsync("#product-select", new []{ "G2" });
+        await page.SelectOptionAsync("#product-select", new []{ "ABC Controller" });
         
         // Select Work Instruction
-        await page.SelectOptionAsync("#workInstruction-select", new []{ new SelectOptionValue { Index = 1} });
+        await page.SelectOptionAsync("#workInstruction-select", new []{"ABC Subassembly"});
         
         // Enter Steps
-        await Expect(page.GetByRole(AriaRole.Listitem)).ToHaveCountAsync(14);
+        await Expect(page.GetByRole(AriaRole.Listitem)).ToHaveCountAsync(3);
 
         var rowLocator = page.GetByRole(AriaRole.Listitem);
 
@@ -45,7 +45,7 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
                     Name = "Success"
                 })
             })
-            .Nth(1)
+            .Nth(0)
             .ClickAsync();
         
         await rowLocator
@@ -56,7 +56,7 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
                     Name = "Failure"
                 })
             })
-            .Nth(2)
+            .Nth(1)
             .ClickAsync();
         
         // Input text into notes field
@@ -94,14 +94,14 @@ public class ProductionLogCreationE2ETests : PageTest, IClassFixture<AuthFixture
         
         await page.GotoAsync("https://localhost:7152/production-log");
         
-        await page.Locator("#product-select").SelectOptionAsync(new[] { "1" });
+        await page.Locator("#product-select").SelectOptionAsync(new[] { "ABC Controller" });
         await page.SelectOptionAsync("#workInstruction-select", new []{ new SelectOptionValue { Index = 1} });
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Product Serial Number:" }).ClickAsync();
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Product Serial Number:" }).FillAsync("000");
-        await page.GetByRole(AriaRole.Textbox, new() { Name = "Display Board Main Board 884-" }).ClickAsync();
-        await page.GetByRole(AriaRole.Textbox, new() { Name = "Display Board Main Board 884-" }).FillAsync("000");
-        await page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Test display. Failure Success" }).Locator("label").Nth(1).ClickAsync();
-        await page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Attach display board to main" }).Locator("label").Nth(1).ClickAsync();
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Display Board" }).ClickAsync();
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Display Board" }).FillAsync("000");
+        await page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Test display and Humidity Sensor." }).Locator("label").Nth(1).ClickAsync();
+        await page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Attach the Display" }).Locator("label").Nth(1).ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Submit Log" }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Alert)).ToBeVisibleAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
