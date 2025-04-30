@@ -168,6 +168,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 ActiveWorkInstruction = null;
                 ActiveProductWorkInstructionList = null;
                 await SetActiveWorkInstruction(-1);
+                await LocalCacheManager.SetActiveProductAsync(null);
                 return;
             }
             
@@ -198,6 +199,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return;
         }
         
+        ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions;
+
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
 
