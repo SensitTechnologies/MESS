@@ -673,8 +673,11 @@ public partial class WorkInstructionService : IWorkInstructionService
                         {
                             var themeColor = workbook.Theme.ResolveThemeColor(richText.FontColor.ThemeColor);
                             var color = themeColor.Color;
-                            string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                            styles.Add($"color: {hexColor}");
+                            if (!string.Equals(color.Name, "Black"))
+                            {
+                                string hexColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+                                styles.Add($"color: {hexColor}");
+                            }
                         }
                     }
                     
