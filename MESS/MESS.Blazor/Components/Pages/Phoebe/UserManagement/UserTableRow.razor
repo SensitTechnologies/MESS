@@ -27,8 +27,6 @@
                 <input type="checkbox" checked="@IsTechnician" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="technician@(User.Id)">Technician</label>
 
-                <input type="checkbox" checked="@IsAdmin" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
-                <label class="btn btn-checkbox" for="administrator@(User.Id)">Administrator</label>
             </div>
         </td>
         <td>
