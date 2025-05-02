@@ -581,7 +581,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.Message);
+            Log.Warning("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.ToString());
         }
     }
 

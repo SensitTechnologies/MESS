@@ -126,6 +126,15 @@ public class SerializationService : ISerializationService
             }
             await using var context = await _contextFactory.CreateDbContextAsync();
 
+            foreach (var serialNumberLog in serialNumberLogs)
+            {
+                if (serialNumberLog.Part is not null)
+                {
+                    context.Attach(serialNumberLog.Part);
+                    context.Entry(serialNumberLog.Part).State = EntityState.Unchanged;
+                }
+            }
+
             await context.SerialNumberLogs.AddRangeAsync(serialNumberLogs);
             await context.SaveChangesAsync();
 
