@@ -3,6 +3,9 @@
 @using Mono.TextTemplating
 @using MESS.Blazor.Components.Carousel
 @inject IProductionLogEventService ProductionLogEventService
+@inject IJSRuntime JS 
+
+<script src="cursorfocus.js"></script>
 
 <div class="row">
     @* This stores the primary content i.e. the content that is always shown to the operator. The 'Name' field is always shown. *@
@@ -67,10 +70,11 @@
 </div>
 
 
-<div class="d-inline-flex">
+<div class="optional-notes-container">
     @if (ShowOptionalNotesField)
     {
-        <InputTextArea data-testid="optional-notes" class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
+        <InputTextArea data-testid="optional-notes" class="form-control mx-2" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
+        JS.InvokeVoidAsync("focusNotesField");
     }
 </div>
 
@@ -78,16 +82,19 @@
 
 
 @code {
+
     /// <summary>
     /// Represents the step data for the current work instruction.
     /// </summary>
     [Parameter]
-    public required Step Step { get; set;}
+    public required Step Step { get; set; }
+
     /// <summary>
     /// Represents the production log step associated with the current step.
     /// </summary>
     [Parameter]
-    public required ProductionLogStep LogStep { get; set;}
+    public required ProductionLogStep LogStep { get; set; }
+
     /// <summary>
     /// Event callback triggered when the step is completed.
     /// The tuple contains the production log step and a nullable boolean indicating success or failure.
@@ -101,14 +108,16 @@
         if (!LogStep.Success.HasValue)
         {
             SetSelectedButton("");
-        } else if (LogStep.Success.Value)
+        }
+        else if (LogStep.Success.Value)
         {
             SetSelectedButton("Success");
-        } else if (!LogStep.Success.Value)
+        }
+        else if (!LogStep.Success.Value)
         {
             SetSelectedButton("Failure");
         }
-        
+
         SetOptionalNotes();
     }
 
@@ -119,40 +128,41 @@
         ShowDetails = !ShowDetails;
         StateHasChanged();
     }
-    
+
     private List<string> GetCombinedMedia()
     {
         var combinedMedia = new List<string>();
-    
+
         // Add primary media if available
         if (Step.PrimaryMedia.Count > 0)
         {
             combinedMedia.AddRange(Step.PrimaryMedia);
         }
-    
+
         // Add secondary media if available
         if (Step.SecondaryMedia.Count > 0)
         {
             combinedMedia.AddRange(Step.SecondaryMedia);
         }
-    
+
         return combinedMedia;
     }
-    
+
     private bool ShowOptionalNotesField { get; set; } = false;
-    
+
     private string? SelectedButton { get; set; } = "";
 
     private void SetSelectedButton(string buttonName)
     {
         SelectedButton = SelectedButton == buttonName ? null : buttonName;
     }
-    
+
     private void SetOptionalNotes()
     {
         if (!string.IsNullOrWhiteSpace(LogStep.Notes) || (LogStep.Success.HasValue && !LogStep.Success.Value))
         {
             ShowOptionalNotesField = true;
+            
         }
     }
 
@@ -162,7 +172,7 @@
         {
             result = null;
         }
-        
+
         if (!result.HasValue)
         {
             ShowOptionalNotesField = false;
@@ -170,7 +180,7 @@
             SetSelectedButton("");
             return;
         }
-        
+
         if (!result.Value)
         {
             ShowOptionalNotesField = !ShowOptionalNotesField;
@@ -184,4 +194,5 @@
 
         SetSelectedButton(result.Value ? "Success" : "Failure");
     }
+
 }

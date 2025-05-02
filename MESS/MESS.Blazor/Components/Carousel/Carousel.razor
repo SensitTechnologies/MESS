@@ -1,45 +1,49 @@
 @using Serilog
 @inject IJSRuntime JSRuntime
 
-<div id="@Id" class="carousel slide @CssClass" data-bs-ride="@(AutoPlay ? "carousel" : "false")">
-    @if (ShowIndicators)
-    {
-        <div class="carousel-indicators">
+
+    <div id="@Id" class="carousel slide @CssClass" data-bs-ride="@(AutoPlay ? "carousel" : "false")">
+        @if (ShowIndicators)
+        {
+            <div class="carousel-indicators">
+                @for (int i = 0; i < Images.Count; i++)
+                {
+                    var index = i;
+                    <button type="button" data-bs-target="#@Id" data-bs-slide-to="@i" class="@(ActiveIndex == i ? "active" : "")"
+                            aria-current="@(ActiveIndex == i ? "true" : "false")" aria-label="Slide @(i + 1)"
+                            @onclick="() => SetActiveIndex(index)"></button>
+                }
+            </div>
+        }
+
+        <div class="carousel-inner">
             @for (int i = 0; i < Images.Count; i++)
             {
-                var index = i;
-                <button type="button" data-bs-target="#@Id" data-bs-slide-to="@i" class="@(ActiveIndex == i ? "active" : "")" 
-                        aria-current="@(ActiveIndex == i ? "true" : "false")" aria-label="Slide @(i+1)"
-                        @onclick="() => SetActiveIndex(index)"></button>
+                <CarouselItem
+                    ImagePath="@Images[i]"
+                    IsActive="i == ActiveIndex"
+                    AltText="@(GetAltText(i))"
+                    Caption="@(i < Captions.Count ? Captions[i] : "")"
+                    Title="@(i < Titles.Count ? Titles[i] : "")"
+                    ImageStyle="@ImageStyle"/>
             }
         </div>
-    }
 
-    <div class="carousel-inner">
-        @for (int i = 0; i < Images.Count; i++)
+        @if (ShowControls)
         {
-            <CarouselItem 
-                ImagePath="@Images[i]" 
-                IsActive="i == ActiveIndex"
-                AltText="@(GetAltText(i))"
-                Caption="@(i < Captions.Count ? Captions[i] : "")"
-                Title="@(i < Titles.Count ? Titles[i] : "")"
-                ImageStyle="@ImageStyle" />
+            <button class="carousel-control-prev" type="button" data-bs-target="#@Id" data-bs-slide="prev" @onclick="PreviousSlide">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#@Id" data-bs-slide="next" @onclick="NextSlide">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
         }
     </div>
 
-    @if (ShowControls)
-    {
-        <button class="carousel-control-prev" type="button" data-bs-target="#@Id" data-bs-slide="prev" @onclick="PreviousSlide">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#@Id" data-bs-slide="next" @onclick="NextSlide">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-        </button>
-    }
-</div>
+
+
 
 @code {
     /// <summary>
