@@ -3,6 +3,7 @@
 @using Mono.TextTemplating
 @using MESS.Blazor.Components.Carousel
 @inject IProductionLogEventService ProductionLogEventService
+@inject IJSRuntime JsRuntime
 
 <div class="row">
     @* This stores the primary content i.e. the content that is always shown to the operator. The 'Name' field is always shown. *@
@@ -26,17 +27,21 @@
         </div>
     </div>
     
+    
     <div class="col col-md-6 secondary-content">
-        <div class="card">
-            <div class="card-body">
-                <Carousel
-                    Images="@GetCombinedMedia()"
-                    AutoPlay="false"
-                    Interval="3000"
-                    ImageStyle="height: 400px; object-fit: cover;" />
-            </div>
+        @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <Carousel
+                        Images="@GetCombinedMedia()"
+                        AutoPlay="false"
+                        Interval="3000"
+                        ImageStyle="height: 400px; object-fit: cover;"/>
+                </div>
 
-        </div>
+            </div>
+        }
     </div>
     
 </div>
@@ -68,10 +73,7 @@
 
 
 <div class="d-inline-flex">
-    @if (ShowOptionalNotesField)
-    {
-        <InputTextArea data-testid="optional-notes" class="form-control mx-2 custom-textarea" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
-    }
+    <FluentTextArea @ref="_failureNoteTextArea" data-testid="optional-notes" class="@(ShowOptionalNotesField ? "": "d-none" )" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
 </div>
 
 
@@ -94,6 +96,8 @@
     /// </summary>
     [Parameter]
     public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+
+    private FluentTextArea? _failureNoteTextArea;
 
     /// <inheritdoc />
     protected override void OnInitialized()
@@ -175,6 +179,11 @@
         {
             ShowOptionalNotesField = !ShowOptionalNotesField;
             await OnStepCompleted.InvokeAsync((LogStep, false));
+            if (ShowOptionalNotesField && _failureNoteTextArea?.Element != null)
+            {
+                await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
+                // _failureNoteTextArea.FocusAsync();
+            }
         }
         else
         {

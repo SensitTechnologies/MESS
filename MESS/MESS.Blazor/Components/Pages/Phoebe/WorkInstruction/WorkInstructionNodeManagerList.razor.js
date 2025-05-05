@@ -1,46 +1,44 @@
-function initializeDragScrolling() {
-    let scrollSpeed = 0;
-    let animationFrame;
+const SCROLL_SPEED = 50;
+const SCROLL_THRESHOLD = 300;
 
-    function smoothScroll() {
-        if (scrollSpeed !== 0) {
-            window.scrollBy(0, scrollSpeed);
-            animationFrame = requestAnimationFrame(smoothScroll);
-        }
+class DragScroller {
+    constructor() {
+        this.scrollSpeed = 0;
+        this.animationFrame = null;
+        this.registerEvents();
+    }
+    
+    registerEvents() {
+        document.addEventListener('drag', this.handleDragOver.bind(this));
+        document.addEventListener('drop', this.resetScroll.bind(this));
     }
 
-    document.addEventListener('dragover', (e) => {
-        const scrollThreshold = 200;
-        const topEdge = e.clientY < scrollThreshold;
-        const bottomEdge = (window.innerHeight - e.clientY) < scrollThreshold;
-
-        if (topEdge) {
-            scrollSpeed = -10;
-        } else if (bottomEdge) {
-            scrollSpeed = 10;
-        } else {
-            scrollSpeed = 0;
+    handleDragOver(e) {
+        const isNearTopEdge = e.clientY < SCROLL_THRESHOLD;
+        const isNearBottomEdge = (window.innerHeight - e.clientY) < SCROLL_THRESHOLD;
+        
+        if (isNearTopEdge) {
+            this.scrollSpeed = -SCROLL_SPEED;
+        } else if (isNearBottomEdge) {
+            this.scrollSpeed = SCROLL_SPEED;
         }
+        window.scrollBy({
+            top: this.scrollSpeed,
+            behavior: 'smooth',
+        });
+    }
 
-        if (!animationFrame) {
-            animationFrame = requestAnimationFrame(smoothScroll);
+    resetScroll() {
+        this.scrollSpeed = 0;
+
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
         }
-    });
+    }
+}
 
-    document.addEventListener('dragleave', () => {
-        scrollSpeed = 0;
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
-    })
-    
-    document.addEventListener('drop', () => {
-        scrollSpeed = 0;
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
-    })
-    
-    // Allow for user to scroll whilst dragging
-    document.addEventListener('wheel', (e) => {
-        window.scrollBy(0, e.deltaY);
-    }, { passive: true });
+
+function initializeDragScrolling() {
+    new DragScroller();
 }

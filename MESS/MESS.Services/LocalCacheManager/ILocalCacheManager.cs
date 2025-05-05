@@ -26,7 +26,7 @@ public interface ILocalCacheManager
     /// Sets the active product in the cache.
     /// </summary>
     /// <param name="product">The <see cref="Product"/> object to set as active.</param>
-    public Task SetActiveProductAsync(Product product);
+    public Task SetActiveProductAsync(Product? product);
     /// <summary>
     /// 
     /// </summary>

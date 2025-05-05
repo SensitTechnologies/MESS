@@ -92,10 +92,15 @@ public class LocalCacheManager : ILocalCacheManager
     }
 
     /// <inheritdoc />
-    public async Task SetActiveProductAsync(Product product)
+    public async Task SetActiveProductAsync(Product? product)
     {
         try
         {
+            if (product is null)
+            {
+                await _protectedLocalStorage.DeleteAsync(ACTIVE_PRODUCT_KEY);
+                return;
+            }
             // map to DTO
             var productDto = new CacheDTO
             {
