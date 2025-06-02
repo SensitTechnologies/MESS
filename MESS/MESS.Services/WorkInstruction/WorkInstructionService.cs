@@ -42,6 +42,9 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
 
+    // Currently, this is set to 50MB
+    private const int SPREADSHEET_SIZE_LIMIT = 50 * 1024 * 1024;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
     /// </summary>
@@ -370,7 +373,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             using var memoryStream = new MemoryStream();
-            await file.OpenReadStream().CopyToAsync(memoryStream);
+            await file.OpenReadStream(maxAllowedSize: SPREADSHEET_SIZE_LIMIT).CopyToAsync(memoryStream);
             memoryStream.Position = 0;
 
             using var workbook = new XLWorkbook(memoryStream);
@@ -525,6 +528,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </exception>
     private async Task ProcessStepMedia(IXLWorksheet worksheet, Step step, int row)
     {
+        Console.WriteLine("Entering Media Processing...");
         try
         {
             var primaryPictures = worksheet.Pictures
@@ -558,7 +562,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                     var imageBytes = ms.ToArray();
                     await File.WriteAllBytesAsync(imagePath, imageBytes);
                 }
-                
+
+                Console.WriteLine("Added Primary Picture");
                 step.PrimaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
             }
             
@@ -576,6 +581,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     await File.WriteAllBytesAsync(imagePath, imageBytes);
                 }
                 
+                Console.WriteLine("Added Secondary Picture");
                 step.SecondaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
             }
         }

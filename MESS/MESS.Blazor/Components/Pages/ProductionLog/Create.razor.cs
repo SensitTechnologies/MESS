@@ -181,7 +181,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             }
 
             ActiveProduct = product;
-            ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions;
+            ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions.Where(w => w.IsActive).ToList();
             ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
             await SetActiveWorkInstruction(-1);
             
@@ -199,8 +199,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return;
         }
         
-        ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions;
-
+        ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions?
+            .Where(w => w.IsActive)
+            .ToList() ?? new List<WorkInstruction>();
+        
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
 
