@@ -14,11 +14,11 @@ public interface IApplicationUserService
     /// </summary>
     public Task SignOutAsync();
     /// <summary>
-    /// Signs in a user by email.
+    /// Signs in a user by username.
     /// </summary>
-    /// <param name="email">The email of the user.</param>
+    /// <param name="username">The username of the user.</param>
     /// <returns>True if sign-in was successful, otherwise false.</returns>
-    public Task<bool> SignInAsync(string email);
+    public Task<bool> SignInAsync(string username);
     /// <summary>
     /// Gets a list of users by role.
     /// </summary>
