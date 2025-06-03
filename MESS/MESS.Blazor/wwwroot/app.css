@@ -255,3 +255,25 @@ table tbody tr {
 td {
     white-space: nowrap;
 }
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    background-color: rgba(0, 0, 0, 0.6); /* Darker background for contrast */
+    border-radius: 50%;                  /* Make them circular */
+    width: 3rem;
+    height: 3rem;
+    background-size: 60% 60%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    opacity: 1;                /* Make them fully visible */
+    transition: opacity 0.3s;
+}
+
+.carousel-control-prev:hover,
+.carousel-control-next:hover {
+    opacity: 0.8;              /* Slight dimming on hover for interactivity */
+}
