@@ -66,7 +66,7 @@
             }
             else
             {
-                ToastService.ShowError($"Unable to save Work Instruction: {instruction.Title}. Please check the log file for more information.");
+                ToastService.ShowError($"Unable to save Work Instruction: {instruction.Title}. Please ensure that both the Title and Version are unique.");
             }
         }
         catch (Exception e)

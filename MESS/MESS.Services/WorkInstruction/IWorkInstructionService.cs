@@ -72,6 +72,17 @@ public interface IWorkInstructionService
     /// Images found in the Excel file are extracted and saved to the web root directory.
     /// </remarks>
     public Task<WorkInstructionImportResult> ImportFromXlsx(IBrowserFile file);
+
+    /// <summary>
+    /// Determines whether a given WorkInstruction is unique based on its properties and contents.
+    /// </summary>
+    /// <param name="workInstruction">The WorkInstruction to check for uniqueness.</param>
+    /// <returns>
+    /// True if the WorkInstruction is unique by counting the instances in the database. If there
+    /// are 0 or 1 instances of the Title, Version combination it is unique; otherwise, false.
+    /// </returns>
+    public Task<bool> IsUnique(WorkInstruction workInstruction);
+
     /// <summary>
     /// Retrieves a List of WorkInstruction objects asynchronously
     /// </summary>

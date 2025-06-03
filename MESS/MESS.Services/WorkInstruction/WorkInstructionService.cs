@@ -512,6 +512,38 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> IsUnique(WorkInstruction workInstruction)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var title = workInstruction.Title;
+            var version = workInstruction.Version;
+
+            var isUniqueCount = await context.WorkInstructions
+                .CountAsync(w => w.Title == title && w.Version == version);
+
+            if (isUniqueCount >= 1)
+            {
+                return false;
+            }
+            
+            if (isUniqueCount is 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Unable to determine if WorkInstruction with Title: {Title}, and Version: {Version} is unique. Exception thrown: {Exception}", workInstruction.Title, workInstruction.Version, e.ToString());
+            return false;
+        }
+    }
+
     /// <summary>
     /// Processes media (images) associated with a step in a work instruction from an Excel worksheet.
     /// </summary>
@@ -1041,7 +1073,27 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 return false;
             }
-
+            
+            // Ensure updated Title + Version combination is unique. If count is > 0 it is not unique
+            if (string.Compare(existingWorkInstruction.Title, workInstruction.Title, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                var isUnique = await IsUnique(workInstruction);
+                if (!isUnique)
+                {
+                    return false;
+                }
+            }
+            
+            // If version is different ensure uniqueness
+            if (string.Compare(existingWorkInstruction.Version, workInstruction.Version, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                var isUnique = await IsUnique(workInstruction);
+                if (!isUnique)
+                {
+                    return false;
+                }
+            }
+            
             context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
 
             // Update Product Relationships
