@@ -97,9 +97,10 @@
     /// <summary>
     /// CSS styling to apply to the images within the carousel.
     /// Default styling sets a fixed height and object-fit: cover.
+    /// At the moment, this is overidden by styling in StepNodeListItem.razor
     /// </summary>
     [Parameter]
-    public string ImageStyle { get; set; } = "height: 300px; object-fit: cover;";
+    public string ImageStyle { get; set; } = "height: 300px; object-fit: contain;";
 
     /// <summary>
     /// Unique identifier for the carousel DOM element.
