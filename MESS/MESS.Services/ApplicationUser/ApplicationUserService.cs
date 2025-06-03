@@ -40,18 +40,18 @@ public class ApplicationUserService : IApplicationUserService
     }
     
     /// <inheritdoc />
-    public async Task<bool> SignInAsync(string email)
+    public async Task<bool> SignInAsync(string username)
     {
         try
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByNameAsync(username);
 
             if (user != null) await _signInManager.SignInAsync(user, isPersistent: false);
             return true;
         }
         catch (Exception e)
         {
-            Log.Warning("Unable to SignInAsync with Email: {email} in ApplicationUserService: Exception thrown: {Exception}", email, e.ToString());
+            Log.Warning("Unable to SignInAsync with UserName: {username} in ApplicationUserService: Exception thrown: {Exception}", username, e.ToString());
             return false;
         }
     }
