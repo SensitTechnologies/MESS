@@ -42,8 +42,8 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
 
-    // Currently, this is set to 50MB
-    private const int SPREADSHEET_SIZE_LIMIT = 50 * 1024 * 1024;
+    // Currently, this is set to 500MB
+    private const int SPREADSHEET_SIZE_LIMIT = 500 * 1024 * 1024;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
