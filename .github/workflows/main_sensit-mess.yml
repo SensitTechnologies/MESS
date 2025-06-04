@@ -37,8 +37,6 @@ jobs:
         with:
           name: .net-app
           path: ${{ env.DOTNET_ROOT }}/myapp
-      - name: List deployment directory
-        run: ls ${{ env.DOTNET_ROOT }}/myapp
         
   deploy:
       runs-on: ubuntu-latest
