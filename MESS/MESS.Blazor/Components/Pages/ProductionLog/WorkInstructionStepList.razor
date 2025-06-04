@@ -25,7 +25,9 @@
                     ProductionLog.LogSteps.Add(logStep);
                 }
                 <li class="mb-3">
-                    <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep"/>
+                    <div id="step-@workInstructionStep.Position">
+                        <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep" />
+                    </div>
                 </li>
             }
             else if (workInstructionNode is PartNode workInstructionPart && workInstructionNode.NodeType == WorkInstructionNodeType.Part)

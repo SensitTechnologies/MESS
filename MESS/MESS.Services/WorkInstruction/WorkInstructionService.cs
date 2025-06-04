@@ -560,7 +560,6 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </exception>
     private async Task ProcessStepMedia(IXLWorksheet worksheet, Step step, int row)
     {
-        Console.WriteLine("Entering Media Processing...");
         try
         {
             var primaryPictures = worksheet.Pictures
@@ -594,8 +593,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     var imageBytes = ms.ToArray();
                     await File.WriteAllBytesAsync(imagePath, imageBytes);
                 }
-
-                Console.WriteLine("Added Primary Picture");
+                
                 step.PrimaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
             }
             
@@ -613,7 +611,6 @@ public partial class WorkInstructionService : IWorkInstructionService
                     await File.WriteAllBytesAsync(imagePath, imageBytes);
                 }
                 
-                Console.WriteLine("Added Secondary Picture");
                 step.SecondaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
             }
         }
