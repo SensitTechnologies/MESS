@@ -409,6 +409,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private async Task OnStepCompleted(ProductionLogStep step, bool? success)
     {
+        if (ActiveWorkInstruction == null)
+            return;
+        
         var currentTime = DateTimeOffset.UtcNow;
         
         // If success is null, that means the button was unselected thus set time to default
@@ -418,6 +421,45 @@ public partial class Create : ComponentBase, IAsyncDisposable
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
+        
+        // Find the current node that corresponds to this step
+        var currentNode = ActiveWorkInstruction.Nodes.FirstOrDefault(n => n.Id == step.WorkInstructionStepId);
+
+        if (currentNode != null)
+        {
+            // Sort nodes by Position to maintain the correct sequence
+            var orderedNodes = ActiveWorkInstruction.Nodes
+                .OrderBy(n => n.Position)
+                .ToList();
+
+            var currentIndex = orderedNodes.FindIndex(n => n.Id == currentNode.Id);
+
+            if (currentIndex >= 0 && currentIndex < orderedNodes.Count - 1)
+            {
+                var nextStep = orderedNodes[currentIndex + 1];
+
+                // If a step completed successfully, scroll to the next work instruction node
+                if (success == true)
+                {
+                    string elementId = $"step-{nextStep.Position}";
+
+                    if (module != null)
+                    {
+                        await module.InvokeVoidAsync("scrollToStep", elementId);
+                    }
+                } 
+            }
+            
+            // Scroll to the submit button if it's the last step and it was successful
+            if (currentIndex == orderedNodes.Count - 1 && success == true)
+            {
+                if (module != null)
+                {
+                    await module.InvokeVoidAsync("scrollToStep", "submit-button");
+                }
+            }
+        }
+
     }
     
     /// <summary>
