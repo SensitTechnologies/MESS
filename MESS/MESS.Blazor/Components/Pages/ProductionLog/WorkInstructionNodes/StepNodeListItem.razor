@@ -33,11 +33,22 @@
         {
             <div class="card">
                 <div class="card-body">
-                    <Carousel
-                        Images="@GetCombinedMedia()"
-                        AutoPlay="false"
-                        Interval="3000"
-                        ImageStyle= "max-height: 500px; object-fit: contain;"/>
+                    @if (ShowDetails && Step.SecondaryMedia.Count > 0)
+                    {
+                        <Carousel
+                            Images="@Step.SecondaryMedia"
+                            AutoPlay="false"
+                            Interval="3000"
+                            ImageStyle="height: 500px; object-fit: contain;" />
+                    }
+                    else if (!ShowDetails && Step.PrimaryMedia.Count > 0)
+                    {
+                        <Carousel
+                            Images="@Step.PrimaryMedia"
+                            AutoPlay="false"
+                            Interval="3000"
+                            ImageStyle="height: 500px; object-fit: contain;" />
+                    }
                 </div>
 
             </div>
@@ -122,25 +133,6 @@
     {
         ShowDetails = !ShowDetails;
         StateHasChanged();
-    }
-    
-    private List<string> GetCombinedMedia()
-    {
-        var combinedMedia = new List<string>();
-    
-        // Add primary media if available
-        if (Step.PrimaryMedia.Count > 0)
-        {
-            combinedMedia.AddRange(Step.PrimaryMedia);
-        }
-    
-        // Add secondary media if available
-        if (Step.SecondaryMedia.Count > 0)
-        {
-            combinedMedia.AddRange(Step.SecondaryMedia);
-        }
-    
-        return combinedMedia;
     }
     
     private bool ShowOptionalNotesField { get; set; } = false;
