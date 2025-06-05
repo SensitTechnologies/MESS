@@ -1,7 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
-@inject AuthenticationStateProvider AuthProvider
-@inject IJSRuntime JS
 
 <HeadContent>
     <script src="darkmode.js"></script>
@@ -11,14 +9,16 @@
     <main>
         <article class="content px-4 mx-auto">
             <AuthorizeView Roles="Technician">
-                <NavLink class="btn btn-outline-secondary text-decoration-none" href="/Dashboard" Match="NavLinkMatch.All">
+                <NavLink class="btn btn-outline-secondary text-decoration-none" href="/WorkInstructionManager" Match="NavLinkMatch.All">
                     Phoebe
                 </NavLink>
                 <NavLink class="btn btn-outline-secondary text-decoration-none" href="/production-log" Match="NavLinkMatch.All">
                     Production Log
                 </NavLink>
             </AuthorizeView>
-            @Body
+            <div class="mt-sm-3">
+                @Body
+            </div>
             <DarkModeButton></DarkModeButton>
         </article>
     </main>
