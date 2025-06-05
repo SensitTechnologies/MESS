@@ -1,5 +1,7 @@
 ﻿@page "/users"
+@layout PhoebeLayout
 @attribute [Authorize(Roles = "Technician")]
+@using MESS.Blazor.Components.Layout
 @using MESS.Data.DTO
 @using MESS.Data.Models
 @using MESS.Services.ApplicationUser
