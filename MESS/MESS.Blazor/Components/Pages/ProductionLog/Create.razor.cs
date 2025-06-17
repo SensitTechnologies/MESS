@@ -130,7 +130,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
 
         if (ProductionLog.LogSteps.All(step => 
-                step.Attempts.Any(a => a.Success == true)))
+                step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue))) 
         {
             WorkInstructionStatus = Status.Completed;
         }
