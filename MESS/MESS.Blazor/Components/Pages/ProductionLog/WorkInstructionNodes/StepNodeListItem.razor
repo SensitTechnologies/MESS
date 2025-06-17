@@ -89,7 +89,7 @@
         data-testid="optional-notes" 
         class="@(ShowOptionalNotesField ? "" : "d-none")" 
         @bind-Value="_currentAttemptNotes"
-        @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" />
+        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
 </div>
 
 
@@ -116,6 +116,8 @@
     private FluentTextArea? _failureNoteTextArea;
     
     private string _currentAttemptNotes = "";
+    
+    private ProductionLogStepAttempt? _pendingFailureAttempt;
     
     private bool IsStepSuccessful(ProductionLogStep step) =>
         step.LatestAttempt?.Success == true;
@@ -172,37 +174,73 @@
 
     private async Task HandleButtonPress(bool? result)
     {
-        var attempt = new ProductionLogStepAttempt()
-        {
-            Success = result ?? false,
-            SubmitTime = DateTimeOffset.UtcNow,
-            Notes = (result.HasValue && !result.Value) ? _currentAttemptNotes : ""
-
-        };
-
-        LogStep.Attempts.Add(attempt);
-    
-        // Clear the temporary notes field
-        _currentAttemptNotes = string.Empty;
-    
-        await OnStepCompleted.InvokeAsync((LogStep, result));
-        SetSelectedButton(result.HasValue ? (result.Value ? "Success" : "Failure") : "");
-    
         if (!result.HasValue)
         {
             ShowOptionalNotesField = false;
+            _pendingFailureAttempt = null;
+            _currentAttemptNotes = string.Empty;
+            SetSelectedButton("");
+            return;
         }
-        else if (!result.Value)
+
+        if (result.Value) // SUCCESS
         {
-            ShowOptionalNotesField = !ShowOptionalNotesField;
-            if (ShowOptionalNotesField && _failureNoteTextArea?.Element != null)
+            var attempt = new ProductionLogStepAttempt
+            {
+                Success = true,
+                SubmitTime = DateTimeOffset.UtcNow,
+                Notes = ""
+            };
+
+            LogStep.Attempts.Add(attempt);
+            _pendingFailureAttempt = null;
+            _currentAttemptNotes = string.Empty;
+            ShowOptionalNotesField = false;
+
+            await OnStepCompleted.InvokeAsync((LogStep, true));
+            SetSelectedButton("Success");
+        }
+        else // FAILURE
+        {
+            // If there's already a pending failure, finalize it by setting its notes
+            if (_pendingFailureAttempt != null)
+            {
+                _pendingFailureAttempt.Notes = _currentAttemptNotes;
+                _pendingFailureAttempt = null;
+            }
+
+            // Clear input for the next note
+            _currentAttemptNotes = string.Empty;
+
+            // Create new pending attempt
+            _pendingFailureAttempt = new ProductionLogStepAttempt
+            {
+                Success = false,
+                SubmitTime = DateTimeOffset.UtcNow,
+                Notes = ""
+            };
+            LogStep.Attempts.Add(_pendingFailureAttempt);
+
+            ShowOptionalNotesField = true;
+            SetSelectedButton("Failure");
+
+            await OnStepCompleted.InvokeAsync((LogStep, false));
+            StateHasChanged();
+            await Task.Yield();
+
+            if (_failureNoteTextArea?.Element != null)
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
             }
         }
-        else
+    }
+    
+    private async Task HandleNoteChangedAsync()
+    {
+        if (_pendingFailureAttempt != null)
         {
-            ShowOptionalNotesField = false;
+            _pendingFailureAttempt.Notes = _currentAttemptNotes;
+            await ProductionLogEventService.ChangeMadeToProductionLog();
         }
     }
 }
