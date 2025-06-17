@@ -106,21 +106,20 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
         {
             WorkInstructionStatus = Status.InProgress;
+
             ProductionLog = new ProductionLog
             {
                 Id = cachedFormData.ProductionLogId,
                 LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
                 {
                     WorkInstructionStepId = step.WorkInstructionStepId,
-                    Attempts = new List<ProductionLogStepAttempt>
+                    ProductionLogId = step.ProductionLogId,
+                    Attempts = step.Attempts.Select(a => new ProductionLogStepAttempt
                     {
-                        new ProductionLogStepAttempt
-                        {
-                            Success = step.Attempts.Last().Success,
-                            Notes = step.Attempts.Last().Notes ?? "",
-                            SubmitTime = step.Attempts.Last().SubmitTime
-                        }
-                    }
+                        Success = a.Success,
+                        Notes = a.Notes ?? "",
+                        SubmitTime = a.SubmitTime
+                    }).ToList()
                 }).ToList()
             };
         }
@@ -129,8 +128,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return false;
         }
 
-        if (ProductionLog.LogSteps.All(step => 
-                step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue))) 
+        if (ProductionLog.LogSteps.All(step =>
+                step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)))
         {
             WorkInstructionStatus = Status.Completed;
         }
