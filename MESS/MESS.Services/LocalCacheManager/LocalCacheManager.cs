@@ -51,21 +51,28 @@ public class LocalCacheManager : ILocalCacheManager
     private static ProductionLogFormDTO MapProductionLogToDto(ProductionLog productionLog)
     {
         var productionLogFormDto = new ProductionLogFormDTO();
+    
         foreach (var step in productionLog.LogSteps)
         {
-            productionLogFormDto.LogSteps.Add(new ProductionLogStepDTO
+            var stepDto = new ProductionLogStepDTO
             {
                 WorkInstructionStepId = step.WorkInstructionStepId,
                 ProductionLogId = step.ProductionLogId,
-                Success = step.Success,
-                SubmitTime = step.SubmitTime,
-                Notes = step.Notes,
-                ShowNotes = step.Notes.Length > 0,
-            });
+                ShowNotes = step.Attempts.Any(a => !string.IsNullOrEmpty(a.Notes))
+            };
+
+            // Map all attempts
+            stepDto.Attempts = step.Attempts.Select(a => new ProductionLogStepAttemptDTO
+            {
+                Success = a.Success,
+                SubmitTime = a.SubmitTime,
+                Notes = a.Notes,
+            }).ToList();
+
+            productionLogFormDto.LogSteps.Add(stepDto);
         }
 
         productionLogFormDto.ProductionLogId = productionLog.Id;
-
         return productionLogFormDto;
     }
 

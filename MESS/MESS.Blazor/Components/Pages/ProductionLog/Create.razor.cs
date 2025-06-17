@@ -112,9 +112,15 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
                 {
                     WorkInstructionStepId = step.WorkInstructionStepId,
-                    Success = step.Success,
-                    Notes = step.Notes ?? "",
-                    SubmitTime = step.SubmitTime
+                    Attempts = new List<ProductionLogStepAttempt>
+                    {
+                        new ProductionLogStepAttempt
+                        {
+                            Success = step.Attempts.Last().Success,
+                            Notes = step.Attempts.Last().Notes ?? "",
+                            SubmitTime = step.Attempts.Last().SubmitTime
+                        }
+                    }
                 }).ToList()
             };
         }
@@ -123,14 +129,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return false;
         }
 
-        if (ProductionLog.LogSteps.TrueForAll(p => p.SubmitTime != DateTimeOffset.MinValue))
+        if (ProductionLog.LogSteps.All(step => 
+                step.Attempts.Any(a => a.Success == true)))
         {
             WorkInstructionStatus = Status.Completed;
         }
 
         return true;
     }
-    
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
     {
@@ -411,13 +417,18 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         if (ActiveWorkInstruction == null)
             return;
-        
+    
         var currentTime = DateTimeOffset.UtcNow;
-        
-        // If success is null, that means the button was unselected thus set time to default
-        step.SubmitTime = success == null ? DateTimeOffset.MinValue : currentTime;
-        
-        step.Success = success;
+    
+        // Create a new attempt
+        var attempt = new ProductionLogStepAttempt
+        {
+            Success = success,
+            SubmitTime = success == null ? DateTimeOffset.MinValue : currentTime
+        };
+    
+        step.Attempts.Add(attempt);
+    
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
@@ -473,20 +484,15 @@ public partial class Create : ComponentBase, IAsyncDisposable
             var result = false;
             await Task.Run(() =>
             {
-                var t = ProductionLog.LogSteps.Find(s => s.SubmitTime == default);
-
-                // If t is null then all steps have been completed
-                if (t == null)
-                {
-                    result = true;
-                }
+                // Check if all steps have at least one successful attempt
+                result = ProductionLog.LogSteps.All(step => 
+                    step.Attempts.Any(a => a.Success == true));
             });
 
             return result;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Error("Error checking work instruction status: {Message}", e.Message);
             return false;
         }

@@ -4,6 +4,7 @@ namespace MESS.Data.DTO;
 
 /// <summary>
 /// Represents a step in the production log. Used primarily for client-side caching purposes.
+/// Now supports multiple attempts per step.
 /// </summary>
 public class ProductionLogStepDTO
 {
@@ -18,22 +19,12 @@ public class ProductionLogStepDTO
     public int ProductionLogId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the step was successful.
+    /// Gets or sets the collection of attempts for this step.
     /// </summary>
-    public bool? Success { get; set; }
-
-    /// <summary>
-    /// Gets or sets the time the step was submitted.
-    /// </summary>
-    public DateTimeOffset SubmitTime { get; set; }
+    public List<ProductionLogStepAttemptDTO> Attempts { get; set; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether to show notes for the step.
     /// </summary>
     public bool ShowNotes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the notes associated with the step.
-    /// </summary>
-    public string? Notes { get; set; }
 }

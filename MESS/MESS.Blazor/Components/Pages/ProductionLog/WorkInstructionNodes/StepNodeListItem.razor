@@ -59,7 +59,7 @@
 <div class="row mt-3">
     <div class="col text-end">
         <input type="radio"
-               checked="@(LogStep.Success)"
+               checked="@(LogStep.LatestAttempt?.Success == true)"
                autocomplete="off"
                class="btn-check"
                name="radioBtn{@Step.Name}"
@@ -68,7 +68,7 @@
         <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@Step.Name}-@Step.Id">Success</label>
        
         <input type="radio"
-               checked="@(!LogStep.Success)"
+               checked="@(LogStep.LatestAttempt?.Success == false)"
                autocomplete="off"
                @onclick="@(async (e) => await HandleButtonPress(false))"
                class="btn-check"
@@ -84,7 +84,12 @@
 
 
 <div class="d-inline-flex">
-    <FluentTextArea @ref="_failureNoteTextArea" data-testid="optional-notes" class="@(ShowOptionalNotesField ? "": "d-none" )" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
+    <FluentTextArea 
+        @ref="_failureNoteTextArea" 
+        data-testid="optional-notes" 
+        class="@(ShowOptionalNotesField ? "" : "d-none")" 
+        @bind-Value="_currentAttemptNotes"
+        @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" />
 </div>
 
 
@@ -109,21 +114,25 @@
     public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
 
     private FluentTextArea? _failureNoteTextArea;
+    
+    private string _currentAttemptNotes = "";
 
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        if (!LogStep.Success.HasValue)
+        if (LogStep.LatestAttempt?.Success == null)
         {
             SetSelectedButton("");
-        } else if (LogStep.Success.Value)
+        }
+        else if (LogStep.LatestAttempt.Success.Value)
         {
             SetSelectedButton("Success");
-        } else if (!LogStep.Success.Value)
+        }
+        else
         {
             SetSelectedButton("Failure");
         }
-        
+    
         SetOptionalNotes();
     }
 
@@ -146,7 +155,8 @@
     
     private void SetOptionalNotes()
     {
-        if (!string.IsNullOrWhiteSpace(LogStep.Notes) || (LogStep.Success.HasValue && !LogStep.Success.Value))
+        if ((!string.IsNullOrWhiteSpace(LogStep.LatestAttempt.Notes) || 
+             (LogStep.LatestAttempt.Success.HasValue && !LogStep.LatestAttempt.Success.Value)))
         {
             ShowOptionalNotesField = true;
         }
@@ -154,35 +164,37 @@
 
     private async Task HandleButtonPress(bool? result)
     {
-        if (SelectedButton == (result.HasValue ? (result.Value ? "Success" : "Failure") : ""))
+        var attempt = new ProductionLogStepAttempt()
         {
-            result = null;
-        }
-        
+            Success = result ?? false,
+            SubmitTime = DateTimeOffset.UtcNow,
+            Notes = (result.HasValue && !result.Value) ? _currentAttemptNotes : ""
+
+        };
+
+        LogStep.Attempts.Add(attempt);
+    
+        // Clear the temporary notes field
+        _currentAttemptNotes = string.Empty;
+    
+        await OnStepCompleted.InvokeAsync((LogStep, result));
+        SetSelectedButton(result.HasValue ? (result.Value ? "Success" : "Failure") : "");
+    
         if (!result.HasValue)
         {
             ShowOptionalNotesField = false;
-            await OnStepCompleted.InvokeAsync((LogStep, null));
-            SetSelectedButton("");
-            return;
         }
-        
-        if (!result.Value)
+        else if (!result.Value)
         {
             ShowOptionalNotesField = !ShowOptionalNotesField;
-            await OnStepCompleted.InvokeAsync((LogStep, false));
             if (ShowOptionalNotesField && _failureNoteTextArea?.Element != null)
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
-                // _failureNoteTextArea.FocusAsync();
             }
         }
         else
         {
             ShowOptionalNotesField = false;
-            await OnStepCompleted.InvokeAsync((LogStep, true));
         }
-
-        SetSelectedButton(result.Value ? "Success" : "Failure");
     }
 }
