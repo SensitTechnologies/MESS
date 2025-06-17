@@ -59,7 +59,7 @@
 <div class="row mt-3">
     <div class="col text-end">
         <input type="radio"
-               checked="@IsStepSuccessful(LogStep)"
+               checked="@(GetStepSuccessState(LogStep) == true)"
                autocomplete="off"
                class="btn-check"
                name="radioBtn{@Step.Name}"
@@ -68,7 +68,7 @@
         <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@Step.Name}-@Step.Id">Success</label>
        
         <input type="radio"
-               checked="@( !IsStepSuccessful(LogStep) )"
+               checked="@(GetStepSuccessState(LogStep) == false)"
                autocomplete="off"
                @onclick="@(async (e) => await HandleButtonPress(false))"
                class="btn-check"
@@ -119,6 +119,9 @@
     
     private bool IsStepSuccessful(ProductionLogStep step) =>
         step.LatestAttempt?.Success == true;
+    
+    private bool? GetStepSuccessState(ProductionLogStep step) =>
+        step.LatestAttempt?.Success;
 
     /// <inheritdoc />
     protected override void OnInitialized()
