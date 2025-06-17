@@ -123,11 +123,11 @@
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        if (LogStep.LatestAttempt?.Success == null)
+        if (LogStep.LatestAttempt.Success == null)
         {
             SetSelectedButton("");
         }
-        else if (LogStep.LatestAttempt.Success.Value)
+        else if (IsStepSuccessful(LogStep))
         {
             SetSelectedButton("Success");
         }
@@ -135,9 +135,10 @@
         {
             SetSelectedButton("Failure");
         }
-    
+
         SetOptionalNotes();
     }
+
 
     private bool ShowDetails = false;
 
