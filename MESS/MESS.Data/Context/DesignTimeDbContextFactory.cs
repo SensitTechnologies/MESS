@@ -22,7 +22,7 @@ namespace MESS.Data.Context
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(basePath)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddUserSecrets("135263b1-164f-4c79-9970-4a2d72396135") // <-- This line adds user secrets
+                .AddUserSecrets<ApplicationContextFactory>() // <-- This line adds user secrets
                 .Build();
 
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationContext>();
