@@ -484,9 +484,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             var result = false;
             await Task.Run(() =>
             {
-                // Check if all steps have at least one successful attempt
-                result = ProductionLog.LogSteps.All(step => 
-                    step.Attempts.Any(a => a.Success == true));
+                result = ProductionLog.LogSteps.All(step =>
+                    step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue));
             });
 
             return result;
