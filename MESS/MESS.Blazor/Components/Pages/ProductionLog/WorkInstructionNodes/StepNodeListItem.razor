@@ -159,8 +159,9 @@
     
     private void SetOptionalNotes()
     {
-        if ((!string.IsNullOrWhiteSpace(LogStep.LatestAttempt.Notes) || 
-             (LogStep.LatestAttempt.Success.HasValue && !LogStep.LatestAttempt.Success.Value)))
+        var attempt = LogStep.LatestAttempt;
+        if (!string.IsNullOrWhiteSpace(attempt.Notes) || 
+            (attempt.Success.HasValue && !attempt.Success.Value))
         {
             ShowOptionalNotesField = true;
         }
