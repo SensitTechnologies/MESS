@@ -418,17 +418,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (ActiveWorkInstruction == null)
             return;
     
-        var currentTime = DateTimeOffset.UtcNow;
-    
-        // Create a new attempt
-        var attempt = new ProductionLogStepAttempt
-        {
-            Success = success,
-            SubmitTime = success == null ? DateTimeOffset.MinValue : currentTime
-        };
-    
-        step.Attempts.Add(attempt);
-    
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
