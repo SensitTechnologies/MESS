@@ -208,6 +208,7 @@
         if (!string.IsNullOrWhiteSpace(attempt.Notes) || 
             (attempt.Success.HasValue && !attempt.Success.Value))
         {
+            _currentAttemptNotes = LogStep.LatestAttempt.Notes;
             ShowOptionalNotesField = true;
         }
     }
