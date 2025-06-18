@@ -40,7 +40,20 @@ public class LocalCacheManager : ILocalCacheManager
 
             Log.Information("Successfully Set New Production Log Form with ID: {PLogID}", productionLog.Id);
             var productionLogForm = MapProductionLogToDto(productionLog);
-            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
+            
+            try
+            {
+                await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
+            }
+            catch (TaskCanceledException ex)
+            {
+                Log.Warning("SetNewProductionLogFormAsync was canceled. The app may have been navigating or busy. Exception: {Exception}", ex);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Unexpected error while setting ProductionLogForm in local storage: {Exception}", ex);
+            }
+            
         }
         catch (Exception e)
         {
