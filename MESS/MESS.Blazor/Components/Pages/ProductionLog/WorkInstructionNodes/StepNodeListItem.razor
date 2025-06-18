@@ -171,6 +171,18 @@
 
         SetOptionalNotes();
     }
+    
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        var latestSuccess = GetStepSuccessState(LogStep);
+        if (latestSuccess == true)
+            SelectedButton = "Success";
+        else if (latestSuccess == false)
+            SelectedButton = "Failure";
+        else
+            SelectedButton = ""; // or null
+    }
 
 
     private bool ShowDetails = false;
