@@ -5,34 +5,96 @@
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JsRuntime
 
-<div class="row">
-    @* This stores the primary content i.e. the content that is always shown to the operator. The 'Name' field is always shown. *@
-    <div class="col col-md-6 col-sm-12 col-3 primary-content">
-        <div class="card">
-            <div class="card-body">
-                <p class="card-text d-block mb-1">
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <div class="col col-md-6 col-sm-12 d-flex flex-column primary-content">
+                <div class="card">
+                    <div class="card-body">
+                        <p class="card-text d-block mb-1">
+                            
+                            @* Replace text with extra details i.e. body text *@
+                            @switch (ShowDetails)
+                            {
+                                case false:
+                                    @((MarkupString)Step.Name)
+                                    break;
+                                case true when Step.Body != null:
+                                    @((MarkupString)Step.Body)
+                                    break;
+                            }
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mt-auto">
+                    <FluentTextArea 
+                        @ref="_failureNoteTextArea" 
+                        data-testid="optional-notes" 
+                        class=@($"w-100 mt-3 {(ShowOptionalNotesField ? "" : "d-none")}")
+                        placeholder="Optional: Add a failure note (if needed)"
+                        @bind-Value="_currentAttemptNotes"
+                        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
                     
-                    @* Replace text with extra details i.e. body text *@
-                    @switch (ShowDetails)
-                    {
-                        case false:
-                            @((MarkupString)Step.Name)
-                            break;
-                        case true when Step.Body != null:
-                            @((MarkupString)Step.Body)
-                            break;
-                    }
-                </p>
+                    <div class="row mt-2">
+                        <div class="col text-start">
+                            <div class="position-relative d-inline-block">
+                                <!-- Success Button -->
+                                <input type="radio"
+                                       class="btn-check"
+                                       name="statusToggle"
+                                       id="radioSuccessBtn{@Step.Name}-@Step.Id"
+                                       checked="@(SelectedButton == "Success")"
+                                       @onclick="@(async (e) => await HandleButtonPress(true))"/>
+                                <label class="btn btn-outline-success @(SelectedButton == "Success" ? "active" : "")"
+                                       for="radioSuccessBtn{@Step.Name}-@Step.Id">
+                                    Success
+                                </label>
+
+                                @if (_showSuccessFloat)
+                                {
+                                    <div class="floating-label" style="left: 50%; transform: translateX(-50%);">
+                                        Success!
+                                    </div>
+                                }
+                            </div>
+                            <div class="position-relative d-inline-block">
+                                <!-- Failure Button -->
+                                <input type="radio"
+                                       class="btn-check"
+                                       name="statusToggle"
+                                       id="radioFailureBtn{@Step.Name}-@Step.Id"
+                                       checked="@(SelectedButton == "Failure")"
+                                       @onclick="@(async (e) => await HandleButtonPress(false))"/>
+                                <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
+                                       for="radioFailureBtn{@Step.Name}-@Step.Id">
+                                    Failure
+                                </label>
+
+                                @if (_showFailureFloat)
+                                {
+                                    <div class="floating-label" style="left: 50%; transform: translateX(-50%); color: #dc3545;">
+                                        Failure!
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="col text-end">
+                            @if (HasDetails)
+                            {
+                                <button @onclick="toggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
+                                    @(ShowDetails ? "Hide Details" : "Show Details")
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    
-    
-    <div class="col col-md-6 secondary-content">
-        @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0)
-        {
-            <div class="card">
-                <div class="card-body">
+            
+            <div class="col col-md-6 secondary-content">
+                @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0)
+                {
+                    
                     @if (ShowDetails && Step.SecondaryMedia.Count > 0)
                     {
                         <Carousel
@@ -49,79 +111,12 @@
                             Interval="3000"
                             ImageStyle="height: 500px; object-fit: contain;" />
                     }
-                </div>
-
+                      
+                }
             </div>
-        }
-    </div>
-    
-</div>
-<div class="row mt-3">
-    <div class="col text-end">
-        <div class="position-relative d-inline-block">
-            <!-- Success Button -->
-            <input type="radio"
-                   class="btn-check"
-                   name="statusToggle"
-                   id="radioSuccessBtn{@Step.Name}-@Step.Id"
-                   checked="@(SelectedButton == "Success")"
-                   @onclick="@(async (e) => await HandleButtonPress(true))" />
-            <label class="btn btn-outline-success @(SelectedButton == "Success" ? "active" : "")"
-                   for="radioSuccessBtn{@Step.Name}-@Step.Id">
-                Success
-            </label>
-
-            @if (_showSuccessFloat)
-            {
-                <div class="floating-label" style="left: 50%; transform: translateX(-50%);">
-                    Success!
-                </div>
-            }
         </div>
-        
-        <div class="position-relative d-inline-block">
-            <!-- Failure Button -->
-            <input type="radio"
-                   class="btn-check"
-                   name="statusToggle"
-                   id="radioFailureBtn{@Step.Name}-@Step.Id"
-                   checked="@(SelectedButton == "Failure")"
-                   @onclick="@(async (e) => await HandleButtonPress(false))" />
-            <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
-                   for="radioFailureBtn{@Step.Name}-@Step.Id">
-                Failure
-            </label>
-
-            @if (_showFailureFloat)
-            {
-                <div class="floating-label" style="left: 50%; transform: translateX(-50%); color: #dc3545;">
-                    Failure!
-                </div>
-            }
-        </div>
-        
-        @if (HasDetails)
-        {
-            <button @onclick="toggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
-                @(ShowDetails ? "Hide Details" : "Show Details")
-            </button>
-        }
-        
     </div>
 </div>
-
-
-<div class="d-inline-flex">
-    <FluentTextArea 
-        @ref="_failureNoteTextArea" 
-        data-testid="optional-notes" 
-        class="@(ShowOptionalNotesField ? "" : "d-none")" 
-        @bind-Value="_currentAttemptNotes"
-        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
-</div>
-
-
-
 
 @code {
     /// <summary>
