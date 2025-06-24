@@ -1,6 +1,6 @@
+@using System.Text.RegularExpressions
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
-@using Mono.TextTemplating
 @using MESS.Blazor.Components.Carousel
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JsRuntime
@@ -99,11 +99,14 @@
                 </div>
             }
         </div>
-
         
-        <button @onclick="toggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
-            @(ShowDetails ? "Hide Details" : "Show Details")
-        </button>
+        @if (HasDetails)
+        {
+            <button @onclick="toggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
+                @(ShowDetails ? "Hide Details" : "Show Details")
+            </button>
+        }
+        
     </div>
 </div>
 
@@ -149,6 +152,20 @@
     
     private bool? GetStepSuccessState(ProductionLogStep step) =>
         step.LatestAttempt?.Success;
+    
+    private bool HasDetails =>
+        !IsHtmlEmpty(Step.Body) || (Step.SecondaryMedia?.Count ?? 0) > 0;
+    
+    private static bool IsHtmlEmpty(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+            return true;
+
+        // Strip tags and decode entities if needed
+        var textOnly = Regex.Replace(html, "<.*?>", "").Trim();
+
+        return string.IsNullOrWhiteSpace(textOnly);
+    }
     
     private bool _showSuccessFloat = false;
     private bool _showFailureFloat = false;
