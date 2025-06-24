@@ -144,55 +144,59 @@ public partial class Create : ComponentBase, IAsyncDisposable
             ActiveWorkInstruction = null;
             await SetSelectedWorkInstructionId(null);
             ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
+            return;
         }
+
         if (ActiveProductWorkInstructionList != null)
         {
             var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
-            
             if (workInstruction?.Products == null)
-            {
                 return;
-            }
-            
-            
-            await SetSelectedWorkInstructionId(workInstructionId);
 
+            // Reset the cached log and internal state
+            await LocalCacheManager.SetNewProductionLogFormAsync(null);
+            ProductionLog = new ProductionLog(); // clear current log
+            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+
+            // Proceed with setting new state
+            await SetSelectedWorkInstructionId(workInstructionId);
             ActiveWorkInstruction = workInstruction;
-            ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
-            
+            ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
 
-    private async Task SetActiveProduct(int productId)
+private async Task SetActiveProduct(int productId)
     {
-        if (Products != null)
+        if (Products == null)
+            return;
+
+        if (productId < 0)
         {
-            if (productId < 0)
-            {
-                ActiveWorkInstruction = null;
-                ActiveProductWorkInstructionList = null;
-                await SetActiveWorkInstruction(-1);
-                await LocalCacheManager.SetActiveProductAsync(null);
-                return;
-            }
-            
-            var product = Products.FirstOrDefault(p => p.Id == productId);
-
-            // The chosen product does not have any Work Instructions
-            if (product?.WorkInstructions == null)
-            {
-                return;
-            }
-
-            ActiveProduct = product;
-            ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions.Where(w => w.IsActive).ToList();
-            ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
+            ActiveWorkInstruction = null;
+            ActiveProductWorkInstructionList = null;
             await SetActiveWorkInstruction(-1);
-            
-            await LocalCacheManager.SetActiveProductAsync(product);
+            await LocalCacheManager.SetActiveProductAsync(null);
+            return;
         }
+
+        var product = Products.FirstOrDefault(p => p.Id == productId);
+        if (product?.WorkInstructions == null)
+            return;
+
+        // Reset the cached log and internal state
+        await LocalCacheManager.SetNewProductionLogFormAsync(null);
+        ProductionLog = new ProductionLog(); // clear current log
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+
+        // Proceed with setting new state
+        ActiveProduct = product;
+        ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
+        ProductionLogEventService.SetCurrentProductName(product.Name);
+        await SetActiveWorkInstruction(-1);
+        await LocalCacheManager.SetActiveProductAsync(product);
     }
+
     
     private async Task GetCachedActiveProductAsync()
     {
