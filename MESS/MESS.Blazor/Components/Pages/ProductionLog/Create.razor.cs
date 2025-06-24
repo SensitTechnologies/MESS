@@ -106,15 +106,20 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
         {
             WorkInstructionStatus = Status.InProgress;
+
             ProductionLog = new ProductionLog
             {
                 Id = cachedFormData.ProductionLogId,
                 LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
                 {
                     WorkInstructionStepId = step.WorkInstructionStepId,
-                    Success = step.Success,
-                    Notes = step.Notes ?? "",
-                    SubmitTime = step.SubmitTime
+                    ProductionLogId = step.ProductionLogId,
+                    Attempts = step.Attempts.Select(a => new ProductionLogStepAttempt
+                    {
+                        Success = a.Success,
+                        Notes = a.Notes ?? "",
+                        SubmitTime = a.SubmitTime
+                    }).ToList()
                 }).ToList()
             };
         }
@@ -123,14 +128,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return false;
         }
 
-        if (ProductionLog.LogSteps.TrueForAll(p => p.SubmitTime != DateTimeOffset.MinValue))
+        if (ProductionLog.LogSteps.All(step =>
+                step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)))
         {
             WorkInstructionStatus = Status.Completed;
         }
 
         return true;
     }
-    
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
     {
@@ -139,55 +144,59 @@ public partial class Create : ComponentBase, IAsyncDisposable
             ActiveWorkInstruction = null;
             await SetSelectedWorkInstructionId(null);
             ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
+            return;
         }
+
         if (ActiveProductWorkInstructionList != null)
         {
             var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
-            
             if (workInstruction?.Products == null)
-            {
                 return;
-            }
-            
-            
-            await SetSelectedWorkInstructionId(workInstructionId);
 
+            // Reset the cached log and internal state
+            await LocalCacheManager.SetNewProductionLogFormAsync(null);
+            ProductionLog = new ProductionLog(); // clear current log
+            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+
+            // Proceed with setting new state
+            await SetSelectedWorkInstructionId(workInstructionId);
             ActiveWorkInstruction = workInstruction;
-            ProductionLogEventService.SetCurrentWorkInstructionName(ActiveWorkInstruction.Title);
-            
+            ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
 
-    private async Task SetActiveProduct(int productId)
+private async Task SetActiveProduct(int productId)
     {
-        if (Products != null)
+        if (Products == null)
+            return;
+
+        if (productId < 0)
         {
-            if (productId < 0)
-            {
-                ActiveWorkInstruction = null;
-                ActiveProductWorkInstructionList = null;
-                await SetActiveWorkInstruction(-1);
-                await LocalCacheManager.SetActiveProductAsync(null);
-                return;
-            }
-            
-            var product = Products.FirstOrDefault(p => p.Id == productId);
-
-            // The chosen product does not have any Work Instructions
-            if (product?.WorkInstructions == null)
-            {
-                return;
-            }
-
-            ActiveProduct = product;
-            ActiveProductWorkInstructionList = ActiveProduct.WorkInstructions.Where(w => w.IsActive).ToList();
-            ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
+            ActiveWorkInstruction = null;
+            ActiveProductWorkInstructionList = null;
             await SetActiveWorkInstruction(-1);
-            
-            await LocalCacheManager.SetActiveProductAsync(product);
+            await LocalCacheManager.SetActiveProductAsync(null);
+            return;
         }
+
+        var product = Products.FirstOrDefault(p => p.Id == productId);
+        if (product?.WorkInstructions == null)
+            return;
+
+        // Reset the cached log and internal state
+        await LocalCacheManager.SetNewProductionLogFormAsync(null);
+        ProductionLog = new ProductionLog(); // clear current log
+        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+
+        // Proceed with setting new state
+        ActiveProduct = product;
+        ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
+        ProductionLogEventService.SetCurrentProductName(product.Name);
+        await SetActiveWorkInstruction(-1);
+        await LocalCacheManager.SetActiveProductAsync(product);
     }
+
     
     private async Task GetCachedActiveProductAsync()
     {
@@ -411,13 +420,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         if (ActiveWorkInstruction == null)
             return;
-        
-        var currentTime = DateTimeOffset.UtcNow;
-        
-        // If success is null, that means the button was unselected thus set time to default
-        step.SubmitTime = success == null ? DateTimeOffset.MinValue : currentTime;
-        
-        step.Success = success;
+    
         await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
@@ -473,20 +476,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
             var result = false;
             await Task.Run(() =>
             {
-                var t = ProductionLog.LogSteps.Find(s => s.SubmitTime == default);
-
-                // If t is null then all steps have been completed
-                if (t == null)
-                {
-                    result = true;
-                }
+                result = ProductionLog.LogSteps.All(step =>
+                    step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue));
             });
 
             return result;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
             Log.Error("Error checking work instruction status: {Message}", e.Message);
             return false;
         }

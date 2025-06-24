@@ -4,7 +4,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <UserSecretsId>4cf3f9ba-9590-456a-85a7-ac170a6f7d71</UserSecretsId>
+        <UserSecretsId>135263b1-164f-4c79-9970-4a2d72396135</UserSecretsId>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
 
@@ -30,6 +30,8 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.5.25277.114" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0-preview.5.25277.114" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
       <PackageReference Include="Serilog" Version="4.2.0" />
       <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" />

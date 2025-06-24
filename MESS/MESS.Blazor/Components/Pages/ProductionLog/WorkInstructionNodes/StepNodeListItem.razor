@@ -58,23 +58,48 @@
 </div>
 <div class="row mt-3">
     <div class="col text-end">
-        <input type="radio"
-               checked="@(LogStep.Success)"
-               autocomplete="off"
-               class="btn-check"
-               name="radioBtn{@Step.Name}"
-               id="radioSuccessBtn{@Step.Name}-@Step.Id"
-               @onclick="@(async (e) => await HandleButtonPress(true))"/>
-        <label class="btn btn-outline-success @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Success" ? "active" : "")" for="radioSuccessBtn{@Step.Name}-@Step.Id">Success</label>
-       
-        <input type="radio"
-               checked="@(!LogStep.Success)"
-               autocomplete="off"
-               @onclick="@(async (e) => await HandleButtonPress(false))"
-               class="btn-check"
-               name="radioBtn{@Step.Name}"
-               id="radioFailureBtn{@Step.Name}-@Step.Id"/>
-        <label class="btn btn-outline-danger @(!string.IsNullOrEmpty(SelectedButton) && SelectedButton == "Failure" ? "active" : "")" for="radioFailureBtn{@Step.Name}-@Step.Id">Failure</label>
+        <div class="position-relative d-inline-block">
+            <!-- Success Button -->
+            <input type="radio"
+                   class="btn-check"
+                   name="statusToggle"
+                   id="radioSuccessBtn{@Step.Name}-@Step.Id"
+                   checked="@(SelectedButton == "Success")"
+                   @onclick="@(async (e) => await HandleButtonPress(true))" />
+            <label class="btn btn-outline-success @(SelectedButton == "Success" ? "active" : "")"
+                   for="radioSuccessBtn{@Step.Name}-@Step.Id">
+                Success
+            </label>
+
+            @if (_showSuccessFloat)
+            {
+                <div class="floating-label" style="left: 50%; transform: translateX(-50%);">
+                    Success!
+                </div>
+            }
+        </div>
+        
+        <div class="position-relative d-inline-block">
+            <!-- Failure Button -->
+            <input type="radio"
+                   class="btn-check"
+                   name="statusToggle"
+                   id="radioFailureBtn{@Step.Name}-@Step.Id"
+                   checked="@(SelectedButton == "Failure")"
+                   @onclick="@(async (e) => await HandleButtonPress(false))" />
+            <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
+                   for="radioFailureBtn{@Step.Name}-@Step.Id">
+                Failure
+            </label>
+
+            @if (_showFailureFloat)
+            {
+                <div class="floating-label" style="left: 50%; transform: translateX(-50%); color: #dc3545;">
+                    Failure!
+                </div>
+            }
+        </div>
+
         
         <button @onclick="toggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
             @(ShowDetails ? "Hide Details" : "Show Details")
@@ -84,7 +109,12 @@
 
 
 <div class="d-inline-flex">
-    <FluentTextArea @ref="_failureNoteTextArea" data-testid="optional-notes" class="@(ShowOptionalNotesField ? "": "d-none" )" @bind-Value:after="@(async () => await ProductionLogEventService.ChangeMadeToProductionLog())" @bind-Value="LogStep.Notes"/>
+    <FluentTextArea 
+        @ref="_failureNoteTextArea" 
+        data-testid="optional-notes" 
+        class="@(ShowOptionalNotesField ? "" : "d-none")" 
+        @bind-Value="_currentAttemptNotes"
+        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
 </div>
 
 
@@ -109,23 +139,51 @@
     public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
 
     private FluentTextArea? _failureNoteTextArea;
+    
+    private string _currentAttemptNotes = "";
+    
+    private ProductionLogStepAttempt? _pendingFailureAttempt;
+    
+    private bool IsStepSuccessful(ProductionLogStep step) =>
+        step.LatestAttempt?.Success == true;
+    
+    private bool? GetStepSuccessState(ProductionLogStep step) =>
+        step.LatestAttempt?.Success;
+    
+    private bool _showSuccessFloat = false;
+    private bool _showFailureFloat = false;
 
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        if (!LogStep.Success.HasValue)
+        if (LogStep.LatestAttempt.Success == null)
         {
             SetSelectedButton("");
-        } else if (LogStep.Success.Value)
+        }
+        else if (IsStepSuccessful(LogStep))
         {
             SetSelectedButton("Success");
-        } else if (!LogStep.Success.Value)
+        }
+        else
         {
             SetSelectedButton("Failure");
         }
-        
+
         SetOptionalNotes();
     }
+    
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        var latestSuccess = GetStepSuccessState(LogStep);
+        if (latestSuccess == true)
+            SelectedButton = "Success";
+        else if (latestSuccess == false)
+            SelectedButton = "Failure";
+        else
+            SelectedButton = ""; // or null
+    }
+
 
     private bool ShowDetails = false;
 
@@ -141,48 +199,112 @@
 
     private void SetSelectedButton(string buttonName)
     {
-        SelectedButton = SelectedButton == buttonName ? null : buttonName;
+        SelectedButton = buttonName;
     }
     
     private void SetOptionalNotes()
     {
-        if (!string.IsNullOrWhiteSpace(LogStep.Notes) || (LogStep.Success.HasValue && !LogStep.Success.Value))
+        var attempt = LogStep.LatestAttempt;
+        if (!string.IsNullOrWhiteSpace(attempt.Notes) || 
+            (attempt.Success.HasValue && !attempt.Success.Value))
         {
+            _currentAttemptNotes = LogStep.LatestAttempt.Notes;
             ShowOptionalNotesField = true;
         }
     }
 
     private async Task HandleButtonPress(bool? result)
     {
-        if (SelectedButton == (result.HasValue ? (result.Value ? "Success" : "Failure") : ""))
-        {
-            result = null;
-        }
-        
         if (!result.HasValue)
         {
             ShowOptionalNotesField = false;
-            await OnStepCompleted.InvokeAsync((LogStep, null));
+            _pendingFailureAttempt = null;
+            _currentAttemptNotes = string.Empty;
             SetSelectedButton("");
             return;
         }
-        
-        if (!result.Value)
+
+        if (result.Value) // SUCCESS
         {
-            ShowOptionalNotesField = !ShowOptionalNotesField;
+            var attempt = new ProductionLogStepAttempt
+            {
+                Success = true,
+                SubmitTime = DateTimeOffset.UtcNow,
+                Notes = ""
+            };
+
+            LogStep.Attempts.Add(attempt);
+            _pendingFailureAttempt = null;
+            _currentAttemptNotes = string.Empty;
+            ShowOptionalNotesField = false;
+
+            await OnStepCompleted.InvokeAsync((LogStep, true));
+            SetSelectedButton("Success");
+            
+            await ShowFloatMessage(true);
+        }
+        else // FAILURE
+        {
+            // If there's already a pending failure, finalize it by setting its notes
+            if (_pendingFailureAttempt != null)
+            {
+                _pendingFailureAttempt.Notes = _currentAttemptNotes;
+                _pendingFailureAttempt = null;
+            }
+
+            // Clear input for the next note
+            _currentAttemptNotes = string.Empty;
+
+            // Create new pending attempt
+            _pendingFailureAttempt = new ProductionLogStepAttempt
+            {
+                Success = false,
+                SubmitTime = DateTimeOffset.UtcNow,
+                Notes = ""
+            };
+            LogStep.Attempts.Add(_pendingFailureAttempt);
+
+            ShowOptionalNotesField = true;
+            SetSelectedButton("Failure");
+
             await OnStepCompleted.InvokeAsync((LogStep, false));
-            if (ShowOptionalNotesField && _failureNoteTextArea?.Element != null)
+            StateHasChanged();
+            await Task.Yield();
+
+            if (_failureNoteTextArea?.Element != null)
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
-                // _failureNoteTextArea.FocusAsync();
             }
+            
+            await ShowFloatMessage(false);
+        }
+    }
+    
+    private async Task HandleNoteChangedAsync()
+    {
+        if (_pendingFailureAttempt != null)
+        {
+            _pendingFailureAttempt.Notes = _currentAttemptNotes;
+            await ProductionLogEventService.ChangeMadeToProductionLog();
+        }
+    }
+    
+    private async Task ShowFloatMessage(bool isSuccess)
+    {
+        if (isSuccess)
+        {
+            _showSuccessFloat = true;
+            StateHasChanged();
+            await Task.Delay(800);
+            _showSuccessFloat = false;
         }
         else
         {
-            ShowOptionalNotesField = false;
-            await OnStepCompleted.InvokeAsync((LogStep, true));
+            _showFailureFloat = true;
+            StateHasChanged();
+            await Task.Delay(800);
+            _showFailureFloat = false;
         }
-
-        SetSelectedButton(result.Value ? "Success" : "Failure");
+        StateHasChanged();
     }
 }

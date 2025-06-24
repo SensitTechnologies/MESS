@@ -40,7 +40,20 @@ public class LocalCacheManager : ILocalCacheManager
 
             Log.Information("Successfully Set New Production Log Form with ID: {PLogID}", productionLog.Id);
             var productionLogForm = MapProductionLogToDto(productionLog);
-            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
+            
+            try
+            {
+                await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
+            }
+            catch (TaskCanceledException ex)
+            {
+                Log.Warning("SetNewProductionLogFormAsync was canceled. The app may have been navigating or busy. Exception: {Exception}", ex);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Unexpected error while setting ProductionLogForm in local storage: {Exception}", ex);
+            }
+            
         }
         catch (Exception e)
         {
@@ -51,21 +64,28 @@ public class LocalCacheManager : ILocalCacheManager
     private static ProductionLogFormDTO MapProductionLogToDto(ProductionLog productionLog)
     {
         var productionLogFormDto = new ProductionLogFormDTO();
+    
         foreach (var step in productionLog.LogSteps)
         {
-            productionLogFormDto.LogSteps.Add(new ProductionLogStepDTO
+            var stepDto = new ProductionLogStepDTO
             {
                 WorkInstructionStepId = step.WorkInstructionStepId,
                 ProductionLogId = step.ProductionLogId,
-                Success = step.Success,
-                SubmitTime = step.SubmitTime,
-                Notes = step.Notes,
-                ShowNotes = step.Notes.Length > 0,
-            });
+                ShowNotes = step.Attempts.Any(a => !string.IsNullOrEmpty(a.Notes))
+            };
+
+            // Map all attempts
+            stepDto.Attempts = step.Attempts.Select(a => new ProductionLogStepAttemptDTO
+            {
+                Success = a.Success,
+                SubmitTime = a.SubmitTime,
+                Notes = a.Notes,
+            }).ToList();
+
+            productionLogFormDto.LogSteps.Add(stepDto);
         }
 
         productionLogFormDto.ProductionLogId = productionLog.Id;
-
         return productionLogFormDto;
     }
 

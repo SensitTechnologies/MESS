@@ -277,3 +277,23 @@ td {
 .carousel-control-next:hover {
     opacity: 0.8;              /* Slight dimming on hover for interactivity */
 }
+
+@keyframes floatAway {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-40px) scale(1.2);
+    }
+}
+
+.floating-label {
+    position: absolute;
+    font-weight: bold;
+    pointer-events: none;
+    animation: floatAway 0.8s ease-out forwards;
+    color: #28a745; /* success green or change for failure */
+}
+

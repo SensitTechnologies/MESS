@@ -17,29 +17,32 @@ public class ProductionLogStep
     /// Gets or sets the identifier of the associated production log.
     /// </summary>
     public int ProductionLogId { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the associated ProductionLog
+    /// </summary>
+    public ProductionLog? ProductionLog { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the associated work instruction step.
     /// </summary>
     public int WorkInstructionStepId { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the step was successful.
-    /// </summary>
-    public bool? Success { get; set; } = null;
-
-    /// <summary>
-    /// Gets or sets any additional notes for the step.
-    /// </summary>
-    public string Notes { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the time the step was submitted.
-    /// </summary>
-    public DateTimeOffset SubmitTime { get; set; }
-
+    
     /// <summary>
     /// Gets or sets the associated work instruction step details.
     /// </summary>
     public Step? WorkInstructionStep { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the collection of attempts for this step
+    /// </summary>
+    public List<ProductionLogStepAttempt> Attempts { get; set; } = new();
+    
+    /// <summary>
+    /// Helper property to get the most recent attempt
+    /// </summary>
+    public ProductionLogStepAttempt LatestAttempt => 
+        Attempts.OrderByDescending(a => a.SubmitTime).FirstOrDefault() 
+        ?? new ProductionLogStepAttempt { Success = null };
+
 }

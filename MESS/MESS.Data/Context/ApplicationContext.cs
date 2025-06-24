@@ -41,6 +41,17 @@ public class ApplicationContext : DbContext
     /// DbSet for ProductionLogs.
     /// </summary>
     public virtual DbSet<ProductionLog> ProductionLogs { get; set; } = null!;
+    
+    /// <summary>
+    /// DbSet for ProductionLogSteps.
+    /// </summary>
+    public virtual DbSet<ProductionLogStep> ProductionLogSteps { get; set; } = null!;
+
+    /// <summary>
+    /// DbSet for ProductionLogStepAttempts.
+    /// </summary>
+    public virtual DbSet<ProductionLogStepAttempt> ProductionLogStepAttempts { get; set; } = null!;
+    
     /// <summary>
     /// DbSet for Products.
     /// </summary>
@@ -67,11 +78,36 @@ public class ApplicationContext : DbContext
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
         
-        modelBuilder.Entity<ProductionLog>()
-            .HasOne(p => p.WorkInstruction)
-            .WithMany()
-            .HasForeignKey("WorkInstructionId")
-            .IsRequired(false);
+        modelBuilder.Entity<ProductionLog>(entity =>
+        {
+            // Configure WorkInstruction relationship
+            entity.HasOne(p => p.WorkInstruction)
+                .WithMany()
+                .HasForeignKey("WorkInstructionId")
+                .IsRequired(false);
+    
+            // Configure LogSteps relationship
+            entity.HasMany(p => p.LogSteps)
+                .WithOne(s => s.ProductionLog)
+                .HasForeignKey(s => s.ProductionLogId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        modelBuilder.Entity<ProductionLogStep>(entity =>
+        {
+            // Relationship to attempts
+            entity.HasMany(s => s.Attempts)
+                .WithOne(a => a.ProductionLogStep)
+                .HasForeignKey(a => a.ProductionLogStepId)
+                .OnDelete(DeleteBehavior.Cascade);
+    
+            // Relationship to work instruction step
+            entity.HasOne(s => s.WorkInstructionStep)
+                .WithMany()
+                .HasForeignKey(s => s.WorkInstructionStepId);
+            
+        });
     }
     
     /// <inheritdoc />
