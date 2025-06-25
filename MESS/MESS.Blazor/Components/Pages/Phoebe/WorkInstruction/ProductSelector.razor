@@ -7,7 +7,23 @@
     }
     else
     {
-        @foreach (var product in AllProducts)
+        @foreach (var product in AllProducts
+                      .OrderBy(p => System.Text.RegularExpressions.Regex.Split(
+                              p.Name?.Replace("SKU-", "", StringComparison.OrdinalIgnoreCase)
+                                  ?.Replace("PRD-", "", StringComparison.OrdinalIgnoreCase)
+                                  ?.Trim() ?? string.Empty,
+                              "([0-9]+)"),
+                          Comparer<string[]>.Create((a, b) =>
+                          {
+                              for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
+                              {
+                                  var result = int.TryParse(a[i], out int ai) && int.TryParse(b[i], out int bi)
+                                      ? ai.CompareTo(bi)
+                                      : StringComparer.OrdinalIgnoreCase.Compare(a[i], b[i]);
+                                  if (result != 0) return result;
+                              }
+                              return a.Length.CompareTo(b.Length);
+                          })))
         {
             <label class="list-group-item">
                 <input type="checkbox"
