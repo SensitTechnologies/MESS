@@ -7,10 +7,181 @@ html, body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+body.dark-mode {
+    color: #ffffff;
+}
+
+body.dark-mode a,
+body.dark-mode p,
+body.dark-mode span,
+body.dark-mode label,
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+    color: #ffffff !important;
+}
+
+/* Placeholder text color */
+body.dark-mode ::placeholder {
+    color: #cccccc !important; /* Slightly off-white for better UX */
+}
+
+/* White text for the login button */
+body.dark-mode .login-button {
+    color: #ffffff !important;
+    background-color: transparent;
+    border: none;
+}
+
+/* Light mode: dropdown should be opaque */
+.login-dropdown,
+.login-dropdown option {
+    background-color: #ffffff;
+    color: #000000;
+    opacity: 1;
+}
+
+/* Dark mode: force white text and gray background on all dropdown elements */
+body.dark-mode .login-dropdown,
+body.dark-mode select.login-dropdown,
+body.dark-mode .login-dropdown *,
+body.dark-mode select.login-dropdown * {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    opacity: 1;
+}
+
+/* Specifically target option elements as well */
+body.dark-mode .login-dropdown option,
+body.dark-mode select.login-dropdown option {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+}
+
+/* 🌙 Dark mode: table row styling */
+body.dark-mode tr,
+body.dark-mode td {
+    background-color: transparent;
+    color: #ffffff;
+    border-color: #444;
+}
+
+/* 🌙 Dark mode: InputText fields */
+body.dark-mode input.form-control[type="text"],
+body.dark-mode input.form-control {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555;
+}
+
+/* 🌙 Dark mode: InputCheckbox */
+body.dark-mode input.form-check-input[type="checkbox"] {
+    background-color: #2a2a2a;
+    border: 1px solid #666;
+    accent-color: #ffd502;
+}
+
+/* 🌙 Dark mode: WorkInstructionSelector (assumes select-based structure) */
+body.dark-mode select,
+body.dark-mode .form-select {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555;
+}
+
+/* 🌙 Dark mode: table row and cells */
+body.dark-mode tr,
+body.dark-mode td,
+body.dark-mode th {
+    background-color: transparent;
+    color: #ffffff;
+    border-color: #444;
+}
+
+/* 🌙 Dark mode: input fields */
+body.dark-mode input.form-control[type="text"],
+body.dark-mode input.form-control[type="email"] {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555;
+}
+
+/* 🌙 Dark mode: confirm-delete box */
+body.dark-mode .confirm-delete {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border: 1px solid #666;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+/* 🌙 Dark mode: product select dropdown */
+body.dark-mode #product-select {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555;
+}
+
+/* 🌙 Dark mode: select options */
+body.dark-mode #product-select option {
+    background-color: #2c2c2c;
+    color: #ffffff;
+}
+
+/* 🌙 Dark mode: Work Instruction select dropdown */
+body.dark-mode #workInstruction-select {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555;
+}
+
+/* 🌙 Dark mode: option list inside select */
+body.dark-mode #workInstruction-select option {
+    background-color: #2c2c2c;
+    color: #ffffff;
+}
+
+/* Optional: truncated text should remain readable */
+body.dark-mode #workInstruction-select.text-truncate {
+    color: #ffffff;
+}
+
 body.dark-mode{
     background-color: #121212;
     color: white;
     transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.label-mode {
+    color: #000; /* Light mode default */
+    transition: color 0.3s ease;
+}
+
+body.dark-mode .label-mode {
+    color: #ffffff; /* A bright contrasting color in dark mode */
+}
+
+.dark-mode-target {
+    background-color: #ffffff;
+    color: #000000;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode .dark-mode-target {
+    background-color: #404040;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19); /* Optional for definition */
+}
+
+body.dark-mode .dark-mode-target .btn-primary {
+    background-color: #ffd502;
+    color: #020000;
+}
+
+body.dark-mode .dark-mode-target .form-control {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19);
 }
 
 body.light-mode .table,

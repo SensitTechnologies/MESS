@@ -9,3 +9,39 @@
 .list-group-item:hover {
     background-color: #f8f9fa;
 }
+
+/* 🌙 Dark mode: scroll container */
+body.dark-mode .list-group.scrollable-checkbox-container {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border: none;
+}
+
+/* 🌙 Dark mode: individual items */
+body.dark-mode .list-group-item {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: none;
+}
+
+/* 🌙 Dark mode: hover effect */
+body.dark-mode .list-group-item:hover {
+    background-color: #3a3a3a;
+}
+
+/* 🌙 Dark mode: muted text like loading and empty state */
+body.dark-mode .list-group-item .text-muted {
+    color: #bbbbbb;
+}
+
+/* 🌙 Dark mode: checkbox styling */
+body.dark-mode .form-check-input {
+    background-color: #2a2a2a;
+    border: 1px solid #666;
+}
+
+/* 🌙 Dark mode: checkbox label text */
+body.dark-mode .list-group-item label {
+    color: #ffffff;
+}
+
