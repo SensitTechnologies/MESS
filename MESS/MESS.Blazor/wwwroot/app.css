@@ -58,7 +58,7 @@ body.dark-mode select.login-dropdown option {
     color: #ffffff !important;
 }
 
-/* 🌙 Dark mode: table row styling */
+/* Dark mode: table row styling */
 body.dark-mode tr,
 body.dark-mode td {
     background-color: transparent;
@@ -66,7 +66,7 @@ body.dark-mode td {
     border-color: #444;
 }
 
-/* 🌙 Dark mode: InputText fields */
+/* Dark mode: InputText fields */
 body.dark-mode input.form-control[type="text"],
 body.dark-mode input.form-control {
     background-color: #2c2c2c;
@@ -74,14 +74,14 @@ body.dark-mode input.form-control {
     border: 1px solid #555;
 }
 
-/* 🌙 Dark mode: InputCheckbox */
+/* Dark mode: InputCheckbox */
 body.dark-mode input.form-check-input[type="checkbox"] {
     background-color: #2a2a2a;
     border: 1px solid #666;
     accent-color: #ffd502;
 }
 
-/* 🌙 Dark mode: WorkInstructionSelector (assumes select-based structure) */
+/* Dark mode: WorkInstructionSelector (assumes select-based structure) */
 body.dark-mode select,
 body.dark-mode .form-select {
     background-color: #2c2c2c;
@@ -89,7 +89,7 @@ body.dark-mode .form-select {
     border: 1px solid #555;
 }
 
-/* 🌙 Dark mode: table row and cells */
+/* Dark mode: table row and cells */
 body.dark-mode tr,
 body.dark-mode td,
 body.dark-mode th {
@@ -98,7 +98,7 @@ body.dark-mode th {
     border-color: #444;
 }
 
-/* 🌙 Dark mode: input fields */
+/* Dark mode: input fields */
 body.dark-mode input.form-control[type="text"],
 body.dark-mode input.form-control[type="email"] {
     background-color: #2c2c2c;
@@ -106,7 +106,7 @@ body.dark-mode input.form-control[type="email"] {
     border: 1px solid #555;
 }
 
-/* 🌙 Dark mode: confirm-delete box */
+/* Dark mode: confirm-delete box */
 body.dark-mode .confirm-delete {
     background-color: #1e1e1e;
     color: #ffffff;
@@ -115,27 +115,43 @@ body.dark-mode .confirm-delete {
     border-radius: 4px;
 }
 
-/* 🌙 Dark mode: product select dropdown */
+/* Dark mode: product select dropdown */
 body.dark-mode #product-select {
     background-color: #2c2c2c;
     color: #ffffff;
     border: 1px solid #555;
 }
 
-/* 🌙 Dark mode: select options */
+/* Dark mode: select options */
 body.dark-mode #product-select option {
     background-color: #2c2c2c;
     color: #ffffff;
 }
 
-/* 🌙 Dark mode: Work Instruction select dropdown */
+body.dark-mode .dark-mode-target input[type="file"]::file-selector-button {
+    background-color: #5e5e5e;
+    color: #ffffff;
+    border: 1px solid #555;
+    padding: 0.3em 0.75em;
+    cursor: pointer;
+}
+
+body.dark-mode .dark-mode-target .btn-primary:disabled {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border: 1px solid #444;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Dark mode: Work Instruction select dropdown */
 body.dark-mode #workInstruction-select {
     background-color: #2c2c2c;
     color: #ffffff;
     border: 1px solid #555;
 }
 
-/* 🌙 Dark mode: option list inside select */
+/* Dark mode: option list inside select */
 body.dark-mode #workInstruction-select option {
     background-color: #2c2c2c;
     color: #ffffff;

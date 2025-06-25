@@ -1,4 +1,4 @@
-/* ✅ Light mode base */
+/* Light mode base */
 .scrollable-checkbox-container {
     max-height: 100px;
     overflow-y: auto;
@@ -6,44 +6,44 @@
     border-radius: 0.25rem;
 }
 
-/* 💡 Light mode hover */
+/* Light mode hover */
 .list-group-item:hover {
     background-color: #f8f9fa;
 }
 
-/* 🌙 Dark mode: scroll container */
+/* Dark mode: scroll container */
 body.dark-mode .scrollable-checkbox-container {
     background-color: #1e1e1e !important;
     color: #ffffff !important;
     border: none;
 }
 
-/* 🌙 Dark mode: list-group-item */
+/* Dark mode: list-group-item */
 body.dark-mode .scrollable-checkbox-container .list-group-item {
     background-color: #2c2c2c !important;
     color: #ffffff !important;
     border: none;
 }
 
-/* 🌙 Dark mode: hover effect */
+/* Dark mode: hover effect */
 body.dark-mode .scrollable-checkbox-container .list-group-item:hover {
     background-color: #3a3a3a !important;
 }
 
-/* 🌙 Dark mode: checkbox input */
+/* Dark mode: checkbox input */
 body.dark-mode .scrollable-checkbox-container input[type="checkbox"] {
     background-color: #2a2a2a !important;
     border: 1px solid #666 !important;
     accent-color: #ffd502; /* Optional: matches your theme */
 }
 
-/* 🌙 Dark mode: label text */
+/* Dark mode: label text */
 body.dark-mode .scrollable-checkbox-container .list-group-item label,
 body.dark-mode .scrollable-checkbox-container label {
     color: #ffffff !important;
 }
 
-/* 🌙 Dark mode: fallback for text-muted */
+/* Dark mode: fallback for text-muted */
 body.dark-mode .scrollable-checkbox-container .text-muted {
     color: #bbbbbb !important;
 }
