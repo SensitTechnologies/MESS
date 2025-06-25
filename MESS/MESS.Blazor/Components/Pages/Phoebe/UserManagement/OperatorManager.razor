@@ -46,7 +46,7 @@
             {
                 @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
                 {
-                    <UserTableRow RowNumber="index" UserRoleDto="userDto" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges"/>
+                    <UserTableRow RowNumber="index" UserRoleDto="userDto" DisplayAlert="DisplayAlert" SaveChanges="SaveChanges" />
                 }
             }
             </tbody>
@@ -109,6 +109,14 @@
             {
                 user.UserName = user.UserName is {Length: >= 0} ? user.UserName : user.Email;
                 await ApplicationUserService.AddApplicationUser(user);
+                
+                // Update IsNew = false in the UserRoleDto
+                var userDto = ApplicationUserDtoList.FirstOrDefault(u => u.User == user);
+                if (userDto is not null)
+                    userDto.IsNew = false;
+
+                StateHasChanged();
+
                 ToastService.ShowSuccess($"Successfully Created User: {user.UserName}");
             }
             else
@@ -139,7 +147,8 @@
         var newApplicationUser = new ApplicationUser();
         var newUser = new UserRoleDto
         {
-            User = newApplicationUser
+            User = newApplicationUser,
+            IsNew = true
         };
         
         ApplicationUserDtoList.Add(newUser);

@@ -20,4 +20,9 @@ public class UserRoleDto
     /// Indicates whether the user account is locked out
     /// </summary>
     public bool IsLockedOut { get; set; }
+    
+    /// <summary>
+    /// Indicates whether the user has been saved to the database
+    /// </summary>
+    public bool IsNew { get; set; }
 }
