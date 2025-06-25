@@ -468,3 +468,15 @@ td {
     color: #28a745; /* success green or change for failure */
 }
 
+body.dark-mode .form-floating > label[for="productSerialNumber"] {
+    background-color: transparent !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+    z-index: 2;
+}
+
+body.dark-mode .form-floating > label[for="productSerialNumber"]::after {
+    content: none !important;
+    background-color: transparent !important;
+    display: none !important;
+}
