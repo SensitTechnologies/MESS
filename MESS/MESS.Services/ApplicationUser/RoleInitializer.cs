@@ -29,7 +29,7 @@ public class RoleInitializer
     /// </remarks>
     public async Task InitializeAsync()
     {
-        string[] roles = { "Technician", "Operator" };
+        string[] roles = { "Technician", "Operator", "Administrator" };
 
         foreach (var role in roles)
         {
