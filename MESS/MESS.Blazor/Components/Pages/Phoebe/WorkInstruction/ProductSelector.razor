@@ -36,7 +36,7 @@
     /// Event callback triggered when the selected products change.
     /// </summary>
     [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
-
+    
     private bool IsProductSelected(int productId)
     {
         return WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;

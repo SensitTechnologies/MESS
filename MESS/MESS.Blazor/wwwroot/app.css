@@ -8,224 +8,40 @@ html, body {
 }
 
 body.dark-mode {
-    color: #ffffff;
-}
-
-body.dark-mode a,
-body.dark-mode p,
-body.dark-mode span,
-body.dark-mode label,
-body.dark-mode input,
-body.dark-mode select,
-body.dark-mode textarea {
-    color: #ffffff !important;
-}
-
-/* Placeholder text color */
-body.dark-mode ::placeholder {
-    color: #cccccc !important; /* Slightly off-white for better UX */
-}
-
-/* White text for the login button */
-body.dark-mode .login-button {
-    color: #ffffff !important;
-    background-color: transparent;
-    border: none;
-}
-
-/* Light mode: dropdown should be opaque */
-.login-dropdown,
-.login-dropdown option {
-    background-color: #ffffff;
-    color: #000000;
-    opacity: 1;
-}
-
-/* Dark mode: force white text and gray background on all dropdown elements */
-body.dark-mode .login-dropdown,
-body.dark-mode select.login-dropdown,
-body.dark-mode .login-dropdown *,
-body.dark-mode select.login-dropdown * {
-    background-color: #2c2c2c !important;
-    color: #ffffff !important;
-    opacity: 1;
-}
-
-/* Specifically target option elements as well */
-body.dark-mode .login-dropdown option,
-body.dark-mode select.login-dropdown option {
-    background-color: #2c2c2c !important;
-    color: #ffffff !important;
-}
-
-/* Dark mode: table row styling */
-body.dark-mode tr,
-body.dark-mode td {
-    background-color: transparent;
-    color: #ffffff;
-    border-color: #444;
-}
-
-/* Dark mode: InputText fields */
-body.dark-mode input.form-control[type="text"],
-body.dark-mode input.form-control {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid #555;
-}
-
-/* Dark mode: InputCheckbox */
-body.dark-mode input.form-check-input[type="checkbox"] {
-    background-color: #2a2a2a;
-    border: 1px solid #666;
-    accent-color: #ffd502;
-}
-
-/* Dark mode: WorkInstructionSelector (assumes select-based structure) */
-body.dark-mode select,
-body.dark-mode .form-select {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid #555;
-}
-
-/* Dark mode: table row and cells */
-body.dark-mode tr,
-body.dark-mode td,
-body.dark-mode th {
-    background-color: transparent;
-    color: #ffffff;
-    border-color: #444;
-}
-
-/* Dark mode: input fields */
-body.dark-mode input.form-control[type="text"],
-body.dark-mode input.form-control[type="email"] {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid #555;
-}
-
-/* Dark mode: confirm-delete box */
-body.dark-mode .confirm-delete {
-    background-color: #1e1e1e;
-    color: #ffffff;
-    border: 1px solid #666;
-    padding: 0.5rem;
-    border-radius: 4px;
-}
-
-/* Dark mode: product select dropdown */
-body.dark-mode #product-select {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid #555;
-}
-
-/* Dark mode: select options */
-body.dark-mode #product-select option {
-    background-color: #2c2c2c;
-    color: #ffffff;
-}
-
-body.dark-mode .dark-mode-target input[type="file"]::file-selector-button {
-    background-color: #5e5e5e;
-    color: #ffffff;
-    border: 1px solid #555;
-    padding: 0.3em 0.75em;
-    cursor: pointer;
-}
-
-body.dark-mode .dark-mode-target .btn-primary:disabled {
-    background-color: #2a2a2a;
-    color: #ffffff;
-    border: 1px solid #444;
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Dark mode: Work Instruction select dropdown */
-body.dark-mode #workInstruction-select {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid #555;
-}
-
-/* Dark mode: option list inside select */
-body.dark-mode #workInstruction-select option {
-    background-color: #2c2c2c;
-    color: #ffffff;
-}
-
-/* Optional: truncated text should remain readable */
-body.dark-mode #workInstruction-select.text-truncate {
-    color: #ffffff;
-}
-
-body.dark-mode{
     background-color: #121212;
     color: white;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.label-mode {
-    color: #000; /* Light mode default */
-    transition: color 0.3s ease;
-}
-
-body.dark-mode .label-mode {
-    color: #ffffff; /* A bright contrasting color in dark mode */
-}
-
-.dark-mode-target {
-    background-color: #ffffff;
-    color: #000000;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body.dark-mode .dark-mode-target {
-    background-color: #404040;
-    color: #ffffff;
-    border: 1px solid rgb(19, 19, 19); /* Optional for definition */
-}
-
-body.dark-mode .dark-mode-target .btn-primary {
-    background-color: #ffd502;
-    color: #020000;
-}
-
-body.dark-mode .dark-mode-target .form-control {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid rgb(19, 19, 19);
-}
-
+/* Light mode tables */
 body.light-mode .table,
 body.light-mode .table th,
 body.light-mode .table td {
-    background-color: #ffffff; 
+    background-color: #ffffff;
     color: #000000;
     border: 1px solid #dee2e6;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body.light-mode .table.table-striped tbody tr {
-    background-color: #6e6e6e; 
+    background-color: #6e6e6e;
 }
 
+/* Dark mode tables */
 body.dark-mode .table,
 body.dark-mode .table th,
 body.dark-mode .table td {
-    background-color: transparent; 
-    color: #ffffff; 
+    background-color: transparent;
+    color: #ffffff;
     border: 1px solid #a8a8a8;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
-    background-color: #151515; 
+    background-color: #151515;
 }
 
+/* Dark mode list-group container */
 body.dark-mode .list-group.container {
     color: #ffffff;
     background-color: #1e1e1e;
@@ -250,15 +66,11 @@ body.dark-mode .step {
 .page {
     display: flex;
     flex-direction: column;
-    min-height: 100vh; 
+    min-height: 100vh;
     width: 100%;
 }
 
 .dark-mode .page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    width: 100%;
     background-color: #1e1e1e;
     color: #ffffff;
 }
@@ -269,7 +81,7 @@ body.dark-mode .step {
     border: 1px solid rgb(19, 19, 19);
 }
 
-.dark-mode .form-floating .form-control { 
+.dark-mode .form-floating .form-control {
     background-color: #2c2c2c;
     color: #ffffff;
     border: 1px solid rgb(19, 19, 19);
@@ -295,6 +107,7 @@ a, .btn-link {
     border: 3px solid #ffd502;
     margin: 5px;
 }
+
 .btn:hover {
     background-color: rgba(255, 213, 2, 0);
     color: #000000;
@@ -316,8 +129,7 @@ a, .btn-link {
     border: 3px solid red;
 }
 
-
-.btn-success{
+.btn-success {
     color: #4aff00;
     background-color: #020000;
     border: 3px solid #4aff00;
@@ -354,7 +166,7 @@ h1:focus {
 }
 
 .blazor-error-boundary::after {
-    content: "An error has occurred."
+    content: "An error has occurred.";
 }
 
 .darker-border-checkbox.form-check-input {
@@ -373,7 +185,6 @@ h1:focus {
 .header-container {
     margin-bottom: 4px;
 }
-
 
 @media (max-width: 768px) {
     .header-container {
@@ -421,7 +232,7 @@ h1:focus {
 
 @media (max-width: 768px) {
     .top-right-corner {
-        top: 15px; 
+        top: 15px;
         right: 15px;
     }
 }
@@ -445,8 +256,8 @@ td {
 
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
-    background-color: rgba(0, 0, 0, 0.6); /* Darker background for contrast */
-    border-radius: 50%;                  /* Make them circular */
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
     width: 3rem;
     height: 3rem;
     background-size: 60% 60%;
@@ -456,13 +267,13 @@ td {
 
 .carousel-control-prev,
 .carousel-control-next {
-    opacity: 1;                /* Make them fully visible */
+    opacity: 1;
     transition: opacity 0.3s;
 }
 
 .carousel-control-prev:hover,
 .carousel-control-next:hover {
-    opacity: 0.8;              /* Slight dimming on hover for interactivity */
+    opacity: 0.8;
 }
 
 @keyframes floatAway {
@@ -481,8 +292,184 @@ td {
     font-weight: bold;
     pointer-events: none;
     animation: floatAway 0.8s ease-out forwards;
-    color: #28a745; /* success green or change for failure */
+    color: #28a745;
 }
+
+/* Dark mode dropdown container */
+body.dark-mode .login-dropdown {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: 1px solid #444 !important;
+    scrollbar-color: #555 #1e1e1e; /* For Firefox scrollbar */
+}
+
+/* Dropdown items */
+body.dark-mode .login-dropdown .dropdown-item {
+    color: #ffffff !important;
+    background-color: transparent !important;
+}
+
+/* Small text inside dropdown items */
+body.dark-mode .login-dropdown .dropdown-item small {
+    color: #ffffff !important;
+}
+
+/* Hover effect for dropdown items */
+body.dark-mode .login-dropdown .dropdown-item:hover {
+    background-color: #3a3a3a !important;
+    color: #ffd502 !important; /* Highlight color on hover */
+}
+
+/* Hover effect for small text */
+body.dark-mode .login-dropdown .dropdown-item:hover small {
+    color: #ffd502 !important;
+}
+
+/* Muted small text */
+body.dark-mode .login-dropdown .dropdown-item small.text-muted {
+    color: #bbbbbb !important;
+}
+
+/* 1. Dark mode: Enabled inputs (textboxes) are lighter gray */
+body.dark-mode input.form-control:enabled,
+body.dark-mode textarea:enabled {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+    border: 1px solid #666 !important;
+}
+
+/* 2. Dark mode: Disabled inputs are darker */
+body.dark-mode input.form-control:disabled,
+body.dark-mode textarea:disabled {
+    background-color: #1f1f1f !important;
+    color: #aaaaaa !important;
+    border: 1px solid #444 !important;
+}
+
+/* 3. Dark mode: Fail box (input validation) */
+body.dark-mode .invalid,
+body.dark-mode .validation-message {
+    background-color: #2c0b0b !important; /* dark red */
+    color: #ff6b6b !important; /* red text */
+    border: 1px solid #ff6b6b !important; /* red border */
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+}
+
+/* Fail dialog boxes in light mode */
+body:not(.dark-mode) .invalid,
+body:not(.dark-mode) .validation-message {
+    background-color: #2c2c2c; /* gray */
+    color: #e50000; /* bright red */
+    border: 1px solid #e50000; /* bright red */
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+}
+
+/* ========================== */
+/* Dark Mode: Dropdowns       */
+/* ========================== */
+
+body.dark-mode select,
+body.dark-mode .form-select,
+body.dark-mode .login-dropdown,
+body.dark-mode #workInstruction-select {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: 1px solid #888 !important;
+    padding-left: 0.5rem !important; /* Prevents large indent */
+    appearance: none !important; /* Removes OS-specific styles */
+}
+
+/* Ensure options are styled consistently */
+body.dark-mode select option,
+body.dark-mode .form-select option,
+body.dark-mode .login-dropdown option,
+body.dark-mode #workInstruction-select option {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+/* Disabled options muted */
+body.dark-mode select option:disabled,
+body.dark-mode .form-select option:disabled {
+    color: #777777 !important;
+}
+
+/* Light mode: login dropdown background and text color */
+body:not(.dark-mode) .login-dropdown {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* Light mode: login dropdown items */
+body:not(.dark-mode) .login-dropdown .dropdown-item {
+    color: #000000 !important;
+}
+
+/* Light mode: login dropdown small text */
+body:not(.dark-mode) .login-dropdown .dropdown-item small {
+    color: #666666 !important;
+}
+
+/* Light mode: login dropdown hover */
+body:not(.dark-mode) .login-dropdown .dropdown-item:hover {
+    background-color: #f8f9fa !important;
+    color: #000000 !important;
+}
+
+/* Light mode: login dropdown hover small text */
+body:not(.dark-mode) .login-dropdown .dropdown-item:hover small {
+    color: #000000 !important;
+}
+
+/* Placeholder text color for the username input */
+
+/* Light mode placeholder (default) */
+body:not(.dark-mode) input#email::placeholder {
+    color: #6c757d; /* or black/dark gray as you prefer */
+}
+
+/* Dark mode placeholder */
+body.dark-mode input#email::placeholder {
+    color: #ffffff !important; /* White placeholder text */
+}
+
+/* =========================== */
+/* Choose File input styling   */
+/* =========================== */
+
+/* Remove default OS styles */
+input[type="file"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Light mode */
+body:not(.dark-mode) input[type="file"] {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #dee2e6;
+}
+
+/* Dark mode */
+body.dark-mode input[type="file"] {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: 1px solid #666 !important;
+}
+
+/* =========================== */
+/* Product Serial Number input  */
+/* =========================== */
 
 body.dark-mode .form-floating > label[for="productSerialNumber"] {
     background-color: transparent !important;
@@ -496,3 +483,81 @@ body.dark-mode .form-floating > label[for="productSerialNumber"]::after {
     background-color: transparent !important;
     display: none !important;
 }
+
+/* Card dark mode background */
+body.dark-mode .dark-mode-target {
+    background-color: transparent !important;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19);
+}
+
+/* File input appearance */
+input[type="file"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+body.dark-mode input[type="file"] {
+    background-color: #404040 !important;
+    color: #ffffff !important;
+    border: 1px solid #666 !important;
+}
+
+/* Optional: style the file upload button */
+body.dark-mode .dark-mode-target input[type="file"]::file-selector-button {
+    background-color: transparent !important;
+    color: #ffffff;
+    border: 1px solid #555;
+    padding: 0.3em 0.75em;
+    cursor: pointer;
+}
+
+/* Disabled button style in dark mode */
+body.dark-mode .dark-mode-target .btn-primary:disabled {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border: 1px solid #444;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- Light mode (unchanged) --- */
+input[disabled] {
+    background-color: #ffffff;
+    color: #777777;
+    font-weight: normal;
+    cursor: not-allowed;
+}
+
+input:not([disabled]) {
+    background-color: #f0f0f0;
+    color: #222222;
+    font-weight: 600;
+    cursor: text;
+}
+
+/* --- Dark mode – Disabled inputs (darker appearance) --- */
+body.dark-mode input[disabled] {
+    background-color: #2a2a2a;  /* dark gray background */
+    color: #888888;
+    font-weight: normal;
+    cursor: not-allowed;
+}
+
+/* --- Dark mode – Enabled inputs (light gray background, dark text) --- */
+body.dark-mode input:not([disabled]) {
+    background-color: #eaeaea;  /* true light gray */
+    color: #1a1a1a;              /* strong readable text */
+    font-weight: 600;
+    cursor: text;
+}
+
+
+
