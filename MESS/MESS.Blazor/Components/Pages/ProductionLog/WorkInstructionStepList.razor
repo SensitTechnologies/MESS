@@ -39,10 +39,10 @@
             }
             
         }
-        @if (ActiveWorkInstruction.Nodes.OfType<PartNode>().Any())
+        @if (ActiveWorkInstruction.CollectsProductSerialNumber)
         {
             <div class="form-floating p-2 mb-2">
-                <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="UpdateSerializationService"></InputText>
+                <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="SetProductionLogSerialNumber"></InputText>
                 <label for="productSerialNumber">Product Serial Number:</label>
             </div>
         }
@@ -99,9 +99,9 @@
         return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
     }
 
-    private void UpdateSerializationService()
+    private void SetProductionLogSerialNumber()
     {
-        SerializationService.CurrentProductNumber = ProductSerialNumber;
+        ProductionLog.ProductSerialNumber = ProductSerialNumber;
     }
 
 }
