@@ -182,7 +182,7 @@ namespace MESS.Data.Migrations
                     b.ToTable("ProductionLogStepAttempts");
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.SerialNumberLog", b =>
+            modelBuilder.Entity("MESS.Data.Models.ProductionLogPart", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -393,7 +393,7 @@ namespace MESS.Data.Migrations
                     b.Navigation("ProductionLogStep");
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.SerialNumberLog", b =>
+            modelBuilder.Entity("MESS.Data.Models.ProductionLogPart", b =>
                 {
                     b.HasOne("MESS.Data.Models.Part", "Part")
                         .WithMany()

@@ -19,7 +19,7 @@ public class SerializationService : ISerializationService
     }
 
     /// <inheritdoc />
-    public event Action? CurrentSerialNumberLogChanged;
+    public event Action? CurrentProductionLogPartChanged;
     /// <inheritdoc />
     public event Action? CurrentProductNumberChanged;
     private string? _currentProductNumber;
@@ -35,55 +35,55 @@ public class SerializationService : ISerializationService
         }
     }
 
-    private List<SerialNumberLog> _currentSerialNumberLogs = [];
+    private List<ProductionLogPart> _currentProductionLogParts = [];
     /// <inheritdoc />
-    public List<SerialNumberLog> CurrentSerialNumberLogs
+    public List<ProductionLogPart> CurrentProductionLogParts
     {
-        get => _currentSerialNumberLogs;
+        get => _currentProductionLogParts;
         set
         {
-            _currentSerialNumberLogs = value;
-            CurrentSerialNumberLogChanged?.Invoke();
+            _currentProductionLogParts = value;
+            CurrentProductionLogPartChanged?.Invoke();
         }
     }
 
     /// <inheritdoc />
-    public async Task<bool> SaveCurrentSerialNumberLogsAsync(int productionLogId)
+    public async Task<bool> SaveCurrentProductionLogPartsAsync(int productionLogId)
     {
         try
         {
-            if (CurrentSerialNumberLogs.Count <= 0)
+            if (CurrentProductionLogParts.Count <= 0)
             {
                 return false;
             }
 
-            foreach (var log in CurrentSerialNumberLogs)
+            foreach (var log in CurrentProductionLogParts)
             {
                 log.ProductionLogId = productionLogId;
             }
 
-            var result = await CreateRangeAsync(CurrentSerialNumberLogs);
+            var result = await CreateRangeAsync(CurrentProductionLogParts);
             if (result)
             {
-                CurrentSerialNumberLogs.Clear();
+                CurrentProductionLogParts.Clear();
             }
             return result;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught when attempting to save Current Serial Number Logs with ProductionLogID: {ID}. Exception Message {Message}", productionLogId, e.Message);
+            Log.Warning("Exception caught when attempting to save Current Production Log Parts with ProductionLogID: {ID}. Exception Message {Message}", productionLogId, e.Message);
             return false;
         }
     }
 
     /// <inheritdoc />
-    public async Task<List<SerialNumberLog>?> GetAllAsync()
+    public async Task<List<ProductionLogPart>?> GetAllAsync()
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var logList = await context.SerialNumberLogs
+            var logList = await context.ProductionLogParts
                 .Include(l => l.Part)
                 .ToListAsync();
 
@@ -91,42 +91,42 @@ public class SerializationService : ISerializationService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to Get All SerialNumberLogs Async: {ExceptionMessage}", e.Message);
+            Log.Warning("Exception caught while attempting to Get All ProductionLogParts Async: {ExceptionMessage}", e.Message);
             return null;
         }
     }
 
     /// <inheritdoc />
-    public async Task<bool> CreateAsync(SerialNumberLog serialNumberLog)
+    public async Task<bool> CreateAsync(ProductionLogPart productionLogPart)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            await context.SerialNumberLogs.AddAsync(serialNumberLog);
+            await context.ProductionLogParts.AddAsync(productionLogPart);
             await context.SaveChangesAsync();
             return true;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to create SerialNumberLog Async: {ExceptionMessage}", e.Message);
+            Log.Warning("Exception caught while attempting to create ProductionLogPart Async: {ExceptionMessage}", e.Message);
             return false;
         }
     }
 
     /// <inheritdoc />
-    public async Task<bool> CreateRangeAsync(List<SerialNumberLog> serialNumberLogs)
+    public async Task<bool> CreateRangeAsync(List<ProductionLogPart> productionLogParts)
     {
         try
         {
-            if (serialNumberLogs.Count <= 0)
+            if (productionLogParts.Count <= 0)
             {
-                Log.Warning("Attempted to add range of serialNumberLogs with {LogCount} logs", serialNumberLogs.Count);
+                Log.Warning("Attempted to add range of productionLogParts with {LogCount} logs", productionLogParts.Count);
                 return false;
             }
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            foreach (var serialNumberLog in serialNumberLogs)
+            foreach (var serialNumberLog in productionLogParts)
             {
                 if (serialNumberLog.Part is not null)
                 {
@@ -135,32 +135,32 @@ public class SerializationService : ISerializationService
                 }
             }
 
-            await context.SerialNumberLogs.AddRangeAsync(serialNumberLogs);
+            await context.ProductionLogParts.AddRangeAsync(productionLogParts);
             await context.SaveChangesAsync();
 
             return true;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to Create a Range of SerialNumberLogs with Exception Message: {ExceptionMessage}",  e.Message);
+            Log.Warning("Exception caught while attempting to Create a Range of ProductionLogParts with Exception Message: {ExceptionMessage}",  e.Message);
             return false;
         }
     }
 
     /// <inheritdoc />
-    public async Task<bool> UpdateAsync(SerialNumberLog serialNumberLog)
+    public async Task<bool> UpdateAsync(ProductionLogPart productionLogPart)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            context.SerialNumberLogs.Update(serialNumberLog);
+            context.ProductionLogParts.Update(productionLogPart);
             await context.SaveChangesAsync();
             return true;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to update SerialNumberLog with ID: {ID} with Exception Message: {ExceptionMessage}", serialNumberLog.Id, e.Message);
+            Log.Warning("Exception caught while attempting to update ProductionLogPart with ID: {ID} with Exception Message: {ExceptionMessage}", productionLogPart.Id, e.Message);
             return false;
         }
     }
@@ -172,27 +172,27 @@ public class SerializationService : ISerializationService
         {
             if (serialNumberLogId <= 0)
             {
-                Log.Error("Attempted to delete SerialNumberLog with invalid ID: {ID}", serialNumberLogId);
+                Log.Error("Attempted to delete ProductionLogPart with invalid ID: {ID}", serialNumberLogId);
                 return false;
             }
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var serialNumberLogToDelete = await context.SerialNumberLogs.FindAsync(serialNumberLogId);
+            var serialNumberLogToDelete = await context.ProductionLogParts.FindAsync(serialNumberLogId);
 
             if (serialNumberLogToDelete == null)
             {
-                Log.Warning("Attempted to delete non-existent SerialNumberLog with ID: {ID}", serialNumberLogId);
+                Log.Warning("Attempted to delete non-existent ProductionLogPart with ID: {ID}", serialNumberLogId);
                 return false;
             }
             
-            context.SerialNumberLogs.Remove(serialNumberLogToDelete);
+            context.ProductionLogParts.Remove(serialNumberLogToDelete);
             await context.SaveChangesAsync();
 
             return true;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to delete serialNumberLog with ID: {ID}: {ExceptionMessage}",serialNumberLogId, e.Message);
+            Log.Warning("Exception caught while attempting to delete productionLogPart with ID: {ID}: {ExceptionMessage}",serialNumberLogId, e.Message);
             return false;
         }
     }

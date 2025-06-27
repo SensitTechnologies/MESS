@@ -1,0 +1,20 @@
+﻿@using MESS.Data.Models
+<div class="d-flex flex-wrap gap-2 mt-2 justify-content-around align-content-center">
+    @foreach (var log in ProductionLogParts)
+    {
+        <RequiredPartInput ActiveProductionLogPart="log" AfterSerialNumberInput="AfterSerialNumberInput" />
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// A list of production log parts to be displayed in the component.
+    /// </summary>
+    [Parameter] public required List<ProductionLogPart> ProductionLogParts { get; set; }
+
+    /// <summary>
+    /// An event callback triggered after a serial number input is processed.
+    /// </summary>
+    [Parameter]
+    public required EventCallback<ProductionLogPart> AfterSerialNumberInput { get; set; }
+}
