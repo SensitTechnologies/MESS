@@ -4,7 +4,7 @@ namespace MESS.Data.Models;
 /// Represents a product entity with properties for identification, name, 
 /// active status, and associated work instructions.
 /// </summary>
-public class Product : AuditableEntity
+public class Product
 {
     /// <summary>
     /// Gets or sets the unique identifier for the product.
