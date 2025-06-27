@@ -23,11 +23,40 @@ public class WorkInstruction : AuditableEntity
     /// Gets or sets the version of the work instruction. This field is optional.
     /// </summary>
     public string? Version { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the id of the original work instruction in the version history. This allows for lineage tracking
+    /// and is nullable.
+    /// </summary>
+    public int? OriginalId { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the original work instruction in the version history.
+    /// </summary>
+    [ForeignKey(nameof(OriginalId))]
+    public WorkInstruction? Original { get; set; }
+    
+    // Helps identify the most recent version in a chain
+    /// <summary>
+    /// Gets or sets a value indicating whether a work instruction is its latest version.
+    /// </summary>
+    public bool IsLatest { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the work instruction is active.
     /// </summary>
     public bool IsActive { get; set; }
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether this work instruction should have a QR code generated when a production
+    /// log is completed for it.
+    /// </summary>
+    public bool ShouldGenerateQrCode { get; set; }
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether this work instruction collects a product serial number.
+    /// </summary>
+    public bool CollectsProductSerialNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the list of nodes associated with the work instruction.
