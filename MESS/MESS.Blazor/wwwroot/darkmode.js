@@ -54,23 +54,6 @@
     });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function applyTheme(isDark) {
     document.body.classList.toggle("dark-mode", isDark);
     document.body.classList.toggle("light-mode", !isDark);
