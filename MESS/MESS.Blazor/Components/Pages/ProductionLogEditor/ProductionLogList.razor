@@ -1,0 +1,146 @@
+@page "/production-logs"
+@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IProductionLogService ProductionLogService
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavManager
+
+<PageTitle>Production Logs</PageTitle>
+
+<ErrorBoundary>
+    <ChildContent>
+        <AuthorizeView Roles="Operator, Technician, Administrator">
+            <Authorizing>
+                <p>Authorizing...</p>
+            </Authorizing>
+            <NotAuthorized>
+                <div class="alert alert-warning">You are not authorized to view this page.</div>
+            </NotAuthorized>
+            <Authorized>
+                <div class="mb-3">
+                    <button class="btn btn-secondary" @onclick="NavigateToCreate">
+                        <i class="bi bi-arrow-left"></i> Back to Production Log
+                    </button>
+                </div>
+
+                @if (IsLoading)
+                {
+                    <div class="text-center my-5">
+                        <div class="spinner-border" role="status"></div>
+                        <p>Loading production logs...</p>
+                    </div>
+                }
+                else if (ProductionLogs.Any())
+                {
+                    <table class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Work Instruction</th>
+                            <th>Product Serial Number</th>
+                            <th>Created On</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var log in PaginatedLogs)
+                        {
+                            <tr>
+                                <td>@(log.Product?.Name ?? "(No Product)")</td>
+                                <td>@(log.WorkInstruction?.Title ?? "(No Work Instruction)")</td>
+                                <td>@log.ProductSerialNumber</td>
+                                <td>@log.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" @onclick="() => EditLog(log.Id)">Edit</button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="PrevPage">Previous</button>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">
+                                    Page @CurrentPage of @TotalPages
+                                </span>
+                            </li>
+                            <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="NextPage">Next</button>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+                else
+                {
+                    <div class="alert alert-info">No production logs found.</div>
+                }
+            </Authorized>
+        </AuthorizeView>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div class="alert alert-danger" role="alert">
+            An error occurred: @ex.Message
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private List<ProductionLog> ProductionLogs { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+
+    private int TotalPages => (int)Math.Ceiling((double)ProductionLogs.Count / PageSize);
+
+    private IEnumerable<ProductionLog> PaginatedLogs =>
+        ProductionLogs.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                ProductionLogs = await ProductionLogService.GetProductionLogsByOperatorIdAsync(userId) ?? [];
+            }
+        }
+
+        IsLoading = false;
+    }
+    
+    private void EditLog(int logId)
+    {
+        NavManager.NavigateTo($"/production-log/edit/{logId}");
+    }
+
+    private void PrevPage()
+    {
+        if (CurrentPage > 1)
+            CurrentPage--;
+    }
+
+    private void NextPage()
+    {
+        if (CurrentPage < TotalPages)
+            CurrentPage++;
+    }
+    
+    private void NavigateToCreate()
+    {
+        NavManager.NavigateTo("/production-log");
+    }
+}

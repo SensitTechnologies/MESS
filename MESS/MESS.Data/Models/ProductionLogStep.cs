@@ -1,6 +1,4 @@
-﻿using FluentValidation;
-
-namespace MESS.Data.Models;
+﻿namespace MESS.Data.Models;
 
 /// <summary>
 /// Represents a step in the production log.

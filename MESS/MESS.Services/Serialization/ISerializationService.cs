@@ -4,14 +4,14 @@ namespace MESS.Services.Serialization;
 
 /// <summary>
 /// Interface for serialization services, providing methods and events
-/// for managing serial number logs and product numbers.
+/// for managing production log parts and product numbers.
 /// </summary>
 public interface ISerializationService
 {
     /// <summary>
-    /// Event triggered when the current serial number log changes.
+    /// Event triggered when the current production log part changes.
     /// </summary>
-    public event Action? CurrentSerialNumberLogChanged;
+    public event Action? CurrentProductionLogPartChanged;
 
     /// <summary>
     /// Event triggered when the current product number changes.
@@ -23,42 +23,44 @@ public interface ISerializationService
     /// </summary>
     public string? CurrentProductNumber { get; set; }
     /// <summary>
-    /// A List of the Current Serial Number Logs for a given Work Instruction Request.
+    /// A List of the Current Production Log Parts for a given Work Instruction Request.
     /// Defaults to an empty List
     /// </summary>
-    public List<SerialNumberLog> CurrentSerialNumberLogs { get; set; }
+    public List<ProductionLogPart> CurrentProductionLogParts { get; set; }
+
     /// <summary>
-    /// Modifies the CurrentSerialNumberLogs list to include the associated ProductionLogIds,
+    /// Modifies the CurrentProductionLogParts list to include the associated ProductionLogIds,
     /// and then saves the range.
     /// </summary>
     /// <param name="productionLogId">int value for the associated ProductionLog</param>
     /// <returns>True value if the operation succeeded, false otherwise</returns>
-    public Task<bool> SaveCurrentSerialNumberLogsAsync(int productionLogId);
+    public Task<bool> SaveCurrentProductionLogPartsAsync(int productionLogId);
     /// <summary>
     /// Retrieves all SerialNumberLogs Async
     /// </summary>
     /// <returns>Nullable List of SerialNumberLogs</returns>
-    public Task<List<SerialNumberLog>?> GetAllAsync();
+    public Task<List<ProductionLogPart>?> GetAllAsync();
     /// <summary>
-    /// Creates and saves a new SerialNumberLog in the database.
+    /// Creates and saves a new ProductionLogPart in the database.
     /// </summary>
-    /// <param name="serialNumberLog">The SerialNumberLog object to be saved in the database</param>
+    /// <param name="productionLogPart">The ProductionLogPart object to be saved in the database</param>
     /// <returns>True value if the operation succeeded, false otherwise</returns>
-    public Task<bool> CreateAsync(SerialNumberLog serialNumberLog);
+    public Task<bool> CreateAsync(ProductionLogPart productionLogPart);
+
     /// <summary>
     /// Creates and saves a List of SerialNumberLogs in the database.
     /// </summary>
-    /// <param name="serialNumberLogs"></param>
+    /// <param name="productionLogParts"></param>
     /// <returns>True value if the operation succeeded, false otherwise</returns>
-    public Task<bool> CreateRangeAsync(List<SerialNumberLog> serialNumberLogs);
+    public Task<bool> CreateRangeAsync(List<ProductionLogPart> productionLogParts);
     /// <summary>
-    /// Updates the saved SerialNumberLog in the database.
+    /// Updates the saved ProductionLogPart in the database.
     /// </summary>
-    /// <param name="serialNumberLog"></param>
+    /// <param name="productionLogPart"></param>
     /// <returns>True value if the operation succeeded, false otherwise</returns>
-    public Task<bool> UpdateAsync(SerialNumberLog serialNumberLog);
+    public Task<bool> UpdateAsync(ProductionLogPart productionLogPart);
     /// <summary>
-    /// Deletes the associated SerialNumberLog with the input integer ID
+    /// Deletes the associated ProductionLogPart with the input integer ID
     /// </summary>
     /// <param name="serialNumberLogId"></param>
     /// <returns>True value if the operation succeeded, false otherwise</returns>

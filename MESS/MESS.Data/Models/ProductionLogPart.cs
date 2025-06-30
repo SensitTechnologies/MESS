@@ -1,12 +1,12 @@
 namespace MESS.Data.Models;
 
 /// <summary>
-/// Represents a log entry for serial numbers associated with a production process.
+/// Represents a log entry for part serial numbers associated with a production process.
 /// </summary>
-public class SerialNumberLog : AuditableEntity
+public class ProductionLogPart
 {
     /// <summary>
-    /// Gets or sets the unique identifier for the serial number log.
+    /// Gets or sets the unique identifier for the production log part.
     /// </summary>
     public int Id { get; set; }
 
@@ -14,12 +14,7 @@ public class SerialNumberLog : AuditableEntity
     /// Gets or sets the part serial number.
     /// </summary>
     public string? PartSerialNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets the product serial number.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
-
+    
     /// <summary>
     /// Gets or sets the identifier of the associated production log.
     /// </summary>

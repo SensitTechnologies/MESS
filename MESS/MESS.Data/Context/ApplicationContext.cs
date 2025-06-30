@@ -34,9 +34,9 @@ public class ApplicationContext : DbContext
     /// </summary>
     public virtual DbSet<PartNode> PartNodes { get; set; } = null!;
     /// <summary>
-    /// DbSet for SerialNumberLogs.
+    /// DbSet for ProductionLogParts.
     /// </summary>
-    public virtual DbSet<SerialNumberLog> SerialNumberLogs { get; set; } = null!;
+    public virtual DbSet<ProductionLogPart> ProductionLogParts { get; set; } = null!;
     /// <summary>
     /// DbSet for ProductionLogs.
     /// </summary>
@@ -78,36 +78,11 @@ public class ApplicationContext : DbContext
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
         
-        modelBuilder.Entity<ProductionLog>(entity =>
-        {
-            // Configure WorkInstruction relationship
-            entity.HasOne(p => p.WorkInstruction)
-                .WithMany()
-                .HasForeignKey("WorkInstructionId")
-                .IsRequired(false);
-    
-            // Configure LogSteps relationship
-            entity.HasMany(p => p.LogSteps)
-                .WithOne(s => s.ProductionLog)
-                .HasForeignKey(s => s.ProductionLogId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-
-        modelBuilder.Entity<ProductionLogStep>(entity =>
-        {
-            // Relationship to attempts
-            entity.HasMany(s => s.Attempts)
-                .WithOne(a => a.ProductionLogStep)
-                .HasForeignKey(a => a.ProductionLogStepId)
-                .OnDelete(DeleteBehavior.Cascade);
-    
-            // Relationship to work instruction step
-            entity.HasOne(s => s.WorkInstructionStep)
-                .WithMany()
-                .HasForeignKey(s => s.WorkInstructionStepId);
-            
-        });
+        modelBuilder.Entity<ProductionLog>()
+            .HasOne(p => p.WorkInstruction)
+            .WithMany()
+            .HasForeignKey("WorkInstructionId")
+            .IsRequired(false);
     }
     
     /// <inheritdoc />

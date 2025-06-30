@@ -1,0 +1,69 @@
+@using MESS.Data.Models
+@using MESS.Services.Serialization
+@inject ISerializationService SerializationService
+
+@if (_initialized)
+{
+    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput" />
+}
+
+@code {
+
+    /// <summary>
+    /// The part node that contains the parts to be displayed.
+    /// This parameter is required.
+    /// </summary>
+    [Parameter]
+    public required PartNode PartNode { get; set; }
+    
+    private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
+    private bool _initialized = false;
+
+    /// <inheritdoc />
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            _initialized = true;
+            StateHasChanged();
+        }
+    }
+    
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        InitializeProductionLogParts();
+    }
+
+
+    /// Each part gets its own production log part
+    private void InitializeProductionLogParts()
+    {
+        // No need to initialize production log parts if they are present in the UI
+        if (ProductionLogParts.Count > 0)
+        {
+            return;
+        }
+        
+        foreach (var part in PartNode.Parts)
+        {
+            ProductionLogParts.Add(new ProductionLogPart
+            {
+                Part = part
+            });
+        }
+    }
+    
+    private void AfterSerialNumberInput(ProductionLogPart productionLogPart)
+    {
+        productionLogPart.SubmitTimeQc = DateTimeOffset.UtcNow;
+
+        var updatedList = new List<ProductionLogPart>(SerializationService.CurrentProductionLogParts);
+        updatedList.Add(productionLogPart);
+
+        SerializationService.CurrentProductionLogParts = updatedList;
+    }
+}
