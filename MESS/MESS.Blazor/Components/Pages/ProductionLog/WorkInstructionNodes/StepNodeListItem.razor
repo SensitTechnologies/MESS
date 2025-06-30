@@ -11,7 +11,7 @@
             <div class="col col-md-6 col-sm-12 d-flex flex-column primary-content">
                 <div class="card">
                     <div class="card-body">
-                        <p class="card-text d-block mb-1">
+                        <p class="card-text d-block mb-1 show-details-text">
                             
                             @* Replace text with extra details i.e. body text *@
                             @switch (ShowDetails)
@@ -28,13 +28,15 @@
                 </div>
                 
                 <div class="mt-auto">
-                    <FluentTextArea 
-                        @ref="_failureNoteTextArea" 
-                        data-testid="optional-notes" 
-                        class=@($"w-100 mt-3 {(ShowOptionalNotesField ? "" : "d-none")}")
+                    <FluentTextArea
+                        @ref="_failureNoteTextArea"
+                        data-testid="optional-notes"
+                        class=@($"failure-textarea w-100 mt-3 {(ShowOptionalNotesField ? "" : "d-none")}")
                         placeholder="Optional: Add a failure note (if needed)"
                         @bind-Value="_currentAttemptNotes"
                         @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
+
+
                     
                     <div class="row mt-2">
                         <div class="col text-start">
@@ -199,11 +201,15 @@
 
     private bool ShowDetails = false;
 
-    private void toggleDetails()
+    private async void toggleDetails()
     {
         ShowDetails = !ShowDetails;
         StateHasChanged();
+
+        await Task.Delay(50);
+        await JsRuntime.InvokeVoidAsync("FixDarkModeColors");
     }
+
     
     private bool ShowOptionalNotesField { get; set; } = false;
     
@@ -226,71 +232,80 @@
     }
 
     private async Task HandleButtonPress(bool? result)
+{
+    if (!result.HasValue)
     {
-        if (!result.HasValue)
-        {
-            ShowOptionalNotesField = false;
-            _pendingFailureAttempt = null;
-            _currentAttemptNotes = string.Empty;
-            SetSelectedButton("");
-            return;
-        }
-
-        if (result.Value) // SUCCESS
-        {
-            var attempt = new ProductionLogStepAttempt
-            {
-                Success = true,
-                SubmitTime = DateTimeOffset.UtcNow,
-                Notes = ""
-            };
-
-            LogStep.Attempts.Add(attempt);
-            _pendingFailureAttempt = null;
-            _currentAttemptNotes = string.Empty;
-            ShowOptionalNotesField = false;
-
-            await OnStepCompleted.InvokeAsync((LogStep, true));
-            SetSelectedButton("Success");
-            
-            await ShowFloatMessage(true);
-        }
-        else // FAILURE
-        {
-            // If there's already a pending failure, finalize it by setting its notes
-            if (_pendingFailureAttempt != null)
-            {
-                _pendingFailureAttempt.Notes = _currentAttemptNotes;
-                _pendingFailureAttempt = null;
-            }
-
-            // Clear input for the next note
-            _currentAttemptNotes = string.Empty;
-
-            // Create new pending attempt
-            _pendingFailureAttempt = new ProductionLogStepAttempt
-            {
-                Success = false,
-                SubmitTime = DateTimeOffset.UtcNow,
-                Notes = ""
-            };
-            LogStep.Attempts.Add(_pendingFailureAttempt);
-
-            ShowOptionalNotesField = true;
-            SetSelectedButton("Failure");
-
-            await OnStepCompleted.InvokeAsync((LogStep, false));
-            StateHasChanged();
-            await Task.Yield();
-
-            if (_failureNoteTextArea?.Element != null)
-            {
-                await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
-            }
-            
-            await ShowFloatMessage(false);
-        }
+        ShowOptionalNotesField = false;
+        _pendingFailureAttempt = null;
+        _currentAttemptNotes = string.Empty;
+        SetSelectedButton("");
+        return;
     }
+
+    if (result.Value) // SUCCESS
+    {
+        var attempt = new ProductionLogStepAttempt
+        {
+            Success = true,
+            SubmitTime = DateTimeOffset.UtcNow,
+            Notes = ""
+        };
+
+        LogStep.Attempts.Add(attempt);
+        _pendingFailureAttempt = null;
+        _currentAttemptNotes = string.Empty;
+        ShowOptionalNotesField = false;
+
+        await OnStepCompleted.InvokeAsync((LogStep, true));
+        SetSelectedButton("Success");
+        
+        await ShowFloatMessage(true);
+    }
+    else // FAILURE
+    {
+        // If there's already a pending failure, finalize it by setting its notes
+        if (_pendingFailureAttempt != null)
+        {
+            _pendingFailureAttempt.Notes = _currentAttemptNotes;
+            _pendingFailureAttempt = null;
+        }
+
+        // Clear input for the next note
+        _currentAttemptNotes = string.Empty;
+
+        // Create new pending attempt
+        _pendingFailureAttempt = new ProductionLogStepAttempt
+        {
+            Success = false,
+            SubmitTime = DateTimeOffset.UtcNow,
+            Notes = ""
+        };
+        LogStep.Attempts.Add(_pendingFailureAttempt);
+
+        ShowOptionalNotesField = true;
+        SetSelectedButton("Failure");
+
+        await OnStepCompleted.InvokeAsync((LogStep, false));
+        StateHasChanged();
+        await Task.Yield();
+
+        if (_failureNoteTextArea?.Element != null)
+        {
+            await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
+            // Fix inline colors after focus
+            await JsRuntime.InvokeVoidAsync("FixDarkModeFailureTextArea");
+
+        }
+        else
+        {
+            // Fix inline colors even if no focus set (just in case)
+            await JsRuntime.InvokeVoidAsync("FixDarkModeColors");
+        }
+        
+        await ShowFloatMessage(false);
+    }
+}
+
     
     private async Task HandleNoteChangedAsync()
     {

@@ -1,0 +1,30 @@
+@using MESS.Data.Models
+
+<div class="form-floating tall-cell">
+    <InputText
+        id="serialNumberLog"
+        class="form-control tall-input text-lightweight"
+        placeholder="@ActiveSerialNumberLog.Part?.PartNumber"
+        @bind-Value="@ActiveSerialNumberLog.PartSerialNumber"
+        @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveSerialNumberLog))" />
+
+    <label for="serialNumberLog" class="form-label subtle-label">
+        @ActiveSerialNumberLog.Part?.PartName
+    </label>
+</div>
+
+@code {
+    /// <summary>
+    /// The active serial number log.
+    /// This parameter is required.
+    /// </summary>
+    [Parameter]
+    public required SerialNumberLog ActiveSerialNumberLog { get; set; }
+
+    /// <summary>
+    /// The callback to be invoked after the serial number input is updated.
+    /// This parameter is required.
+    /// </summary>
+    [Parameter]
+    public required EventCallback<SerialNumberLog> AfterSerialNumberInput { get; set; }
+}
