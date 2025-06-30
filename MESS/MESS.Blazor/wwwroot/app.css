@@ -7,13 +7,43 @@ html, body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Default light mode styling */
+.login-dropdown {
+    background-color: white !important;
+    color: black;
+    border: 1px solid #ccc !important;
+}
+
+.login-dropdown .dropdown-item {
+    color: black !important;
+}
+
+.login-dropdown .dropdown-item:hover {
+    background-color: #f0f0f0 !important;
+}
+
+/* Dark mode overrides */
+body.dark-mode .login-dropdown {
+    background-color: #1e1e1e !important;
+    color: white !important;
+    border: 1px solid #444 !important;
+}
+
+body.dark-mode .login-dropdown,
+body.dark-mode .login-dropdown * {
+    color: white !important;
+}
+
+body.dark-mode .login-dropdown .dropdown-item:hover {
+    background-color: #333 !important;
+}
+
 body.dark-mode {
     background-color: #121212;
     color: white;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Original card style restored */
 body.dark-mode .dark-mode-target {
     background-color: transparent;
     color: #ffffff;
@@ -60,6 +90,7 @@ body.dark-mode .list-group.container {
     border: 1px solid transparent;
 }
 
+/* Steps */
 .step {
     background-color: transparent;
     color: #000000;
@@ -73,6 +104,7 @@ body.dark-mode .step {
     color: #ffffff;
 }
 
+/* Layout */
 .page {
     display: flex;
     flex-direction: column;
@@ -97,6 +129,7 @@ body.dark-mode .step {
     border: 1px solid #131313;
 }
 
+/* Inputs and cells */
 .small-input {
     height: 34px;
     font-size: 0.8rem;
@@ -115,13 +148,14 @@ body.dark-mode .step {
 
 .tall-input {
     height: 64px;
-    padding: 0.5rem 0.5rem;
+    padding: 0.5rem;
     font-size: 0.85rem;
     font-weight: 500;
     line-height: 1.3;
     resize: none;
 }
 
+/* Typography helpers */
 .text-lightweight {
     font-weight: 500;
     color: #131313;
@@ -155,15 +189,17 @@ body.dark-mode .step {
     }
 }
 
-/* Other elements */
+/* General layout */
 .main {
     flex: 1;
 }
 
-a, .btn-link {
+a,
+.btn-link {
     color: #d6a100;
 }
 
+/* Buttons */
 .btn-primary {
     color: #020000;
     background-color: #ffd502;
@@ -204,10 +240,15 @@ a, .btn-link {
     border: 3px solid #4aff00;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+/* Other UI */
 .content {
     padding-top: 1.1rem;
 }
@@ -242,6 +283,7 @@ h1:focus {
     border-color: #929292;
 }
 
+/* Floating labels */
 .form-floating > .form-control-plaintext::placeholder,
 .form-floating > .form-control::placeholder {
     color: var(--bs-secondary-color);
@@ -253,6 +295,7 @@ h1:focus {
     text-align: start;
 }
 
+/* Headers */
 .header-container {
     margin-bottom: 4px;
 }
@@ -267,6 +310,7 @@ h1:focus {
     }
 }
 
+/* Dark mode button */
 .darkmode {
     background-color: transparent;
     outline: none;
@@ -307,11 +351,13 @@ h1:focus {
     }
 }
 
+/* Custom labels */
 .custom-label::after,
 .label::after {
     background-color: transparent !important;
 }
 
+/* Tables */
 table tbody tr {
     margin-bottom: 10px;
     padding-bottom: 10px;
@@ -321,6 +367,7 @@ td {
     white-space: nowrap;
 }
 
+/* Carousel */
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
     background-color: rgba(0, 0, 0, 0.6);
@@ -343,9 +390,16 @@ td {
     opacity: 0.8;
 }
 
+/* Animations */
 @keyframes floatAway {
-    0% { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-40px) scale(1.2);
+    }
 }
 
 .floating-label {
@@ -356,7 +410,7 @@ td {
     color: #28a745;
 }
 
-/* Dark Mode Standard Dropdowns */
+/* Dark Mode Dropdowns */
 body.dark-mode select,
 body.dark-mode .form-select {
     background-color: #2c2c2c !important;
@@ -384,24 +438,7 @@ body.dark-mode .form-select::-ms-expand {
     color: #ffffff;
 }
 
-/* file input states */
-input[type="file"] {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding: 0.375rem 0.75rem;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 1rem;
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-body:not(.dark-mode) input[type="file"] {
-    background-color: #ffffff;
-    color: #000000;
-    border: 1px solid #dee2e6;
-}
-
+/* Dark mode file input */
 body.dark-mode input[type="file"] {
     background-color: #2c2c2c !important;
     color: #ffffff !important;
@@ -416,6 +453,7 @@ body.dark-mode .dark-mode-target input[type="file"]::file-selector-button {
     cursor: pointer;
 }
 
+/* Disabled dark mode primary button */
 body.dark-mode .dark-mode-target .btn-primary:disabled {
     background-color: #2a2a2a;
     color: #ffffff;
@@ -424,6 +462,7 @@ body.dark-mode .dark-mode-target .btn-primary:disabled {
     cursor: not-allowed;
 }
 
+/* Inputs */
 input[disabled] {
     background-color: #ffffff;
     color: #777777;
@@ -449,6 +488,63 @@ body.dark-mode input:not([disabled]) {
     cursor: text;
 }
 
+/* Placeholders */
+::placeholder {
+    /* no color here, keep default light mode */
+}
+
+body.dark-mode ::placeholder {
+    background-color: transparent !important;
+    color: #bbbbbb !important;
+}
+
+body.dark-mode .text-lightweight {
+    color: #ffffff !important;
+}
+
+body.dark-mode .subtle-label {
+    color: #b0b0b0 !important;
+}
+
+::placeholder,
+.form-floating > .form-control::placeholder,
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > label::after {
+    background-color: transparent !important;
+}
+
+body.dark-mode .form-floating > label::after {
+    background-color: transparent !important;
+    display: none !important;
+    content: none !important;
+}
+
+/* Inputs light/dark modes */
+body:not(.dark-mode) input,
+body:not(.dark-mode) textarea,
+body:not(.dark-mode) select,
+body:not(.dark-mode) .form-control,
+body:not(.dark-mode) .form-select {
+    color: black !important;
+    background-color: white !important;
+}
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    color: white !important;
+    background-color: #2c2c2c !important;
+    border-color: #444 !important;
+}
+
+body:not(.dark-mode) ::placeholder {
+    color: #6c757d !important;
+    background-color: transparent !important;
+}
+
+/* Floating labels on product serial number */
 body.dark-mode .form-floating > label[for="productSerialNumber"] {
     background-color: transparent !important;
     color: #ffffff !important;
@@ -461,69 +557,144 @@ body.dark-mode .form-floating > label[for="productSerialNumber"]::after {
     display: none !important;
 }
 
-/* -------------------------------------------------- */
-/* PATCH for CONSISTENCY — keep code safe */
-/* -------------------------------------------------- */
-body.dark-mode .text-lightweight {
-    color: #ffffff !important;
+/* Show Details Button */
+body.dark-mode .btn-outline-secondary,
+body.dark-mode .btn-outline-secondary.active,
+body.dark-mode .btn-outline-secondary:hover,
+body.dark-mode label.btn-outline-secondary,
+body.dark-mode label.btn-outline-secondary.active,
+body.dark-mode label.btn-outline-secondary:hover {
+    background-color: #ffd502 !important;
+    border-color: #ffd502 !important;
+    color: black !important;
+    box-shadow: 0 0.15rem 0.25rem rgba(255, 193, 7, 0.5) !important;
 }
-body.dark-mode .subtle-label {
-    color: #b0b0b0 !important;
+
+/* Floating label highlight colors */
+body.dark-mode .floating-label {
+    color: #198754 !important;
 }
-body.dark-mode .form-control::placeholder,
-body.dark-mode .tall-input::placeholder,
-body.dark-mode .small-input::placeholder {
-    color: #bbbbbb;
+
+body.dark-mode .floating-label[style*="color: #dc3545"] {
+    color: #dc3545 !important;
 }
-@media (prefers-color-scheme: dark) {
-    .btn:hover { color: #ffffff; }
-    .label-mode { color: #ffffff; }
-    .table,
-    .table th,
-    .table td {
-        background-color: transparent;
-        color: #ffffff;
-        border: 1px solid #a8a8a8;
-    }
-    .table.table-striped tbody tr:nth-child(odd) {
-        background-color: #151515;
-    }
-    .btn-primary:disabled {
-        background-color: #2a2a2a;
-        color: #ffffff;
-        border: 1px solid #444;
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
+
+.show-details-text {
+    color: black;
 }
-body.dark-mode .form-floating .form-control {
+
+body.dark-mode .show-details-text {
+    color: white !important;
+}
+
+/* Failure textarea light mode */
+fluent-text-area.failure-textarea {
+    background-color: #f0f0f0;
+    color: black;
+    resize: vertical;
+    min-height: 100px;
+    max-height: 300px;
+    width: 100%;
+    display: block;
+    border-radius: 4px;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: none;
+}
+
+fluent-text-area.failure-textarea::part(control) {
+    background-color: #f0f0f0 !important;
+    color: black !important;
+    resize: vertical !important;
+    min-height: 100px !important;
+    max-height: 300px !important;
+    padding: 0.5rem !important;
+    border-radius: 4px !important;
+    border: none !important;
+    font-size: 1rem !important;
+    caret-color: black !important;
+}
+
+fluent-text-area.failure-textarea::part(control)::placeholder {
+    color: #999999 !important;
+    background-color: transparent !important;
+}
+
+/* Failure textarea dark mode */
+body.dark-mode fluent-text-area.failure-textarea {
     background-color: #2c2c2c !important;
-    color: #ffffff !important;
-    border: 1px solid #131313 !important;
+    color: black !important;
+    resize: vertical !important;
+    min-height: 100px !important;
+    max-height: 300px !important;
+    width: 100%;
+    display: block;
+    border-radius: 4px !important;
+    padding: 0.5rem !important;
+    font-size: 1rem !important;
+    border: none !important;
 }
 
-/* 🔧 Fix: Remove white box behind placeholder text */
-::placeholder {
+body.dark-mode fluent-text-area.failure-textarea::part(control) {
+    background-color: #2c2c2c !important;
+    color: black !important;
+    resize: vertical !important;
+    padding: 0.5rem !important;
+    border-radius: 4px !important;
+    border: none !important;
+    font-size: 1rem !important;
+    caret-color: black !important;
+}
+
+body.dark-mode fluent-text-area.failure-textarea::part(control)::placeholder {
+    color: #777777 !important;
     background-color: transparent !important;
 }
 
-/* Specifically for dark mode */
-body.dark-mode ::placeholder {
+
+/* Style all checkboxes EXCEPT .btn-check */
+input[type="checkbox"]:not(.btn-check),
+.form-check-input:not(.btn-check) {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    width: 18px !important;
+    height: 18px !important;
     background-color: transparent !important;
-    color: #bbbbbb !important; /* optional: ensures readable text */
+    border: 2px solid #0d6efd !important; /* blue border */
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    position: relative !important;
 }
 
-/* Fix Bootstrap/form-floating label background bleed */
-.form-floating > .form-control::placeholder,
-.form-floating > .form-control-plaintext::placeholder,
-.form-floating > label::after {
-    background-color: transparent !important;
+/* checked state */
+input[type="checkbox"]:not(.btn-check):checked,
+.form-check-input:not(.btn-check):checked {
+    background-color: #0d6efd !important; /* blue fill */
+    border-color: #0d6efd !important;
 }
 
-/* Prevent label backgrounds in dark mode */
-body.dark-mode .form-floating > label::after {
-    background-color: transparent !important;
-    display: none !important;
-    content: none !important;
+/* add a checkmark */
+input[type="checkbox"]:not(.btn-check):checked::after,
+.form-check-input:not(.btn-check):checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
+
+/* unchecked hover */
+input[type="checkbox"]:not(.btn-check):hover,
+.form-check-input:not(.btn-check):hover {
+    border-color: #094aab !important;
+}
+
+
+
+
 
