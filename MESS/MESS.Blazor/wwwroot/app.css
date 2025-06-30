@@ -218,10 +218,13 @@ a,
     color: #000000;
 }
 
-.dark-mode .btn:hover {
-    background-color: transparent;
-    color: #ffffff;
+/* dark mode button hover fix */
+body.dark-mode .btn:hover {
+    background-color: #ffd502 !important;
+    color: #000000 !important;
+    border-color: #ffd502 !important;
 }
+
 
 .btn-checkbox {
     color: #ffd502;
@@ -693,6 +696,28 @@ input[type="checkbox"]:not(.btn-check):hover,
 .form-check-input:not(.btn-check):hover {
     border-color: #094aab !important;
 }
+
+/* Normal state in dark mode stays yellow */
+body.dark-mode .btn-outline-secondary,
+body.dark-mode .btn-outline-secondary.active,
+body.dark-mode label.btn-outline-secondary,
+body.dark-mode label.btn-outline-secondary.active {
+    background-color: #ffd502 !important;
+    border-color: #ffd502 !important;
+    color: black !important;
+    box-shadow: 0 0.15rem 0.25rem rgba(255, 193, 7, 0.5) !important;
+}
+
+/* Hover state in dark mode goes gray */
+body.dark-mode .btn-outline-secondary:hover,
+body.dark-mode label.btn-outline-secondary:hover {
+    background-color: #555 !important;   /* dark gray */
+    border-color: #555 !important;
+    color: white !important;
+    box-shadow: 0 0.15rem 0.25rem rgba(0, 0, 0, 0.3) !important;
+}
+
+
 
 
 
