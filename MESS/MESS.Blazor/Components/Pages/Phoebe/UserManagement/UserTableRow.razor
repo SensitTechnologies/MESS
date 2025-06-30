@@ -21,13 +21,13 @@
         </td>
         <td>
             <div class="btn-group" role="group">
-                <input type="checkbox" checked="@IsOperator" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
+                <input type="checkbox" checked="@IsOperator" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="operator@(User.Id)">Operator</label>
 
-                <input type="checkbox" checked="@IsTechnician" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
+                <input type="checkbox" checked="@IsTechnician" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="technician@(User.Id)">Technician</label>
 
-                <input type="checkbox" checked="@IsAdmin" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
+                <input type="checkbox" checked="@IsAdmin" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="administrator@(User.Id)">Administrator</label>
             </div>
         </td>
@@ -85,6 +85,7 @@
     /// </summary>
     [Parameter]
     public EventCallback<ApplicationUser> SaveChanges { get; set; }
+    
     private ApplicationUser? User { get; set; }
     private IList<string>? CurrentRoles { get; set; }
     
@@ -95,9 +96,9 @@
     private bool IsOperator { get; set; }
     private bool IsTechnician { get; set; }
     private bool IsAdmin { get; set; }
-
+    
     /// <inheritdoc />
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         User = UserRoleDto.User;
         CurrentRoles = UserRoleDto.Roles;
@@ -108,6 +109,13 @@
             IsAdmin = CurrentRoles.Contains("Administrator");
             IsOperator = CurrentRoles.Contains("Operator");
             IsTechnician = CurrentRoles.Contains("Technician");
+        }
+
+        // Try to determine if user is new (not persisted in DB)
+        if (User != null)
+        {
+            var existingUser = await UserManager.FindByIdAsync(User.Id);
+            UserRoleDto.IsNew = existingUser == null;
         }
     }
 
@@ -202,6 +210,7 @@
             if (result.Succeeded)
             {
                 await DisplayAlert.InvokeAsync($"User {User.Email} has been deleted");
+                StateHasChanged();
             }
             else
             {
