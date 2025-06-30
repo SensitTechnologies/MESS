@@ -18,7 +18,7 @@ internal enum Status
 /// </summary>
 public partial class Create : ComponentBase, IAsyncDisposable
 {
-    private string Title = "Add";
+    private const string Title = "Production Log";
     private bool IsLoading { get; set; } = true;
     private ConfirmationModal? popupRef;
     private bool IsWorkflowActive { get; set; }
