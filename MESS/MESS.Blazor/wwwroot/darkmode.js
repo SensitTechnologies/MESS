@@ -2,38 +2,85 @@
     document.querySelectorAll("fluent-text-area").forEach(el => {
         const shadow = el.shadowRoot;
         if (!shadow) return;
-        const textarea = shadow.querySelector("textarea");
-        if (!textarea) return;
 
-        if (isDark) {
-            textarea.style.backgroundColor = "#1e1e1e";
-            textarea.style.color = "white";
-            textarea.style.border = "none";
-            textarea.style.resize = "vertical";
-            textarea.style.minHeight = "100px";
-            textarea.style.maxHeight = "300px";
-            textarea.style.padding = "0.5rem";
-            textarea.style.borderRadius = "4px";
-            textarea.style.caretColor = "white";
-        } else {
-            textarea.style.backgroundColor = "";
-            textarea.style.color = "";
-            textarea.style.border = "";
-            textarea.style.resize = "";
-            textarea.style.minHeight = "";
-            textarea.style.maxHeight = "";
-            textarea.style.padding = "";
-            textarea.style.borderRadius = "";
-            textarea.style.caretColor = "";
-        }
+        const existingStyle = shadow.getElementById('theme-mode-injected-style');
+        if (existingStyle) existingStyle.remove();
+
+        const style = document.createElement('style');
+        style.id = 'theme-mode-injected-style';
+
+        style.textContent = `
+            /* Always keep these parts transparent and borderless */
+            [part="root"],
+            [part="control"],
+            [part="field"],
+            [role="presentation"],
+            *::before,
+            *::after {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                outline: none !important;
+            }
+
+            /* Style the internal textarea differently based on mode */
+            textarea {
+                background: ${isDark ? 'transparent' : 'white'} !important;
+                color: ${isDark ? 'white' : 'black'} !important;
+                caret-color: ${isDark ? 'white' : 'black'} !important;
+                border: ${isDark ? 'none' : '1px solid #ccc'} !important;
+                border-radius: 4px !important;
+                padding: 0.5rem !important;
+                resize: vertical !important;
+                min-height: 100px !important;
+                max-height: 300px !important;
+                box-shadow: none !important;
+                position: relative !important;
+                z-index: 1000 !important;
+                transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+            }
+            textarea:focus {
+                outline: none !important;
+            }
+        `;
+
+        shadow.appendChild(style);
+
+        // Reset host styles (optional, can remove if you want)
+        el.style.backgroundColor = 'transparent';
+        el.style.color = isDark ? 'white' : 'black';
+
+        console.log(`Applied ${isDark ? 'dark' : 'light'} mode with transparent parent and styled textarea`);
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function applyTheme(isDark) {
     document.body.classList.toggle("dark-mode", isDark);
     document.body.classList.toggle("light-mode", !isDark);
+    
     applyDarkModeToFluentTextAreas(isDark);
     applyCheckBoxStyles(isDark);
+    
+    if (isDark) {
+        window.ApplyDarkModeFixToFailureTextAreas();
+    }
 }
 
 function applyCheckBoxStyles(isDark) {
@@ -97,29 +144,64 @@ window.FixDarkModeColors = function () {
     }
 };
 
-window.FixDarkModeFailureTextArea = function() {
+window.FixDarkModeFailureTextArea = function () {
     if (!document.body.classList.contains("dark-mode")) return;
 
-    const textareas = document.querySelectorAll("fluent-text-area.failure-textarea");
+    const fluentTextAreas = document.querySelectorAll("fluent-text-area.failure-textarea");
 
-    textareas.forEach(fluentTextArea => {
+    fluentTextAreas.forEach(fluentTextArea => {
+        // Style the host element (the outer tag)
+        fluentTextArea.style.backgroundColor = "#2c2c2c";
+        fluentTextArea.style.borderRadius = "4px";
+        fluentTextArea.style.display = "inline-block"; // ensure size fits content
+
         const shadowRoot = fluentTextArea.shadowRoot;
         if (!shadowRoot) return;
 
-        // The control part is usually a part attribute, so query with ::part
-        // But shadowRoot.querySelector('part="control"') is invalid syntax.
-        // Instead use shadowRoot.querySelector('[part="control"]')
+        // Style the part="control" wrapper (if it exists)
         const control = shadowRoot.querySelector('[part="control"]');
-        if (!control) return;
+        if (control) {
+            control.style.backgroundColor = "#2c2c2c";
+            control.style.borderColor = "#555";
+            control.style.borderRadius = "4px";
+            control.style.padding = "0.5rem";
+        }
 
-        control.style.backgroundColor = "#2c2c2c";
-        control.style.color = "white";
-        control.style.caretColor = "white";
-        control.style.borderColor = "#444";
-        control.style.padding = "0.5rem";
-        control.style.borderRadius = "4px";
-        control.style.fontSize = "1rem";
+        // Style the actual <textarea>
+        const textarea = shadowRoot.querySelector("textarea");
+        if (textarea) {
+            textarea.style.backgroundColor = "#2c2c2c";
+            textarea.style.color = "white";
+            textarea.style.caretColor = "white";
+            textarea.style.border = "none";
+            textarea.style.padding = "0.5rem";
+            textarea.style.fontSize = "1rem";
+            textarea.style.resize = "vertical";
+        }
     });
+
+    window.ApplyDarkModeFixToFailureTextAreas = function () {
+        document.querySelectorAll("fluent-text-area.failure-textarea").forEach(el => {
+            const shadow = el.shadowRoot;
+            if (!shadow) return;
+
+            const textarea = shadow.querySelector("textarea");
+
+            if (textarea) {
+                textarea.style.backgroundColor = "#2c2c2c";
+                textarea.style.color = "white";
+                textarea.style.border = "none";
+                textarea.style.padding = "0.5rem";
+                textarea.style.borderRadius = "4px";
+                textarea.style.resize = "vertical";
+                textarea.style.minHeight = "100px";
+                textarea.style.maxHeight = "300px";
+                textarea.style.fontSize = "1rem";
+                textarea.style.caretColor = "white";
+            }
+        });
+    };
 };
+
 
 

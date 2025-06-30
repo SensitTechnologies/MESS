@@ -717,6 +717,21 @@ body.dark-mode label.btn-outline-secondary:hover {
     box-shadow: 0 0.15rem 0.25rem rgba(0, 0, 0, 0.3) !important;
 }
 
+textarea::selection {
+    background-color: #555 !important;
+    color: white !important;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
