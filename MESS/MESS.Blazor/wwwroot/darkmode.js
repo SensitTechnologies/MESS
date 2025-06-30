@@ -61,7 +61,7 @@ function applyTheme(isDark) {
     applyDarkModeToFluentTextAreas(isDark);
     applyCheckBoxStyles(isDark);
     
-    if (isDark) {
+    if (isDark && typeof window.ApplyDarkModeFixToFailureTextAreas === "function") {
         window.ApplyDarkModeFixToFailureTextAreas();
     }
 }
