@@ -11,47 +11,30 @@
 @inject IToastService ToastService
 
 
-    <div class="container justify-content-center">
-        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
-        <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
-                <FluentLabel class="label-mode">
-                    Title
-                </FluentLabel>
-                <FluentLabel class="label-mode">
-                    Version
-                </FluentLabel>
-                <FluentLabel class="label-mode">
-                    Actions
-                </FluentLabel>
-            </FluentStack>
-            @foreach (var (instruction, index) in WorkInstructions
-                          .OrderBy(w => System.Text.RegularExpressions.Regex.Split(
-                                  w.Title?.Replace("WI-", "", StringComparison.OrdinalIgnoreCase)
-                                      ?.Replace("DOC-", "", StringComparison.OrdinalIgnoreCase)
-                                      ?.Trim() ?? string.Empty,
-                                  "([0-9]+)"),
-                              Comparer<string[]>.Create((a, b) =>
-                              {
-                                  for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
-                                  {
-                                      var result = int.TryParse(a[i], out int ai) && int.TryParse(b[i], out int bi)
-                                          ? ai.CompareTo(bi)
-                                          : StringComparer.OrdinalIgnoreCase.Compare(a[i], b[i]);
-                                      if (result != 0) return result;
-                                  }
-                                  return a.Length.CompareTo(b.Length);
-                              }))
-                          .Select((instruction, index) => (instruction, index)))
-            {
-                <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" 
-                                             OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"
-                                             AllProducts="AllProducts"></WorkInstructionTableRow>
-                </FluentGridItem>
-            }
-        </FluentGrid>
-    </div>
+<div class="container justify-content-center">
+    <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
+    <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+            <FluentLabel>
+                Title
+            </FluentLabel>
+            <FluentLabel>
+                Version
+            </FluentLabel>
+            <FluentLabel>
+                Actions
+            </FluentLabel>
+        </FluentStack>
+        @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
+        {
+            <FluentGridItem xs="12">
+                <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" 
+                                         OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"
+                                         AllProducts="AllProducts"></WorkInstructionTableRow>
+            </FluentGridItem>
+        }
+    </FluentGrid>
+</div>
 
 
 @code {

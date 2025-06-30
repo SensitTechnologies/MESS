@@ -8,7 +8,8 @@
     {
         <select disabled="@Disabled" id="product-select" class="form-select" @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
             <option value="-1">Select Product</option>
-            @foreach (var product in Products)
+            @foreach (var product in Products
+                          .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
             {
                 @if (product.WorkInstructions == null)
                 {

@@ -1,5 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Services.WorkInstruction
+@using Microsoft.CodeAnalysis.CSharp.Syntax
 
 
 <div class="mb-3">
@@ -23,7 +24,9 @@
         }
         else
         {
-            @foreach (var instruction in AllInstructions)
+            @foreach (var instruction in AllInstructions
+                .OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(i => i.Version))
             {
                 <label class="list-group-item">
                     <input type="checkbox" 
