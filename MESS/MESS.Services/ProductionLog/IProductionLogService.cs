@@ -46,4 +46,10 @@ public interface IProductionLogService
     /// <returns>A list of ProductionLog entities for the specified operator.</returns>
     Task<List<ProductionLog>?> GetProductionLogsByOperatorIdAsync(string operatorId);
 
+    /// <summary>
+    /// Deletes a <see cref="ProductionLogStepAttempt"/> from the database by its ID.
+    /// </summary>
+    /// <param name="id">The unique identifier of the attempt to delete.</param>
+    /// <returns>A task that represents the asynchronous delete operation.</returns>
+    Task DeleteAttemptAsync(int id);
 }

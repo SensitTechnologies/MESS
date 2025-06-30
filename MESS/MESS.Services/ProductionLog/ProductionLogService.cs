@@ -194,5 +194,16 @@ public class ProductionLogService : IProductionLogService
             return new List<ProductionLog>();
         }
     }
-
+    
+    /// <inheritdoc />
+    public async Task DeleteAttemptAsync(int id)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var entity = await context.ProductionLogStepAttempts.FindAsync(id);
+        if (entity != null)
+        {
+            context.ProductionLogStepAttempts.Remove(entity);
+            await context.SaveChangesAsync();
+        }
+    }
 }

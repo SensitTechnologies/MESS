@@ -16,10 +16,13 @@
     </td>
 
     <td>
-        <textarea class="form-control form-control-sm"
+        @if (Attempt.Success != true)  @* Show textarea only if not success *@
+        {
+            <textarea class="form-control form-control-sm"
                   rows="1"
                   @bind="Attempt.Notes"
                   placeholder="Optional failure note"></textarea>
+        }
     </td>
 
     <td>
@@ -59,6 +62,10 @@
     private async Task UpdateStatus(bool isSuccess)
     {
         Attempt.Success = isSuccess;
+        if (isSuccess)
+        {
+            Attempt.Notes = string.Empty;
+        }
         await OnChanged.InvokeAsync(Attempt);
     }
 

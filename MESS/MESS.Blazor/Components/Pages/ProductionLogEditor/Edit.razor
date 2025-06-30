@@ -80,7 +80,7 @@ else
         return Task.CompletedTask;
     }
 
-    private Task HandleAttemptDeleted(ProductionLogStepAttempt attempt)
+    private async Task HandleAttemptDeleted(ProductionLogStepAttempt attempt)
     {
         _allAttempts.Remove(attempt);
         if (_attemptToStep.TryGetValue(attempt, out var parentStep))
@@ -88,7 +88,9 @@ else
             parentStep.Attempts.Remove(attempt);
             _attemptToStep.Remove(attempt);
         }
-        return Task.CompletedTask;
+
+        // Explicitly Delete the Attempt
+        await ProductionLogService.DeleteAttemptAsync(attempt.Id);
     }
 
     private async Task Save()
