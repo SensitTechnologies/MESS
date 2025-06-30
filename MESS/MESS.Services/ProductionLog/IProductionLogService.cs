@@ -37,4 +37,13 @@ public interface IProductionLogService
     /// <param name="logIds">A list of integer production log ids</param>
     /// <returns>A List of Production Log object</returns>
     public Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds);
+    
+    /// <summary>
+    /// Retrieves all production logs created by a specific operator (user) based on their unique OperatorId.
+    /// Returns an empty list if none found.
+    /// </summary>
+    /// <param name="operatorId">The unique identifier of the operator (typically the ASP.NET Identity UserId).</param>
+    /// <returns>A list of ProductionLog entities for the specified operator.</returns>
+    Task<List<ProductionLog>?> GetProductionLogsByOperatorIdAsync(string operatorId);
+
 }
