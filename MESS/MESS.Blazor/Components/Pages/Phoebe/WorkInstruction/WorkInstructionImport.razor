@@ -4,14 +4,14 @@
 @inject IWorkInstructionService WorkInstructionService
 @inject IToastService ToastService
 
-<FluentCard Width="400" Class="m-0 w-100 dark-mode-target">
-    <div class="d-flex align-items-center gap-2">
-        <InputFile OnChange="LoadFile" accept=".xlsx" class="form-control mb-3" />
+<FluentGrid Class="mb-3 w-100 dark-mode-target">
+    <div class="d-flex align-items-center gap-2 w-100">
+        <InputFile OnChange="LoadFile" accept=".xlsx" class="form-control mb-3 flex-grow-1" />
         <button @onclick="Import" class="btn btn-primary" disabled="@(IsImporting || File == null)">
             Import File
         </button>
     </div>
-</FluentCard>
+</FluentGrid>
 
 
 @code {

@@ -33,31 +33,33 @@
         </td>
         <td>
             <button type="button"
-                    class="btn @(IsLockedOut ? "btn-success" : "btn-warning")"
+                    class="btn-lock"
                     @onclick="ToggleLockoutAsync">
                 @(IsLockedOut ? "Unlock" : "Lock") User
             </button>
+    
             @if (IsConfirmingDelete && UserToDeleteId == User.Id)
             {
-            <div class="confirm-delete mt-2">
-                <span>Are you sure?</span>
-                <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDeleteUser">Yes</button>
-                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteUser">No</button>
-            </div>
+                <div class="confirm-delete mt-2">
+                    <span>Are you sure?</span>
+                    <button type="button" class="btn-delete btn-sm" @onclick="ConfirmDeleteUser">Yes</button>
+                    <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDeleteUser">No</button>
+                </div>
             }
             else
             {
-            <button type="button"
-                    class="btn btn-warning"
-                    @onclick="() => InitiateDeleteUser(User.Id)">
-                Delete
-            </button>
+                <button type="button"
+                        class="btn-delete"
+                        @onclick="() => InitiateDeleteUser(User.Id)">
+                    Delete
+                </button>
             }
-            <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(User)">
+
+            <button type="button" class="btn-save" @onclick="async () => await SaveChanges.InvokeAsync(User)">
                 Save Changes
             </button>
-
         </td>
+
     </tr>
 }
 

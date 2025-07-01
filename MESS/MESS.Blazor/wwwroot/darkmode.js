@@ -10,7 +10,6 @@
         style.id = 'theme-mode-injected-style';
 
         style.textContent = `
-            /* Always keep these parts transparent and borderless */
             [part="root"],
             [part="control"],
             [part="field"],
@@ -23,12 +22,11 @@
                 outline: none !important;
             }
 
-            /* Style the internal textarea differently based on mode */
             textarea {
-                background: ${isDark ? 'transparent' : 'white'} !important;
-                color: ${isDark ? 'white' : 'black'} !important;
-                caret-color: ${isDark ? 'white' : 'black'} !important;
-                border: ${isDark ? 'none' : '1px solid #ccc'} !important;
+                background: ${isDark ? '#2c2c2c' : '#fff'} !important;
+                color: ${isDark ? '#fff' : '#000'} !important;
+                caret-color: ${isDark ? '#fff' : '#000'} !important;
+                border: ${isDark ? '1px solid #555' : '1px solid #ccc'} !important;
                 border-radius: 4px !important;
                 padding: 0.5rem !important;
                 resize: vertical !important;
@@ -46,11 +44,8 @@
 
         shadow.appendChild(style);
 
-        // Reset host styles (optional, can remove if you want)
         el.style.backgroundColor = 'transparent';
-        el.style.color = isDark ? 'white' : 'black';
-
-        console.log(`Applied ${isDark ? 'dark' : 'light'} mode with transparent parent and styled textarea`);
+        el.style.color = isDark ? '#fff' : '#000';
     });
 }
 

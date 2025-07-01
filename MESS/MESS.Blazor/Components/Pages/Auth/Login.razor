@@ -7,8 +7,8 @@
 @inject IApplicationUserService ApplicationUserService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<div class="d-flex justify-content-center align-items-center dark-mode-target" style="min-height: 50vh;">
-    <div class="card shadow" style="min-width: 350px; max-width: 450px;">
+<div class="d-flex justify-content-center align-items-center" style="min-height: 50vh;">
+    <div class="card shadow dark-mode-target" style="min-width: 350px; max-width: 450px;">
         <div class="card-header bg-black text-white">
             <h3 class="m-0">Login</h3>
         </div>
@@ -46,23 +46,23 @@
                                      @onmouseenter="OnDropdownMouseEnter"
                                      @onmouseleave="OnDropdownMouseLeave"
                                      class="position-absolute w-100 mt-1 shadow login-dropdown border rounded"
-                                 style="max-height: 200px; overflow-y: auto; z-index: 1000;">
-                                @if (ApplicationUsers != null)
-                                {
-                                    @foreach (var lineOperator in ApplicationUsers.Where(u =>
-                                        u.UserName != null && (string.IsNullOrEmpty(SearchFilter) ||
-                                                            u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
-                                                            u.UserName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
+                                     style="max-height: 200px; overflow-y: auto; z-index: 1000;">
+                                    @if (ApplicationUsers != null)
                                     {
-                                    <div class="dropdown-item py-2 px-3"
-                                         @onclick="() => SelectOperator(lineOperator)"
-                                         style="cursor: pointer;">
-                                        <div>@lineOperator.FullName</div>
-                                        <small class="text-muted">@lineOperator.UserName</small>
-                                    </div>
-                                }
-                                }
-                            </div>
+                                        @foreach (var lineOperator in ApplicationUsers.Where(u =>
+                                            u.UserName != null && (string.IsNullOrEmpty(SearchFilter) ||
+                                                                u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
+                                                                u.UserName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
+                                        {
+                                            <div class="dropdown-item py-2 px-3"
+                                                 @onclick="() => SelectOperator(lineOperator)"
+                                                 style="cursor: pointer;">
+                                                <div>@lineOperator.FullName</div>
+                                                <small class="text-muted">@lineOperator.UserName</small>
+                                            </div>
+                                        }
+                                    }
+                                </div>
                             }
                         </div>
                         <div class="d-grid gap-2">

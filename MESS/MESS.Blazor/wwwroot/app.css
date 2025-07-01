@@ -1,376 +1,226 @@
+/* === Base styles === */
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100%;
     margin: 0;
-    background-color: white;
-    color: black;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Default light mode styling */
-.login-dropdown {
-    background-color: white !important;
-    color: black;
-    border: 1px solid #ccc !important;
-}
-
-.login-dropdown .dropdown-item {
-    color: black !important;
-}
-
-.login-dropdown .dropdown-item:hover {
-    background-color: #f0f0f0 !important;
-}
-
-/* Dark mode overrides */
-body.dark-mode .login-dropdown {
-    background-color: #1e1e1e !important;
-    color: white !important;
-    border: 1px solid #444 !important;
-}
-
-body.dark-mode .login-dropdown,
-body.dark-mode .login-dropdown * {
-    color: white !important;
-}
-
-body.dark-mode .login-dropdown .dropdown-item:hover {
-    background-color: #333 !important;
+    background-color: #ffffff;
+    color: #000000;
 }
 
 body.dark-mode {
-    background-color: #121212;
-    color: white;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: #121212 !important;
+    color: #ffffff !important;
 }
 
-body.dark-mode .dark-mode-target {
-    background-color: transparent;
-    color: #ffffff;
+/* === Buttons === */
+.btn-outline-secondary,
+.btn-outline-secondary.active {
+    background-color: #ffeb99;
+    color: #222;
+    border: 1px solid #d6a100;
+    box-shadow: 0 0.15rem 0.3rem rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
-
-.label-mode {
+.btn-outline-secondary:hover {
+    background-color: #f5d442;
     color: #000;
-    transition: color 0.3s ease;
+    border-color: #c19000;
+}
+body.dark-mode .btn-outline-secondary,
+body.dark-mode .btn-outline-secondary.active {
+    background-color: #d6a100 !important;
+    color: #000 !important;
+    border: 1px solid #b38700 !important;
+    box-shadow: 0 0.15rem 0.3rem rgba(255, 215, 0, 0.4);
+}
+body.dark-mode .btn-outline-secondary:hover {
+    background-color: #b38700 !important;
+    color: #fff !important;
+    border-color: #8c6a00 !important;
 }
 
-body.dark-mode .label-mode {
-    color: #ffffff;
+/* === Primary Buttons === */
+.btn-primary {
+    color: #000;
+    background-color: #ffd502;
+    border: 1px solid #c37f00;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.btn-primary:hover {
+    background-color: #c37f00;
+    color: #fff;
 }
 
-/* Light mode tables */
-body.light-mode .table,
-body.light-mode .table th,
-body.light-mode .table td {
-    background-color: #ffffff;
-    color: #000000;
-    border: 1px solid #dee2e6;
-}
-
-body.light-mode .table.table-striped tbody tr {
-    background-color: #6e6e6e;
-}
-
-/* Dark mode tables */
-body.dark-mode .table,
-body.dark-mode .table th,
-body.dark-mode .table td {
-    background-color: transparent;
-    color: #ffffff;
-    border: 1px solid #a8a8a8;
-}
-
-body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
-    background-color: #151515;
-}
-
-body.dark-mode .list-group.container {
-    color: #ffffff;
-    background-color: #1e1e1e;
-    border: 1px solid transparent;
-}
-
-/* Steps */
-.step {
-    background-color: transparent;
-    color: #000000;
-    border: 1px solid transparent;
-    padding: 10px;
-    list-style-type: none;
-}
-
-body.dark-mode .step {
-    background-color: transparent;
-    color: #ffffff;
-}
-
-/* Layout */
-.page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    width: 100%;
-}
-
-.dark-mode .page {
-    background-color: #1e1e1e;
-    color: #ffffff;
-}
-
-.dark-mode .card {
-    background-color: #404040;
-    color: #ffffff;
-    border: 1px solid #131313;
-}
-
-.dark-mode .form-floating .form-control {
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid #131313;
-}
-
-/* Inputs and cells */
-.small-input {
-    height: 34px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    padding: 0.25rem 0.5rem;
-    line-height: 1.2;
-}
-
-.tall-cell {
-    width: 260px;
-    min-width: 260px;
-    max-width: 260px;
-    flex: 0 0 260px;
-    margin-right: 8px;
-}
-
-.tall-input {
-    height: 64px;
-    padding: 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    line-height: 1.3;
-    resize: none;
-}
-
-/* Typography helpers */
-.text-lightweight {
-    font-weight: 500;
-    color: #131313;
-}
-
-.subtle-label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #6c757d;
-}
-
-/* prefers-color-scheme dark */
-@media (prefers-color-scheme: dark) {
-    .form-control,
-    .tall-input,
-    .small-input {
-        color: #ffffff !important;
-        background-color: #1e1e1e;
-        border-color: #444;
-    }
-    .form-control::placeholder,
-    .tall-input::placeholder,
-    .small-input::placeholder {
-        color: #bbbbbb;
-    }
-    .text-lightweight {
-        color: #ffffff !important;
-    }
-    .subtle-label {
-        color: #b0b0b0;
-    }
-}
-
-/* General layout */
-.main {
-    flex: 1;
-}
-
+/* === Links === */
 a,
 .btn-link {
     color: #d6a100;
+    transition: color 0.3s ease;
+}
+a:hover,
+.btn-link:hover {
+    color: #b38700;
 }
 
-/* Buttons */
-.btn-primary {
-    color: #020000;
-    background-color: #ffd502;
-    border-color: #c37f00;
+/* === Forms === */
+input:not([disabled]),
+textarea:not([disabled]),
+select:not([disabled]) {
+    background-color: #f8f9fa;
+    color: #222;
+    border: 1px solid #ccc;
+    font-weight: 500;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+input[disabled],
+textarea[disabled],
+select[disabled] {
+    background-color: #e9ecef;
+    color: #777;
+    cursor: not-allowed;
+}
+body.dark-mode input:not([disabled]),
+body.dark-mode textarea:not([disabled]),
+body.dark-mode select:not([disabled]) {
+    background-color: #343a40 !important;
+    color: #ffffff !important;
+    border: 1px solid #555 !important;
+}
+body.dark-mode input[disabled],
+body.dark-mode textarea[disabled],
+body.dark-mode select[disabled] {
+    background-color: #2a2a2a !important;
+    color: #888 !important;
+}
+/* placeholder text */
+::placeholder {
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+body.dark-mode ::placeholder {
+    color: #bbbbbb;
 }
 
-.btn {
-    background-color: #ffd502;
-    color: #020000;
-    border: 3px solid #ffd502;
-    margin: 5px;
+/* === Tables === */
+.table {
+    border-collapse: collapse;
+    width: 100%;
 }
-
-.btn:hover {
-    background-color: transparent;
+.table,
+.table th,
+.table td {
+    border: 1px solid #dee2e6;
+    background-color: #ffffff;
     color: #000000;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+body.dark-mode .table,
+body.dark-mode .table th,
+body.dark-mode .table td {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+    border-color: #555 !important;
+}
+.table-striped tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
+}
+body.dark-mode .table-striped tbody tr:nth-child(odd) {
+    background-color: #2a2a2a !important;
 }
 
-/* dark mode button hover fix */
-body.dark-mode .btn:hover {
-    background-color: #ffd502 !important;
-    color: #000000 !important;
-    border-color: #ffd502 !important;
-}
-
-
-.btn-checkbox {
-    color: #ffd502;
-    background-color: #020000;
-}
-
-.btn-warning {
-    color: red;
-    background-color: #020000;
-    border: 3px solid red;
-}
-
-.btn-success {
-    color: #4aff00;
-    background-color: #020000;
-    border: 3px solid #4aff00;
-}
-
-.btn:focus,
-.btn:active:focus,
-.btn-link.nav-link:focus,
-.form-control:focus,
-.form-check-input:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-/* Other UI */
-.content {
-    padding-top: 1.1rem;
-}
-
-h1:focus {
-    outline: none;
-}
-
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
-}
-
-.invalid {
-    outline: 1px solid #e50000;
-}
-
-.validation-message {
-    color: #e50000;
-}
-
-.blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,...) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: white;
-}
-
-.blazor-error-boundary::after {
-    content: "An error has occurred.";
-}
-
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
-}
-
-/* Floating labels */
-.form-floating > .form-control-plaintext::placeholder,
-.form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
-    text-align: end;
-}
-
-.form-floating > .form-control-plaintext:focus::placeholder,
-.form-floating > .form-control:focus::placeholder {
-    text-align: start;
-}
-
-/* Headers */
-.header-container {
-    margin-bottom: 4px;
-}
-
-@media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-    }
-    .info-card {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-}
-
-/* Dark mode button */
-.darkmode {
+/* === Checkboxes === */
+input[type="checkbox"]:not(.btn-check),
+.form-check-input:not(.btn-check) {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
     background-color: transparent;
-    outline: none;
-    color: #ffd502;
-    position: fixed;
-    width: 30px;
-    height: 30px;
-    right: 18px;
-    top: 20px;
+    border: 2px solid #0d6efd;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+input[type="checkbox"]:checked,
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+input[type="checkbox"]:checked::after,
+.form-check-input:checked::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+input[type="checkbox"]:hover {
+    border-color: #094aab;
 }
 
-.darkmode .darkmode-button {
-    position: fixed;
-    right: 27px;
-    top: 27px;
-    border: none;
-    background: none;
-    padding: 0;
+/* === Steps === */
+.step {
+    background-color: transparent;
     color: inherit;
+    padding: 10px;
+    list-style: none;
+}
+body.dark-mode .step {
+    color: #fff !important;
 }
 
-.darkmode .step-node {
-    background-color: #404040;
-    color: #ffffff;
+/* === Cards === */
+.card {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #dee2e6;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+body.dark-mode .card {
+    background-color: #404040 !important;
+    color: #ffffff !important;
+    border-color: #222 !important;
 }
 
-.toggle-images {
-    top: 10px;
-    right: 5px;
-    display: flex;
-    align-items: center;
+/* === Failure textareas === */
+fluent-text-area.failure-textarea,
+fluent-text-area.failure-textarea::part(control) {
+    background-color: #f0f0f0;
+    color: #000;
+    resize: vertical;
+    min-height: 100px;
+    max-height: 300px;
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+body.dark-mode fluent-text-area.failure-textarea,
+body.dark-mode fluent-text-area.failure-textarea::part(control) {
+    background-color: #2c2c2c !important;
+    color: #fff !important;
 }
 
-@media (max-width: 768px) {
-    .top-right-corner {
-        top: 15px;
-        right: 15px;
-    }
+/* === Show Details text === */
+.show-details-text {
+    color: #000;
+}
+body.dark-mode .show-details-text {
+    color: #fff !important;
 }
 
-/* Custom labels */
-.custom-label::after,
-.label::after {
-    background-color: transparent !important;
+/* === Selection highlight === */
+textarea::selection,
+input::selection {
+    background-color: #555;
+    color: #fff;
 }
 
-/* Tables */
-table tbody tr {
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-}
-
-td {
-    white-space: nowrap;
-}
-
-/* Carousel */
+/* === Carousel === */
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
     background-color: rgba(0, 0, 0, 0.6);
@@ -381,357 +231,320 @@ td {
     background-position: center;
     background-repeat: no-repeat;
 }
-
-.carousel-control-prev,
-.carousel-control-next {
-    opacity: 1;
-    transition: opacity 0.3s;
-}
-
 .carousel-control-prev:hover,
 .carousel-control-next:hover {
     opacity: 0.8;
 }
 
-/* Animations */
-@keyframes floatAway {
-    0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+/* === Focus outlines === */
+:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+/* === Headers === */
+.header-container {
+    margin-bottom: 4px;
+    display: flex;
+    flex-direction: row;
+}
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
     }
-    100% {
-        opacity: 0;
-        transform: translateY(-40px) scale(1.2);
+    .info-card {
+        width: 100%;
+        margin-bottom: 1rem;
     }
 }
 
-.floating-label {
-    position: absolute;
-    font-weight: bold;
-    pointer-events: none;
-    animation: floatAway 0.8s ease-out forwards;
-    color: #28a745;
-}
-
-/* Dark Mode Dropdowns */
-body.dark-mode select,
-body.dark-mode .form-select {
-    background-color: #2c2c2c !important;
-    color: #ffffff !important;
-    border: 1px solid #888 !important;
-    padding-left: 0.5rem !important;
-    appearance: none !important;
-}
-
-body.dark-mode select option,
-body.dark-mode .form-select option {
-    background-color: #2c2c2c !important;
-    color: #ffffff !important;
-    border: none !important;
-}
-
-body.dark-mode select option:disabled,
-body.dark-mode .form-select option:disabled {
-    color: #777777 !important;
-}
-
-body.dark-mode select::-ms-expand,
-body.dark-mode .form-select::-ms-expand {
-    background-color: transparent;
-    color: #ffffff;
-}
-
-/* Dark mode file input */
-body.dark-mode input[type="file"] {
-    background-color: #2c2c2c !important;
-    color: #ffffff !important;
-    border: 1px solid #666 !important;
-}
-
-body.dark-mode .dark-mode-target input[type="file"]::file-selector-button {
-    background-color: transparent !important;
-    color: #ffffff;
-    border: 1px solid #555;
-    padding: 0.3em 0.75em;
-    cursor: pointer;
-}
-
-/* Disabled dark mode primary button */
-body.dark-mode .dark-mode-target .btn-primary:disabled {
-    background-color: #2a2a2a;
-    color: #ffffff;
-    border: 1px solid #444;
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Inputs */
-input[disabled] {
+/* === Page === */
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     background-color: #ffffff;
-    color: #777777;
-    cursor: not-allowed;
+    color: #000000;
 }
-
-input:not([disabled]) {
-    background-color: #f0f0f0;
-    color: #222222;
-    font-weight: 600;
-    cursor: text;
-}
-
-body.dark-mode input[disabled] {
-    background-color: #2a2a2a;
-    color: #888888;
-}
-
-body.dark-mode input:not([disabled]) {
-    background-color: #3a3a3a;
-    color: #ffffff;
-    font-weight: 600;
-    cursor: text;
-}
-
-/* Placeholders */
-::placeholder {
-    /* no color here, keep default light mode */
-}
-
-body.dark-mode ::placeholder {
-    background-color: transparent !important;
-    color: #bbbbbb !important;
-}
-
-body.dark-mode .text-lightweight {
+body.dark-mode .page {
+    background-color: #1e1e1e !important;
     color: #ffffff !important;
 }
 
+/* === Error boundary === */
+.blazor-error-boundary {
+    background: url(data:image/svg+xml;base64,...) no-repeat 1rem/1.8rem, #b32121;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: #fff;
+}
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
+
+/* === Helpers === */
+.text-lightweight {
+    font-weight: 500;
+}
+.subtle-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6c757d;
+}
 body.dark-mode .subtle-label {
     color: #b0b0b0 !important;
 }
 
-::placeholder,
-.form-floating > .form-control::placeholder,
-.form-floating > .form-control-plaintext::placeholder,
-.form-floating > label::after {
-    background-color: transparent !important;
-}
-
-body.dark-mode .form-floating > label::after {
-    background-color: transparent !important;
-    display: none !important;
-    content: none !important;
-}
-
-/* Inputs light/dark modes */
-body:not(.dark-mode) input,
-body:not(.dark-mode) textarea,
-body:not(.dark-mode) select,
-body:not(.dark-mode) .form-control,
-body:not(.dark-mode) .form-select {
-    color: black !important;
-    background-color: white !important;
-}
-
-body.dark-mode input,
-body.dark-mode textarea,
-body.dark-mode select,
-body.dark-mode .form-control,
-body.dark-mode .form-select {
-    color: white !important;
-    background-color: #2c2c2c !important;
-    border-color: #444 !important;
-}
-
-body:not(.dark-mode) ::placeholder {
-    color: #6c757d !important;
-    background-color: transparent !important;
-}
-
-/* Floating labels on product serial number */
-body.dark-mode .form-floating > label[for="productSerialNumber"] {
-    background-color: transparent !important;
-    color: #ffffff !important;
-    opacity: 1 !important;
-    z-index: 2;
-}
-
-body.dark-mode .form-floating > label[for="productSerialNumber"]::after {
-    content: none !important;
-    display: none !important;
-}
-
-/* Show Details Button */
-body.dark-mode .btn-outline-secondary,
-body.dark-mode .btn-outline-secondary.active,
-body.dark-mode .btn-outline-secondary:hover,
-body.dark-mode label.btn-outline-secondary,
-body.dark-mode label.btn-outline-secondary.active,
-body.dark-mode label.btn-outline-secondary:hover {
-    background-color: #ffd502 !important;
-    border-color: #ffd502 !important;
-    color: black !important;
-    box-shadow: 0 0.15rem 0.25rem rgba(255, 193, 7, 0.5) !important;
-}
-
-/* Floating label highlight colors */
-body.dark-mode .floating-label {
-    color: #198754 !important;
-}
-
-body.dark-mode .floating-label[style*="color: #dc3545"] {
-    color: #dc3545 !important;
-}
-
-.show-details-text {
-    color: black;
-}
-
-body.dark-mode .show-details-text {
-    color: white !important;
-}
-
-/* Failure textarea light mode */
-fluent-text-area.failure-textarea {
-    background-color: #f0f0f0;
-    color: black;
-    resize: vertical;
-    min-height: 100px;
-    max-height: 300px;
-    width: 100%;
-    display: block;
-    border-radius: 4px;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: none;
-}
-
-fluent-text-area.failure-textarea::part(control) {
-    background-color: #f0f0f0 !important;
-    color: black !important;
-    resize: vertical !important;
-    min-height: 100px !important;
-    max-height: 300px !important;
-    padding: 0.5rem !important;
-    border-radius: 4px !important;
-    border: none !important;
-    font-size: 1rem !important;
-    caret-color: black !important;
-}
-
-fluent-text-area.failure-textarea::part(control)::placeholder {
-    color: #999999 !important;
-    background-color: transparent !important;
-}
-
-/* Failure textarea dark mode */
-body.dark-mode fluent-text-area.failure-textarea {
-    background-color: #2c2c2c !important;
-    color: black !important;
-    resize: vertical !important;
-    min-height: 100px !important;
-    max-height: 300px !important;
-    width: 100%;
-    display: block;
-    border-radius: 4px !important;
-    padding: 0.5rem !important;
-    font-size: 1rem !important;
-    border: none !important;
-}
-
-body.dark-mode fluent-text-area.failure-textarea::part(control) {
-    background-color: #2c2c2c !important;
-    color: black !important;
-    resize: vertical !important;
-    padding: 0.5rem !important;
-    border-radius: 4px !important;
-    border: none !important;
-    font-size: 1rem !important;
-    caret-color: black !important;
-}
-
-body.dark-mode fluent-text-area.failure-textarea::part(control)::placeholder {
-    color: #777777 !important;
-    background-color: transparent !important;
-}
-
-
-/* Style all checkboxes EXCEPT .btn-check */
-input[type="checkbox"]:not(.btn-check),
-.form-check-input:not(.btn-check) {
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-    width: 18px !important;
-    height: 18px !important;
-    background-color: transparent !important;
-    border: 2px solid #0d6efd !important; /* blue border */
-    border-radius: 4px !important;
-    cursor: pointer !important;
-    position: relative !important;
-}
-
-/* checked state */
-input[type="checkbox"]:not(.btn-check):checked,
-.form-check-input:not(.btn-check):checked {
-    background-color: #0d6efd !important; /* blue fill */
-    border-color: #0d6efd !important;
-}
-
-/* add a checkmark */
-input[type="checkbox"]:not(.btn-check):checked::after,
-.form-check-input:not(.btn-check):checked::after {
-    content: '';
+/* === Role buttons === */
+.btn-check {
     position: absolute;
-    left: 4px;
-    top: 0px;
-    width: 5px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    opacity: 0;
+    width: 0;
+    height: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    overflow: hidden;
+}
+.btn-checkbox {
+    background-color: transparent;
+    font-weight: 600;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    user-select: none;
+    display: inline-block;
+}
+.btn-checkbox[for^="operator"] {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+body.dark-mode .btn-checkbox[for^="operator"] {
+    color: #a3c8ff !important;
+}
+.btn-checkbox[for^="operator"]:hover {
+    background-color: #0d6efd;
+    color: white;
+}
+.btn-checkbox[for^="technician"] {
+    border-color: #28a745;
+    color: #28a745;
+}
+body.dark-mode .btn-checkbox[for^="technician"] {
+    color: #9be59a !important;
+}
+.btn-checkbox[for^="technician"]:hover {
+    background-color: #28a745;
+    color: white;
+}
+.btn-checkbox[for^="administrator"] {
+    border-color: #d6a100;
+    color: #d6a100;
+}
+body.dark-mode .btn-checkbox[for^="administrator"] {
+    color: #ffdd55 !important;
+}
+.btn-checkbox[for^="administrator"]:hover {
+    background-color: #d6a100;
+    color: white;
+}
+.btn-check:checked + .btn-checkbox {
+    color: white;
+    font-weight: 700;
+    border-width: 2.5px;
+}
+body:not(.dark-mode) .btn-check:checked + .btn-checkbox[for^="operator"] {
+    background-color: #0d6efd;
+}
+body:not(.dark-mode) .btn-check:checked + .btn-checkbox[for^="technician"] {
+    background-color: #28a745;
+}
+body:not(.dark-mode) .btn-check:checked + .btn-checkbox[for^="administrator"] {
+    background-color: #d6a100;
+}
+body.dark-mode .btn-check:checked + .btn-checkbox[for^="operator"] {
+    background-color: #356ac9 !important;
+}
+body.dark-mode .btn-check:checked + .btn-checkbox[for^="technician"] {
+    background-color: #4c9e4c !important;
+}
+body.dark-mode .btn-check:checked + .btn-checkbox[for^="administrator"] {
+    background-color: #b38700 !important;
 }
 
-/* unchecked hover */
-input[type="checkbox"]:not(.btn-check):hover,
-.form-check-input:not(.btn-check):hover {
-    border-color: #094aab !important;
+/* === Lock, Delete, Save buttons === */
+.btn-lock,
+.btn-delete {
+    display: inline-block;
+    box-sizing: border-box;
+    background-color: transparent !important;
+    color: #dc3545 !important;
+    border: 2px solid #dc3545 !important;
+    font-weight: 600;
+    border-radius: 0.4rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
-
-/* Normal state in dark mode stays yellow */
-body.dark-mode .btn-outline-secondary,
-body.dark-mode .btn-outline-secondary.active,
-body.dark-mode label.btn-outline-secondary,
-body.dark-mode label.btn-outline-secondary.active {
-    background-color: #ffd502 !important;
-    border-color: #ffd502 !important;
-    color: black !important;
-    box-shadow: 0 0.15rem 0.25rem rgba(255, 193, 7, 0.5) !important;
-}
-
-/* Hover state in dark mode goes gray */
-body.dark-mode .btn-outline-secondary:hover,
-body.dark-mode label.btn-outline-secondary:hover {
-    background-color: #555 !important;   /* dark gray */
-    border-color: #555 !important;
+.btn-lock:hover,
+.btn-delete:hover {
+    background-color: #dc3545 !important;
     color: white !important;
-    box-shadow: 0 0.15rem 0.25rem rgba(0, 0, 0, 0.3) !important;
+}
+body.dark-mode .btn-lock,
+body.dark-mode .btn-delete {
+    color: #ff6b6b !important;
+    border-color: #ff6b6b !important;
+}
+body.dark-mode .btn-lock:hover,
+body.dark-mode .btn-delete:hover {
+    background-color: #ff6b6b !important;
+    color: white !important;
+}
+.btn-save {
+    display: inline-block;
+    box-sizing: border-box;
+    background-color: transparent !important;
+    color: #198754 !important;
+    border: 2px solid #198754 !important;
+    font-weight: 600;
+    border-radius: 0.4rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.btn-save:hover {
+    background-color: #198754 !important;
+    color: white !important;
+}
+body.dark-mode .btn-save {
+    color: #63d68e !important;
+    border-color: #63d68e !important;
+}
+body.dark-mode .btn-save:hover {
+    background-color: #63d68e !important;
+    color: white !important;
 }
 
-textarea::selection {
-    background-color: #555 !important;
+/* === Dark mode card override === */
+.dark-mode-target {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* === Labels === */
+body.dark-mode .label-mode {
+    color: #ffffff !important;
+}
+
+/* Light mode dropdown */
+.login-dropdown {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #ced4da !important;
+}
+
+.login-dropdown .dropdown-item {
+    background-color: transparent !important;
+    color: #000000 !important;
+}
+
+.login-dropdown .dropdown-item:hover {
+    background-color: #f0f0f0 !important;
+    color: #000000 !important;
+}
+
+/* Make the dropdown background dark in dark mode */
+body.dark-mode .login-dropdown {
+    background-color: #1e1e1e !important;
+    border-color: #444 !important;
+    color: #ffffff !important;
+}
+
+/* force all dropdown-item text white in dark mode, including text-muted */
+body.dark-mode .login-dropdown .dropdown-item,
+body.dark-mode .login-dropdown .dropdown-item small,
+body.dark-mode .login-dropdown .dropdown-item div {
+    color: #ffffff !important;
+}
+
+/* keep hover readable in dark mode */
+body.dark-mode .login-dropdown .dropdown-item:hover {
+    background-color: #2a2a2a !important;
+    color: #ffffff !important;
+}
+
+/* and fix the small muted text forcibly for dark mode */
+body.dark-mode .login-dropdown .dropdown-item small.text-muted {
+    color: #cccccc !important;
+}
+
+/* === Match Success and Failure buttons to Lock/Delete/Save style === */
+
+.btn-success {
+    display: inline-block;
+    box-sizing: border-box;
+    background-color: transparent !important;
+    color: #198754 !important;          /* same green as .btn-save */
+    border: 2px solid #198754 !important;
+    font-weight: 600;
+    border-radius: 0.4rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-success:hover {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+body.dark-mode .btn-success {
+    color: #63d68e !important;
+    border-color: #63d68e !important;
+}
+
+body.dark-mode .btn-success:hover {
+    background-color: #63d68e !important;
     color: white !important;
 }
 
 
+.btn-danger {
+    display: inline-block;
+    box-sizing: border-box;
+    background-color: transparent !important;
+    color: #dc3545 !important;          /* same red as .btn-lock/.btn-delete */
+    border: 2px solid #dc3545 !important;
+    font-weight: 600;
+    border-radius: 0.4rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
 
+.btn-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
 
+body.dark-mode .btn-danger {
+    color: #ff6b6b !important;
+    border-color: #ff6b6b !important;
+}
 
+body.dark-mode .btn-danger:hover {
+    background-color: #ff6b6b !important;
+    color: white !important;
+}
 
-
-
-
-
-
+/* Optional spacing for buttons side by side */
+.position-relative.d-inline-block {
+    margin-right: 0.5rem;
+}
 
 
 

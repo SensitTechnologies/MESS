@@ -48,7 +48,7 @@
                                        id="radioSuccessBtn{@Step.Name}-@Step.Id"
                                        checked="@(SelectedButton == "Success")"
                                        @onclick="@(async (e) => await HandleButtonPress(true))"/>
-                                <label class="btn btn-outline-success @(SelectedButton == "Success" ? "active" : "")"
+                                <label class="btn btn-success @(SelectedButton == "Success" ? "active" : "")"
                                        for="radioSuccessBtn{@Step.Name}-@Step.Id">
                                     Success
                                 </label>
@@ -68,7 +68,7 @@
                                        id="radioFailureBtn{@Step.Name}-@Step.Id"
                                        checked="@(SelectedButton == "Failure")"
                                        @onclick="@(async (e) => await HandleButtonPress(false))"/>
-                                <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
+                                <label class="btn btn-danger @(SelectedButton == "Failure" ? "active" : "")"
                                        for="radioFailureBtn{@Step.Name}-@Step.Id">
                                     Failure
                                 </label>
