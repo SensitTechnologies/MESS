@@ -7,16 +7,19 @@
         <div class="d-flex justify-content-between align-items-center">
             <!-- Left-aligned Navigation Buttons -->
             <div class="d-flex gap-2">
-                <NavLink class="btn btn-outline-secondary" href="/WorkInstructionManager" Match="NavLinkMatch.All">
+                <NavLink class="btn btn-outline-secondary" href="/WorkInstructionManager" Match="NavLinkMatch.All" activeClass="tab-selected">
                     Work Instructions
                 </NavLink>
-                <NavLink class="btn btn-outline-secondary" href="/users" Match="NavLinkMatch.All">
+                <NavLink class="btn btn-outline-secondary" href="/users" Match="NavLinkMatch.All" activeClass="tab-selected">
                     Users
                 </NavLink>
-                <NavLink class="btn btn-outline-secondary" href="/products" Match="NavLinkMatch.All">
+                <NavLink class="btn btn-outline-secondary" href="/products" Match="NavLinkMatch.All" activeClass="tab-selected">
                     Products
                 </NavLink>
             </div>
+
+
+
 
             <!-- Right-aligned Logout -->
             @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
@@ -39,15 +42,17 @@
 
 
 @code {
-    /// <summary>
-    /// Gets or sets the active line operator.
-    /// </summary>
     private string? ActiveLineOperator { get; set; }
+    private string activeTab { get; set; } = "WorkInstructions";
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Called by the framework when the component is initialized.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task OnInitializedAsync()
     {
         var state = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = state.User.Identity?.Name;
     }
+
 }

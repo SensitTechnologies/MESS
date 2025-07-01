@@ -12,6 +12,11 @@ body.dark-mode {
     color: #ffffff !important;
 }
 
+.tab-selected {
+    background-color: gray !important;
+    color: white !important;
+}
+
 /* === Buttons === */
 .btn-outline-secondary,
 .btn-outline-secondary.active {
@@ -545,6 +550,48 @@ body.dark-mode .btn-danger:hover {
 .position-relative.d-inline-block {
     margin-right: 0.5rem;
 }
+
+/* === Floating label animation for success/failure messages === */
+.floating-label {
+    position: absolute;
+    top: -1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 700;
+    font-size: 0.9rem;
+    pointer-events: none;
+    opacity: 0;
+    animation: floatFadeInOut 0.8s forwards;
+    z-index: 10;
+}
+
+.floating-label.success {
+    color: #198754; /* green */
+}
+
+.floating-label.failure {
+    color: #dc3545; /* red */
+}
+
+@keyframes floatFadeInOut {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+    10% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    90% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+}
+
 
 
 
