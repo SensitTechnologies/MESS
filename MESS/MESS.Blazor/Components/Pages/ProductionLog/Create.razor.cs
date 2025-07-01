@@ -353,8 +353,12 @@ private async Task SetActiveProduct(int productId)
         {
             await ProductionLogService.UpdateAsync(ProductionLog);
         }
+
+        if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
+        {
+            await PrintQRCode();
+        }
         
-        await PrintQRCode();
         ToastService.ShowSuccess("Successfully Created Production Log", 3000);
         
         // Create any associated SerialNumberLogs
