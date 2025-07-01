@@ -11,6 +11,24 @@
         </button>
         <InputFile OnChange="LoadFile" accept=".xlsx" class="form-control mb-3"/>
     </div>
+
+    @if (IsImporting)
+    {
+        <div class="mt-3">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">
+                    Importing...
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <div class="alert alert-info mt-3">
+            @StatusMessage
+        </div>
+    }
 </FluentCard>
 
 
