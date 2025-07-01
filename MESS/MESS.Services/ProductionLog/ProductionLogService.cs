@@ -198,7 +198,7 @@ public class ProductionLogService : IProductionLogService
     /// <inheritdoc />
     public async Task DeleteAttemptAsync(int id)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var entity = await context.ProductionLogStepAttempts.FindAsync(id);
         if (entity != null)
         {
