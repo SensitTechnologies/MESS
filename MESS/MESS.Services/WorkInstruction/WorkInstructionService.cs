@@ -24,19 +24,21 @@ public partial class WorkInstructionService : IWorkInstructionService
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
 
-    // The following attributes define the current expected XLSX structure as of 3/28/2025
-    private const string INSTRUCTION_TITLE_CELL = "B1";
-    private const string VERSION_CELL = "D1";
-    private const string PRODUCT_NAME_CELL = "B2";
-    private const string STEPS_PARTS_LIST_CELL = "B3";
+    // The following attributes define the current expected XLSX structure as of 7/1/2025
+    private const string PRODUCT_NAME_CELL = "B1";
+    private const string INSTRUCTION_TITLE_CELL = "B2";
+    private const string VERSION_CELL = "B3";
+    private const string SHOULD_GENERATE_QR_CODE_CELL = "B4";
+    private const string COLLECTS_PRODUCT_SERIAL_NUMBER_CELL = "B5";
     
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
-    private const int STEP_START_ROW = 7;
+    private const int STEP_START_ROW = 8;
+    private const int PART_COLUMN = 1;
     private const int STEP_START_COLUMN = 1;
     private const int STEP_TITLE_COLUMN = 2;
-    private const int STEP_DESCRIPTION_COLUMN = 3;
-    private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
+    private const int STEP_PRIMARY_MEDIA_COLUMN = 3;
+    private const int STEP_DESCRIPTION_COLUMN = 4;
     private const int STEP_SECONDARY_MEDIA_COLUMN = 5;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
@@ -89,7 +91,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 var allParts = partNodes.SelectMany(pn => pn.Parts).ToList();
                 var partsListStrings = allParts.Select(p => $"({p.PartName}, {p.PartNumber})");
-                worksheet.Cell(STEPS_PARTS_LIST_CELL).Value = string.Join(", ", partsListStrings);
+                //worksheet.Cell(STEPS_PARTS_LIST_CELL).Value = string.Join(", ", partsListStrings);
             }
             
             // Setup headers
@@ -382,6 +384,9 @@ public partial class WorkInstructionService : IWorkInstructionService
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
             
+            var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
+            var collectsProductSerialNumber = worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).GetValue<bool>();
+            
             // Check for pre-existing WorkInstruction that have matching title + version
             var preexistingWorkInstruction = await context.WorkInstructions
                 .Where(w => w.Title == workInstructionTitle && w.Version == versionString)
@@ -398,7 +403,9 @@ public partial class WorkInstructionService : IWorkInstructionService
                 Title = workInstructionTitle,
                 Version = versionString,
                 Products = [],
-                Nodes = []
+                Nodes = [],
+                ShouldGenerateQrCode = shouldGenerateQrCode,
+                CollectsProductSerialNumber = collectsProductSerialNumber
             };
             
             // Retrieve Product and assign relationship
@@ -413,44 +420,68 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             workInstruction.Products.Add(product);
 
-            // Create all steps within instruction
-            // Add any required parts to the work instruction
-            var partsNode = new PartNode();
-            partsNode.NodeType = WorkInstructionNodeType.Part;
-            var partsList = await GetPartsListFromString(worksheet.Cell(STEPS_PARTS_LIST_CELL).GetString());
+            // Create all steps within instruction and add part nodes where logical
+            // Start from row 8 (assuming header row is 7)
+            var currentRow = STEP_START_ROW;
+            var position = 0;
 
-            if (partsList != null)
+            while (true)
             {
-                partsNode.Parts.AddRange(partsList);
-                // Making PartsNode position 0 since there is no inherent way to get the desired position from
-                // an Excel spreadsheet. It is possible, but with the ability to alter Node positions this feature
-                // was placed on the backlog.
-                partsNode.Position = 0;
-                workInstruction.Nodes.Add(partsNode);
-            }
+                var partCell = worksheet.Cell(currentRow, PART_COLUMN).GetString()?.Trim();
+                var stepTitleCell = worksheet.Cell(currentRow, STEP_TITLE_COLUMN).GetString()?.Trim();
 
+                var isPartRow = !string.IsNullOrWhiteSpace(partCell);
+                var isStepRow = !string.IsNullOrWhiteSpace(stepTitleCell);
 
-            // Start from row 7 (assuming header row is 6)
-            var stepStartRow = STEP_START_ROW;
-            while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
-            {
-                var step = new Step
+                if (!isPartRow && !isStepRow)
                 {
-                    Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
-                    Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
-                };
-                
-                await ProcessStepMedia(worksheet, step, stepStartRow);
-                
-                // Step extends WorkInstructionNode for ordering purposes
-                // Calculation 0 Indexes the step order. 1st step has position 1 if there are parts, otherwise position 0.
-                var rowPositionCalculation = stepStartRow - STEP_START_ROW;
-                step.Position = partsList != null ? rowPositionCalculation + 1 : rowPositionCalculation;
-                step.NodeType = WorkInstructionNodeType.Step;
-                workInstruction.Nodes.Add(step);
-                stepStartRow++;
-            }
+                    // Stop on first fully empty row
+                    break;
+                }
 
+                if (isPartRow)
+                {
+                    // Create a PartNode from the part string in column A
+                    if (!string.IsNullOrWhiteSpace(partCell))
+                    {
+                        var parts = await GetPartsListFromString(partCell);
+
+                        if (parts != null && parts.Any())
+                        {
+                            var partNode = new PartNode
+                            {
+                                NodeType = WorkInstructionNodeType.Part,
+                                Position = position
+                            };
+
+                            partNode.Parts.AddRange(parts);
+                            workInstruction.Nodes.Add(partNode);
+
+                            Log.Information("Imported PartNode at position {Position} with parts count {Count}", position, parts.Count);
+                        }
+                    }
+
+                }
+                else if (isStepRow)
+                {
+                    var step = new Step
+                    {
+                        Name = ProcessCellText(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), workbook),
+                        Body = ProcessCellText(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), workbook),
+                        NodeType = WorkInstructionNodeType.Step,
+                        Position = position
+                    };
+
+                    await ProcessStepMedia(worksheet, step, currentRow);
+
+                    workInstruction.Nodes.Add(step);
+                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Name);
+                }
+
+                position++;
+                currentRow++;
+            }
+            
             var fileName = file.Name;
 
             if (await Create(workInstruction))
@@ -751,7 +782,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// <summary>
     /// Extracts a list of parts from a formatted string.
     /// </summary>
-    /// <param name="partsListString">String in format: "(PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), ..."</param>
+    /// <param name="partsListString">String in format: "(PART_SERIAL_NUMBER, PART_NAME), (PART_SERIAL_NUMBER, PART_NAME), ..."</param>
     /// <returns>List of Part objects if successful, null otherwise.</returns>
     /// <remarks>
     /// Uses regex to parse the parts list string and either retrieve existing parts
@@ -776,8 +807,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     var partToAdd = new Part
                     {
-                        PartName = match.Groups[1].Value.Trim(),
-                        PartNumber = match.Groups[2].Value.Trim()
+                        PartNumber = match.Groups[1].Value.Trim(),
+                        PartName = match.Groups[2].Value.Trim()
                     };
 
                     // This will always retrieve a persisted part in the database,
@@ -1147,9 +1178,9 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
 
     /// <summary>
-    /// Regex pattern for parsing parts list strings in the format "(PART_NAME, PART_NUMBER)"
+    /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"
     /// </summary>
-    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
+    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,]+),\s*([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
     [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
     private static partial System.Text.RegularExpressions.Regex RemoveHtmlRegex();
