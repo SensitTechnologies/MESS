@@ -45,8 +45,8 @@
                                 <div @ref="_dropdownContainer"
                                      @onmouseenter="OnDropdownMouseEnter"
                                      @onmouseleave="OnDropdownMouseLeave"
-                                    class="position-absolute w-100 mt-1 shadow bg-white border rounded"
-                                 style="max-height: 200px; overflow-y: auto; z-index: 1000;">
+                                     class="login-dropdown position-absolute w-100 mt-1 shadow border rounded"
+                                     style="max-height: 200px; overflow-y: auto; z-index: 1000;">
                                 @if (ApplicationUsers != null)
                                 {
                                     @foreach (var lineOperator in ApplicationUsers.Where(u =>
