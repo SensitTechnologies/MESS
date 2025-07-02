@@ -258,6 +258,35 @@ h1:focus {
     }
 }
 
+/* Dark mode dropdown selects */
+body.dark-mode select,
+body.dark-mode .form-select {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: 1px solid #888 !important;
+    padding-left: 0.5rem !important;
+    appearance: none !important;
+}
+
+body.dark-mode select option,
+body.dark-mode .form-select option {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+body.dark-mode select option:disabled,
+body.dark-mode .form-select option:disabled {
+    color: #777777 !important;
+}
+
+body.dark-mode select::-ms-expand,
+body.dark-mode .form-select::-ms-expand {
+    background-color: transparent;
+    color: #ffffff;
+}
+
+
 .darkmode {
     background-color: transparent;
     outline: none;
@@ -420,5 +449,4 @@ body.dark-mode fluent-text-area.failure-textarea::part(control)::placeholder {
     color: #777777 !important;
     background-color: transparent !important;
 }
-
 
