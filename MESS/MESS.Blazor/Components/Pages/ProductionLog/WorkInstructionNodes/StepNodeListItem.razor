@@ -92,18 +92,28 @@
             </div>
             
             <div class="col col-md-6 secondary-content">
-                @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0)
+                @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0) 
                 {
-                    
-                    @if (ShowDetails && Step.SecondaryMedia.Count > 0)
+                    @if (ShowDetails)
                     {
-                        <Carousel
-                            Images="@Step.SecondaryMedia"
-                            AutoPlay="false"
-                            Interval="3000"
-                            ImageStyle="height: 500px; object-fit: contain;" />
+                        if (Step.SecondaryMedia.Count > 0)
+                        {
+                            <Carousel
+                                Images="@Step.SecondaryMedia"
+                                AutoPlay="false"
+                                Interval="3000"
+                                ImageStyle="height: 500px; object-fit: contain;" />
+                        }
+                        else if (Step.PrimaryMedia.Count > 0)
+                        {
+                            <Carousel
+                                Images="@Step.PrimaryMedia"
+                                AutoPlay="false"
+                                Interval="3000"
+                                ImageStyle="height: 500px; object-fit: contain;" />
+                        }
                     }
-                    else if (!ShowDetails && Step.PrimaryMedia.Count > 0)
+                    else if (Step.PrimaryMedia.Count > 0)
                     {
                         <Carousel
                             Images="@Step.PrimaryMedia"
@@ -111,7 +121,6 @@
                             Interval="3000"
                             ImageStyle="height: 500px; object-fit: contain;" />
                     }
-                      
                 }
             </div>
         </div>

@@ -741,6 +741,16 @@ public partial class WorkInstructionService : IWorkInstructionService
             var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
             var collectsProductSerialNumber = worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).GetValue<bool>();
             
+            // Retrieve Product and assign relationship
+            var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
+            var product = await _productService.FindByTitleAsync(productString);
+
+            if (product == null)
+            {
+                Log.Information("Product not found. Cannot create Work Instruction");
+                return WorkInstructionImportResult.NoProductFound(file.Name, productString);
+            }
+            
             var originalIdString = worksheet.Cell(ORIGINAL_ID_CELL).GetString()?.Trim();
             int? originalId = null;
 
@@ -760,7 +770,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             else
             {
                 versionQuery = context.WorkInstructions
-                    .Where(w => w.Title == workInstructionTitle);
+                    .Where(w => w.Title == workInstructionTitle && w.Products.Any(p => p.Id == product.Id));
             }
 
             // Duplicate check
@@ -802,16 +812,6 @@ public partial class WorkInstructionService : IWorkInstructionService
 
                     workInstruction.OriginalId = originalId.Value;
                 }
-            }
-            
-            // Retrieve Product and assign relationship
-            var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
-            var product = await _productService.FindByTitleAsync(productString);
-
-            if (product == null)
-            {
-                Log.Information("Product not found. Cannot create Work Instruction");
-                return WorkInstructionImportResult.NoProductFound(file.Name, productString);
             }
             
             workInstruction.Products.Add(product);
