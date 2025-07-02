@@ -1,7 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
-@using Microsoft.AspNetCore.Components.Authorization
-@inject IProductionLogEventService ProductionLogEventService
+@inject NavigationManager NavigationManager
 
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
     
@@ -13,6 +12,10 @@
 @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
 {
     <div class="d-flex align-items-center justify-content-end">
+        <button class="btn btn-primary btn-sm me-4" @onclick="NavigateToLogs">
+            <i class="bi bi-card-list me-1"></i>My Production Logs
+        </button>
+        
         <span class="me-3">@ActiveLineOperator</span>
         <form method="post" action="/api/auth/logout">
             <button type="submit" class="btn btn-danger btn-sm">
@@ -68,4 +71,9 @@ else
     /// </summary>
     [Parameter]
     public string? ActiveLineOperator { get; set; }
+    
+    private void NavigateToLogs()
+    {
+        NavigationManager.NavigateTo("/production-logs");
+    }
 }

@@ -1,6 +1,4 @@
-using System.Reflection;
 using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using MESS.Data.Context;
 using MESS.Data.DTO;
 using MESS.Services.Product;
@@ -9,10 +7,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
-using System.Drawing;
 using System.Net;
 using System.Text;
-using Microsoft.Extensions.Primitives;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
@@ -24,19 +22,20 @@ public partial class WorkInstructionService : IWorkInstructionService
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
 
-    // The following attributes define the current expected XLSX structure as of 3/28/2025
-    private const string INSTRUCTION_TITLE_CELL = "B1";
-    private const string VERSION_CELL = "D1";
-    private const string PRODUCT_NAME_CELL = "B2";
-    private const string STEPS_PARTS_LIST_CELL = "B3";
-    
+    // The following attributes define the current expected XLSX structure as of 7/1/2025
+    private const string PRODUCT_NAME_CELL = "B1";
+    private const string INSTRUCTION_TITLE_CELL = "B2";
+    private const string VERSION_CELL = "B3";
+    private const string SHOULD_GENERATE_QR_CODE_CELL = "B4";
+    private const string COLLECTS_PRODUCT_SERIAL_NUMBER_CELL = "B5";
+    private const string ORIGINAL_ID_CELL = "B6";
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
-    private const int STEP_START_ROW = 7;
-    private const int STEP_START_COLUMN = 1;
+    private const int STEP_START_ROW = 9;
+    private const int PART_COLUMN = 1;
     private const int STEP_TITLE_COLUMN = 2;
-    private const int STEP_DESCRIPTION_COLUMN = 3;
-    private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
+    private const int STEP_PRIMARY_MEDIA_COLUMN = 3;
+    private const int STEP_DESCRIPTION_COLUMN = 4;
     private const int STEP_SECONDARY_MEDIA_COLUMN = 5;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
@@ -71,6 +70,9 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Set basic data in the header
             worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
+            worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).Value = workInstructionToExport.ShouldGenerateQrCode;
+            worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).Value = workInstructionToExport.CollectsProductSerialNumber;
+            worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
             if (workInstructionToExport.Products.Count > 0)
@@ -79,72 +81,128 @@ public partial class WorkInstructionService : IWorkInstructionService
                 worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
             }
             
-            // Build parts list string in format "(PART_NAME, PART_NUMBER), ..."
-            var partNodes = workInstructionToExport.Nodes
-                .Where(n => n is PartNode)
-                .Cast<PartNode>()
-                .ToList();
-            
-            if (partNodes.Count > 0)
-            {
-                var allParts = partNodes.SelectMany(pn => pn.Parts).ToList();
-                var partsListStrings = allParts.Select(p => $"({p.PartName}, {p.PartNumber})");
-                worksheet.Cell(STEPS_PARTS_LIST_CELL).Value = string.Join(", ", partsListStrings);
-            }
-            
             // Setup headers
-            worksheet.Cell("A1").Value = "Title:";
-            worksheet.Cell("C1").Value = "Version:";
-            worksheet.Cell("A2").Value = "Product:";
-            worksheet.Cell("C2").Value = "QR Code Required:";
-            worksheet.Cell("A3").Value = "Required Parts:";
+            worksheet.Cell("A1").Value = "Product";
+            worksheet.Cell("A2").Value = "Instruction";
+            worksheet.Cell("A3").Value = "Version";
+            worksheet.Cell("A4").Value = "QR Code";
+            worksheet.Cell("A5").Value = "Serial Number";
+            worksheet.Cell("A6").Value = "Version History ID";
+            worksheet.Range("A1:A6").Style.Font.Bold = true;
+            
+            // Setup Header Comments
+            worksheet.Cell("C1").Value = "Name of the product that this work instruction contributes to.";
+            worksheet.Cell("C2").Value = "Title of this set of steps to produce the product.";
+            worksheet.Cell("C3").Value = "Version code for this document.";
+            worksheet.Cell("C4").Value = "True if the work instruction produces a printed QR code on completion. " +
+                                         "False otherwise.";
+            worksheet.Cell("C5").Value = "True if the work instruction allows the operator to input a product serial " +
+                                         "number after the last step.  False otherwise.";
+            worksheet.Cell("C6").Value = "Optional integer field that can be used to link this work instruction to an " +
+                                         "already existing version history chain. Leave blank if unsure.";
+            
+            //Styling the comments
+            var commentRange = worksheet.Range("C1:C6");
+            commentRange.Style.Font.FontColor = XLColor.Gray;
+            commentRange.Style.Font.Italic = true;
             
             // Step Header row. With bold.
-            var currentRow = 6;
-            worksheet.Cell(currentRow, 1).Value = "#";
-            worksheet.Cell(currentRow, 2).Value = "Title";
-            worksheet.Cell(currentRow, 3).Value = "Description";
-            worksheet.Cell(currentRow, 4).Value = "Primary Media";
-            worksheet.Cell(currentRow, 5).Value = "Secondary Media";
+            var currentRow = STEP_START_ROW;
+            worksheet.Cell(currentRow, PART_COLUMN).Value = "Parts";
+            worksheet.Cell(currentRow, STEP_TITLE_COLUMN).Value = "Primary Instructions";
+            worksheet.Cell(currentRow, STEP_PRIMARY_MEDIA_COLUMN).Value = "Primary Media";
+            worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN).Value = "Secondary Instructions";
+            worksheet.Cell(currentRow, STEP_SECONDARY_MEDIA_COLUMN).Value = "Secondary Media";
 
-            var stepNodes = workInstructionToExport.Nodes
-                .Where(n => n is Step)
-                .Cast<Step>()
-                .OrderBy(s => s.Position)
+            // Make them bold
+            worksheet.Range(currentRow, PART_COLUMN, currentRow, STEP_SECONDARY_MEDIA_COLUMN)
+                .Style.Font.Bold = true;
+            
+            var orderedNodes = workInstructionToExport.Nodes
+                .OrderBy(n => n.Position)
                 .ToList();
 
             currentRow++;
-            var stepNumber = 1;
         
-            foreach (var step in stepNodes)
+            foreach (var node in orderedNodes)
             {
-                worksheet.Cell(currentRow, 1).Value = stepNumber++;
-                
-                // Currently just stripping the html off of the steps to get the content out.
-                worksheet.Cell(currentRow, 2).Value = StripHtmlTags(step.Name);
-                worksheet.Cell(currentRow, 3).Value = StripHtmlTags(step.Body);
-                
-                // ApplyFormattingToCells(worksheet.Cell(currentRow, 2), step.Name); 
-                // ApplyFormattingToCells(worksheet.Cell(currentRow, 3), step.Body);
-            
-                // Handle primary media
-                if (step.PrimaryMedia.Count > 0)
+                if (node is PartNode partNode)
                 {
-                    worksheet.Cell(currentRow, 4).Value = string.Join(", ", step.PrimaryMedia);
+                    // Write parts string to column A (PART_COLUMN)
+                    var partStrings = partNode.Parts.Select(p => $"({p.PartNumber}, {p.PartName})");
+                    worksheet.Cell(currentRow, PART_COLUMN).Value = string.Join(", ", partStrings);
+
+                    // Leave other columns blank automatically
                 }
-            
-                // Handle secondary media
-                if (step.SecondaryMedia.Count > 0)
+                else if (node is Step step)
                 {
-                    worksheet.Cell(currentRow, 5).Value = string.Join(", ", step.SecondaryMedia);
+                    worksheet.Cell(currentRow, PART_COLUMN).Value = ""; // no part
+
+                    //Applying Text
+                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), step.Name);
+                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), step.Body);
+                    
+                    //Inserting Images
+                    InsertImagesIntoCell(
+                        worksheet,
+                        currentRow,
+                        STEP_PRIMARY_MEDIA_COLUMN,
+                        step.PrimaryMedia
+                    );
+
+                    InsertImagesIntoCell(
+                        worksheet,
+                        currentRow,
+                        STEP_SECONDARY_MEDIA_COLUMN,
+                        step.SecondaryMedia
+                    );
                 }
-            
+
                 currentRow++;
             }
             
-            // Auto-fit column widths
-            worksheet.Columns().AdjustToContents();
-        
+            //Set Column Widths
+            worksheet.Column(PART_COLUMN).Width = 30;
+            worksheet.Column(STEP_TITLE_COLUMN).Width = 40;
+            worksheet.Column(STEP_PRIMARY_MEDIA_COLUMN).Width = 40;
+            worksheet.Column(STEP_DESCRIPTION_COLUMN).Width = 40;
+            worksheet.Column(STEP_SECONDARY_MEDIA_COLUMN).Width = 40;
+            
+            // Enable wrapping on data rows starting from STEP_START_ROW downward
+            for (int col = PART_COLUMN; col <= STEP_SECONDARY_MEDIA_COLUMN; col++)
+            {
+                worksheet.Column(col).Style.Alignment.WrapText = true;
+            }
+            
+            // Disable wrapping on header rows (e.g., rows 1 to STEP_START_ROW - 1)
+            for (int row = 1; row < STEP_START_ROW; row++)
+            {
+                for (int col = PART_COLUMN; col <= STEP_SECONDARY_MEDIA_COLUMN; col++)
+                {
+                    worksheet.Cell(row, col).Style.Alignment.WrapText = false;
+                }
+            }
+            
+            // Determine the data range starting from your header row (STEP_START_ROW)
+            // and covering all columns used (PART_COLUMN to STEP_SECONDARY_MEDIA_COLUMN)
+            var lastRowUsed = worksheet.LastRowUsed();
+            if (lastRowUsed != null)
+            {
+                int lastRowNumber = lastRowUsed.RowNumber();
+
+                // Define the range including headers and data rows
+                var tableRange = worksheet.Range(
+                    worksheet.Cell(STEP_START_ROW, PART_COLUMN),
+                    worksheet.Cell(lastRowNumber, STEP_SECONDARY_MEDIA_COLUMN)
+                );
+
+                // Create a table on that range
+                var table = tableRange.CreateTable();
+
+                // Set a built-in table style with alternating row colors
+                table.Theme = XLTableTheme.TableStyleMedium2;
+            }
+            
             // Create directory for exports if it doesn't exist
             var exportDir = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionExports");
             if (!Directory.Exists(exportDir))
@@ -172,12 +230,28 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
     
+    private class TextRun
+    {
+        public string Text { get; set; } = "";
+        public bool IsBold { get; set; }
+        public bool IsItalic { get; set; }
+        public bool IsUnderline { get; set; }
+        public string? FontColor { get; set; }
+        public double? FontSize { get; set; }
+        public bool IsLink { get; set; }
+        public string? LinkHref { get; set; }
+        public string? FontFamily { get; set; }
+        public bool IsStrikethrough { get; set; }
+        public string? BackgroundColor { get; set; }
+    }
+    
     /// <summary>
-    /// 
+    /// Applies rich text formatting to an Excel cell based on the provided HTML content.
+    /// This includes styles such as bold, italic, underline, strikethrough, font size, 
+    /// font family, font color, background color, and link styling.
     /// </summary>
-    /// <param name="cell"></param>
-    /// <param name="htmlContent"></param>
-    /// <returns></returns>
+    /// <param name="cell">The target Excel cell to apply formatting to.</param>
+    /// <param name="htmlContent">The HTML content containing the text and inline styles to parse and apply.</param>
     private void ApplyFormattingToCells(IXLCell cell, string? htmlContent)
     {
         if (string.IsNullOrEmpty(htmlContent))
@@ -186,19 +260,301 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
 
         htmlContent = htmlContent.Trim();
-        
-        // Remove div wrapper as it should never have any styles associated with it
+
+        // Remove div wrapper
         if (htmlContent.StartsWith("<div>") && htmlContent.EndsWith("</div>"))
         {
             htmlContent = htmlContent.Substring(5, htmlContent.Length - 11);
         }
 
-        var plainText = StripHtmlTags(htmlContent);
-        cell.Value = plainText;
-        
-        // TODO finish full implementation
+        // Decode HTML entities
+        htmlContent = System.Net.WebUtility.HtmlDecode(htmlContent);
+
+        var tokens = TokenizeSimpleHtml(htmlContent);
+
+        var richText = cell.GetRichText();
+
+        foreach (var token in tokens)
+        {
+            if (string.IsNullOrWhiteSpace(token.Text)) continue;
+
+            var rt = cell.GetRichText().AddText(token.Text);
+            rt.Bold = token.IsBold;
+            rt.Italic = token.IsItalic;
+            rt.Underline = token.IsUnderline ? XLFontUnderlineValues.Single : XLFontUnderlineValues.None;
+            rt.Strikethrough = token.IsStrikethrough;
+
+            if (!string.IsNullOrWhiteSpace(token.FontColor))
+            {
+                try { rt.FontColor = XLColor.FromHtml(token.FontColor); }
+                catch { }
+            }
+
+            if (!string.IsNullOrWhiteSpace(token.FontFamily))
+            {
+                rt.FontName = token.FontFamily;
+            }
+
+            if (token.FontSize.HasValue)
+            {
+                rt.FontSize = token.FontSize.Value;
+            }
+
+            if (token.IsLink)
+            {
+                rt.Underline = XLFontUnderlineValues.Single;
+                rt.FontColor = XLColor.FromHtml("#0000EE"); // Typical link blue
+            }
+
+            // Note: Background color can't be set on rich text runs in ClosedXML.
+            // You can collect it here for whole-cell fallback if you want:
+            //   if (!string.IsNullOrWhiteSpace(token.BackgroundColor)) { ... }
+        }
+
+    }
+    
+    private void ApplyTagToRun(TextRun run, string tag, bool enable, Dictionary<string,string>? attributes = null)
+    {
+        switch (tag)
+        {
+            case "b":
+                run.IsBold = enable;
+                break;
+            case "i":
+                run.IsItalic = enable;
+                break;
+            case "u":
+                run.IsUnderline = enable;
+                break;
+            case "a":
+                run.IsLink = enable;
+                if (enable && attributes != null && attributes.TryGetValue("href", out var href))
+                {
+                    run.LinkHref = href;
+                }
+                break;
+            case "span":
+                if (enable && attributes != null)
+                {
+                    if (attributes.TryGetValue("style", out var styleString))
+                    {
+                        ApplySpanStyles(run, styleString);
+                    }
+                }
+                break;
+        }
     }
 
+    private void ApplySpanStyles(TextRun run, string styleString)
+    {
+        var styles = styleString.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var s in styles)
+        {
+            var kvp = s.Split(':', 2);
+            if (kvp.Length != 2) continue;
+            var key = kvp[0].Trim().ToLower();
+            var value = kvp[1].Trim();
+
+            switch (key)
+            {
+                case "color":
+                    run.FontColor = value;
+                    break;
+                case "background-color":
+                    run.BackgroundColor = value;
+                    break;
+                case "font-size":
+                    if (value.EndsWith("pt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = value[..^2].Trim();
+                    }
+                    if (double.TryParse(value, out var size))
+                    {
+                        run.FontSize = size;
+                    }
+                    break;
+                case "font-family":
+                    run.FontFamily = value;
+                    break;
+                case "text-decoration":
+                    if (value.Contains("line-through", StringComparison.OrdinalIgnoreCase))
+                    {
+                        run.IsStrikethrough = true;
+                    }
+                    if (value.Contains("underline", StringComparison.OrdinalIgnoreCase))
+                    {
+                        run.IsUnderline = true;
+                    }
+                    break;
+            }
+        }
+    }
+
+    private List<TextRun> TokenizeSimpleHtml(string html)
+    {
+        var runs = new List<TextRun>();
+        var current = new TextRun();
+        var stack = new Stack<(string Tag, Dictionary<string, string>? Attributes)>();
+
+        var i = 0;
+        while (i < html.Length)
+        {
+            if (html[i] == '<')
+            {
+                var end = html.IndexOf('>', i);
+                if (end == -1)
+                {
+                    current.Text += html.Substring(i);
+                    break;
+                }
+
+                var tagContent = html.Substring(i + 1, end - i - 1).Trim();
+
+                if (!tagContent.StartsWith("/"))
+                {
+                    // Opening tag
+                    var (tag, attributes) = ParseTagAndAttributes(tagContent);
+                    stack.Push((tag, attributes));
+                    ApplyTagToRun(current, tag, true, attributes);
+                }
+                else
+                {
+                    // Closing tag
+                    var closing = tagContent.Substring(1).Trim().ToLower();
+                    if (stack.Count > 0 && stack.Peek().Tag == closing)
+                    {
+                        stack.Pop();
+                        ApplyTagToRun(current, closing, false);
+                    }
+                }
+
+                i = end + 1;
+            }
+            else
+            {
+                var nextTag = html.IndexOf('<', i);
+                if (nextTag == -1) nextTag = html.Length;
+
+                current.Text += html.Substring(i, nextTag - i);
+                i = nextTag;
+            }
+
+            if (!string.IsNullOrEmpty(current.Text))
+            {
+                runs.Add(current);
+                current = new TextRun
+                {
+                    IsBold = current.IsBold,
+                    IsItalic = current.IsItalic,
+                    IsUnderline = current.IsUnderline,
+                    FontColor = current.FontColor,
+                    FontSize = current.FontSize,
+                    IsLink = current.IsLink,
+                    LinkHref = current.LinkHref
+                };
+            }
+        }
+
+        return runs;
+    }
+    
+    private (string Tag, Dictionary<string,string> Attributes) ParseTagAndAttributes(string tagContent)
+    {
+        var spaceIndex = tagContent.IndexOf(' ');
+        if (spaceIndex == -1)
+        {
+            return (tagContent.ToLower(), new Dictionary<string, string>());
+        }
+
+        var tagName = tagContent.Substring(0, spaceIndex).ToLower();
+        var attrString = tagContent.Substring(spaceIndex + 1);
+
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var regex = new System.Text.RegularExpressions.Regex(@"(\w+)\s*=\s*(""[^""]*""|'[^']*'|[^\s]*)");
+        foreach (System.Text.RegularExpressions.Match m in regex.Matches(attrString))
+        {
+            var key = m.Groups[1].Value;
+            var val = m.Groups[2].Value.Trim('"', '\'');
+            attributes[key] = val;
+        }
+
+        return (tagName, attributes);
+    }
+    
+    private void InsertImagesIntoCell(IXLWorksheet worksheet, int row, int column, List<string> mediaPaths)
+{
+    if (mediaPaths == null || mediaPaths.Count == 0)
+        return;
+
+    // Settings
+    const int targetDisplayHeightPx = 100; // All images scaled to this height
+    const int cellEdgePaddingPx = 5;       // Padding from cell edges
+    const int imageSpacingPx = 5;          // Spacing between images horizontally and vertically
+
+    // Determine wrap width *more conservatively*
+    double excelColumnWidthUnits = worksheet.Column(column).Width;
+    double approxWrapWidthPx = (excelColumnWidthUnits * 7);
+    
+    if (approxWrapWidthPx <= 0) approxWrapWidthPx = 500;
+
+    int offsetX = cellEdgePaddingPx;
+    int offsetY = cellEdgePaddingPx;
+    int lineMaxHeight = 0;
+    bool anyImageInserted = false;
+
+    foreach (var media in mediaPaths)
+    {
+        var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
+        var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
+
+        if (!File.Exists(imagePath))
+            continue;
+
+        using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
+        using (var image = Image.Load(stream))
+        {
+            int originalWidth = image.Width;
+            int originalHeight = image.Height;
+
+            // Scale to target height
+            double scale = (double)targetDisplayHeightPx / originalHeight;
+            int scaledWidth = (int)(originalWidth * scale);
+            int scaledHeight = targetDisplayHeightPx;
+
+            // Check if image fits on current line
+            if (offsetX + scaledWidth + cellEdgePaddingPx > approxWrapWidthPx)
+            {
+                // Wrap to next line
+                offsetX = cellEdgePaddingPx;
+                offsetY += lineMaxHeight + imageSpacingPx;
+                lineMaxHeight = 0;
+            }
+
+            // Save image to memory
+            using var rawStream = new MemoryStream();
+            image.Save(rawStream, new PngEncoder());
+            rawStream.Position = 0;
+
+            // Add to Excel
+            worksheet.AddPicture(rawStream)
+                .MoveTo(worksheet.Cell(row, column), new System.Drawing.Point(offsetX, offsetY))
+                .WithSize(scaledWidth, scaledHeight);
+
+            offsetX += scaledWidth + imageSpacingPx;
+            lineMaxHeight = Math.Max(lineMaxHeight, scaledHeight);
+            anyImageInserted = true;
+        }
+    }
+
+    // Adjust row height
+    if (anyImageInserted)
+    {
+        double totalHeightPx = offsetY + lineMaxHeight + cellEdgePaddingPx;
+        worksheet.Row(row).Height = totalHeightPx * 0.75; // Excel points ≈ 0.75 px
+    }
+}
+    
     /// <summary>
     /// Removes HTML tags from a string.
     /// </summary>
@@ -382,24 +738,8 @@ public partial class WorkInstructionService : IWorkInstructionService
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
             
-            // Check for pre-existing WorkInstruction that have matching title + version
-            var preexistingWorkInstruction = await context.WorkInstructions
-                .Where(w => w.Title == workInstructionTitle && w.Version == versionString)
-                .AnyAsync();
-
-            if (preexistingWorkInstruction)
-            {
-                Log.Information("Unable to import Work Instruction. Pre-existing work instruction found for Title: {Title}, Version: {Version}. ", workInstructionTitle, versionString);
-                return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
-            }
-            
-            var workInstruction = new WorkInstruction
-            {
-                Title = workInstructionTitle,
-                Version = versionString,
-                Products = [],
-                Nodes = []
-            };
+            var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
+            var collectsProductSerialNumber = worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).GetValue<bool>();
             
             // Retrieve Product and assign relationship
             var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
@@ -411,46 +751,133 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return WorkInstructionImportResult.NoProductFound(file.Name, productString);
             }
             
+            var originalIdString = worksheet.Cell(ORIGINAL_ID_CELL).GetString()?.Trim();
+            int? originalId = null;
+
+            if (int.TryParse(originalIdString, out var parsedId))
+            {
+                originalId = parsedId;
+            }
+            
+            // Prepare to query for duplicates
+            IQueryable<WorkInstruction> versionQuery;
+
+            if (originalId.HasValue)
+            {
+                versionQuery = context.WorkInstructions
+                    .Where(w => w.OriginalId == originalId.Value || w.Id == originalId.Value);
+            }
+            else
+            {
+                versionQuery = context.WorkInstructions
+                    .Where(w => w.Title == workInstructionTitle && w.Products.Any(p => p.Id == product.Id));
+            }
+
+            // Duplicate check
+            var duplicateExists = await versionQuery
+                .Where(w => w.Version == versionString)
+                .AnyAsync();
+
+            if (duplicateExists)
+            {
+                Log.Information("Unable to import Work Instruction. Duplicate version found for Title: {Title}, Version: {Version}.", workInstructionTitle, versionString);
+                return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
+            }
+            
+            // Building the work instruction object with gathered data
+            var workInstruction = new WorkInstruction
+            {
+                Title = workInstructionTitle,
+                Version = versionString,
+                Products = [],
+                Nodes = [],
+                ShouldGenerateQrCode = shouldGenerateQrCode,
+                CollectsProductSerialNumber = collectsProductSerialNumber,
+                IsLatest = true
+            };
+            
+            // Handle lineage
+            if (originalId.HasValue)
+            {
+                var existingChain = await context.WorkInstructions
+                    .Where(w => w.OriginalId == originalId.Value || w.Id == originalId.Value)
+                    .ToListAsync();
+
+                if (existingChain.Any())
+                {
+                    foreach (var old in existingChain)
+                    {
+                        old.IsLatest = false;
+                    }
+
+                    workInstruction.OriginalId = originalId.Value;
+                }
+            }
+            
             workInstruction.Products.Add(product);
 
-            // Create all steps within instruction
-            // Add any required parts to the work instruction
-            var partsNode = new PartNode();
-            partsNode.NodeType = WorkInstructionNodeType.Part;
-            var partsList = await GetPartsListFromString(worksheet.Cell(STEPS_PARTS_LIST_CELL).GetString());
+            // Create all steps within instruction and add part nodes where logical
+            // Start from row 9 (assuming header row is 8)
+            var currentRow = STEP_START_ROW;
+            var position = 0;
 
-            if (partsList != null)
+            while (true)
             {
-                partsNode.Parts.AddRange(partsList);
-                // Making PartsNode position 0 since there is no inherent way to get the desired position from
-                // an Excel spreadsheet. It is possible, but with the ability to alter Node positions this feature
-                // was placed on the backlog.
-                partsNode.Position = 0;
-                workInstruction.Nodes.Add(partsNode);
-            }
+                var partCell = worksheet.Cell(currentRow, PART_COLUMN).GetString()?.Trim();
+                var stepTitleCell = worksheet.Cell(currentRow, STEP_TITLE_COLUMN).GetString()?.Trim();
 
+                var isPartRow = !string.IsNullOrWhiteSpace(partCell);
+                var isStepRow = !string.IsNullOrWhiteSpace(stepTitleCell);
 
-            // Start from row 7 (assuming header row is 6)
-            var stepStartRow = STEP_START_ROW;
-            while (!worksheet.Cell(stepStartRow, STEP_START_COLUMN).IsEmpty())
-            {
-                var step = new Step
+                if (!isPartRow && !isStepRow)
                 {
-                    Name = ProcessCellText(worksheet.Cell(stepStartRow, STEP_TITLE_COLUMN), workbook),
-                    Body = ProcessCellText(worksheet.Cell(stepStartRow, STEP_DESCRIPTION_COLUMN), workbook),
-                };
-                
-                await ProcessStepMedia(worksheet, step, stepStartRow);
-                
-                // Step extends WorkInstructionNode for ordering purposes
-                // Calculation 0 Indexes the step order. 1st step has position 1 if there are parts, otherwise position 0.
-                var rowPositionCalculation = stepStartRow - STEP_START_ROW;
-                step.Position = partsList != null ? rowPositionCalculation + 1 : rowPositionCalculation;
-                step.NodeType = WorkInstructionNodeType.Step;
-                workInstruction.Nodes.Add(step);
-                stepStartRow++;
-            }
+                    // Stop on first fully empty row
+                    break;
+                }
 
+                if (isPartRow)
+                {
+                    // Create a PartNode from the part string in column A
+                    if (!string.IsNullOrWhiteSpace(partCell))
+                    {
+                        var parts = await GetPartsListFromString(partCell);
+
+                        if (parts != null && parts.Any())
+                        {
+                            var partNode = new PartNode
+                            {
+                                NodeType = WorkInstructionNodeType.Part,
+                                Position = position
+                            };
+
+                            partNode.Parts.AddRange(parts);
+                            workInstruction.Nodes.Add(partNode);
+
+                            Log.Information("Imported PartNode at position {Position} with parts count {Count}", position, parts.Count);
+                        }
+                    }
+
+                }
+                else if (isStepRow)
+                {
+                    var step = new Step
+                    {
+                        Name = ProcessCellText(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), workbook),
+                        Body = ProcessCellText(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), workbook),
+                        NodeType = WorkInstructionNodeType.Step,
+                        Position = position
+                    };
+
+                    await ProcessStepMedia(worksheet, step, currentRow);
+
+                    workInstruction.Nodes.Add(step);
+                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Name);
+                }
+
+                position++;
+                currentRow++;
+            }
+            
             var fileName = file.Name;
 
             if (await Create(workInstruction))
@@ -751,7 +1178,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// <summary>
     /// Extracts a list of parts from a formatted string.
     /// </summary>
-    /// <param name="partsListString">String in format: "(PART_NAME, PART_SERIAL_NUMBER), (PART_NAME, PART_SERIAL_NUMBER), ..."</param>
+    /// <param name="partsListString">String in format: "(PART_SERIAL_NUMBER, PART_NAME), (PART_SERIAL_NUMBER, PART_NAME), ..."</param>
     /// <returns>List of Part objects if successful, null otherwise.</returns>
     /// <remarks>
     /// Uses regex to parse the parts list string and either retrieve existing parts
@@ -776,8 +1203,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     var partToAdd = new Part
                     {
-                        PartName = match.Groups[1].Value.Trim(),
-                        PartNumber = match.Groups[2].Value.Trim()
+                        PartNumber = match.Groups[1].Value.Trim(),
+                        PartName = match.Groups[2].Value.Trim()
                     };
 
                     // This will always retrieve a persisted part in the database,
@@ -1147,9 +1574,9 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
 
     /// <summary>
-    /// Regex pattern for parsing parts list strings in the format "(PART_NAME, PART_NUMBER)"
+    /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"
     /// </summary>
-    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,)]+)(?:,\s*)?([^)]+)\)")]
+    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,]+),\s*([^)]+)\)")]
     private static partial System.Text.RegularExpressions.Regex PartsListRegex();
     [System.Text.RegularExpressions.GeneratedRegex("<.*?>")]
     private static partial System.Text.RegularExpressions.Regex RemoveHtmlRegex();

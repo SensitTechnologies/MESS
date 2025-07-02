@@ -72,7 +72,9 @@ public class ProductionLogService : IProductionLogService
             await using var context = await _contextFactory.CreateDbContextAsync();
             var productionLog = await context.ProductionLogs
                 .Include(p => p.LogSteps)
-                .ThenInclude(p => p.WorkInstructionStep)
+                .ThenInclude(ls => ls.WorkInstructionStep)
+                .Include(p => p.LogSteps)
+                .ThenInclude(ls => ls.Attempts)
                 .Include(w => w.WorkInstruction)
                 .Include(p => p.Product)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -162,6 +164,46 @@ public class ProductionLogService : IProductionLogService
         {
             Log.Warning("Exception thrown when attempting to GetProductionLogsByListOfIdsAsync, in ProductionLogService: {Exception}", e.ToString());
             return [];
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<List<ProductionLog>?> GetProductionLogsByOperatorIdAsync(string operatorId)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.ProductionLogs
+                .Include(p => p.WorkInstruction)
+                .ThenInclude(w => w!.Nodes)
+                .Include(p => p.Product)
+                .Include(p => p.LogSteps)
+                .ThenInclude(p => p.WorkInstructionStep)
+                .Where(p => p.OperatorId == operatorId)
+                .OrderByDescending(p => p.CreatedOn)
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown when attempting to GetProductionLogsByOperatorIdAsync for OperatorId: {OperatorId} in ProductionLogService: {Exception}",
+                operatorId,
+                e.ToString()
+            );
+            return new List<ProductionLog>();
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task DeleteAttemptAsync(int id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var entity = await context.ProductionLogStepAttempts.FindAsync(id);
+        if (entity != null)
+        {
+            context.ProductionLogStepAttempts.Remove(entity);
+            await context.SaveChangesAsync();
         }
     }
 }

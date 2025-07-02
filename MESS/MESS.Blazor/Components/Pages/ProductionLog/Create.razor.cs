@@ -18,7 +18,7 @@ internal enum Status
 /// </summary>
 public partial class Create : ComponentBase, IAsyncDisposable
 {
-    private string Title = "Add";
+    private const string Title = "Production Log";
     private bool IsLoading { get; set; } = true;
     private ConfirmationModal? popupRef;
     private bool IsWorkflowActive { get; set; }
@@ -42,7 +42,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
     private IJSObjectReference? module;
-    private List<SerialNumberLog> _serialNumberLogs { get; set; } = [];
+    private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
     
     private Func<ProductionLog, Task>? _autoSaveHandler;
     /// <inheritdoc />
@@ -82,9 +82,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         ProductSerialNumber = SerializationService.CurrentProductNumber;
 
-        SerializationService.CurrentSerialNumberLogChanged += HandleSerialNumberLogsChanged;
+        SerializationService.CurrentProductionLogPartChanged += HandleProductionLogPartsChanged;
         SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
-        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
+        ProductionLogParts = SerializationService.CurrentProductionLogParts;
 
         IsLoading = false;
     }
@@ -310,7 +310,7 @@ private async Task SetActiveProduct(int productId)
         }
         
 
-        bool allStepsHavePartsNeeded = _serialNumberLogs.Count >= totalPartsNeeded;
+        bool allStepsHavePartsNeeded = ProductionLogParts.Count >= totalPartsNeeded;
 
         if (!allStepsHavePartsNeeded)
         {
@@ -353,12 +353,16 @@ private async Task SetActiveProduct(int productId)
         {
             await ProductionLogService.UpdateAsync(ProductionLog);
         }
+
+        if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
+        {
+            await PrintQRCode();
+        }
         
-        await PrintQRCode();
         ToastService.ShowSuccess("Successfully Created Production Log", 3000);
         
         // Create any associated SerialNumberLogs
-        await SerializationService.SaveCurrentSerialNumberLogsAsync(ProductionLog.Id);
+        await SerializationService.SaveCurrentProductionLogPartsAsync(ProductionLog.Id);
         
         // Reset the local storage values
         await LocalCacheManager.SetNewProductionLogFormAsync(null);
@@ -369,9 +373,9 @@ private async Task SetActiveProduct(int productId)
         await ResetFormState();
     }
     
-    private void HandleSerialNumberLogsChanged()
+    private void HandleProductionLogPartsChanged()
     {
-        _serialNumberLogs = SerializationService.CurrentSerialNumberLogs;
+        ProductionLogParts = SerializationService.CurrentProductionLogParts;
     
         InvokeAsync(StateHasChanged);
     }
@@ -492,7 +496,7 @@ private async Task SetActiveProduct(int productId)
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        SerializationService.CurrentSerialNumberLogChanged -= HandleSerialNumberLogsChanged;
+        SerializationService.CurrentProductionLogPartChanged -= HandleProductionLogPartsChanged;
         SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
         try
