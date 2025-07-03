@@ -1,9 +1,16 @@
 @using MESS.Data.Models
 
-<div class="form-floating flex-grow-1 m-0">
-    <InputText id="productionLogPart" class="form-control col custom-input" @bind-Value="@ActiveProductionLogPart.PartSerialNumber"
-               @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveProductionLogPart))"></InputText>
-    <label class="form-label col custom-label" for="productionLogPart" style="color: gray; background-color: transparent;">@ActiveProductionLogPart.Part?.PartName</label>
+<div class="form-floating flex-grow-1">
+    <InputText
+        id="productionLogPart"
+        class="form-control tall-input text-lightweight"
+        placeholder="@ActiveProductionLogPart.Part?.PartNumber"
+        @bind-Value="@ActiveProductionLogPart.PartSerialNumber"
+        @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveProductionLogPart))" />
+
+    <label for="productionLogPart" class="form-label subtle-label">
+        @ActiveProductionLogPart.Part?.PartName
+    </label>
 </div>
 
 @code {
