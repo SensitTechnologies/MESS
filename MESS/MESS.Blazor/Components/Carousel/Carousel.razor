@@ -28,7 +28,7 @@
         }
     </div>
 
-    @if (ShowControls)
+    @if (ShowControls && Images.Count > 1)
     {
         <button class="carousel-control-prev" type="button" data-bs-target="#@Id" data-bs-slide="prev" @onclick="PreviousSlide">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
