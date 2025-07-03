@@ -6,21 +6,29 @@
 <div>
     @if (WorkInstructions != null)
     {
-        <select id="workInstruction-select" style="max-width: 250px;" class="text-truncate form-select" @onchange="async e => await OnWorkInstructionSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
+        <select id="workInstruction-select"
+                style="max-width: 250px;"
+                class="text-truncate form-select"
+                @onchange="HandleSelectionAsync">
             @{
                 var selectedWorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
                 var isDefaultSelected = string.IsNullOrEmpty(selectedWorkInstructionName);
                 <option selected="@isDefaultSelected" value="-1">Select Instruction</option>
-                @foreach (var workInstruction in WorkInstructions)
+
+                @foreach (var workInstruction in WorkInstructions
+                    .OrderBy(i => ExtractTitlePrefix(i.Title))          // Sort by name prefix
+                    .ThenBy(i => ExtractTitleNumber(i.Title))          // Sort by numeric portion
+                    .ThenBy(i => i.Version))                           // Sort by version ascending
                 {
                     var isSelected = workInstruction.Title == selectedWorkInstructionName;
-                    <option class="w-50 text-truncate" selected="@isSelected" value="@workInstruction.Id">@workInstruction.Title</option>
+                    <option class="w-50 text-truncate" selected="@isSelected" value="@workInstruction.Id">
+                        @($"{workInstruction.Title} v{workInstruction.Version}")
+                    </option>
                 }
             }
         </select>
     }
 </div>
-
 
 @code {
     /// <summary>
@@ -30,22 +38,87 @@
     public List<WorkInstruction>? WorkInstructions { get; set; }
 
     /// <summary>
+    /// Gets or sets the list of selected instructions.
+    /// Used for binding selected state between components.
+    /// </summary>
+    [Parameter]
+    public List<WorkInstruction>? SelectedInstructions { get; set; } = [];
+
+    /// <summary>
     /// Event callback triggered when a work instruction is selected.
-    /// The selected work instruction's ID is passed as an argument.
+    /// The selected instruction's ID is passed to the parent component.
     /// </summary>
     [Parameter]
     public EventCallback<int> OnWorkInstructionSelected { get; set; }
-    
-    /// <inheritdoc />
+
+    /// <summary>
+    /// Event callback triggered when the selected instruction list changes.
+    /// Used to notify the parent of selection updates.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<WorkInstruction>> SelectedInstructionsChanged { get; set; }
+
+    /// <summary>
+    /// Registers event handlers for refreshing state when the production log's instruction details change.
+    /// </summary>
+    /// <returns>A completed task for component initialization.</returns>
     protected override Task OnInitializedAsync()
     {
         ProductionLogEventService.WorkInstructionDetailsChanged += StateHasChanged;
         return base.OnInitializedAsync();
     }
-    
-    /// <inheritdoc />
+
+    /// <summary>
+    /// Handles disposal of registered event handlers to prevent memory leaks.
+    /// </summary>
     public void Dispose()
     {
         ProductionLogEventService.ProductDetailsChanged -= StateHasChanged;
+    }
+
+    private async Task HandleSelectionAsync(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(value) || value == "-1")
+            return;
+
+        if (WorkInstructions is null)
+            return;
+
+        var selectedId = int.Parse(value);
+        var selectedInstruction = WorkInstructions.FirstOrDefault(wi => wi.Id == selectedId);
+        if (selectedInstruction is null)
+            return;
+
+        SelectedInstructions = [selectedInstruction];
+
+        await SelectedInstructionsChanged.InvokeAsync(SelectedInstructions);
+
+        if (OnWorkInstructionSelected.HasDelegate)
+        {
+            await OnWorkInstructionSelected.InvokeAsync(selectedId);
+        }
+    }
+
+    /// <summary>
+    /// Extracts the alphabetic prefix from a work instruction title, used for sorting.
+    /// </summary>
+    /// <param name="title">The full instruction title.</param>
+    /// <returns>The alphabetic prefix portion of the title.</returns>
+    private string ExtractTitlePrefix(string title)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(title, @"^[^\d]+");
+        return match.Success ? match.Value.Trim() : title;
+    }
+
+    /// <summary>
+    /// Extracts the first numeric sequence from a work instruction title for numerical sorting.
+    /// </summary>
+    /// <param name="title">The full instruction title.</param>
+    /// <returns>The numeric portion of the title, or int.MaxValue if none is found.</returns>
+    private int ExtractTitleNumber(string title)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(title, @"\d+");
+        return match.Success ? int.Parse(match.Value) : int.MaxValue;
     }
 }

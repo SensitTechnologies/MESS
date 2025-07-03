@@ -6,16 +6,23 @@
 <div>
     @if (Products != null)
     {
-        <select disabled="@Disabled" id="product-select" class="form-select" @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
+        <select disabled="@Disabled" id="product-select" class="form-select"
+                @onchange="async e => await OnProductSelected.InvokeAsync(int.Parse(e.Value?.ToString() ?? string.Empty))">
             <option value="-1">Select Product</option>
-            @foreach (var product in Products)
+
+            @foreach (var product in Products
+                .OrderBy(p => ExtractNamePrefix(p.Name)) // Alphabetical by prefix
+                .ThenBy(p => ExtractNameNumber(p.Name))  // Numeric portion
+                .ThenBy(p => p.Id))                      // Fallback by ID
             {
                 @if (product.WorkInstructions == null)
                 {
                     continue;
                 }
+
                 var selectedProductName = ProductionLogEventService.CurrentProductName;
                 var isSelected = product.Name == selectedProductName;
+
                 <option selected="@isSelected" value="@product.Id">@product.Name</option>
             }
         </select>
@@ -47,10 +54,33 @@
     {
         ProductionLogEventService.ProductDetailsChanged += StateHasChanged;
     }
-    
+
     /// <inheritdoc />
     public void Dispose()
     {
         ProductionLogEventService.ProductDetailsChanged -= StateHasChanged;
+    }
+
+    /// <summary>
+    /// Extracts the leading alphabetic portion of a product name.
+    /// Used for prefix-based alphabetical sorting.
+    /// </summary>
+    /// <param name="name">The full product name.</param>
+    /// <returns>The alphabetic prefix portion of the name.</returns>
+    private string ExtractNamePrefix(string name)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(name, @"^[^\d]+");
+        return match.Success ? match.Value.Trim() : name;
+    }
+
+    /// <summary>
+    /// Extracts the first numeric portion of a product name for proper numeric sorting.
+    /// </summary>
+    /// <param name="name">The full product name.</param>
+    /// <returns>The numeric portion if present; otherwise int.MaxValue.</returns>
+    private int ExtractNameNumber(string name)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(name, @"\d+");
+        return match.Success ? int.Parse(match.Value) : int.MaxValue;
     }
 }
