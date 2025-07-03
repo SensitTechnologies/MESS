@@ -517,12 +517,6 @@ button.confirmed:active {
     outline: none;
 }
 
-/* Optional: Keep pending state consistent */
-.pending:hover {
-    background-color: #198754;
-    color: #fff;
-}
-
 .failed {
     background-color: #dc3545; /* Strong red tone */
     color: white;
@@ -538,11 +532,7 @@ button.confirmed:active {
     outline: none;
 }
 
-/* Optional: Keep pending state consistent */
-.pending:hover {
-    background-color: #bb2d3b;
-    color: #fff;
-}
+
 
 /* transparent container and all children in light mode */
 .part-grid-container .part-input,
