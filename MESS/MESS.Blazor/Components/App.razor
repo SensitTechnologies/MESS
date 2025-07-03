@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="@Assets["app.css"]"/>
     <link rel="stylesheet" href="@Assets["MESS.Blazor.styles.css"]"/>
     <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.bubble.css" rel="stylesheet">
     <ImportMap/>
     <link rel="icon" type="image/png" href="favicon.png"/>
     <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
@@ -22,6 +24,9 @@
 <script src='./Components/Pages/ProductionLog/ConfirmationModal.razor.js'></script>
 <script src="./Scripts/AutoFocus.js"></script>
 <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script src="_content/Blazored.TextEditor/quill-blot-formatter.min.js"></script>
+<script src="_content/Blazored.TextEditor/Blazored-BlazorQuill.js"></script>
 </body>
 
 </html>
