@@ -2,15 +2,20 @@
 @inject IJSRuntime JSRuntime
 
 <div id="@Id" class="carousel slide @CssClass" data-bs-ride="@(AutoPlay ? "carousel" : "false")">
-    @if (ShowIndicators)
+    @if (ShowIndicators && Images.Count > 1)
     {
         <div class="carousel-indicators">
             @for (int i = 0; i < Images.Count; i++)
             {
                 var index = i;
-                <button type="button" data-bs-target="#@Id" data-bs-slide-to="@i" class="@(ActiveIndex == i ? "active" : "")" 
-                        aria-current="@(ActiveIndex == i ? "true" : "false")" aria-label="Slide @(i+1)"
-                        @onclick="() => SetActiveIndex(index)"></button>
+                <button type="button"
+                        data-bs-target="#@Id"
+                        data-bs-slide-to="@i"
+                        class="@(ActiveIndex == i ? "active" : "")"
+                        aria-current="@(ActiveIndex == i ? "true" : "false")"
+                        aria-label="Slide @(i + 1)"
+                        @onclick="() => SetActiveIndex(index)">
+                </button>
             }
         </div>
     }
@@ -28,7 +33,7 @@
         }
     </div>
 
-    @if (ShowControls)
+    @if (ShowControls && Images.Count > 1)
     {
         <button class="carousel-control-prev" type="button" data-bs-target="#@Id" data-bs-slide="prev" @onclick="PreviousSlide">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
