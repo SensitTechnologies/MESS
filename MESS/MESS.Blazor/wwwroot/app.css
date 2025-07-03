@@ -13,7 +13,7 @@ body.dark-mode{
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* 🌞 Light Mode Defaults */
+/* Light Mode Defaults */
 .login-dropdown {
     background-color: #ffffff !important;
     color: #000000 !important;
@@ -44,7 +44,7 @@ body.dark-mode{
 }
 
 
-/* 🌙 Dark Mode Overrides */
+/* Dark Mode Overrides */
 body.dark-mode .login-dropdown {
     background-color: #1e1e1e !important;
     color: #ffffff !important;
@@ -504,11 +504,17 @@ body.dark-mode .alert-success {
     transition: all 0.2s ease;
 }
 
-/* Optional: Style confirmed state with yellow and black text */
-.confirmed {
-    background-color: #ffd502; /* Yellow */
-    color: #212529;             /* Dark readable text */
-    border: 3px solid #ffd502;
+button.confirmed {
+    background-color: #198754; /* Bootstrap success green */
+    color: white;
+    border-color: #198754;
+}
+
+button.confirmed:focus,
+button.confirmed:active {
+    background-color: #157347; /* Slightly darker green for feedback */
+    border-color: #157347;
+    outline: none;
 }
 
 /* Optional: Keep pending state consistent */
@@ -516,3 +522,64 @@ body.dark-mode .alert-success {
     background-color: #198754;
     color: #fff;
 }
+
+.failed {
+    background-color: #dc3545; /* Strong red tone */
+    color: white;
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.5); /* Subtle glow effect */
+    transition: background-color 0.2s ease;
+}
+
+.failed:focus,
+.failed:active {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+    outline: none;
+}
+
+/* Optional: Keep pending state consistent */
+.pending:hover {
+    background-color: #bb2d3b;
+    color: #fff;
+}
+
+/* transparent container and all children in light mode */
+.part-grid-container .part-input,
+.part-grid-container .part-input *,
+.production-log-grid .part-card,
+.production-log-grid .part-card * {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* same in dark mode */
+body.dark-mode .part-grid-container .part-input,
+body.dark-mode .part-grid-container .part-input *,
+body.dark-mode .production-log-grid .part-card,
+body.dark-mode .production-log-grid .part-card * {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.form-floating > label,
+.form-floating > label::after {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Remove background and pseudo-element backgrounds from serial number labels in .form-floating */
+.form-floating.serial-number > label,
+.form-floating.serial-number > label::after {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+
+
+
+

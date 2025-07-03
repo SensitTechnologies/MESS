@@ -14,7 +14,7 @@
                     @onclick="() => UpdateStatus(true)">
                 Success
             </button>
-            <button class="btn btn-sm @(Attempt.Success == false ? "btn-danger" : "btn-outline-danger")" @onclick="() => UpdateStatus(false)">
+            <button class="btn btn-sm @(Attempt.Success == false ? "btn-danger failed" : "btn-outline-danger")" @onclick="() => UpdateStatus(false)">
                 Failure
             </button>
         </div>
