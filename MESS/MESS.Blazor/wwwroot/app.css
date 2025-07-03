@@ -450,3 +450,69 @@ body.dark-mode fluent-text-area.failure-textarea::part(control)::placeholder {
     background-color: transparent !important;
 }
 
+:root {
+    --toast-bg-light: #fff;
+    --toast-bg-dark: #1e1e1e;
+    --toast-header-bg-light: #f8f9fa;
+    --toast-header-bg-dark: #2c2c2c;
+    --toast-text-light: #212529;
+    --toast-text-dark: #e5e5e5;
+    --btn-close-filter-light: invert(0%);
+    --btn-close-filter-dark: invert(100%);
+}
+
+/* Apply styling when body is in dark mode */
+body.dark-mode .toast {
+    background-color: var(--toast-bg-dark);
+    color: var(--toast-text-dark);
+    border: 1px solid #444;
+}
+
+body.dark-mode .toast-header {
+    background-color: var(--toast-header-bg-dark);
+    color: var(--toast-text-dark);
+    border-bottom: 1px solid #555;
+}
+
+body.dark-mode .btn-close {
+    filter: var(--btn-close-filter-dark);
+}
+
+/* Success alert override in dark mode */
+body.dark-mode .alert-success {
+    background-color: #2a4c2a;
+    border-color: #417a41;
+    color: #c8ecc8;
+}
+
+.btn-outline-success-custom {
+    background-color: transparent;
+    color: #198754; /* Bootstrap success green text */
+    border: 2px solid #198754;
+}
+
+.btn-outline-success-custom:hover {
+    background-color: #198754;
+    color: #fff;
+}
+
+/* Base style for success status button */
+.success-status-button {
+    border: 2px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+/* Optional: Style confirmed state with yellow and black text */
+.confirmed {
+    background-color: #ffd502; /* Yellow */
+    color: #212529;             /* Dark readable text */
+    border: 3px solid #ffd502;
+}
+
+/* Optional: Keep pending state consistent */
+.pending:hover {
+    background-color: #198754;
+    color: #fff;
+}
