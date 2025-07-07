@@ -13,7 +13,7 @@ body.dark-mode{
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* 🌞 Light Mode Defaults */
+/* Light Mode Defaults */
 .login-dropdown {
     background-color: #ffffff !important;
     color: #000000 !important;
@@ -44,7 +44,7 @@ body.dark-mode{
 }
 
 
-/* 🌙 Dark Mode Overrides */
+/* Dark Mode Overrides */
 body.dark-mode .login-dropdown {
     background-color: #1e1e1e !important;
     color: #ffffff !important;
@@ -449,4 +449,126 @@ body.dark-mode fluent-text-area.failure-textarea::part(control)::placeholder {
     color: #777777 !important;
     background-color: transparent !important;
 }
+
+:root {
+    --toast-bg-light: #fff;
+    --toast-bg-dark: #1e1e1e;
+    --toast-header-bg-light: #f8f9fa;
+    --toast-header-bg-dark: #2c2c2c;
+    --toast-text-light: #212529;
+    --toast-text-dark: #e5e5e5;
+    --btn-close-filter-light: invert(0%);
+    --btn-close-filter-dark: invert(100%);
+}
+
+/* Apply styling when body is in dark mode */
+body.dark-mode .toast {
+    background-color: var(--toast-bg-dark);
+    color: var(--toast-text-dark);
+    border: 1px solid #444;
+}
+
+body.dark-mode .toast-header {
+    background-color: var(--toast-header-bg-dark);
+    color: var(--toast-text-dark);
+    border-bottom: 1px solid #555;
+}
+
+body.dark-mode .btn-close {
+    filter: var(--btn-close-filter-dark);
+}
+
+/* Success alert override in dark mode */
+body.dark-mode .alert-success {
+    background-color: #2a4c2a;
+    border-color: #417a41;
+    color: #c8ecc8;
+}
+
+.btn-outline-success-custom {
+    background-color: transparent;
+    color: #198754; /* Bootstrap success green text */
+    border: 2px solid #198754;
+}
+
+.btn-outline-success-custom:hover {
+    background-color: #198754;
+    color: #fff;
+}
+
+/* Base style for success status button */
+.success-status-button {
+    border: 2px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+button.confirmed {
+    background-color: #198754; /* Bootstrap success green */
+    color: white;
+    border-color: #198754;
+}
+
+button.confirmed:focus,
+button.confirmed:active {
+    background-color: #157347; /* Slightly darker green for feedback */
+    border-color: #157347;
+    outline: none;
+}
+
+.failed {
+    background-color: #dc3545; /* Strong red tone */
+    color: white;
+    border-color: #dc3545;
+    transition: background-color 0.2s ease;
+}
+
+.failed:focus,
+.failed:active {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+    outline: none;
+}
+
+
+
+/* transparent container and all children in light mode */
+.part-grid-container .part-input,
+.part-grid-container .part-input *,
+.production-log-grid .part-card,
+.production-log-grid .part-card * {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* same in dark mode */
+body.dark-mode .part-grid-container .part-input,
+body.dark-mode .part-grid-container .part-input *,
+body.dark-mode .production-log-grid .part-card,
+body.dark-mode .production-log-grid .part-card * {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.form-floating > label,
+.form-floating > label::after {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Remove background and pseudo-element backgrounds from serial number labels in .form-floating */
+.form-floating.serial-number > label,
+.form-floating.serial-number > label::after {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+
+
+
 

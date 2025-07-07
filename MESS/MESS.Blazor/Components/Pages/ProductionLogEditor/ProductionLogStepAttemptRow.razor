@@ -6,10 +6,15 @@
 
     <td>
         <div class="d-flex gap-2">
-            <button class="btn btn-sm @(Attempt.Success == true ? "btn-success" : "btn-outline-success")" @onclick="() => UpdateStatus(true)">
+            @{
+                var isConfirmed = Attempt.Success.HasValue && Attempt.Success.Value;
+            }
+
+            <button class="btn btn-sm @(isConfirmed ? "btn-success confirmed" : "btn-outline-success pending")"
+                    @onclick="() => UpdateStatus(true)">
                 Success
             </button>
-            <button class="btn btn-sm @(Attempt.Success == false ? "btn-danger" : "btn-outline-danger")" @onclick="() => UpdateStatus(false)">
+            <button class="btn btn-sm @(Attempt.Success == false ? "btn-danger failed" : "btn-outline-danger")" @onclick="() => UpdateStatus(false)">
                 Failure
             </button>
         </div>
