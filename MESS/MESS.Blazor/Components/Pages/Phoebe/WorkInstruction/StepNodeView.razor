@@ -1,0 +1,177 @@
+@using MESS.Data.Models
+@using Serilog
+
+<div class="step-node">
+    <div class="mb-2 d-flex align-items-center">
+        <strong>Currently Editing:</strong> @(GetActiveField(Step.Id))
+        <button class="btn btn-sm btn-primary ms-2" @onclick="() => SwapField()">Swap Field</button>
+    </div>
+    <div class="editor-wrapper mb-2">
+        <BlazoredTextEditor @ref="EditorRef">
+            <ToolbarContent>
+                @((MarkupString)DefaultToolbarHtml)
+            </ToolbarContent>
+        </BlazoredTextEditor>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the step node data to be displayed and edited in this component.
+    /// </summary>
+    /// <remarks>
+    /// This is required and represents the underlying data model for the rich text editor,
+    /// including fields like Name and Body.
+    /// </remarks>
+    [Parameter, EditorRequired]
+    public required Step Step { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTML markup used to define the toolbar for the rich text editor.
+    /// </summary>
+    /// <remarks>
+    /// This parameter is required and should contain the desired Quill toolbar configuration in HTML.
+    /// </remarks>
+    [Parameter, EditorRequired]
+    public required string ToolbarHtml { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dictionary of editor references, keyed by Step ID.
+    /// </summary>
+    /// <remarks>
+    /// This dictionary enables sharing and reusing editor instances across nodes.
+    /// It must be provided by the parent component.
+    /// </remarks>
+    [Parameter, EditorRequired]
+    public required Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dictionary of currently active fields being edited, keyed by Step ID.
+    /// </summary>
+    /// <remarks>
+    /// This tracks which field (e.g., Name or Body) is currently active for editing per step.
+    /// </remarks>
+    [Parameter, EditorRequired]
+    public required Dictionary<int, string> ActiveFields { get; set; }
+
+    /// <summary>
+    /// Gets or sets the BlazoredTextEditor reference for this specific Step node.
+    /// </summary>
+    private BlazoredTextEditor? EditorRef
+    {
+        get => EditorRefs.TryGetValue(Step.Id, out var editor) ? editor : null;
+        set
+        {
+            if (value != null)
+            {
+                EditorRefs[Step.Id] = value;
+            }
+        }
+    }
+
+    private string GetActiveField(int stepId)
+    {
+        if (ActiveFields.TryGetValue(stepId, out var field))
+        {
+            return field;
+        }
+
+        ActiveFields[stepId] = "Body";
+        return "Body";
+    }
+
+    private async Task SwapField()
+    {
+        if (!EditorRefs.TryGetValue(Step.Id, out var editor))
+            return;
+
+        if (!ActiveFields.TryGetValue(Step.Id, out var currentField))
+            currentField = "Body";
+
+        var html = await editor.GetHTML();
+        if (currentField == "Body")
+        {
+            Step.Body = html;
+            ActiveFields[Step.Id] = "Name";
+            await editor.LoadHTMLContent(Step.Name ?? "");
+        }
+        else
+        {
+            Step.Name = html;
+            ActiveFields[Step.Id] = "Body";
+            await editor.LoadHTMLContent(Step.Body ?? "");
+        }
+
+        StateHasChanged();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrWhiteSpace(Step.Body))
+        {
+            if (EditorRef != null)
+            {
+                if (await WaitForEditorReady(EditorRef))
+                {
+                    await EditorRef.LoadHTMLContent(Step.Body);
+                }
+                else
+                {
+                    Log.Error("Quill editor failed to initialize for step {StepId}", Step.Id);
+                }
+            }
+        }
+    }
+
+    private async Task<bool> WaitForEditorReady(BlazoredTextEditor editor)
+    {
+        const int maxRetries = 15;
+        const int delayMs = 200;
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            try
+            {
+                if (editor == null) return false;
+                await editor.GetHTML();
+                return true;
+            }
+            catch
+            {
+                // Retry
+            }
+            await Task.Delay(delayMs);
+        }
+        return false;
+    }
+    
+    private string DefaultToolbarHtml => @"
+    <select class='ql-header'>
+        <option selected></option>
+        <option value='1'></option>
+        <option value='2'></option>
+        <option value='3'></option>
+        <option value='4'></option>
+        <option value='5'></option>
+    </select>
+    <span class='ql-formats'>
+        <button class='ql-bold'></button>
+        <button class='ql-italic'></button>
+        <button class='ql-underline'></button>
+        <button class='ql-strike'></button>
+    </span>
+    <span class='ql-formats'>
+        <select class='ql-color'></select>
+        <select class='ql-background'></select>
+    </span>
+    <span class='ql-formats'>
+        <button class='ql-list' value='ordered'></button>
+        <button class='ql-list' value='bullet'></button>
+    </span>
+    <span class='ql-formats'>
+        <button class='ql-link'></button>
+    </span>
+    ";
+
+}
