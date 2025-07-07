@@ -1,0 +1,42 @@
+﻿.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-row {
+    background-color: #000;
+    border-bottom: 1px solid #d6a100;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.menu-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.menu-buttons button {
+    white-space: nowrap;
+    font-weight: 600;
+    border-radius: 0.25rem;
+    padding: 0.3rem 0.8rem;
+    transition: background-color 0.3s ease;
+}
+
+.menu-buttons button:hover {
+    filter: brightness(90%);
+    cursor: pointer;
+}
+
+.sidebar {
+    background-image: linear-gradient(180deg, rgb(214, 161, 0) 0%, #3a0647 70%);
+    padding: 1rem;
+}
+
+main {
+    flex: 1;
+}

@@ -1,0 +1,27 @@
+﻿@* MenuBarPhoebe.razor *@
+
+<div class="page">
+    <header class="top-row">
+        <nav class="menu-buttons">
+            <button type="button" class="btn btn-primary btn-sm">New</button>
+            <button type="button" class="btn btn-secondary btn-sm">Edit</button>
+            <button type="button" class="btn btn-secondary btn-sm">Delete</button>
+            <button type="button" class="btn btn-warning btn-sm">Hide</button>
+            <button type="button" class="btn btn-success btn-sm">Save</button>
+            <button type="button" class="btn btn-info btn-sm">Download</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm">QR</button>
+            <button type="button" class="btn btn-dark btn-sm">Version History</button>
+        </nav>
+    </header>
+    <main>
+        @ChildContent
+    </main>
+</div>
+
+@code {
+    /// <summary>
+    /// Render the page’s main content inside the layout.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
