@@ -1,0 +1,137 @@
+@using System.Collections.Generic
+@using System.Diagnostics.CodeAnalysis
+
+@inject IJSRuntime JS
+
+@typeparam T
+
+<div id="@Id">
+    @foreach (var item in Items)
+    {
+        @if (SortableItemTemplate is not null)
+        {
+            @SortableItemTemplate(item)
+        }
+    }
+</div>
+
+@code {
+
+    /// <summary>
+    /// The template to render each sortable item.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<T>? SortableItemTemplate { get; set; }
+
+    /// <summary>
+    /// The list of items to display and allow reordering.
+    /// </summary>
+    [Parameter, AllowNull]
+    public List<T> Items { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the list is reordered, providing the old and new indices.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(int oldIndex, int newIndex)> OnUpdate { get; set; }
+
+    /// <summary>
+    /// Callback invoked when an item is removed from the list.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(int oldIndex, int newIndex)> OnRemove { get; set; }
+
+    /// <summary>
+    /// The HTML ID of the list container. Used for targeting in JS interop.
+    /// </summary>
+    [Parameter]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Group name for SortableJS grouping. Allows connected lists to share drag-and-drop.
+    /// </summary>
+    [Parameter]
+    public string Group { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Defines which other lists items can be pulled from (or null for none).
+    /// </summary>
+    [Parameter]
+    public string? Pull { get; set; }
+
+    /// <summary>
+    /// Whether this list accepts items being put into it from other lists.
+    /// </summary>
+    [Parameter]
+    public bool Put { get; set; } = true;
+
+    /// <summary>
+    /// Whether the list itself is sortable.
+    /// </summary>
+    [Parameter]
+    public bool Sort { get; set; } = true;
+
+    /// <summary>
+    /// CSS selector for the drag handle within each item.
+    /// </summary>
+    [Parameter]
+    public string Handle { get; set; } = string.Empty;
+
+    /// <summary>
+    /// CSS selector to filter out non-draggable elements.
+    /// </summary>
+    [Parameter]
+    public string? Filter { get; set; }
+
+    /// <summary>
+    /// Whether to force fallback behavior for dragging (for older browsers or custom styling).
+    /// </summary>
+    [Parameter]
+    public bool ForceFallback { get; set; } = true;
+
+    private DotNetObjectReference<SortableList<T>>? selfReference;
+
+    /// <summary>
+    /// Initializes the SortableJS integration after the component is rendered for the first time.
+    /// </summary>
+    /// <param name="firstRender">Indicates if this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            selfReference = DotNetObjectReference.Create(this);
+            var module = await JS.InvokeAsync<IJSObjectReference>("import", "/SortableList.js");
+            await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference, ForceFallback);
+        }
+    }
+
+    /// <summary>
+    /// Called by JavaScript when an item is reordered within the list.
+    /// </summary>
+    /// <param name="oldIndex">The index the item was moved from.</param>
+    /// <param name="newIndex">The index the item was moved to.</param>
+    [JSInvokable]
+    public void OnUpdateJS(int oldIndex, int newIndex)
+    {
+        // invoke the OnUpdate event passing in the oldIndex and the newIndex
+        OnUpdate.InvokeAsync((oldIndex, newIndex));
+    }
+
+    /// <summary>
+    /// Called by JavaScript when an item is removed from the list.
+    /// </summary>
+    /// <param name="oldIndex">The index the item was removed from.</param>
+    /// <param name="newIndex">The index it was moved to (typically -1).</param>
+    [JSInvokable]
+    public void OnRemoveJS(int oldIndex, int newIndex)
+    {
+        // remove the item from the list
+        OnRemove.InvokeAsync((oldIndex, newIndex));
+    }
+
+    /// <summary>
+    /// Disposes the DotNetObjectReference to avoid memory leaks.
+    /// </summary>
+    public void Dispose() => selfReference?.Dispose();
+}
+

@@ -70,6 +70,7 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
+      <None Include="wwwroot\SortableList.js" />
     </ItemGroup>
 
     <ItemGroup>
