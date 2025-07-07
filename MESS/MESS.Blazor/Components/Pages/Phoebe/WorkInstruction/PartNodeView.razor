@@ -1,0 +1,24 @@
+@using MESS.Data.Models
+@inherits ComponentBase
+
+@if (PartNode?.Parts is not null)
+{
+    @foreach (var part in PartNode.Parts)
+    {
+        <div class="part-node border rounded p-2 mb-2">
+            <div><strong>Serial Number:</strong> @part.PartNumber</div>
+            <div><strong>Part Name:</strong> @part.PartName</div>
+        </div>
+    }
+}
+
+@code {
+    /// <summary>
+    /// The <see cref="PartNode"/> containing one or more parts to render.
+    /// </summary>
+    /// <remarks>
+    /// This parameter must be provided and should contain the relevant part data for display.
+    /// </remarks>
+    [Parameter, EditorRequired]
+    public PartNode? PartNode { get; set; }
+}
