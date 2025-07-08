@@ -28,36 +28,37 @@
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-        @<div class="sortable-card mb-3 p-3 border rounded">
-            <div class="sortable-card-row d-flex align-items-center">
-                <div class="sortable-card-col position me-3">
-                    <strong>@node.Position</strong>
-                </div>
-                <div class="sortable-card-col type me-3">
-                    <span>@node.NodeType</span>
-                </div>
-                <div class="sortable-card-col content flex-grow-1">
-                    @switch (node)
-                    {
-                        case PartNode partNode:
-                            <PartNodeView PartNode="partNode" />
-                            break;
-
-                        case Step stepNode:
-                            <StepNodeView Step="stepNode"
-                                          ToolbarHtml="ToolbarHtml"
-                                          EditorRefs="EditorRefs"
-                                          ActiveFields="ActiveFields" />
-                            break;
-
-                        default:
-                            <div>Unknown node type: @node.NodeType</div>
-                            break;
-                    }
-                </div>
+    @<div class="sortable-card mb-3 p-3 border rounded">
+        <div class="sortable-card-row d-flex align-items-center">
+            <div class="sortable-card-col position me-3">
+                <strong>@node.Position</strong>
             </div>
-        </div>;
+            <div class="sortable-card-col type me-3">
+                <span>@node.NodeType</span>
+            </div>
+            <div class="sortable-card-col content flex-grow-1">
+                @switch (node)
+                {
+                    case PartNode partNode:
+                        <PartNodeView PartNode="partNode" />
+                        break;
 
+                    case Step stepNode:
+                        <StepNodeView
+                            Step="stepNode"
+                            EditorRefs="EditorRefs"
+                            ActiveFields="ActiveFields"
+                            OnMoveRequested="HandleMoveRequest" />
+                        break;
+
+                    default:
+                        <div>Unknown node type: @node.NodeType</div>
+                        break;
+                }
+            </div>
+        </div>
+    </div>;
+    
     private void OnItemsChanged((int oldIndex, int newIndex) indices)
     {
         var (oldIndex, newIndex) = indices;
@@ -75,11 +76,42 @@
             WorkInstructionNodes.Add(itemToMove);
         }
 
+        RecalculatePositions();
+    }
+    
+    private void RecalculatePositions()
+    {
         for (var i = 0; i < WorkInstructionNodes.Count; i++)
         {
             WorkInstructionNodes[i].Position = i;
         }
-
         StateHasChanged();
+    }
+    
+    private void HandleMoveRequest((Step step, string direction) moveRequest)
+    {
+        var (step, direction) = moveRequest;
+        var index = WorkInstructionNodes.IndexOf(step);
+        if (index == -1) return;
+
+        WorkInstructionNodes.RemoveAt(index);
+
+        switch (direction)
+        {
+            case "up":
+                WorkInstructionNodes.Insert(Math.Max(0, index - 1), step);
+                break;
+            case "down":
+                WorkInstructionNodes.Insert(Math.Min(WorkInstructionNodes.Count, index + 1), step);
+                break;
+            case "top":
+                WorkInstructionNodes.Insert(0, step);
+                break;
+            case "bottom":
+                WorkInstructionNodes.Add(step);
+                break;
+        }
+
+        RecalculatePositions();
     }
 }
