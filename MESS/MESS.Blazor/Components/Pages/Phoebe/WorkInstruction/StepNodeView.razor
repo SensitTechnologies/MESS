@@ -134,13 +134,6 @@
             {
                 var contentToLoad = ShowBody ? (Step.Body ?? "") : (Step.Name ?? "");
 
-                Log.Information(
-                    "Loading HTML content for StepId={StepId}, Field={Field}, Content={Content}",
-                    Step.Id,
-                    ShowBody ? "Body" : "Name",
-                    contentToLoad
-                );
-
                 await EditorRef.LoadHTMLContent(contentToLoad);
 
                 NeedsLoadAfterRender = false;
