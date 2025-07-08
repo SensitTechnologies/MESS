@@ -1,11 +1,15 @@
 @using MESS.Data.Models
 @using Serilog
 
-<div class="step-node">
-    <div class="mb-2 d-flex align-items-center">
-        <strong>Currently Editing:</strong> @(GetActiveField(Step.Id))
-        <button class="btn btn-sm btn-primary ms-2" @onclick="() => SwapField()">Swap Field</button>
+<div class="step-node border rounded p-2 mb-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <button class="btn btn-sm btn-primary" @onclick="SwapField">
+            @(ShowBody ? "Hide Details" : "Show Details")
+        </button>
+
+        <NodeActionMenu OnAction="HandleMoveAction" />
     </div>
+
     <div class="editor-wrapper mb-2">
         <BlazoredTextEditor @ref="EditorRef">
             <ToolbarContent>
@@ -13,7 +17,9 @@
             </ToolbarContent>
         </BlazoredTextEditor>
     </div>
+
 </div>
+
 
 @code {
     /// <summary>
@@ -25,15 +31,6 @@
     /// </remarks>
     [Parameter, EditorRequired]
     public required Step Step { get; set; }
-
-    /// <summary>
-    /// Gets or sets the HTML markup used to define the toolbar for the rich text editor.
-    /// </summary>
-    /// <remarks>
-    /// This parameter is required and should contain the desired Quill toolbar configuration in HTML.
-    /// </remarks>
-    [Parameter, EditorRequired]
-    public required string ToolbarHtml { get; set; }
 
     /// <summary>
     /// Gets or sets the dictionary of editor references, keyed by Step ID.
@@ -53,10 +50,34 @@
     /// </remarks>
     [Parameter, EditorRequired]
     public required Dictionary<int, string> ActiveFields { get; set; }
-
+    
     /// <summary>
-    /// Gets or sets the BlazoredTextEditor reference for this specific Step node.
+    /// An event callback invoked when the user requests to move this step node within the list.
     /// </summary>
+    /// <remarks>
+    /// The parent component should handle this event to perform the actual reordering
+    /// of the <see cref="WorkInstructionNode"/> collection. The callback provides a tuple
+    /// containing the <see cref="Step"/> being moved and the requested move direction
+    /// (e.g., "up", "down", "top", or "bottom").
+    /// </remarks>
+    [Parameter]
+    public EventCallback<(Step step, string direction)> OnMoveRequested { get; set; }
+    
+    // Track which field is showing
+    private bool ShowBody
+    {
+        get
+        {
+            if (ActiveFields.TryGetValue(Step.Id, out var field))
+                return field == "Body";
+
+            ActiveFields[Step.Id] = "Name";  // default to Name
+            return false;                    // false = show Name
+        }
+        set => ActiveFields[Step.Id] = value ? "Body" : "Name";
+    }
+
+    
     private BlazoredTextEditor? EditorRef
     {
         get => EditorRefs.TryGetValue(Step.Id, out var editor) ? editor : null;
@@ -68,61 +89,69 @@
             }
         }
     }
-
-    private string GetActiveField(int stepId)
+    
+    private bool NeedsLoadAfterRender { get; set; } = true;
+    
+    private async Task HandleMoveAction(string direction)
     {
-        if (ActiveFields.TryGetValue(stepId, out var field))
-        {
-            return field;
-        }
-
-        ActiveFields[stepId] = "Body";
-        return "Body";
+        await OnMoveRequested.InvokeAsync((Step, direction));
     }
-
+    
     private async Task SwapField()
     {
-        if (!EditorRefs.TryGetValue(Step.Id, out var editor))
-            return;
+        if (EditorRef == null) return;
 
-        if (!ActiveFields.TryGetValue(Step.Id, out var currentField))
-            currentField = "Body";
-
-        var html = await editor.GetHTML();
-        if (currentField == "Body")
+        // Save current
+        var currentHtml = await EditorRef.GetHTML();
+        if (ShowBody)
         {
-            Step.Body = html;
-            ActiveFields[Step.Id] = "Name";
-            await editor.LoadHTMLContent(Step.Name ?? "");
+            Step.Body = currentHtml;
         }
         else
         {
-            Step.Name = html;
-            ActiveFields[Step.Id] = "Body";
-            await editor.LoadHTMLContent(Step.Body ?? "");
+            Step.Name = currentHtml;
         }
+
+        // Swap
+        ShowBody = !ShowBody;
+        NeedsLoadAfterRender = true;
 
         StateHasChanged();
     }
-
+    
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !string.IsNullOrWhiteSpace(Step.Body))
+        if (EditorRef == null)
+            return;
+
+        if (!NeedsLoadAfterRender)
+            return;
+
+        try
         {
-            if (EditorRef != null)
+            if (await WaitForEditorReady(EditorRef))
             {
-                if (await WaitForEditorReady(EditorRef))
-                {
-                    await EditorRef.LoadHTMLContent(Step.Body);
-                }
-                else
-                {
-                    Log.Error("Quill editor failed to initialize for step {StepId}", Step.Id);
-                }
+                var contentToLoad = ShowBody ? (Step.Body ?? "") : (Step.Name ?? "");
+
+                Log.Information(
+                    "Loading HTML content for StepId={StepId}, Field={Field}, Content={Content}",
+                    Step.Id,
+                    ShowBody ? "Body" : "Name",
+                    contentToLoad
+                );
+
+                await EditorRef.LoadHTMLContent(contentToLoad);
+
+                NeedsLoadAfterRender = false;
             }
         }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error loading HTML content for field in step {StepId}", Step.Id);
+        }
     }
+
 
     private async Task<bool> WaitForEditorReady(BlazoredTextEditor editor)
     {
