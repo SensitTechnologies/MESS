@@ -59,10 +59,12 @@
         </div>
     </div>;
     
-    private void OnItemsChanged((int oldIndex, int newIndex) indices)
+    private async Task OnItemsChanged((int oldIndex, int newIndex) indices)
     {
         var (oldIndex, newIndex) = indices;
         if (oldIndex == newIndex) return;
+
+        await SaveAllEditorsContentAsync();
 
         var itemToMove = WorkInstructionNodes[oldIndex];
         WorkInstructionNodes.RemoveAt(oldIndex);
@@ -85,14 +87,15 @@
         {
             WorkInstructionNodes[i].Position = i;
         }
-        StateHasChanged();
     }
     
-    private void HandleMoveRequest((Step step, string direction) moveRequest)
+    private async Task HandleMoveRequest((Step step, string direction) moveRequest)
     {
         var (step, direction) = moveRequest;
         var index = WorkInstructionNodes.IndexOf(step);
         if (index == -1) return;
+
+        await SaveAllEditorsContentAsync();
 
         WorkInstructionNodes.RemoveAt(index);
 
@@ -113,5 +116,37 @@
         }
 
         RecalculatePositions();
+    }
+    
+    /// <summary>
+    /// Iterates over all tracked BlazoredTextEditor instances and saves their current HTML content
+    /// into the corresponding <see cref="Step"/> objects in <see cref="WorkInstructionNodes"/>.
+    /// </summary>
+    /// <remarks>
+    /// This ensures that any in-progress edits in the rich text editors are persisted
+    /// back to the underlying data model before performing actions like saving to the database
+    /// or navigating away from the page.
+    /// </remarks>
+    /// <returns>A task that represents the asynchronous save operation.</returns>
+    public async Task SaveAllEditorsContentAsync()
+    {
+        foreach (var kvp in EditorRefs)
+        {
+            var stepId = kvp.Key;
+            var editor = kvp.Value;
+            if (editor == null) continue;
+
+            var currentHtml = await editor.GetHTML();
+
+            // Find the node, check if Step (only steps have editable content)
+            var node = WorkInstructionNodes.FirstOrDefault(n => n.Id == stepId);
+            if (node is Step step)
+            {
+                if (ActiveFields.TryGetValue(stepId, out var field) && field == "Body")
+                    step.Body = currentHtml;
+                else
+                    step.Name = currentHtml;
+            }
+        }
     }
 }

@@ -51,9 +51,9 @@
                                              OnProductsChanged="UpdateProducts" />
 
                             <FluentDivider/>
-                        <button type="button" class="btn btn-outline-success" @onclick="async () => await SaveChanges.InvokeAsync(WorkInstruction)">
-                            Save
-                        </button>
+                            <button type="button" class="btn btn-outline-success" @onclick="SaveWorkInstruction">
+                                Save
+                            </button>
                         <FluentDivider />
                         <WorkInstructionExportButton WorkInstruction="WorkInstruction"/>
                         </FluentStack>
@@ -62,7 +62,9 @@
             </FluentGridItem>
             @if (DisplayStepManager)
             {
-                <WorkInstructionNodeManagerList WorkInstructionNodes="WorkInstruction.Nodes"/>
+                <WorkInstructionNodeManagerList
+                    @ref="NodeManagerRef"
+                    WorkInstructionNodes="WorkInstruction.Nodes" />
             }
         
     </FluentGrid>
@@ -103,6 +105,8 @@
     public required List<Product> AllProducts { get; set; }
     
     private bool IsEditable { get; set; }
+    
+    private WorkInstructionNodeManagerList? NodeManagerRef;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -163,6 +167,16 @@
     private void UpdateProducts(List<Product> selectedProducts)
     {
         WorkInstruction.Products = selectedProducts; 
+    }
+    
+    private async Task SaveWorkInstruction()
+    {
+        if (NodeManagerRef is not null)
+        {
+            await NodeManagerRef.SaveAllEditorsContentAsync();
+        }
+
+        await SaveChanges.InvokeAsync(WorkInstruction);
     }
 
 
