@@ -1072,7 +1072,6 @@ public partial class WorkInstructionService : IWorkInstructionService
         try
         {
             var sb = new StringBuilder();
-            sb.Append("<div>");
 
             var hasHyperLink = cell.HasHyperlink;
             string? hyperLinkUri = null;
@@ -1164,8 +1163,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     sb.Append(richTextContent);
                 }
             }
-
-            sb.Append("</div>");
+            
             return sb.ToString();
         }
         catch (Exception e)
