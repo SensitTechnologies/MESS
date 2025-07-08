@@ -8,10 +8,12 @@
 <div id="@Id">
     @foreach (var item in Items)
     {
-        @if (SortableItemTemplate is not null)
-        {
-            @SortableItemTemplate(item)
-        }
+        <div @key="item">
+            @if (SortableItemTemplate is not null)
+            {
+                @SortableItemTemplate(item)
+            }
+        </div>
     }
 </div>
 
