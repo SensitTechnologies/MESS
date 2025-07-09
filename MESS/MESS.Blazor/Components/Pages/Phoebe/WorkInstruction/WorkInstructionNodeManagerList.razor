@@ -28,15 +28,15 @@
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-    @<div class="sortable-card mb-3 p-3 border rounded">
-        <div class="sortable-card-row d-flex align-items-center">
-            <div class="sortable-card-col position me-3">
+    @<div class="mb-3 p-3 border rounded">
+        <div class="d-flex align-items-center">
+            <div class="position me-3">
                 <strong>@node.Position</strong>
             </div>
-            <div class="sortable-card-col type me-3">
+            <div class="type me-3">
                 <span>@node.NodeType</span>
             </div>
-            <div class="sortable-card-col content flex-grow-1">
+            <div class="content flex-grow-1">
                 @switch (node)
                 {
                     case PartNode partNode:
@@ -48,7 +48,7 @@
                             Step="stepNode"
                             EditorRefs="EditorRefs"
                             ActiveFields="ActiveFields"
-                            OnMoveRequested="HandleMoveRequest" />
+                            OnAction="HandleStepNodeAction" />
                         break;
 
                     default:
@@ -89,17 +89,21 @@
         }
     }
     
-    private async Task HandleMoveRequest((Step step, string direction) moveRequest)
+    private async Task HandleStepNodeAction((Step step, string action) actionTuple)
     {
-        var (step, direction) = moveRequest;
+        var (step, action) = actionTuple;
         var index = WorkInstructionNodes.IndexOf(step);
         if (index == -1) return;
 
-        await SaveAllEditorsContentAsync();
+        // Only save if moving or removing
+        if (action is not ("insertBefore" or "insertAfter"))
+        {
+            await SaveAllEditorsContentAsync();
+        }
 
-        WorkInstructionNodes.RemoveAt(index);
+        WorkInstructionNodes.Remove(step);
 
-        switch (direction)
+        switch (action)
         {
             case "up":
                 WorkInstructionNodes.Insert(Math.Max(0, index - 1), step);
@@ -112,6 +116,17 @@
                 break;
             case "bottom":
                 WorkInstructionNodes.Add(step);
+                break;
+            case "insertBefore":
+                WorkInstructionNodes.Insert(index, new Step { Name = "", Body = "" }); // new step at index
+                WorkInstructionNodes.Insert(index + 1, step);                        // original step after
+                break;
+            case "insertAfter":
+                WorkInstructionNodes.Insert(index, step);                            // original step at index
+                WorkInstructionNodes.Insert(index + 1, new Step { Name = "", Body = "" }); // new step after
+                break;
+            case "remove":
+                // already removed above
                 break;
         }
 

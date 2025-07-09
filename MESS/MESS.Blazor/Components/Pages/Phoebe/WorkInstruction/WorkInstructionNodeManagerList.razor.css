@@ -1,9 +1,0 @@
-/* Card styling: full width, controlled height */
-.sortable-card {
-    width: 100%;
-    max-height: 400px;
-    overflow: hidden;
-    padding: 1rem;
-    box-sizing: border-box;
-    border-radius: 8px;
-}
