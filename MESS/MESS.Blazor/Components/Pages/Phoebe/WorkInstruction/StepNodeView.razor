@@ -52,16 +52,13 @@
     public required Dictionary<int, string> ActiveFields { get; set; }
     
     /// <summary>
-    /// An event callback invoked when the user requests to move this step node within the list.
+    /// Event callback to handle a node action like move, insert, or delete.
     /// </summary>
     /// <remarks>
-    /// The parent component should handle this event to perform the actual reordering
-    /// of the <see cref="WorkInstructionNode"/> collection. The callback provides a tuple
-    /// containing the <see cref="Step"/> being moved and the requested move direction
-    /// (e.g., "up", "down", "top", or "bottom").
+    /// The parent handles this action by modifying the list of nodes appropriately.
     /// </remarks>
     [Parameter]
-    public EventCallback<(Step step, string direction)> OnMoveRequested { get; set; }
+    public EventCallback<(Step step, string action)> OnAction { get; set; }
     
     // Track which field is showing
     private bool ShowBody
@@ -92,9 +89,12 @@
     
     private bool NeedsLoadAfterRender { get; set; } = true;
     
-    private async Task HandleMoveAction(string direction)
+    private async Task HandleMoveAction(string action)
     {
-        await OnMoveRequested.InvokeAsync((Step, direction));
+        if (OnAction.HasDelegate)
+        {
+            await OnAction.InvokeAsync((Step, action));
+        }
     }
     
     private async Task SwapField()
