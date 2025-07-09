@@ -3,22 +3,79 @@
 
 @if (PartNode?.Parts is not null)
 {
+    <div class="row">
     @foreach (var part in PartNode.Parts)
     {
-        <div class="part-node border rounded p-2 mb-2">
-            <div><strong>Serial Number:</strong> @part.PartNumber</div>
-            <div><strong>Part Name:</strong> @part.PartName</div>
+        <div class="col-12 col-md-6 col-lg-4 mb-3">
+        <div class="part-node border rounded p-3 h-100">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label"><strong>Part Number</strong></label>
+                    <input type="text" class="form-control" @bind="part.PartNumber" @bind:event="oninput" />
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label"><strong>Part Name</strong></label>
+                    <input type="text" class="form-control" @bind="part.PartName" @bind:event="oninput" />
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <NodeActionMenu OnAction="(action) => HandlePartAction(part, action)" />
+                </div>
+            </div>
+
+        </div>
         </div>
     }
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">No part data available.</div>
 }
 
 @code {
     /// <summary>
-    /// The <see cref="PartNode"/> containing one or more parts to render.
+    /// The <see cref="PartNode"/> containing one or more parts to render and edit.
     /// </summary>
-    /// <remarks>
-    /// This parameter must be provided and should contain the relevant part data for display.
-    /// </remarks>
     [Parameter, EditorRequired]
     public PartNode? PartNode { get; set; }
+    
+    private void HandlePartAction(Part part, string action)
+    {
+        if (PartNode?.Parts == null) return;
+
+        var index = PartNode.Parts.IndexOf(part);
+        if (index == -1) return;
+
+        PartNode.Parts.Remove(part);
+
+        switch (action)
+        {
+            case "up":
+                PartNode.Parts.Insert(Math.Max(0, index - 1), part);
+                break;
+            case "down":
+                PartNode.Parts.Insert(Math.Min(PartNode.Parts.Count, index + 1), part);
+                break;
+            case "top":
+                PartNode.Parts.Insert(0, part);
+                break;
+            case "bottom":
+                PartNode.Parts.Add(part);
+                break;
+            case "remove":
+                // Already removed above, nothing to do
+                break;
+            case "insertBefore":
+                PartNode.Parts.Insert(index, part);
+                PartNode.Parts.Insert(index, new Part { PartNumber = "", PartName = "" });
+                break;
+            case "insertAfter":
+                PartNode.Parts.Insert(index, part);
+                PartNode.Parts.Insert(index + 1, new Part { PartNumber = "", PartName = "" });
+                break;
+
+        }
+    }
+
+
 }
