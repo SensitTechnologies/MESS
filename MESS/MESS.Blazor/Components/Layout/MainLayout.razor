@@ -1,69 +1,132 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using YourApp.Services  @* Update with actual namespace *@
-@inject ProductService ProductService
-@inject StationService StationService
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@inject ILogger<MainLayout> DemoLogger
+@inject IJSRuntime JS
 @inherits LayoutComponentBase
 
 <HeadContent>
     <script src="darkmode.js"></script>
 </HeadContent>
 
-<div class="page">
-    <main>
-        <article class="content px-4 mx-auto">
-            <AuthorizeView Roles="Technician, Administrator">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                    <!-- Nav Buttons -->
-                    <NavLink class="btn btn-sm btn-outline-secondary text-decoration-none"
-                             href="/WorkInstructionManager" Match="NavLinkMatch.All">
-                        Phoebe
-                    </NavLink>
-                    <NavLink class="btn btn-sm btn-outline-secondary text-decoration-none"
-                             href="/production-log" Match="NavLinkMatch.All">
-                        Production Log
-                    </NavLink>
+<!-- Menu Bar Card -->
+<div class="card shadow-sm border rounded-3 px-3 py-2 mb-3"
+     style="background-color: #fff;">
 
-                    <!-- Dynamic Product Select -->
-                    <select id="product-select"
-                            class="form-select form-select-sm w-auto"
-                            @bind="SelectedProductId"
-                            aria-label="Select Product">
-                        <option value="-1">Select Product</option>
-                        @foreach (var product in Products)
-                        {
-                            <option value="@product.Id">@product.Name</option>
-                        }
-                    </select>
+    <div class="d-flex align-items-center gap-3">
 
-                    <!-- Dynamic Station Select -->
-                    <select id="station-select"
-                            class="form-select form-select-sm w-auto"
-                            @bind="SelectedStationId"
-                            aria-label="Select Station">
-                        <option value="-1">Select Station</option>
-                        @foreach (var station in Stations)
-                        {
-                            <option value="@station.Id">@station.Name</option>
-                        }
-                    </select>
-                </div>
-            </AuthorizeView>
+        <!-- Toggle Menu Button -->
+        <button class="btn btn-outline-secondary"
+                @onclick="ToggleMenu"
+                style="width: 32px; height: 32px; padding: 0; font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+            ☰
+        </button>
 
-            <div class="mt-sm-3">
-                @Body
-            </div>
+        <!-- File Button -->
+        <button class="btn btn-yellow" @onclick="ToggleFileMenu" id="@fileAnchorId">File</button>
 
-            <DarkModeButton></DarkModeButton>
-        </article>
-    </main>
+        @if (fileMenuOpen)
+        {
+            <FluentMenu Anchor="@fileAnchorId"
+                        Open="true"
+                        OpenChanged="@(val => fileMenuOpen = val)"
+                        OnMenuChange="OnMenuChange"
+                        VerticalThreshold="170">
+                <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
+                <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
+                <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
+                <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
+                <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+                <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
+            </FluentMenu>
+        }
+
+        <!-- Options Button -->
+        <button class="btn btn-yellow" @onclick="ToggleOptionsMenu" id="@optionsAnchorId">Options</button>
+
+        @if (optionsMenuOpen)
+        {
+            <FluentMenu Anchor="@optionsAnchorId"
+                        Open="true"
+                        OpenChanged="@(val => optionsMenuOpen = val)"
+                        OnMenuChange="OnMenuChange"
+                        VerticalThreshold="170">
+                <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
+                <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
+                <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
+            </FluentMenu>
+        }
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Dark Mode Toggle Button -->
+        <div class="btn btn-outline-secondary darkmode">
+            <button class="darkmode-button"
+                    @onclick="ToggleDarkMode"
+                    style="font-size:1.2rem; background:none; border:none; padding:0;">
+                @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
+            </button>
+        </div>
+
+    </div>
 </div>
 
+<!-- Sidebar -->
+<div class="bg-light shadow-sm"
+     style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 250px;
+        padding: 1rem;
+        overflow-y: auto;
+        transform: @(isMenuOpen ? "translateX(0)" : "translateX(-100%)");
+        transition: transform 0.3s ease-in-out;
+        z-index: 1050;
+    ">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn-close" @onclick="ToggleMenu" aria-label="Close sidebar" />
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="d-grid gap-2">
+        <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                 href="/production-log" @onclick="ToggleMenu" Match="NavLinkMatch.All">
+            Production
+        </NavLink>
+        <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                 href="/WorkInstructionManager" @onclick="ToggleMenu">
+            Instructions
+        </NavLink>
+        <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                 href="/users" @onclick="ToggleMenu">
+            Users
+        </NavLink>
+        <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                 href="/products" @onclick="ToggleMenu">
+            Products
+        </NavLink>
+    </div>
+</div>
+
+<!-- Main Content -->
+<main style="margin-left: @(isMenuOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+    <article class="content px-4 mx-auto">
+        @Body
+    </article>
+</main>
+
+<!-- Error UI -->
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
 
+<!-- Fluent Providers -->
 <FluentToastProvider />
 <FluentDialogProvider />
 <FluentTooltipProvider />
@@ -71,59 +134,72 @@
 <FluentMenuProvider />
 
 @code {
-    /// <summary>
-    /// Represents a product available for selection.
-    /// </summary>
-    public class Product
-    {
-        /// <summary>
-        /// Unique identifier of the product.
-        /// </summary>
-        public int Id { get; set; }
+    private bool isMenuOpen = false;
 
-        /// <summary>
-        /// Display name of the product.
-        /// </summary>
-        public required string Name { get; set; }
+    private bool fileMenuOpen = false;
+    private bool optionsMenuOpen = false;
+
+    private bool qrChecked = false;
+    private bool serialChecked = false;
+    private bool activeChecked = false;
+
+    private string status = "";
+
+    private string fileAnchorId = "btnOpen1";
+    private string optionsAnchorId = "btnOpen2";
+
+    private bool isDarkMode = false;
+
+    private void ToggleMenu()
+    {
+        isMenuOpen = !isMenuOpen;
     }
 
-    /// <summary>
-    /// Represents a station available for selection.
-    /// </summary>
-    public class Station
+    private void ToggleFileMenu()
     {
-        /// <summary>
-        /// Unique identifier of the station.
-        /// </summary>
-        public int Id { get; set; }
-
-        /// <summary>
-        /// Display name of the station.
-        /// </summary>
-        public required string Name { get; set; }
+        fileMenuOpen = !fileMenuOpen;
+        optionsMenuOpen = false;
     }
 
-    private List<Product> Products { get; set; } = new();
-    private List<Station> Stations { get; set; } = new();
-
-    private int SelectedProductId { get; set; } = -1;
-    private int SelectedStationId { get; set; } = -1;
-
-    /// <summary>
-    /// Loads product and station data on component initialization.
-    /// </summary>
-    protected override async Task OnInitializedAsync()
+    private void ToggleOptionsMenu()
     {
-        await RefreshDropdownsAsync();
+        optionsMenuOpen = !optionsMenuOpen;
+        fileMenuOpen = false;
     }
 
-    /// <summary>
-    /// Refreshes product and station dropdown content.
-    /// </summary>
-    public async Task RefreshDropdownsAsync()
+    private void LogAndClose(string item)
     {
-        Products = await ProductService.GetProductsAsync();
-        Stations = await StationService.GetStationsAsync();
-        StateHasChanged();
+        status = $"Clicked: {item}";
+        fileMenuOpen = false;
+        optionsMenuOpen = false;
+        DemoLogger.LogInformation(status);
+    }
+
+    private void ToggleOption(string field)
+    {
+        switch (field)
+        {
+            case nameof(qrChecked): qrChecked = !qrChecked; break;
+            case nameof(serialChecked): serialChecked = !serialChecked; break;
+            case nameof(activeChecked): activeChecked = !activeChecked; break;
+        }
+
+        optionsMenuOpen = false;
+        DemoLogger.LogInformation($"Toggled: {field}");
+    }
+
+    private void OnMenuChange(MenuChangeEventArgs args)
+    {
+        if (args?.Value is not null)
+        {
+            status = $"Item '{args.Value}' clicked";
+            DemoLogger.LogInformation(status);
+        }
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        isDarkMode = !isDarkMode;
+        await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
     }
 }

@@ -1,27 +1,92 @@
-﻿@* MenuBarPhoebe.razor *@
+﻿@*@using Microsoft.FluentUI.AspNetCore.Components
+@inject ILogger<MenuBarPhoebe> DemoLogger
 
-<div class="page">
-    <header class="top-row">
-        <nav class="menu-buttons">
-            <button type="button" class="btn btn-primary btn-sm">New</button>
-            <button type="button" class="btn btn-secondary btn-sm">Edit</button>
-            <button type="button" class="btn btn-secondary btn-sm">Delete</button>
-            <button type="button" class="btn btn-warning btn-sm">Hide</button>
-            <button type="button" class="btn btn-success btn-sm">Save</button>
-            <button type="button" class="btn btn-info btn-sm">Download</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm">QR</button>
-            <button type="button" class="btn btn-dark btn-sm">Version History</button>
-        </nav>
-    </header>
-    <main>
-        @ChildContent
-    </main>
+
+
+
+
+<div class="menu-buttons d-flex align-items-center gap-2">
+    <!-- File Menu Button -->
+    <button class="btn btn-yellow" @onclick="ToggleFileMenu" id="btnOpen1">File</button>
+
+    <FluentMenu Anchor="btnOpen1"
+                Open="@open"
+                OpenChanged="@(val => open = val)"
+                OnMenuChange="OnMenuChange"
+                VerticalThreshold="170">
+        <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
+        <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
+        <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
+        <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
+        <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+        <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
+    </FluentMenu>
+
+    <button class="btn btn-yellow" @onclick="ToggleOptionsMenu" id="btnOpen2">Options</button>
+
+    <FluentMenu Anchor="btnOpen2"
+                Open="@openOptions"
+                OpenChanged="@(val => openOptions = val)"
+                OnMenuChange="OnMenuChange"
+                VerticalThreshold="170">
+        <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
+        <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
+        <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
+    </FluentMenu>
 </div>
 
+<p class="mt-2">@status</p>
+
 @code {
-    /// <summary>
-    /// Render the page’s main content inside the layout.
-    /// </summary>
-    [Parameter]
-    public RenderFragment? ChildContent { get; set; }
+    private bool open = false;
+    private bool openOptions = false;
+
+    private bool qrChecked = false;
+    private bool serialChecked = false;
+    private bool activeChecked = false;
+
+    private string status = "";
+
+    private void ToggleFileMenu()
+    {
+        open = !open;
+        openOptions = false;
+    }
+
+    private void ToggleOptionsMenu()
+    {
+        openOptions = !openOptions;
+        open = false;
+    }
+
+    private void OnMenuChange(MenuChangeEventArgs args)
+    {
+        if (args?.Value is not null)
+        {
+            status = $"Item '{args.Value}' clicked";
+            DemoLogger.LogInformation(status);
+        }
+    }
+
+    private void LogAndClose(string item)
+    {
+        status = $"Clicked: {item}";
+        open = false;
+        openOptions = false;
+        DemoLogger.LogInformation(status);
+    }
+
+    private void ToggleOption(string field)
+    {
+        switch (field)
+        {
+            case nameof(qrChecked): qrChecked = !qrChecked; break;
+            case nameof(serialChecked): serialChecked = !serialChecked; break;
+            case nameof(activeChecked): activeChecked = !activeChecked; break;
+        }
+
+        openOptions = false;
+        DemoLogger.LogInformation($"Toggled: {field}");
+    }
 }
+*@
