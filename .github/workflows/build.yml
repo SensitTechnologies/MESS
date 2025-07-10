@@ -1,0 +1,38 @@
+# This workflow will build a .NET project for deployment and store the commit that triggered it via an artifact
+
+name: Build .NET Project
+
+on:
+  push:
+    branches:
+      - deployment-automation # will be main when action is out of testing phase
+
+env:
+  SOLUTION_PATH: './MESS/MESS.sln'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
+
+      - name: Publish
+        run: dotnet publish ${{ env.SOLUTION_PATH }} -c Release -o ${{ env.DOTNET_ROOT }}/myapp
+
+      - name: Record commit SHA
+        run: echo "${{ github.sha }}" > ${{ env.DOTNET_ROOT }}/myapp/VERSION.txt
+
+      - name: Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-file
+          path: ${{ env.DOTNET_ROOT }}/myapp/VERSION.txt
