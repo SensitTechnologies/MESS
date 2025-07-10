@@ -1,78 +1,44 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.FluentUI.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Routing
-@using MESS.Blazor.Components.Pages.Phoebe.MenuBar
-@inject ILogger<MainLayout> DemoLogger
-@inject IJSRuntime JS
-@inject NavigationManager NavManager
-@inject AuthenticationStateProvider AuthStateProvider
+﻿@inject IJSRuntime JS
 @inherits LayoutComponentBase
 @implements IDisposable
+@using MESS.Blazor.Components.Navigator
+@inject NavigationManager Navigation
 
 <HeadContent>
     <script src="darkmode.js"></script>
 </HeadContent>
 
-<!-- Top Bar -->
-<div class="position-sticky top-0 d-flex align-items-center gap-3 px-3 py-2" style="z-index: 1040;">
-    @if (!ShowMenuBar)
+<div class="position-sticky top-0 d-flex align-items-center justify-content-between px-3 py-1 custom-top-bar"
+     style="z-index: 1040; min-height: 36px; background: transparent; padding: 0 12px;">
+
+    @if (ShowSidebarToggle)
     {
-        <!-- Show sidebar toggle button only when NOT on /WorkInstructionManager -->
         <button class="btn btn-outline-secondary"
-                @onclick="ToggleMenu"
-                style="width: 32px; height: 32px; padding: 0; font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                @onclick="ToggleSidebar"
+                style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
             ☰
         </button>
     }
+
     <div class="flex-grow-1"></div>
+
+    @if (ShowDarkModeToggle)
+    {
+        <button class="btn btn-outline-secondary"
+                @onclick="ToggleDarkMode"
+                title="Toggle Dark Mode"
+                style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+            @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
+        </button>
+    }
 </div>
 
 <!-- Sidebar -->
-<div class="bg-light shadow-sm"
-     style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: 250px;
-        padding: 1rem;
-        overflow-y: auto;
-        transform: @(isMenuOpen ? "translateX(0)" : "translateX(-100%)");
-        transition: transform 0.3s ease-in-out;
-        z-index: 1050;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <button class="btn-close" @onclick="ToggleMenu" aria-label="Close sidebar" />
-    </div>
-    <div class="d-grid gap-2">
-        <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                 href="/production-log" @onclick="ToggleMenu" Match="NavLinkMatch.All">
-            Production
-        </NavLink>
-        <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                 href="/WorkInstructionManager" @onclick="ToggleMenu">
-            Instructions
-        </NavLink>
-        <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                 href="/users" @onclick="ToggleMenu">
-            Users
-        </NavLink>
-        <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                 href="/products" @onclick="ToggleMenu">
-            Products
-        </NavLink>
-    </div>
-</div>
+<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
 <!-- Main Content -->
-<main style="margin-left: @(isMenuOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
-    <article class="content px-4 mx-auto">
-        @if (ShowMenuBar)
-        {
-            <!-- Pass sidebar toggle callback into MenuBarPhoebe -->
-            <MenuBarPhoebe ActiveLineOperator="@ActiveLineOperator" OnSidebarToggle="ToggleMenu" />
-        }
-        @Body
-    </article>
+<main class="content px-4 mx-auto" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+    @Body
 </main>
 
 <!-- Fluent Providers -->
@@ -90,47 +56,61 @@
 </div>
 
 @code {
-    private bool isMenuOpen = true;
-    private bool ShowMenuBar;
-    private string? ActiveLineOperator;
-
-    private void ToggleMenu()
-    {
-        isMenuOpen = !isMenuOpen;
-    }
+    private bool isSidebarOpen = false;
+    private bool ShowSidebarToggle = true;
+    private bool ShowDarkModeToggle = true;
+    private bool isDarkMode = false;
 
     /// <summary>
-    /// Initializes the layout component by subscribing to navigation changes and determining
-    /// if the menu bar should be displayed. Also retrieves the current authenticated user's name
-    /// to be displayed in the UI.
+    /// Called by the framework when parameters are set.
+    /// Checks the current page and determines whether the sidebar toggle and dark mode toggle should be shown.
     /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
-    protected override async Task OnInitializedAsync()
+    protected override void OnParametersSet()
     {
-        NavManager.LocationChanged += OnLocationChanged;
-        EvaluateMenuVisibility();
+        var relativeUri = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
 
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        ActiveLineOperator = authState.User.Identity?.Name;
-    }
+        // Hide toggle button on the WorkInstructionManager page
+        ShowSidebarToggle = !relativeUri.Equals("WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        EvaluateMenuVisibility();
-        StateHasChanged();
-    }
-
-    private void EvaluateMenuVisibility()
-    {
-        var uri = new Uri(NavManager.Uri);
-        ShowMenuBar = uri.AbsolutePath.Equals("/WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
+        // Also hide dark mode toggle on WorkInstructionManager page
+        ShowDarkModeToggle = ShowSidebarToggle; // same logic, or explicitly:
+        // ShowDarkModeToggle = !relativeUri.Equals("WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// Unsubscribes from navigation changes to prevent memory leaks.
+    /// Toggles the sidebar open/closed state.
+    /// Also invokes the SidebarToggleRequested callback if assigned.
+    /// </summary>
+    private async Task ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+
+        if (SidebarToggleRequested.HasDelegate)
+        {
+            await SidebarToggleRequested.InvokeAsync(null);
+        }
+    }
+
+    /// <summary>
+    /// Toggles dark mode by invoking the JS function and updates the icon.
+    /// </summary>
+    private async Task ToggleDarkMode()
+    {
+        isDarkMode = !isDarkMode;
+        await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
+    }
+
+    /// <summary>
+    /// Performs any necessary cleanup when the component is disposed.
     /// </summary>
     public void Dispose()
     {
-        NavManager.LocationChanged -= OnLocationChanged;
+        // Cleanup if needed
     }
+
+    /// <summary>
+    /// Event callback for notifying external components when the sidebar toggle is requested.
+    /// </summary>
+    [Parameter]
+    public EventCallback SidebarToggleRequested { get; set; }
 }

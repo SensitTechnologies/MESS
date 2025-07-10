@@ -1,11 +1,19 @@
 ﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components
+@inject AuthenticationStateProvider AuthProvider
 @inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
-@using Microsoft.AspNetCore.Components
 
 <style>
     .menu-bar-card {
+        width: 100%;               /* make full width */
+        max-width: 100vw;          /* prevent overflow */
+        margin: 0;                 /* remove side margin */
+        box-sizing: border-box;    /* include padding/border in width */
+        padding-left: 1rem;        /* optional horizontal padding */
+        padding-right: 1rem;       /* optional horizontal padding */
+
         background-color: var(--menu-bg);
         border: 1px solid var(--menu-border);
         color: var(--menu-item-color);
@@ -29,7 +37,6 @@
         box-shadow: 0 2px 6px rgb(255 255 255 / 0.1);
     }
 
-    /* Transparent buttons with yellow hover */
     .btn-small {
         background-color: transparent;
         color: inherit;
@@ -56,7 +63,6 @@
         font-size: 1.1rem;
     }
 
-    /* Logout button */
     .btn-logout {
         background-color: transparent;
         color: inherit;
@@ -81,7 +87,6 @@
         padding: 0;
     }
 
-    /* Input styling */
     .menu-input,
     .menu-input-secondary {
         padding: 0.3rem 0.6rem;
@@ -117,7 +122,6 @@
         color: #000;
     }
 
-    /* Layout containers */
     .menu-left-buttons,
     .menu-right-content {
         display: flex;
@@ -144,12 +148,10 @@
 </style>
 
 <div class="menu-bar-card">
-    <!-- Sidebar toggle button on the far left -->
-    <button class="btn-small" title="Toggle Sidebar" @onclick="OnSidebarToggleClicked" aria-label="Toggle sidebar">
-        ☰
-    </button>
+    <!-- Sidebar toggle button -->
+    <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
 
-    <!-- Left Section: File + Options buttons -->
+    <!-- File / Options Menu -->
     <div class="menu-left-buttons">
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
@@ -169,13 +171,13 @@
         </FluentMenu>
     </div>
 
-    <!-- Input container that grows to fill space between Options button and right inputs -->
+    <!-- Title Input -->
     <div class="menu-input-container">
         <input type="text" class="menu-input" placeholder="Enter Title Here..." @bind="inputText" @onkeydown="HandleKeyDown" />
     </div>
 
-    <!-- Right Section: Additional inputs + user + logout -->
-    <div class="menu-right-content" style="align-items:center; gap: 1rem;">
+    <!-- Right Controls -->
+    <div class="menu-right-content">
         <input type="text" class="menu-input-secondary" placeholder="Version..." @bind="additionalInput" />
         <button class="btn-small" title="Clock">⏰</button>
         <button class="btn-small" title="Save">💾</button>
@@ -195,49 +197,66 @@
 
 @code {
     /// <summary>
-    /// The currently active line operator's username, displayed near the logout button.
+    /// The name of the currently authenticated user (line operator).
+    /// Displayed in the UI beside the logout button.
     /// </summary>
-    [Parameter]
-    public string? ActiveLineOperator { get; set; }
+    private string? ActiveLineOperator { get; set; }
 
     /// <summary>
-    /// Event callback to notify parent layout to toggle sidebar visibility.
+    /// Raised when the sidebar toggle button is clicked.
     /// </summary>
-    [Parameter]
-    public EventCallback OnSidebarToggle { get; set; }
+    [Parameter] public EventCallback OnSidebarToggle { get; set; }
 
     private bool open = false;
     private bool openOptions = false;
-
     private bool qrChecked = false;
     private bool serialChecked = false;
     private bool activeChecked = false;
-
     private string inputText = "";
     private string additionalInput = "";
-
     private string darkModeIcon = "🌙";
 
+    /// <summary>
+    /// On component initialization, fetch the authenticated user name.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = state.User.Identity?.Name;
+    }
+
+    /// <summary>
+    /// Toggle the visibility of the "File" menu.
+    /// </summary>
     private void ToggleFileMenu()
     {
         open = !open;
         openOptions = false;
     }
 
+    /// <summary>
+    /// Toggle the visibility of the "Options" menu.
+    /// </summary>
     private void ToggleOptionsMenu()
     {
         openOptions = !openOptions;
         open = false;
     }
 
+    /// <summary>
+    /// Handle menu selection logging.
+    /// </summary>
+    /// <param name="args">Menu change event args.</param>
     private void OnMenuChange(MenuChangeEventArgs args)
     {
         if (args?.Value is not null)
-        {
             DemoLogger.LogInformation($"Item '{args.Value}' clicked");
-        }
     }
 
+    /// <summary>
+    /// Log and close menus when a file menu item is selected.
+    /// </summary>
+    /// <param name="item">Selected item name.</param>
     private void LogAndClose(string item)
     {
         open = false;
@@ -245,6 +264,10 @@
         DemoLogger.LogInformation($"Clicked: {item}");
     }
 
+    /// <summary>
+    /// Toggle state of options checkboxes.
+    /// </summary>
+    /// <param name="field">Field name to toggle.</param>
     private void ToggleOption(string field)
     {
         switch (field)
@@ -253,11 +276,13 @@
             case nameof(serialChecked): serialChecked = !serialChecked; break;
             case nameof(activeChecked): activeChecked = !activeChecked; break;
         }
-
         openOptions = false;
         DemoLogger.LogInformation($"Toggled: {field}");
     }
 
+    /// <summary>
+    /// Handle pressing Enter in the title input.
+    /// </summary>
     private void HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(inputText))
@@ -267,6 +292,9 @@
         }
     }
 
+    /// <summary>
+    /// Toggle dark mode using JS interop and update icon accordingly.
+    /// </summary>
     private async Task ToggleDarkMode()
     {
         await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
@@ -275,11 +303,12 @@
         DemoLogger.LogInformation("Toggled dark mode");
     }
 
-    private async Task OnSidebarToggleClicked()
+    /// <summary>
+    /// Trigger sidebar toggle callback.
+    /// </summary>
+    private async Task ToggleSidebar()
     {
         if (OnSidebarToggle.HasDelegate)
-        {
             await OnSidebarToggle.InvokeAsync(null);
-        }
     }
 }
