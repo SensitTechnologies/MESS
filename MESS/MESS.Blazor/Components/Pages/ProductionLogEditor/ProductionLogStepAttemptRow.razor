@@ -2,7 +2,7 @@
 <tr>
     <td>@Attempt.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
 
-    <td>@ToMarkup(ParentStep.WorkInstructionStep?.Body ?? "(No Step Name)")</td>
+    <td>@ToMarkup(ParentStep.WorkInstructionStep?.Name ?? "(No Step Name)")</td>
 
     <td>
         <div class="d-flex gap-2">
