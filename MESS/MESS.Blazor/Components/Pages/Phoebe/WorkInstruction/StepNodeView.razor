@@ -10,12 +10,24 @@
         <NodeActionMenu OnAction="HandleMoveAction" />
     </div>
 
-    <div class="editor-wrapper mb-2">
-        <BlazoredTextEditor @ref="EditorRef">
-            <ToolbarContent>
-                @((MarkupString)DefaultToolbarHtml)
-            </ToolbarContent>
-        </BlazoredTextEditor>
+    <div class="d-flex">
+        <div class="w-50" style="min-width: 0;">
+            <div class="editor-wrapper" style="width: 100%; max-width: 100%; overflow: auto;">
+                    <BlazoredTextEditor @ref="EditorRef">
+                        <ToolbarContent>
+                            @((MarkupString)DefaultToolbarHtml)
+                        </ToolbarContent>
+                    </BlazoredTextEditor>
+            </div>
+        </div>
+
+        <div class="w-50" style="min-width: 0;">
+            <WorkInstructionImageManager
+                PrimaryMedia="@Step.PrimaryMedia"
+                SecondaryMedia="@Step.SecondaryMedia"
+                ShowBody="@ShowBody"
+                OnMediaChanged="HandleImageMediaChanged" />
+        </div>
     </div>
 
 </div>
@@ -196,4 +208,12 @@
     </span>
     ";
 
+    private Task HandleImageMediaChanged((List<string> Primary, List<string> Secondary) updated)
+    {
+        Step.PrimaryMedia = new List<string>(updated.Primary);
+        Step.SecondaryMedia = new List<string>(updated.Secondary);
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 }

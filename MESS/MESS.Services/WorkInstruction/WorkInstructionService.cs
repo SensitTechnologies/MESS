@@ -1570,6 +1570,54 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
+    
+    /// <summary>
+    /// Saves an uploaded image file to the work instruction images directory and returns its relative path.
+    /// </summary>
+    /// <param name="file">The uploaded browser file.</param>
+    /// <returns>The relative path to the saved image (for database storage).</returns>
+    public async Task<string> SaveImageFileAsync(IBrowserFile file)
+    {
+        try
+        {
+            // Decide where on disk to save
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+            if (!Directory.Exists(imageDir))
+            {
+                Directory.CreateDirectory(imageDir);
+            }
+
+            // Create a unique filename with original extension preserved
+            var extension = Path.GetExtension(file.Name);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";  // Default to png if browser doesn't send extension
+            }
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var fullPath = Path.Combine(imageDir, fileName);
+
+            // Save file contents
+            await using (var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024))
+            await using (var fileStream = new FileStream(fullPath, FileMode.Create))
+            {
+                await stream.CopyToAsync(fileStream);
+            }
+
+            // Return the relative path for storing in the DB
+            var relativePath = Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
+            Log.Information("Saved image file: {RelativePath}", relativePath);
+
+            return relativePath;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error saving uploaded image file: {FileName}", file?.Name ?? "unknown");
+            throw;
+        }
+    }
+
 
     /// <summary>
     /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"

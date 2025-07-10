@@ -1,0 +1,231 @@
+@using MESS.Blazor.Components.Carousel
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+@inject IJSRuntime JsRuntime
+
+<div class="card">
+    <div class="card-header">
+        Manage @ActiveLabel Images
+    </div>
+
+    <div class="card-body">
+        @if (ActiveImages == null || ActiveImages.Count == 0)
+        {
+            <p>No images in @ActiveLabel. Add some below.</p>
+        }
+        else
+        {
+            <div class="carousel-wrapper mb-3">
+                <Carousel
+                    Images="ActiveImages"
+                    AutoPlay="false"
+                    Interval="3000"
+                    OnActiveIndexChanged="HandleCarouselChanged"
+                    ImageStyle="height: 400px; object-fit: contain;" />
+
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Selected:</strong>
+                        @Path.GetFileName(ActiveImages[CurrentIndex])
+                    </div>
+
+                    <NodeActionMenu OnAction="HandleReorder" />
+                </div>
+            </div>
+        }
+
+        <hr/>
+
+        <div class="upload-area">
+            <label class="form-label">Upload New @ActiveLabel Image(s)</label>
+            <InputFile OnChange="HandleUpload" multiple accept="image/*" />
+        </div>
+    </div>
+</div>
+
+<InputFile id="hiddenFileInput" OnChange="HandleUpload" multiple accept="image/*" style="display:none;" @ref="_insertFileInput" />
+
+@code {
+    /// <summary>
+    /// Gets or sets the list of primary media image paths (used when the component is in "Name" view).
+    /// These images are shown and edited when <see cref="ShowBody"/> is <c>false</c>.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required List<string> PrimaryMedia { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of secondary media image paths (used when the component is in "Body" view).
+    /// These images are shown and edited when <see cref="ShowBody"/> is <c>true</c>.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required List<string> SecondaryMedia { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the component is currently in "Body" view mode.
+    /// When <c>true</c>, the component manages <see cref="SecondaryMedia"/>; when <c>false</c>, it manages <see cref="PrimaryMedia"/>.
+    /// </summary>
+    [Parameter]
+    public required bool ShowBody { get; set; }
+
+    /// <summary>
+    /// Callback invoked when either the primary or secondary media list changes.
+    /// The updated primary and secondary lists are provided as the callback argument.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(List<string> Primary, List<string> Secondary)> OnMediaChanged { get; set; }
+
+    private int _currentIndex = 0;
+
+    private int CurrentIndex
+    {
+        get
+        {
+            if (ActiveImages == null || ActiveImages.Count == 0) return 0;
+            return Math.Clamp(_currentIndex, 0, ActiveImages.Count - 1);
+        }
+        set
+        {
+            _currentIndex = value;
+        }
+    }
+
+    private List<string> ActiveImages =>
+        ShowBody ? SecondaryMedia : PrimaryMedia;
+
+    private string ActiveLabel => ShowBody ? "Secondary" : "Primary";
+    
+    private int? _pendingInsertIndex = null;
+    private InputFile? _insertFileInput;
+    
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // When ShowBody changes, ensure index is valid for new active list
+        CurrentIndex = 0;
+    }
+
+    private void HandleCarouselChanged(int newIndex)
+    {
+        CurrentIndex = newIndex;
+        StateHasChanged();
+    }
+
+    private async Task HandleReorder(string action)
+    { 
+        if (ActiveImages == null)
+            return;
+        
+        if (ActiveImages.Count == 0 && action != "insertBefore" && action != "insertAfter")
+            return;
+
+        var item = ActiveImages.Count > 0 && CurrentIndex >= 0 && CurrentIndex < ActiveImages.Count
+            ? ActiveImages[CurrentIndex]
+            : null;
+
+        switch (action)
+        {
+            case "up":
+                if (item != null)
+                {
+                    ActiveImages.RemoveAt(CurrentIndex);
+                    ActiveImages.Insert(Math.Max(CurrentIndex - 1, 0), item);
+                }
+                break;
+            case "down":
+                if (item != null)
+                {
+                    ActiveImages.RemoveAt(CurrentIndex);
+                    ActiveImages.Insert(Math.Min(CurrentIndex + 1, ActiveImages.Count), item);
+                }
+                break;
+            case "top":
+                if (item != null)
+                {
+                    ActiveImages.RemoveAt(CurrentIndex);
+                    ActiveImages.Insert(0, item);
+                }
+                break;
+            case "bottom":
+                if (item != null)
+                {
+                    ActiveImages.RemoveAt(CurrentIndex);
+                    ActiveImages.Add(item);
+                }
+                break;
+            case "remove":
+                if (item != null)
+                {
+                    ActiveImages.RemoveAt(CurrentIndex);
+                }
+                break;
+            case "insertBefore":
+                _pendingInsertIndex = CurrentIndex;
+                await JsRuntime.InvokeVoidAsync("triggerFileInputClick", "hiddenFileInput");
+                return;
+
+            case "insertAfter":
+                _pendingInsertIndex = CurrentIndex + 1;
+                await JsRuntime.InvokeVoidAsync("triggerFileInputClick", "hiddenFileInput");
+                return;
+        }
+
+        CurrentIndex = Math.Clamp(CurrentIndex, 0, ActiveImages.Count - 1);
+        await NotifyChange();
+    }
+    
+    private async Task HandleUpload(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            var newPath = await WorkInstructionService.SaveImageFileAsync(file);
+
+            List<string> updatedList;
+
+            if (ShowBody)
+            {
+                updatedList = new List<string>(SecondaryMedia);
+            }
+            else
+            {
+                updatedList = new List<string>(PrimaryMedia);
+            }
+
+            if (_pendingInsertIndex.HasValue)
+            {
+                // Insert at the saved index
+                int insertIndex = Math.Clamp(_pendingInsertIndex.Value, 0, updatedList.Count);
+                updatedList.Insert(insertIndex, newPath);
+                _pendingInsertIndex = null;
+                CurrentIndex = insertIndex;
+            }
+            else
+            {
+                // Append at the end (default)
+                updatedList.Add(newPath);
+                CurrentIndex = updatedList.Count - 1;
+            }
+
+            if (ShowBody)
+            {
+                SecondaryMedia = updatedList;
+            }
+            else
+            {
+                PrimaryMedia = updatedList;
+            }
+        }
+
+        await NotifyChange();
+    }
+
+
+    private async Task NotifyChange()
+    {
+        if (OnMediaChanged.HasDelegate)
+        {
+            await OnMediaChanged.InvokeAsync((PrimaryMedia, SecondaryMedia));
+        }
+        StateHasChanged();
+    }
+
+}

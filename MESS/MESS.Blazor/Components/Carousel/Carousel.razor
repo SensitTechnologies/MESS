@@ -113,6 +113,12 @@
     /// </summary>
     [Parameter]
     public string Id { get; set; } = $"carousel_{Guid.NewGuid():N}";
+    
+    /// <summary>
+    /// Event callback triggered when the active image index changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnActiveIndexChanged { get; set; }
 
     private int ActiveIndex { get; set; } = 0;
     private IJSObjectReference? module;
@@ -131,21 +137,24 @@
         }
     }
 
-    private void NextSlide()
+    private async Task NextSlide()
     {
         ActiveIndex = (ActiveIndex + 1) % Images.Count;
+        await OnActiveIndexChanged.InvokeAsync(ActiveIndex);
         StateHasChanged();
     }
 
-    private void PreviousSlide()
+    private async Task PreviousSlide()
     {
         ActiveIndex = (ActiveIndex - 1 + Images.Count) % Images.Count;
+        await OnActiveIndexChanged.InvokeAsync(ActiveIndex);
         StateHasChanged();
     }
 
-    private void SetActiveIndex(int index)
+    private async Task SetActiveIndex(int index)
     {
         ActiveIndex = index;
+        await OnActiveIndexChanged.InvokeAsync(ActiveIndex);
         StateHasChanged();
     }
 

@@ -119,5 +119,13 @@ public interface IWorkInstructionService
     /// <param name="workInstruction">A WorkInstruction instance.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
-
+    /// <summary>
+    /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
+    /// </summary>
+    /// <param name="file">The uploaded browser file.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is the relative path
+    /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
+    /// </returns>
+    Task<string> SaveImageFileAsync(IBrowserFile file);
 }
