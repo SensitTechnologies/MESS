@@ -12,12 +12,20 @@
 
     <div class="d-flex">
         <div class="w-50" style="min-width: 0;">
+            <div class="mb-2">
+                <label class="form-label" for="stepNameInput">Step Name</label>
+                <input type="text"
+                       class="form-control"
+                       id="stepNameInput"
+                       @bind="Step.Name"
+                       placeholder="Enter step name" />
+            </div>
             <div class="editor-wrapper" style="width: 100%; max-width: 100%; overflow: auto;">
-                    <BlazoredTextEditor @ref="EditorRef">
-                        <ToolbarContent>
-                            @((MarkupString)DefaultToolbarHtml)
-                        </ToolbarContent>
-                    </BlazoredTextEditor>
+                <BlazoredTextEditor @ref="EditorRef">
+                    <ToolbarContent>
+                        @((MarkupString)DefaultToolbarHtml)
+                    </ToolbarContent>
+                </BlazoredTextEditor>
             </div>
         </div>
 
