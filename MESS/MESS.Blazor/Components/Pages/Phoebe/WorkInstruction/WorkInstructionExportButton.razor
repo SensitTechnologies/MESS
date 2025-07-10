@@ -25,6 +25,9 @@
     private async Task DownloadWorkInstruction()
     {
         isLoading = true;
+        StateHasChanged(); // force UI refresh to show spinner immediately
+        await Task.Yield(); // yield control to let UI update
+        
         try
         {
             var workInstructionPath = WorkInstructionService.ExportToXlsx(WorkInstruction);
