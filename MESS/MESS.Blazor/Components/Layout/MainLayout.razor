@@ -1,31 +1,30 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Routing
+@using MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @inject ILogger<MainLayout> DemoLogger
 @inject IJSRuntime JS
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthStateProvider
 @inherits LayoutComponentBase
+@implements IDisposable
 
 <HeadContent>
     <script src="darkmode.js"></script>
 </HeadContent>
 
-<!-- Top Bar with Menu -->
+<!-- Top Bar -->
 <div class="position-sticky top-0 d-flex align-items-center gap-3 px-3 py-2" style="z-index: 1040;">
-    <!-- Toggle Menu Button -->
-    <button class="btn btn-outline-secondary"
-            @onclick="ToggleMenu"
-            style="width: 32px; height: 32px; padding: 0; font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-        ☰
-    </button>
-
+    @if (!ShowMenuBar)
+    {
+        <!-- Show sidebar toggle button only when NOT on /WorkInstructionManager -->
+        <button class="btn btn-outline-secondary"
+                @onclick="ToggleMenu"
+                style="width: 32px; height: 32px; padding: 0; font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+            ☰
+        </button>
+    }
     <div class="flex-grow-1"></div>
-
-    @* <!-- Dark Mode Toggle Button -->
-    <button class="btn btn-outline-secondary"
-            @onclick="ToggleDarkMode"
-            style="font-size: 1.2rem; padding: 0.25rem 0.5rem;">
-        @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
-    </button> *@
 </div>
 
 <!-- Sidebar -->
@@ -40,14 +39,10 @@
         overflow-y: auto;
         transform: @(isMenuOpen ? "translateX(0)" : "translateX(-100%)");
         transition: transform 0.3s ease-in-out;
-        z-index: 1050;
-    ">
-
+        z-index: 1050;">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <button class="btn-close" @onclick="ToggleMenu" aria-label="Close sidebar" />
     </div>
-
-    <!-- Navigation Links -->
     <div class="d-grid gap-2">
         <NavLink class="btn btn-sm btn-outline-secondary text-start"
                  href="/production-log" @onclick="ToggleMenu" Match="NavLinkMatch.All">
@@ -71,16 +66,14 @@
 <!-- Main Content -->
 <main style="margin-left: @(isMenuOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
     <article class="content px-4 mx-auto">
+        @if (ShowMenuBar)
+        {
+            <!-- Pass sidebar toggle callback into MenuBarPhoebe -->
+            <MenuBarPhoebe ActiveLineOperator="@ActiveLineOperator" OnSidebarToggle="ToggleMenu" />
+        }
         @Body
     </article>
 </main>
-
-<!-- Error UI -->
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
 
 <!-- Fluent Providers -->
 <FluentToastProvider />
@@ -89,18 +82,55 @@
 <FluentMessageBarProvider />
 <FluentMenuProvider />
 
+<!-- Error UI -->
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
 @code {
-    private bool isMenuOpen = false;
-    // private bool isDarkMode = false;
+    private bool isMenuOpen = true;
+    private bool ShowMenuBar;
+    private string? ActiveLineOperator;
 
     private void ToggleMenu()
     {
         isMenuOpen = !isMenuOpen;
     }
 
-    // private async Task ToggleDarkMode()
-    // {
-    //     isDarkMode = !isDarkMode;
-    //     await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
-    // }
+    /// <summary>
+    /// Initializes the layout component by subscribing to navigation changes and determining
+    /// if the menu bar should be displayed. Also retrieves the current authenticated user's name
+    /// to be displayed in the UI.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        NavManager.LocationChanged += OnLocationChanged;
+        EvaluateMenuVisibility();
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = authState.User.Identity?.Name;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        EvaluateMenuVisibility();
+        StateHasChanged();
+    }
+
+    private void EvaluateMenuVisibility()
+    {
+        var uri = new Uri(NavManager.Uri);
+        ShowMenuBar = uri.AbsolutePath.Equals("/WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Unsubscribes from navigation changes to prevent memory leaks.
+    /// </summary>
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= OnLocationChanged;
+    }
 }

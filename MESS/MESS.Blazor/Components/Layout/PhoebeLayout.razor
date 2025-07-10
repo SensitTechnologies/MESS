@@ -1,78 +1,11 @@
 @page "/phoebe"
 @using Microsoft.AspNetCore.Components.Authorization
-@using MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthProvider
-
-<style>
-  /* Card styling respecting dark mode variables */
-  .card-custom {
-    background-color: var(--menu-bg);
-    border: 1px solid var(--menu-border);
-    color: var(--menu-item-color);
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  body.dark-mode .card-custom {
-    background-color: var(--menu-bg);
-    border-color: var(--menu-border);
-    color: var(--menu-item-color);
-  }
-
-  /* Logout button styling to match your FluentButton style */
-  .btn-logout {
-    background-color: var(--btn-bg);
-    color: var(--btn-color);
-    border: none;
-    border-radius: 0.25rem;
-    font-weight: 400;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
-
-  .btn-logout:hover,
-  .btn-logout:focus {
-    background-color: var(--btn-hover-bg);
-    color: var(--btn-color);
-    outline: none;
-  }
-
-  /* Smaller size and compact padding for the icon button */
-  .btn-logout-icon {
-    padding: 0.15rem 0.4rem;
-    font-size: 1.1rem;
-    line-height: 1;
-  }
-</style>
 
 <div class="container-fluid p-0 m-0">
     <AuthorizeView Roles="Technician,Administrator">
         <LayoutView Layout="typeof(MainLayout)">
-            <!-- Full width card with dark mode aware styling -->
-            <div class="card card-custom shadow-sm rounded-3 px-3 py-1 mb-3">
-                <div class="d-flex align-items-center">
-                    <!-- Menu bar (left-aligned) -->
-                    <MenuBarPhoebe />
-
-                    <!-- Active user and logout (right-aligned) -->
-                    @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
-                    {
-                        <div class="d-flex align-items-center gap-2 ms-auto" style="white-space: nowrap;">
-                            <span>@ActiveLineOperator</span>
-                            <form method="post" action="/api/auth/logout" class="m-0">
-                                <button type="submit" class="btn btn-logout btn-logout-icon" title="Logout">
-                                    👤
-                                </button>
-                            </form>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Main page body content -->
             <div class="p-3">
                 @Body
             </div>
