@@ -118,12 +118,12 @@
                 WorkInstructionNodes.Add(step);
                 break;
             case "insertBefore":
-                WorkInstructionNodes.Insert(index, new Step { Name = "", Body = "" }); // new step at index
+                WorkInstructionNodes.Insert(index, new Step { Name = "", Body = "", DetailedBody = "" }); // new step at index
                 WorkInstructionNodes.Insert(index + 1, step);                        // original step after
                 break;
             case "insertAfter":
                 WorkInstructionNodes.Insert(index, step);                            // original step at index
-                WorkInstructionNodes.Insert(index + 1, new Step { Name = "", Body = "" }); // new step after
+                WorkInstructionNodes.Insert(index + 1, new Step { Name = "", Body = "", DetailedBody = "" }); // new step after
                 break;
             case "remove":
                 // already removed above
@@ -158,9 +158,9 @@
             if (node is Step step)
             {
                 if (ActiveFields.TryGetValue(stepId, out var field) && field == "Body")
-                    step.Body = currentHtml;
+                    step.DetailedBody = currentHtml;
                 else
-                    step.Name = currentHtml;
+                    step.Body = currentHtml;
             }
         }
     }

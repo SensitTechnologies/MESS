@@ -33,10 +33,11 @@ public partial class WorkInstructionService : IWorkInstructionService
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
     private const int STEP_START_ROW = 9;
     private const int PART_COLUMN = 1;
-    private const int STEP_TITLE_COLUMN = 2;
-    private const int STEP_PRIMARY_MEDIA_COLUMN = 3;
-    private const int STEP_DESCRIPTION_COLUMN = 4;
-    private const int STEP_SECONDARY_MEDIA_COLUMN = 5;
+    private const int STEP_NAME_COLUMN = 2;
+    private const int STEP_BODY_COLUMN = 3;
+    private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
+    private const int STEP_DETAILED_BODY_COLUMN = 5;
+    private const int STEP_SECONDARY_MEDIA_COLUMN = 6;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -109,9 +110,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Step Header row. With bold.
             var currentRow = STEP_START_ROW;
             worksheet.Cell(currentRow, PART_COLUMN).Value = "Parts";
-            worksheet.Cell(currentRow, STEP_TITLE_COLUMN).Value = "Primary Instructions";
+            worksheet.Cell(currentRow, STEP_NAME_COLUMN).Value = "Name";
+            worksheet.Cell(currentRow, STEP_BODY_COLUMN).Value = "Body";
             worksheet.Cell(currentRow, STEP_PRIMARY_MEDIA_COLUMN).Value = "Primary Media";
-            worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN).Value = "Secondary Instructions";
+            worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN).Value = "Detailed Body";
             worksheet.Cell(currentRow, STEP_SECONDARY_MEDIA_COLUMN).Value = "Secondary Media";
 
             // Make them bold
@@ -137,10 +139,12 @@ public partial class WorkInstructionService : IWorkInstructionService
                 else if (node is Step step)
                 {
                     worksheet.Cell(currentRow, PART_COLUMN).Value = ""; // no part
+                    
+                    worksheet.Cell(currentRow, STEP_NAME_COLUMN).Value = step.Name;
 
                     //Applying Text
-                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), step.Name);
-                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), step.Body);
+                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_BODY_COLUMN), step.Body);
+                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), step.DetailedBody);
                     
                     //Inserting Images
                     InsertImagesIntoCell(
@@ -163,9 +167,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             //Set Column Widths
             worksheet.Column(PART_COLUMN).Width = 30;
-            worksheet.Column(STEP_TITLE_COLUMN).Width = 40;
+            worksheet.Column(STEP_NAME_COLUMN).Width = 30;
+            worksheet.Column(STEP_BODY_COLUMN).Width = 40;
             worksheet.Column(STEP_PRIMARY_MEDIA_COLUMN).Width = 40;
-            worksheet.Column(STEP_DESCRIPTION_COLUMN).Width = 40;
+            worksheet.Column(STEP_DETAILED_BODY_COLUMN).Width = 40;
             worksheet.Column(STEP_SECONDARY_MEDIA_COLUMN).Width = 40;
             
             // Enable wrapping on data rows starting from STEP_START_ROW downward
@@ -483,77 +488,77 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
     
     private void InsertImagesIntoCell(IXLWorksheet worksheet, int row, int column, List<string> mediaPaths)
-{
-    if (mediaPaths == null || mediaPaths.Count == 0)
-        return;
-
-    // Settings
-    const int targetDisplayHeightPx = 100; // All images scaled to this height
-    const int cellEdgePaddingPx = 5;       // Padding from cell edges
-    const int imageSpacingPx = 5;          // Spacing between images horizontally and vertically
-
-    // Determine wrap width *more conservatively*
-    double excelColumnWidthUnits = worksheet.Column(column).Width;
-    double approxWrapWidthPx = (excelColumnWidthUnits * 7);
-    
-    if (approxWrapWidthPx <= 0) approxWrapWidthPx = 500;
-
-    int offsetX = cellEdgePaddingPx;
-    int offsetY = cellEdgePaddingPx;
-    int lineMaxHeight = 0;
-    bool anyImageInserted = false;
-
-    foreach (var media in mediaPaths)
     {
-        var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
-        var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
+        if (mediaPaths == null || mediaPaths.Count == 0)
+            return;
 
-        if (!File.Exists(imagePath))
-            continue;
+        // Settings
+        const int targetDisplayHeightPx = 100; // All images scaled to this height
+        const int cellEdgePaddingPx = 5;       // Padding from cell edges
+        const int imageSpacingPx = 5;          // Spacing between images horizontally and vertically
 
-        using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
-        using (var image = Image.Load(stream))
+        // Determine wrap width *more conservatively*
+        double excelColumnWidthUnits = worksheet.Column(column).Width;
+        double approxWrapWidthPx = (excelColumnWidthUnits * 7);
+        
+        if (approxWrapWidthPx <= 0) approxWrapWidthPx = 500;
+
+        int offsetX = cellEdgePaddingPx;
+        int offsetY = cellEdgePaddingPx;
+        int lineMaxHeight = 0;
+        bool anyImageInserted = false;
+
+        foreach (var media in mediaPaths)
         {
-            int originalWidth = image.Width;
-            int originalHeight = image.Height;
+            var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
+            var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
 
-            // Scale to target height
-            double scale = (double)targetDisplayHeightPx / originalHeight;
-            int scaledWidth = (int)(originalWidth * scale);
-            int scaledHeight = targetDisplayHeightPx;
+            if (!File.Exists(imagePath))
+                continue;
 
-            // Check if image fits on current line
-            if (offsetX + scaledWidth + cellEdgePaddingPx > approxWrapWidthPx)
+            using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
+            using (var image = Image.Load(stream))
             {
-                // Wrap to next line
-                offsetX = cellEdgePaddingPx;
-                offsetY += lineMaxHeight + imageSpacingPx;
-                lineMaxHeight = 0;
+                int originalWidth = image.Width;
+                int originalHeight = image.Height;
+
+                // Scale to target height
+                double scale = (double)targetDisplayHeightPx / originalHeight;
+                int scaledWidth = (int)(originalWidth * scale);
+                int scaledHeight = targetDisplayHeightPx;
+
+                // Check if image fits on current line
+                if (offsetX + scaledWidth + cellEdgePaddingPx > approxWrapWidthPx)
+                {
+                    // Wrap to next line
+                    offsetX = cellEdgePaddingPx;
+                    offsetY += lineMaxHeight + imageSpacingPx;
+                    lineMaxHeight = 0;
+                }
+
+                // Save image to memory
+                using var rawStream = new MemoryStream();
+                image.Save(rawStream, new PngEncoder());
+                rawStream.Position = 0;
+
+                // Add to Excel
+                worksheet.AddPicture(rawStream)
+                    .MoveTo(worksheet.Cell(row, column), new System.Drawing.Point(offsetX, offsetY))
+                    .WithSize(scaledWidth, scaledHeight);
+
+                offsetX += scaledWidth + imageSpacingPx;
+                lineMaxHeight = Math.Max(lineMaxHeight, scaledHeight);
+                anyImageInserted = true;
             }
+        }
 
-            // Save image to memory
-            using var rawStream = new MemoryStream();
-            image.Save(rawStream, new PngEncoder());
-            rawStream.Position = 0;
-
-            // Add to Excel
-            worksheet.AddPicture(rawStream)
-                .MoveTo(worksheet.Cell(row, column), new System.Drawing.Point(offsetX, offsetY))
-                .WithSize(scaledWidth, scaledHeight);
-
-            offsetX += scaledWidth + imageSpacingPx;
-            lineMaxHeight = Math.Max(lineMaxHeight, scaledHeight);
-            anyImageInserted = true;
+        // Adjust row height
+        if (anyImageInserted)
+        {
+            double totalHeightPx = offsetY + lineMaxHeight + cellEdgePaddingPx;
+            worksheet.Row(row).Height = totalHeightPx * 0.75; // Excel points ≈ 0.75 px
         }
     }
-
-    // Adjust row height
-    if (anyImageInserted)
-    {
-        double totalHeightPx = offsetY + lineMaxHeight + cellEdgePaddingPx;
-        worksheet.Row(row).Height = totalHeightPx * 0.75; // Excel points ≈ 0.75 px
-    }
-}
     
     /// <summary>
     /// Removes HTML tags from a string.
@@ -637,6 +642,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                             {
                                 Name = originalStep.Name,
                                 Body = originalStep.Body,
+                                DetailedBody = originalStep.DetailedBody,
                                 Position = originalStep.Position,
                                 NodeType = originalStep.NodeType,
                                 PrimaryMedia = [..originalStep.PrimaryMedia],
@@ -824,10 +830,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             while (true)
             {
                 var partCell = worksheet.Cell(currentRow, PART_COLUMN).GetString()?.Trim();
-                var stepTitleCell = worksheet.Cell(currentRow, STEP_TITLE_COLUMN).GetString()?.Trim();
+                var stepBodyCell = worksheet.Cell(currentRow, STEP_BODY_COLUMN).GetString()?.Trim();
 
                 var isPartRow = !string.IsNullOrWhiteSpace(partCell);
-                var isStepRow = !string.IsNullOrWhiteSpace(stepTitleCell);
+                var isStepRow = !string.IsNullOrWhiteSpace(stepBodyCell);
 
                 if (!isPartRow && !isStepRow)
                 {
@@ -862,8 +868,13 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     var step = new Step
                     {
-                        Name = ProcessCellText(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), workbook),
-                        Body = ProcessCellText(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), workbook),
+                        Name = System.Text.RegularExpressions.Regex.Replace(
+                            string.Join(" ", worksheet.Cell(currentRow, STEP_NAME_COLUMN)
+                                .GetRichText()
+                                .Select(r => r.Text.Trim())),
+                            @"\s+", " ").Trim(),
+                        Body = ProcessCellText(worksheet.Cell(currentRow, STEP_BODY_COLUMN), workbook),
+                        DetailedBody = ProcessCellText(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), workbook),
                         NodeType = WorkInstructionNodeType.Step,
                         Position = position
                     };
@@ -871,7 +882,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     await ProcessStepMedia(worksheet, step, currentRow);
 
                     workInstruction.Nodes.Add(step);
-                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Name);
+                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Body);
                 }
 
                 position++;

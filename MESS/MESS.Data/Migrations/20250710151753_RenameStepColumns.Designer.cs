@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250710151753_RenameStepColumns")]
+    partial class RenameStepColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,7 +43,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Parts", (string)null);
+                    b.ToTable("Parts");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Product", b =>
@@ -60,7 +63,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLog", b =>
@@ -103,7 +106,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionId");
 
-                    b.ToTable("ProductionLogs", (string)null);
+                    b.ToTable("ProductionLogs");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogPart", b =>
@@ -130,7 +133,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.ToTable("ProductionLogParts", (string)null);
+                    b.ToTable("ProductionLogParts");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogStep", b =>
@@ -153,7 +156,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionStepId");
 
-                    b.ToTable("ProductionLogSteps", (string)null);
+                    b.ToTable("ProductionLogSteps");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogStepAttempt", b =>
@@ -181,7 +184,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("ProductionLogStepId");
 
-                    b.ToTable("ProductionLogStepAttempts", (string)null);
+                    b.ToTable("ProductionLogStepAttempts");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
@@ -232,7 +235,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("OriginalId");
 
-                    b.ToTable("WorkInstructions", (string)null);
+                    b.ToTable("WorkInstructions");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstructionNode", b =>
@@ -256,7 +259,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionId");
 
-                    b.ToTable("WorkInstructionNodes", (string)null);
+                    b.ToTable("WorkInstructionNodes");
 
                     b.UseTptMappingStrategy();
                 });
@@ -273,7 +276,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("PartsId");
 
-                    b.ToTable("PartNodeParts", (string)null);
+                    b.ToTable("PartNodeParts");
                 });
 
             modelBuilder.Entity("ProductWorkInstruction", b =>
@@ -288,7 +291,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("WorkInstructionsId");
 
-                    b.ToTable("ProductWorkInstruction", (string)null);
+                    b.ToTable("ProductWorkInstruction");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.PartNode", b =>

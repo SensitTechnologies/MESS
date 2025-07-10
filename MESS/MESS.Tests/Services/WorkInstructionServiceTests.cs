@@ -74,7 +74,7 @@ public class WorkInstructionServiceTests
         var workInstruction = new Data.Models.WorkInstruction
         {
             Title = title,
-            Nodes = new List<WorkInstructionNode> { new Step { Name = "Test Step" } }
+            Nodes = new List<WorkInstructionNode> { new Step { Name = "Test Step", Body = "Test Step" } }
         };
 
         // Add the work instruction to the test database

@@ -117,11 +117,11 @@
         var currentHtml = await EditorRef.GetHTML();
         if (ShowBody)
         {
-            Step.Body = currentHtml;
+            Step.DetailedBody = currentHtml;
         }
         else
         {
-            Step.Name = currentHtml;
+            Step.Body = currentHtml;
         }
 
         // Swap
@@ -144,7 +144,7 @@
         {
             if (await WaitForEditorReady(EditorRef))
             {
-                var contentToLoad = ShowBody ? (Step.Body ?? "") : (Step.Name ?? "");
+                var contentToLoad = ShowBody ? (Step.DetailedBody ?? "") : (Step.Body ?? "");
 
                 await EditorRef.LoadHTMLContent(contentToLoad);
 

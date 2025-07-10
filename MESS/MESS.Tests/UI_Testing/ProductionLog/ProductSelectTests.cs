@@ -35,14 +35,17 @@ public class ProductSelectTests : TestContext
                                 new Step
                                 {
                                     Name = "Step 1",
+                                    Body = "Step 1",
                                 },
                                 new Step
                                 {
                                     Name = "Step 2",
+                                    Body = "Step 2",
                                 },
                                 new Step
                                 {
                                     Name = "Step 3",
+                                    Body = "Step 3",
                                 }
                             } 
                         }
