@@ -1,92 +1,295 @@
-﻿@*@using Microsoft.FluentUI.AspNetCore.Components
+﻿@using Microsoft.FluentUI.AspNetCore.Components
 @inject ILogger<MenuBarPhoebe> DemoLogger
+@inject IJSRuntime JS
 
+<style>
+    :root {
+        --btn-bg: #ffd502;
+        --btn-color: #000000;
+        --btn-hover-bg: #ffdf33;
 
+        --menu-bg: #ffffff;
+        --menu-border: #ffd502;
+        --menu-item-color: #212529;
+        --menu-item-hover-bg: #fff8cc;
+    }
 
+    body.dark-mode {
+        --btn-bg: #ffd502;
+        --btn-color: #ffffff;
+        --btn-hover-bg: #ffdf33;
 
+        --menu-bg: #1a1a1a;
+        --menu-border: #4a4300;
+        --menu-item-color: #ffffff;
+        --menu-item-hover-bg: #333300;
+    }
 
-<div class="menu-buttons d-flex align-items-center gap-2">
-    <!-- File Menu Button -->
-    <button class="btn btn-yellow" @onclick="ToggleFileMenu" id="btnOpen1">File</button>
+    /* === FluentButton Override === */
+    fluent-button::part(control),
+    .fluent-button::part(control) {
+        background-color: var(--btn-bg) !important;
+        color: var(--btn-color) !important;
+        border: none !important;
+        border-radius: 0.25rem;
+        font-weight: 400 !important;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
 
-    <FluentMenu Anchor="btnOpen1"
-                Open="@open"
-                OpenChanged="@(val => open = val)"
-                OnMenuChange="OnMenuChange"
-                VerticalThreshold="170">
-        <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
-        <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
-        <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
-        <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
-        <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
-        <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
-    </FluentMenu>
+    fluent-button:hover::part(control),
+    .fluent-button:hover::part(control) {
+        background-color: var(--btn-hover-bg) !important;
+        color: var(--btn-color) !important;
+    }
 
-    <button class="btn btn-yellow" @onclick="ToggleOptionsMenu" id="btnOpen2">Options</button>
+    /* === FluentMenu ::part overrides === */
+    fluent-menu::part(control) {
+        background-color: var(--menu-bg) !important;
+        border: 1px solid var(--menu-border) !important;
+        border-radius: 0.25rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        padding: 0.25rem 0;
+        min-width: max-content;
+        z-index: 1000;
+        color: var(--menu-item-color) !important;
+    }
 
-    <FluentMenu Anchor="btnOpen2"
-                Open="@openOptions"
-                OpenChanged="@(val => openOptions = val)"
-                OnMenuChange="OnMenuChange"
-                VerticalThreshold="170">
-        <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
-        <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
-        <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
-    </FluentMenu>
+    fluent-menu-item::part(control) {
+        color: var(--menu-item-color) !important;
+        background-color: transparent !important;
+        padding: 0.35rem 1rem;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    fluent-menu-item:hover::part(control) {
+        background-color: var(--menu-item-hover-bg) !important;
+        color: var(--menu-item-color) !important;
+    }
+
+    /* === Refined .menu-buttons and button styling === */
+    .menu-bar-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 6px 16px;
+        background: transparent;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        user-select: none;
+        gap: 12px;
+    }
+
+    .menu-buttons {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .menu-buttons button {
+        background: transparent;
+        border: none;
+        color: var(--btn-color);
+        font-weight: 600;
+        font-size: 14px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .menu-buttons button:hover,
+    .menu-buttons button:focus {
+        background-color: var(--btn-hover-bg);
+        color: var(--btn-color);
+        outline: none;
+    }
+
+    .menu-buttons button:active {
+        background-color: #bdbdbd;
+    }
+
+    .menu-buttons button[aria-expanded="true"] {
+        background-color: #d0d0d0;
+    }
+
+    .input-container {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        min-width: 120px;
+        margin-left: 12px;
+    }
+
+    input.menu-input {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--menu-border);
+        border-radius: 0.25rem;
+        background-color: var(--menu-bg);
+        color: var(--menu-item-color);
+        flex-grow: 1;
+        transition: border-color 0.2s ease;
+        min-width: 100px;
+    }
+
+    input.menu-input:focus {
+        outline: none;
+        border-color: var(--btn-hover-bg);
+    }
+
+    .menu-right-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .btn-small {
+        background-color: var(--btn-bg);
+        color: var(--btn-color);
+        border: none;
+        border-radius: 0.25rem;
+        font-weight: 500;
+        padding: 0.3rem 0.6rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+    }
+
+    .btn-small:hover,
+    .btn-small:focus {
+        background-color: var(--btn-hover-bg);
+        color: var(--btn-color);
+        outline: none;
+    }
+</style>
+
+<div class="menu-bar-container">
+    <!-- Left Section -->
+    <div class="menu-buttons">
+        <!-- File Menu -->
+        <button @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
+        <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+            <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
+        </FluentMenu>
+
+        <!-- Options Menu -->
+        <button @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
+        <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+            <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
+            <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
+            <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
+        </FluentMenu>
+
+        <!-- Input and Enter -->
+        <div class="input-container">
+            <input type="text" class="menu-input" placeholder="Type here..." @bind="inputText" @onkeydown="HandleKeyDown" />
+            <button class="btn-small" @onclick="OnEnterClicked">Enter</button>
+        </div>
+    </div>
+
+    <!-- Right Section -->
+    <div class="menu-right-content">
+        @* Removed status text here *@
+        <button class="btn-small" title="Dark Mode" @onclick="ToggleDarkMode">🌙</button>
+        <button class="btn-small" title="Clock">⏰</button>
+        <button class="btn-small" title="Save">💾</button>
+    </div>
 </div>
 
-<p class="mt-2">@status</p>
-
 @code {
-    private bool open = false;
-    private bool openOptions = false;
+private bool open = false;
+private bool openOptions = false;
 
-    private bool qrChecked = false;
-    private bool serialChecked = false;
-    private bool activeChecked = false;
+private bool qrChecked = false;
+private bool serialChecked = false;
+private bool activeChecked = false;
 
-    private string status = "";
+private string inputText = "";
 
-    private void ToggleFileMenu()
-    {
-        open = !open;
-        openOptions = false;
-    }
-
-    private void ToggleOptionsMenu()
-    {
-        openOptions = !openOptions;
-        open = false;
-    }
-
-    private void OnMenuChange(MenuChangeEventArgs args)
-    {
-        if (args?.Value is not null)
-        {
-            status = $"Item '{args.Value}' clicked";
-            DemoLogger.LogInformation(status);
-        }
-    }
-
-    private void LogAndClose(string item)
-    {
-        status = $"Clicked: {item}";
-        open = false;
-        openOptions = false;
-        DemoLogger.LogInformation(status);
-    }
-
-    private void ToggleOption(string field)
-    {
-        switch (field)
-        {
-            case nameof(qrChecked): qrChecked = !qrChecked; break;
-            case nameof(serialChecked): serialChecked = !serialChecked; break;
-            case nameof(activeChecked): activeChecked = !activeChecked; break;
-        }
-
-        openOptions = false;
-        DemoLogger.LogInformation($"Toggled: {field}");
-    }
+private void ToggleFileMenu()
+{
+open = !open;
+openOptions = false;
 }
-*@
+
+private void ToggleOptionsMenu()
+{
+openOptions = !openOptions;
+open = false;
+}
+
+private void OnMenuChange(MenuChangeEventArgs args)
+{
+if (args?.Value is not null)
+{
+DemoLogger.LogInformation($"Item '{args.Value}' clicked");
+}
+}
+
+private void LogAndClose(string item)
+{
+open = false;
+openOptions = false;
+DemoLogger.LogInformation($"Clicked: {item}");
+}
+
+private void ToggleOption(string field)
+{
+switch (field)
+{
+case nameof(qrChecked): qrChecked = !qrChecked; break;
+case nameof(serialChecked): serialChecked = !serialChecked; break;
+case nameof(activeChecked): activeChecked = !activeChecked; break;
+}
+
+openOptions = false;
+DemoLogger.LogInformation($"Toggled: {field}");
+}
+
+private void OnEnterClicked()
+{
+if (!string.IsNullOrWhiteSpace(inputText))
+{
+DemoLogger.LogInformation($"Entered: {inputText}");
+inputText = "";
+}
+}
+
+private void HandleKeyDown(KeyboardEventArgs e)
+{
+if (e.Key == "Enter")
+{
+OnEnterClicked();
+}
+}
+
+private async Task ToggleDarkMode()
+{
+await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
+// No status update to UI
+DemoLogger.LogInformation("Toggled dark mode");
+}
+}

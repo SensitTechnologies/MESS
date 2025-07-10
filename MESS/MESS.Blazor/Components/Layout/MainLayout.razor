@@ -9,67 +9,23 @@
     <script src="darkmode.js"></script>
 </HeadContent>
 
-<!-- Menu Bar Card -->
-<div class="card shadow-sm border rounded-3 px-3 py-2 mb-3"
-     style="background-color: #fff;">
+<!-- Top Bar with Menu -->
+<div class="position-sticky top-0 d-flex align-items-center gap-3 px-3 py-2" style="z-index: 1040;">
+    <!-- Toggle Menu Button -->
+    <button class="btn btn-outline-secondary"
+            @onclick="ToggleMenu"
+            style="width: 32px; height: 32px; padding: 0; font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+        ☰
+    </button>
 
-    <div class="d-flex align-items-center gap-3">
+    <div class="flex-grow-1"></div>
 
-        <!-- Toggle Menu Button -->
-        <button class="btn btn-outline-secondary"
-                @onclick="ToggleMenu"
-                style="width: 32px; height: 32px; padding: 0; font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-            ☰
-        </button>
-
-        <!-- File Button -->
-        <button class="btn btn-yellow" @onclick="ToggleFileMenu" id="@fileAnchorId">File</button>
-
-        @if (fileMenuOpen)
-        {
-            <FluentMenu Anchor="@fileAnchorId"
-                        Open="true"
-                        OpenChanged="@(val => fileMenuOpen = val)"
-                        OnMenuChange="OnMenuChange"
-                        VerticalThreshold="170">
-                <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
-                <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
-                <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
-                <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
-                <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
-                <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
-            </FluentMenu>
-        }
-
-        <!-- Options Button -->
-        <button class="btn btn-yellow" @onclick="ToggleOptionsMenu" id="@optionsAnchorId">Options</button>
-
-        @if (optionsMenuOpen)
-        {
-            <FluentMenu Anchor="@optionsAnchorId"
-                        Open="true"
-                        OpenChanged="@(val => optionsMenuOpen = val)"
-                        OnMenuChange="OnMenuChange"
-                        VerticalThreshold="170">
-                <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
-                <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
-                <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
-            </FluentMenu>
-        }
-
-        <!-- Spacer -->
-        <div class="flex-grow-1"></div>
-
-        <!-- Dark Mode Toggle Button -->
-        <div class="btn btn-outline-secondary darkmode">
-            <button class="darkmode-button"
-                    @onclick="ToggleDarkMode"
-                    style="font-size:1.2rem; background:none; border:none; padding:0;">
-                @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
-            </button>
-        </div>
-
-    </div>
+    @* <!-- Dark Mode Toggle Button -->
+    <button class="btn btn-outline-secondary"
+            @onclick="ToggleDarkMode"
+            style="font-size: 1.2rem; padding: 0.25rem 0.5rem;">
+        @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
+    </button> *@
 </div>
 
 <!-- Sidebar -->
@@ -135,71 +91,16 @@
 
 @code {
     private bool isMenuOpen = false;
-
-    private bool fileMenuOpen = false;
-    private bool optionsMenuOpen = false;
-
-    private bool qrChecked = false;
-    private bool serialChecked = false;
-    private bool activeChecked = false;
-
-    private string status = "";
-
-    private string fileAnchorId = "btnOpen1";
-    private string optionsAnchorId = "btnOpen2";
-
-    private bool isDarkMode = false;
+    // private bool isDarkMode = false;
 
     private void ToggleMenu()
     {
         isMenuOpen = !isMenuOpen;
     }
 
-    private void ToggleFileMenu()
-    {
-        fileMenuOpen = !fileMenuOpen;
-        optionsMenuOpen = false;
-    }
-
-    private void ToggleOptionsMenu()
-    {
-        optionsMenuOpen = !optionsMenuOpen;
-        fileMenuOpen = false;
-    }
-
-    private void LogAndClose(string item)
-    {
-        status = $"Clicked: {item}";
-        fileMenuOpen = false;
-        optionsMenuOpen = false;
-        DemoLogger.LogInformation(status);
-    }
-
-    private void ToggleOption(string field)
-    {
-        switch (field)
-        {
-            case nameof(qrChecked): qrChecked = !qrChecked; break;
-            case nameof(serialChecked): serialChecked = !serialChecked; break;
-            case nameof(activeChecked): activeChecked = !activeChecked; break;
-        }
-
-        optionsMenuOpen = false;
-        DemoLogger.LogInformation($"Toggled: {field}");
-    }
-
-    private void OnMenuChange(MenuChangeEventArgs args)
-    {
-        if (args?.Value is not null)
-        {
-            status = $"Item '{args.Value}' clicked";
-            DemoLogger.LogInformation(status);
-        }
-    }
-
-    private async Task ToggleDarkMode()
-    {
-        isDarkMode = !isDarkMode;
-        await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
-    }
+    // private async Task ToggleDarkMode()
+    // {
+    //     isDarkMode = !isDarkMode;
+    //     await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
+    // }
 }
