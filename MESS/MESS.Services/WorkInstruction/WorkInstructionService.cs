@@ -1313,7 +1313,48 @@ public partial class WorkInstructionService : IWorkInstructionService
             return [];
         }
     }
-    
+
+    /// <summary>
+    /// Asynchronously retrieves only the latest versions of all work instructions,
+    /// using caching for performance.
+    /// </summary>
+    /// <returns>List of work instructions where IsLatest is true.</returns>
+    /// <remarks>
+    /// Results are cached for 15 minutes to improve performance.
+    /// </remarks>
+    public async Task<List<WorkInstruction>> GetAllLatestAsync()
+    {
+        const string WORK_INSTRUCTION_LATEST_CACHE_KEY = WORK_INSTRUCTION_CACHE_KEY + "_Latest";
+
+        if (_cache.TryGetValue(WORK_INSTRUCTION_LATEST_CACHE_KEY, out List<WorkInstruction>? cachedLatestList) &&
+            cachedLatestList != null)
+        {
+            return cachedLatestList;
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var latestWorkInstructions = await context.WorkInstructions
+                .Where(w => w.IsLatest)
+                .Include(w => w.Products)
+                .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
+                .ToListAsync();
+
+            // Cache data for 15 minutes
+            _cache.Set(WORK_INSTRUCTION_LATEST_CACHE_KEY, latestWorkInstructions, TimeSpan.FromMinutes(15));
+
+            Log.Information("GetAllLatestAsync successfully retrieved {WorkInstructionCount} latest WorkInstructions", latestWorkInstructions.Count);
+            return latestWorkInstructions;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown in GetAllLatestAsync in WorkInstructionService. Exception: {Exception}", e.ToString());
+            return [];
+        }
+    }
+
     /// <summary>
     /// Retrieves a work instruction by its title.
     /// </summary>
@@ -1364,6 +1405,47 @@ public partial class WorkInstructionService : IWorkInstructionService
         {
             Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
             return null;
+        }
+    }
+    
+    /// <summary>
+    /// Asynchronously retrieves the full version history for a given work instruction lineage,
+    /// identified by its OriginalId. Results are ordered by LastModifiedOn descending (most recent edits first).
+    /// </summary>
+    /// <param name="originalId">The OriginalId of the work instruction lineage to retrieve.</param>
+    /// <returns>
+    /// List of all versions in the lineage, including the original itself,
+    /// ordered by LastModifiedOn descending.
+    /// </returns>
+    public async Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var versionHistory = await context.WorkInstructions
+                .Where(w => w.OriginalId == originalId || w.Id == originalId)
+                .Include(w => w.Products)
+                .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
+                .OrderByDescending(w => w.LastModifiedOn)
+                .ToListAsync();
+
+            Log.Information(
+                "GetVersionHistoryAsync successfully retrieved {Count} versions for OriginalId {OriginalId}",
+                versionHistory.Count,
+                originalId
+            );
+
+            return versionHistory;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown in GetVersionHistoryAsync in WorkInstructionService. Exception: {Exception}",
+                e.ToString()
+            );
+            return [];
         }
     }
 

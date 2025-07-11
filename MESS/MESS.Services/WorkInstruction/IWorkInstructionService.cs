@@ -89,11 +89,20 @@ public interface IWorkInstructionService
     /// <returns>List of WorkInstruction objects</returns>
     public Task<List<WorkInstruction>> GetAllAsync();
     /// <summary>
+    /// Retrieves only the latest versions of all work instructions (IsLatest = true).
+    /// </summary>
+    Task<List<WorkInstruction>> GetAllLatestAsync();
+    /// <summary>
+    /// Retrieves all versions of a work instruction lineage given its OriginalId.
+    /// </summary>
+    /// <param name="originalId">The OriginalId of the lineage.</param>
+    /// <returns>List of all versions for that lineage.</returns>
+    Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId);
+    /// <summary>
     /// Retrieves a WorkInstruction by its title.
     /// </summary>
     /// <param name="title">The title of the WorkInstruction to retrieve.</param>
     /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
-
     public WorkInstruction? GetByTitle(string title);
     /// <summary>
     /// Retrieves a WorkInstruction by its ID.
