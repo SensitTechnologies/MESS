@@ -1,0 +1,181 @@
+﻿/* Overlay & popup container */
+.win-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 380px;
+    max-width: 90vw;
+    background-color: #f3f3f3;
+    border: 1px solid #ababab;
+    border-radius: 6px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.25);
+    transform: translate(-50%, -50%);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    z-index: 1050;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Dark mode popup */
+body.dark-mode .win-popup {
+    background-color: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+    color: #eee;
+}
+
+/* Fluent UI - Light mode (optional default) */
+fluent-menu,
+fluent-menu-item {
+    background-color: white;
+    color: black;
+}
+
+/* Fluent UI - Dark mode override */
+body.dark-mode fluent-menu,
+body.dark-mode fluent-menu-item {
+    background-color: #252526 !important;
+    color: #f3f3f3 !important;
+    border-color: #3c3c3c;
+}
+
+/* Fluent UI - Dark mode hover & focus */
+body.dark-mode fluent-menu-item:hover,
+body.dark-mode fluent-menu-item:focus {
+    background-color: #333333 !important;
+    color: #ffffff !important;
+}
+
+/* Fluent divider in dark mode */
+body.dark-mode fluent-divider {
+    background-color: #444 !important;
+}
+
+/* Hidden state */
+.win-popup-hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Title Bar */
+.win-titlebar {
+    background: #ffd502;
+    color: black;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+/* Title Bar dark mode */
+body.dark-mode .win-popup .win-titlebar {
+    background: #ffd502;
+    color: black;
+}
+
+/* Title text */
+.win-title-text {
+    user-select: text;
+}
+
+/* Popup body */
+.win-body {
+    padding: 16px 20px;
+    font-size: 1rem;
+    line-height: 1.4;
+    background-color: #fff;
+    border-bottom: 1px solid #c8c8c8;
+    color: #000;
+    overflow: auto;
+    max-width: 100%;
+    max-height: 50vh;
+    box-sizing: border-box;
+}
+
+/* Popup body dark mode */
+body.dark-mode .win-popup .win-body {
+    background-color: #252526;
+    border-bottom: 1px solid #3c3c3c;
+    color: #ddd;
+}
+
+/* Footer */
+.win-footer {
+    padding: 10px 20px;
+    display: flex;
+    justify-content: flex-end;
+    background-color: #f3f3f3;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Footer dark mode */
+body.dark-mode .win-popup .win-footer {
+    background-color: #1e1e1e;
+}
+
+/* Buttons: Save and Cancel */
+.win-btn-primary,
+.win-btn-cancel {
+    background-color: #ffd502;
+    border: none;
+    color: #000;
+    padding: 6px 18px;
+    font-size: 1rem;
+    font-weight: normal;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Hover states */
+.win-btn-primary:hover,
+.win-btn-cancel:hover {
+    background-color: #e6c700;
+}
+
+/* Dark mode buttons */
+body.dark-mode .win-popup .win-btn-primary,
+body.dark-mode .win-popup .win-btn-cancel {
+    background-color: #ffd502;
+    color: black;
+}
+
+/* Hover in dark mode */
+body.dark-mode .win-popup .win-btn-primary:hover,
+body.dark-mode .win-popup .win-btn-cancel:hover {
+    background-color: #e6c700;
+}
+
+/* Add spacing between buttons */
+.win-btn-cancel {
+    margin-left: 8px;
+}
+
+/* Transparent resizable textarea */
+.transparent-textarea {
+    background-color: transparent;
+    border: 1px solid #ccc;
+    width: 100%;
+    resize: vertical;
+    padding: 8px;
+    color: inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    box-shadow: none;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .transparent-textarea {
+    border: 1px solid #555;
+    color: #eee;
+}
+
