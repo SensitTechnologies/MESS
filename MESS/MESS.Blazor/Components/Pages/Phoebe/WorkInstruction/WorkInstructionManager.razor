@@ -1,56 +1,71 @@
 @page "/WorkInstructionManager"
-@layout PhoebeLayout
-@using MESS.Blazor.Components.Layout
 @using MESS.Data.DTO
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using MESS.Services.WorkInstruction
 @using Serilog
+@using MESS.Blazor.Components.Pages.Phoebe.MenuBar
+@using MESS.Blazor.Components.Navigator
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject IToastService ToastService
 
+<MenuBarPhoebe OnSidebarToggle="ToggleSidebar" />
 
-    <div class="container justify-content-center">
-        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
-        <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
-                <FluentLabel>
-                    Title
-                </FluentLabel>
-                <FluentLabel>
-                    Version
-                </FluentLabel>
-                <FluentLabel>
-                    Actions
-                </FluentLabel>
-            </FluentStack>
-            @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
-            {
-                <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" 
-                                             OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"
-                                             AllProducts="AllProducts"></WorkInstructionTableRow>
-                </FluentGridItem>
-            }
-        </FluentGrid>
-    </div>
+<!-- Sidebar component with IsOpen and OnToggle -->
+<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
+<div class="container justify-content-center" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+    <WorkInstructionImport OnImportComplete="HandleImportComplete" />
+    <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+            <FluentLabel>Title</FluentLabel>
+            <FluentLabel>Version</FluentLabel>
+            <FluentLabel>Actions</FluentLabel>
+        </FluentStack>
+
+        @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
+        {
+            <FluentGridItem xs="12">
+                <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges"
+                                         OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"
+                                         AllProducts="AllProducts" />
+            </FluentGridItem>
+        }
+    </FluentGrid>
+</div>
 
 @code {
-    private List<WorkInstruction> WorkInstructions { get; set; } = [];
+    private List<WorkInstruction> WorkInstructions { get; set; } = new();
     private List<Product>? AllProducts { get; set; }
-    
-    /// <inheritdoc />
+
+    /// <summary>
+    /// Tracks whether the sidebar is currently open.
+    /// </summary>
+    private bool isSidebarOpen = false;
+
+    /// <summary>
+    /// Toggles the sidebar open/closed state.
+    /// Called by MenuBarPhoebe component or NavigationMenu component.
+    /// </summary>
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Loads all work instructions and products asynchronously.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         WorkInstructions = await WorkInstructionService.GetAllAsync();
         AllProducts = (await ProductService.GetAllProductsAsync()).ToList();
     }
-    
+
     private async Task SaveChanges(WorkInstruction instruction)
     {
-        if (instruction is { Title: {Length: <= 0 } })
+        if (string.IsNullOrWhiteSpace(instruction.Title))
         {
             Log.Information("Attempted Work Instruction save changes with empty or null Title, for instruction ID: {InstructionId}", instruction.Id);
             ToastService.ShowError("A Work Instruction must have a title.");
@@ -59,8 +74,6 @@
 
         try
         {
-            // Only have to account for updates here since a work instruction can currently
-            // only be created via importation as of 4/3/2025.
             var saveResult = await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
             if (saveResult)
             {
@@ -97,5 +110,4 @@
         WorkInstructions.Add(importedWorkInstruction);
         ToastService.ShowSuccess($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}", 3000);
     }
-
 }

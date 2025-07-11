@@ -1,0 +1,191 @@
+﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components
+@using MESS.Data.Models
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
+@inject AuthenticationStateProvider AuthProvider
+@inject ILogger<MenuBarPhoebe> DemoLogger
+@inject IJSRuntime JS
+
+<div class="menu-bar-card">
+    <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
+
+    <div class="menu-left-buttons">
+        <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
+        <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+            <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
+        </FluentMenu>
+
+        <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
+        <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+            <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
+            <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
+            <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
+        </FluentMenu>
+    </div>
+
+    <div class="inputs-container">
+        <input type="text" class="menu-input" placeholder="Enter Title Here..." @bind="inputText" @onkeydown="HandleKeyDown" />
+        <input type="text" class="menu-input-secondary" placeholder="Version..." @bind="additionalInput" />
+    </div>
+
+    @*<InstructionProductDropdown TItem="Product"
+                                Items="@Products"
+                                SelectedId="@selectedProductId"
+                                SelectedIdChanged="OnProductSelected"
+                                Label="Product"
+                                Disabled="false" />
+
+    <InstructionProductDropdown TItem="WorkInstruction"
+                                Items="@WorkInstructions"
+                                SelectedId="@selectedWorkInstructionId"
+                                SelectedIdChanged="OnWorkInstructionSelected"
+                                Label="Instruction"
+                                Disabled="false" /> *@  <!-- original dropdown skeleton code -->
+
+    <div class="menu-right-content">
+        <button class="btn-small" title="Version History">⏲</button>
+        <button class="btn-small" title="Save">🖫</button>
+        <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">@darkModeIcon</button>
+
+        @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
+        {
+            <div class="logout-container">
+                <span>@ActiveLineOperator</span>
+                <form method="post" action="/api/auth/logout" class="logout-form">
+                    <button type="submit" class="btn btn-logout btn-logout-icon" title="Logout">👥</button>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string? ActiveLineOperator { get; set; }
+
+    /// <summary>
+    /// Raised when the sidebar toggle button is clicked.
+    /// </summary>
+    [Parameter] 
+    public EventCallback OnSidebarToggle { get; set; }
+
+    private bool open = false;
+    private bool openOptions = false;
+    private bool qrChecked = false;
+    private bool serialChecked = false;
+    private bool activeChecked = false;
+    private string inputText = "";
+    private string additionalInput = "";
+    private string darkModeIcon = "🌙";
+
+    // Data sources for dropdowns
+    private List<Product>? Products { get; set; }
+    private List<WorkInstruction>? WorkInstructions { get; set; }
+
+    private int selectedProductId = -1;
+    private int selectedWorkInstructionId = -1;
+
+    /// <summary>
+    /// Called when the component is initialized.
+    /// Fetches the authenticated user and initializes data.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = state.User.Identity?.Name;
+
+        // TODO: Load Products and WorkInstructions here or via cascading params
+        // Example:
+        // Products = await LoadProductsAsync();
+        // WorkInstructions = new List<WorkInstruction>();
+    }
+
+    private void ToggleFileMenu()
+    {
+        open = !open;
+        openOptions = false;
+    }
+
+    private void ToggleOptionsMenu()
+    {
+        openOptions = !openOptions;
+        open = false;
+    }
+
+    private void OnMenuChange(MenuChangeEventArgs args)
+    {
+        if (args?.Value is not null)
+            DemoLogger.LogInformation($"Item '{args.Value}' clicked");
+    }
+
+    private void LogAndClose(string item)
+    {
+        open = false;
+        openOptions = false;
+        DemoLogger.LogInformation($"Clicked: {item}");
+    }
+
+    private void ToggleOption(string field)
+    {
+        switch (field)
+        {
+            case nameof(qrChecked): qrChecked = !qrChecked; break;
+            case nameof(serialChecked): serialChecked = !serialChecked; break;
+            case nameof(activeChecked): activeChecked = !activeChecked; break;
+        }
+        openOptions = false;
+        DemoLogger.LogInformation($"Toggled: {field}");
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(inputText))
+        {
+            DemoLogger.LogInformation($"Entered: {inputText}");
+            inputText = "";
+        }
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
+        var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
+        darkModeIcon = isDark ? "☀️" : "🌙";
+        DemoLogger.LogInformation("Toggled dark mode");
+    }
+
+    private async Task ToggleSidebar()
+    {
+        if (OnSidebarToggle.HasDelegate)
+            await OnSidebarToggle.InvokeAsync(null);
+    }
+
+    private async Task OnProductSelected(int id)
+    {
+        selectedProductId = id;
+        DemoLogger.LogInformation($"Product selected: {id}");
+        // Optionally load related instructions
+        WorkInstructions = await LoadWorkInstructionsForProduct(id);
+        selectedWorkInstructionId = -1; // reset
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnWorkInstructionSelected(int id)
+    {
+        selectedWorkInstructionId = id;
+        DemoLogger.LogInformation($"Work Instruction selected: {id}");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Dummy async loader - replace with real data call
+    private Task<List<WorkInstruction>> LoadWorkInstructionsForProduct(int productId)
+    {
+        // TODO: implement loading based on productId
+        return Task.FromResult(new List<WorkInstruction>());
+    }
+}

@@ -4,24 +4,13 @@
 
 <LayoutView Layout="typeof(MainLayout)">
     <AuthorizeView Roles="Technician, Administrator">
-        <div class="d-flex justify-content-between align-items-center">
-            <!-- Left-aligned Navigation Buttons -->
-            <div class="d-flex gap-2">
-                <NavLink class="btn btn-outline-secondary" href="/WorkInstructionManager" Match="NavLinkMatch.All">
-                    Work Instructions
-                </NavLink>
-                <NavLink class="btn btn-outline-secondary" href="/users" Match="NavLinkMatch.All">
-                    Users
-                </NavLink>
-                <NavLink class="btn btn-outline-secondary" href="/products" Match="NavLinkMatch.All">
-                    Products
-                </NavLink>
-            </div>
 
-            <!-- Right-aligned Logout -->
+        <!-- Sticky Top Bar with Logout -->
+        <div class="position-sticky top-0 d-flex align-items-center justify-content-end gap-2 px-2 py-1 custom-top-bar"
+             style="z-index: 1040; min-height: 36px; background: transparent; padding: 0;">
             @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
             {
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                     <span>@ActiveLineOperator</span>
                     <form method="post" action="/api/auth/logout">
                         <button type="submit" class="btn btn-danger btn-sm">
@@ -31,12 +20,13 @@
                 </div>
             }
         </div>
+
+        <!-- Page Body -->
         <div class="mt-3 px-3">
             @Body
         </div>
     </AuthorizeView>
 </LayoutView>
-
 
 @code {
     /// <summary>

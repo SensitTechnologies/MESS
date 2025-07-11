@@ -2,14 +2,23 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
+    background-color: #fff;  /* Light mode background */
+    color: #000;             /* Light mode text color */
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 main {
     flex: 1;
+    background-color: #fff; /* Light mode main content bg */
+    padding: 1rem;
+    transition: background-color 0.3s ease;
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(214, 161, 0) 0%, #3a0647 70%);
+    background-color: #f8f9fa; /* Light mode sidebar bg */
+    color: #212529;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .top-row {
@@ -19,29 +28,35 @@ main {
     height: 3.5rem;
     display: flex;
     align-items: center;
+    padding: 0 1rem;
+    color: #fff;
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
-    }
+.top-row ::deep a,
+.top-row ::deep .btn-link {
+    white-space: nowrap;
+    margin-left: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+}
 
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
-    }
+.top-row ::deep a:hover,
+.top-row ::deep .btn-link:hover {
+    text-decoration: underline;
+}
 
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.top-row ::deep a:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 @media (max-width: 640.98px) {
     .top-row {
         justify-content: space-between;
     }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
+    .top-row ::deep a,
+    .top-row ::deep .btn-link {
         margin-left: 0;
     }
 }
@@ -56,12 +71,13 @@ main {
         height: 100vh;
         position: sticky;
         top: 0;
+        flex-shrink: 0;
     }
 
     .top-row {
         position: sticky;
         top: 0;
-        z-index: 1;
+        z-index: 10;
     }
 
     .top-row.auth ::deep a:first-child {
@@ -70,7 +86,8 @@ main {
         width: 0;
     }
 
-    .top-row, article {
+    .top-row,
+    article {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
     }
@@ -92,9 +109,57 @@ main {
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.sidebar a.btn-yellow {
+    background-color: #ffd700;     /* Bright yellow */
+    color: #000000;                /* Black text */
+    border: none;
+    text-align: start;
+    text-decoration: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.sidebar a.btn-yellow:hover {
+    background-color: #e2e6ea;     /* Light gray hover in light mode */
+    color: #000000;
+}
+
+/* Dark mode overrides */
+body.dark-mode {
+    background-color: #121212;
+    color: #eee;
+}
+
+body.dark-mode main {
+    background-color: #181818;
+}
+
+body.dark-mode .sidebar {
+    background-color: #2d2d2d;
+    color: #ffffff;
+}
+
+body.dark-mode .sidebar a.btn-yellow {
+    background-color: #ffd700;
+    color: #000000;
+}
+
+body.dark-mode .sidebar a.btn-yellow:hover {
+    background-color: #444;
+    color: #ffffff;
+}
+
+body.dark-mode .top-row {
+    background-color: #000;
+    color: #fff;
+}
+

@@ -1,43 +1,116 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+﻿@inject IJSRuntime JS
 @inherits LayoutComponentBase
+@implements IDisposable
+@using MESS.Blazor.Components.Navigator
+@inject NavigationManager Navigation
 
 <HeadContent>
     <script src="darkmode.js"></script>
 </HeadContent>
 
-<div class="page">
-    <main>
-        <article class="content px-4 mx-auto">
-            <AuthorizeView Roles="Technician, Administrator">
-                <NavLink class="btn btn-outline-secondary text-decoration-none" href="/WorkInstructionManager" Match="NavLinkMatch.All">
-                    Phoebe
-                </NavLink>
-                <NavLink class="btn btn-outline-secondary text-decoration-none" href="/production-log" Match="NavLinkMatch.All">
-                    Production Log
-                </NavLink>
-            </AuthorizeView>
-            <div class="mt-sm-3">
-                @Body
-            </div>
-            <DarkModeButton></DarkModeButton>
-        </article>
-    </main>
+<div class="position-sticky top-0 d-flex align-items-center justify-content-between px-3 py-1 custom-top-bar"
+     style="z-index: 1040; min-height: 36px; background: transparent; padding: 0 12px;">
+
+    @if (ShowSidebarToggle)
+    {
+        <button class="btn btn-outline-secondary"
+                @onclick="ToggleSidebar"
+                style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+            ☰
+        </button>
+    }
+
+    <div class="flex-grow-1"></div>
+
+    @if (ShowDarkModeToggle)
+    {
+        <button class="btn btn-outline-secondary"
+                @onclick="ToggleDarkMode"
+                title="Toggle Dark Mode"
+                style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+            @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
+        </button>
+    }
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+<!-- Sidebar -->
+<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
+<!-- Main Content -->
+<main class="content px-4 mx-auto" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+    @Body
+</main>
+
+<!-- Fluent Providers -->
 <FluentToastProvider />
 <FluentDialogProvider />
 <FluentTooltipProvider />
 <FluentMessageBarProvider />
 <FluentMenuProvider />
 
+<!-- Error UI -->
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
 
-@code
-{
+@code {
+    private bool isSidebarOpen = false;
+    private bool ShowSidebarToggle = true;
+    private bool ShowDarkModeToggle = true;
+    private bool isDarkMode = false;
 
+    /// <summary>
+    /// Called by the framework when parameters are set.
+    /// Checks the current page and determines whether the sidebar toggle and dark mode toggle should be shown.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        var relativeUri = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+
+        // Hide toggle button on the WorkInstructionManager page
+        ShowSidebarToggle = !relativeUri.Equals("WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
+
+        // Also hide dark mode toggle on WorkInstructionManager page
+        ShowDarkModeToggle = ShowSidebarToggle; // same logic, or explicitly:
+        // ShowDarkModeToggle = !relativeUri.Equals("WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Toggles the sidebar open/closed state.
+    /// Also invokes the SidebarToggleRequested callback if assigned.
+    /// </summary>
+    private async Task ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+
+        if (SidebarToggleRequested.HasDelegate)
+        {
+            await SidebarToggleRequested.InvokeAsync(null);
+        }
+    }
+
+    /// <summary>
+    /// Toggles dark mode by invoking the JS function and updates the icon.
+    /// </summary>
+    private async Task ToggleDarkMode()
+    {
+        isDarkMode = !isDarkMode;
+        await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
+    }
+
+    /// <summary>
+    /// Performs any necessary cleanup when the component is disposed.
+    /// </summary>
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+
+    /// <summary>
+    /// Event callback for notifying external components when the sidebar toggle is requested.
+    /// </summary>
+    [Parameter]
+    public EventCallback SidebarToggleRequested { get; set; }
 }
