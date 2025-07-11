@@ -1,6 +1,7 @@
-﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
+﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar 
 @using Microsoft.AspNetCore.Components.Authorization
 @using MESS.Data.Models
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
 @inject AuthenticationStateProvider AuthProvider
 @inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
@@ -11,12 +12,13 @@
     <div class="menu-left-buttons">
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
-            <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => ShowPopup("New", "You clicked New."))">New</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => ShowPopup("Save As", "You clicked Save As."))">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Revert"))">Revert</FluentMenuItem>
         </FluentMenu>
 
         <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
@@ -32,22 +34,8 @@
         <input type="text" class="menu-input-secondary" placeholder="Version..." @bind="additionalInput" />
     </div>
 
-    @*<InstructionProductDropdown TItem="Product"
-                                Items="@Products"
-                                SelectedId="@selectedProductId"
-                                SelectedIdChanged="OnProductSelected"
-                                Label="Product"
-                                Disabled="false" />
-
-    <InstructionProductDropdown TItem="WorkInstruction"
-                                Items="@WorkInstructions"
-                                SelectedId="@selectedWorkInstructionId"
-                                SelectedIdChanged="OnWorkInstructionSelected"
-                                Label="Instruction"
-                                Disabled="false" /> *@  <!-- original dropdown skeleton code -->
-
     <div class="menu-right-content">
-        <button class="btn-small" title="Version History">⏲</button>
+        <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">⏲</button>
         <button class="btn-small" title="Save">🖫</button>
         <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">@darkModeIcon</button>
 
@@ -63,11 +51,21 @@
     </div>
 </div>
 
+<!-- Pass isDarkMode parameter to popup -->
+<PopUpMenu @ref="popupRef" IsDarkMode="@isDarkMode" />
+
+<!-- Version History Sidebar Component -->
+<VersionHistoryMenu 
+    IsOpen="isVersionHistoryOpen" 
+    OnToggle="ToggleVersionHistorySidebar" 
+    OnRestore="OnVersionHistoryRestore" />
+
 @code {
     private string? ActiveLineOperator { get; set; }
 
     /// <summary>
     /// Raised when the sidebar toggle button is clicked.
+    /// Used by the parent layout to control sidebar visibility.
     /// </summary>
     [Parameter] 
     public EventCallback OnSidebarToggle { get; set; }
@@ -81,7 +79,8 @@
     private string additionalInput = "";
     private string darkModeIcon = "🌙";
 
-    // Data sources for dropdowns
+    private bool isDarkMode = false; // Tracks current dark mode state
+
     private List<Product>? Products { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
 
@@ -89,31 +88,30 @@
     private int selectedWorkInstructionId = -1;
 
     /// <summary>
-    /// Called when the component is initialized.
-    /// Fetches the authenticated user and initializes data.
+    /// Reference to the PopUpMenu component used to show notifications.
+    /// Set via @ref after render.
+    /// </summary>
+    private PopUpMenu? popupRef;
+
+    // ** Version History Sidebar Open State **
+    private bool isVersionHistoryOpen = false;
+
+    /// <summary>
+    /// Asynchronously initializes the component.
+    /// Retrieves the authenticated user's identity and sets initial dark mode state.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
         var state = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = state.User.Identity?.Name;
 
-        // TODO: Load Products and WorkInstructions here or via cascading params
-        // Example:
-        // Products = await LoadProductsAsync();
-        // WorkInstructions = new List<WorkInstruction>();
+        // Initialize dark mode state on startup
+        isDarkMode = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
+        darkModeIcon = isDarkMode ? "☀️" : "🌙";
     }
 
-    private void ToggleFileMenu()
-    {
-        open = !open;
-        openOptions = false;
-    }
-
-    private void ToggleOptionsMenu()
-    {
-        openOptions = !openOptions;
-        open = false;
-    }
+    private void ToggleFileMenu() => (open, openOptions) = (!open, false);
+    private void ToggleOptionsMenu() => (openOptions, open) = (!openOptions, false);
 
     private void OnMenuChange(MenuChangeEventArgs args)
     {
@@ -126,6 +124,14 @@
         open = false;
         openOptions = false;
         DemoLogger.LogInformation($"Clicked: {item}");
+    }
+
+    private void ShowPopup(string title, string message)
+    {
+        popupRef?.Show(message, title);
+        open = false;
+        openOptions = false;
+        DemoLogger.LogInformation($"Popup triggered: {title}");
     }
 
     private void ToggleOption(string field)
@@ -151,10 +157,15 @@
 
     private async Task ToggleDarkMode()
     {
+        // Toggle the dark mode CSS class on body
         await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
-        var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
-        darkModeIcon = isDark ? "☀️" : "🌙";
+
+        // Update local state for icon and popup
+        isDarkMode = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
+        darkModeIcon = isDarkMode ? "☀️" : "🌙";
+
         DemoLogger.LogInformation("Toggled dark mode");
+        StateHasChanged();
     }
 
     private async Task ToggleSidebar()
@@ -163,13 +174,25 @@
             await OnSidebarToggle.InvokeAsync(null);
     }
 
+    // ** Toggle Version History Sidebar **
+    private void ToggleVersionHistorySidebar()
+    {
+        isVersionHistoryOpen = !isVersionHistoryOpen;
+    }
+
+    // ** Restore action from Version History Sidebar **
+    private void OnVersionHistoryRestore()
+    {
+        DemoLogger.LogInformation("Version history restore clicked.");
+        // Add your restore logic here
+    }
+
     private async Task OnProductSelected(int id)
     {
         selectedProductId = id;
         DemoLogger.LogInformation($"Product selected: {id}");
-        // Optionally load related instructions
         WorkInstructions = await LoadWorkInstructionsForProduct(id);
-        selectedWorkInstructionId = -1; // reset
+        selectedWorkInstructionId = -1;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -180,10 +203,8 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    // Dummy async loader - replace with real data call
     private Task<List<WorkInstruction>> LoadWorkInstructionsForProduct(int productId)
     {
-        // TODO: implement loading based on productId
         return Task.FromResult(new List<WorkInstruction>());
     }
 }
