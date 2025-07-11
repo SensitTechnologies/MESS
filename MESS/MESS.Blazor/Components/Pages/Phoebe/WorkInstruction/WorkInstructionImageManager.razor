@@ -3,45 +3,35 @@
 @inject IWorkInstructionService WorkInstructionService
 @inject IJSRuntime JsRuntime
 
-<div class="card">
-    <div class="card-header">
-        Manage @ActiveLabel Images
-    </div>
+    @if (ActiveImages == null || ActiveImages.Count == 0)
+    {
+        <p>No images in @ActiveLabel. Add some below.</p>
+    }
+    else
+    {
+        <div class="carousel-wrapper mb-3">
+            <Carousel
+                Images="ActiveImages"
+                AutoPlay="false"
+                Interval="3000"
+                OnActiveIndexChanged="HandleCarouselChanged"
+                ImageStyle="height: 400px; object-fit: contain;" />
 
-    <div class="card-body">
-        @if (ActiveImages == null || ActiveImages.Count == 0)
-        {
-            <p>No images in @ActiveLabel. Add some below.</p>
-        }
-        else
-        {
-            <div class="carousel-wrapper mb-3">
-                <Carousel
-                    Images="ActiveImages"
-                    AutoPlay="false"
-                    Interval="3000"
-                    OnActiveIndexChanged="HandleCarouselChanged"
-                    ImageStyle="height: 400px; object-fit: contain;" />
-
-                <div class="mt-2 d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>Selected:</strong>
-                        @Path.GetFileName(ActiveImages[CurrentIndex])
-                    </div>
-
-                    <NodeActionMenu OnAction="HandleReorder" />
+            <div class="mt-2 d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Selected:</strong>
+                    @Path.GetFileName(ActiveImages[CurrentIndex])
                 </div>
+
+                <NodeActionMenu OnAction="HandleReorder" />
             </div>
-        }
-
-        <hr/>
-
-        <div class="upload-area">
-            <label class="form-label">Upload New @ActiveLabel Image(s)</label>
-            <InputFile OnChange="HandleUpload" multiple accept="image/*" />
         </div>
+    }
+
+    <div class="upload-area">
+        <label class="form-label">Upload New @ActiveLabel Image(s)</label>
+        <InputFile OnChange="HandleUpload" multiple accept="image/*" />
     </div>
-</div>
 
 <InputFile id="hiddenFileInput" OnChange="HandleUpload" multiple accept="image/*" style="display:none;" @ref="_insertFileInput" />
 
