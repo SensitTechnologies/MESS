@@ -188,3 +188,21 @@ body.dark-mode fluent-menu-item:hover::part(control) {
     background-color: #ffdf33 !important;
     color: #fff !important;
 }
+
+/* Force dark mode dropdown styling if parent has dark-mode */
+body.dark-mode fluent-select::part(listbox),
+body.dark-mode fluent-combobox::part(listbox),
+body.dark-mode fluent-menu::part(control),
+body.dark-mode fluent-listbox::part(listbox),
+body.dark-mode fluent-option::part(control) {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+/* Fix options on hover/selected in dark mode */
+body.dark-mode fluent-option:hover::part(control),
+body.dark-mode fluent-option[aria-selected="true"]::part(control) {
+    background-color: #ffdf33 !important;
+    color: #000000 !important;
+}
+

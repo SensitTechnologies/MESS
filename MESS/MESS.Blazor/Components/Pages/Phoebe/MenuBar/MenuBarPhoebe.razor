@@ -18,7 +18,6 @@
             <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => ShowPopup("Save As", "You clicked Save As."))">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Revert"))">Revert</FluentMenuItem>
         </FluentMenu>
 
         <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
