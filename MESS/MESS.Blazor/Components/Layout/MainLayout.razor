@@ -2,7 +2,9 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using MESS.Blazor.Components.Navigator
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
 
 <HeadContent>
     <script src="darkmode.js"></script>
@@ -11,17 +13,19 @@
 <div class="position-sticky top-0 d-flex align-items-center justify-content-between px-3 py-1 custom-top-bar"
      style="z-index: 1040; min-height: 36px; background: transparent; padding: 0 12px;">
 
-    @if (ShowSidebarToggle)
-    {
-        <button class="btn btn-outline-secondary"
-                @onclick="ToggleSidebar"
-                style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-            ☰
-        </button>
-    }
-
+    <AuthorizeView Roles="Technician, Administrator">
+        @if (ShowSidebarToggle)
+        {
+            <button class="btn btn-outline-secondary"
+                    @onclick="ToggleSidebar"
+                    style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                ☰
+            </button>
+        }
+    </AuthorizeView>
+    
     <div class="flex-grow-1"></div>
-
+    
     @if (ShowDarkModeToggle)
     {
         <button class="btn btn-outline-secondary"
@@ -34,7 +38,9 @@
 </div>
 
 <!-- Sidebar -->
-<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
+<AuthorizeView Roles="Technician, Administrator">
+    <NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
+</AuthorizeView>
 
 <!-- Main Content -->
 <main class="content px-4 mx-auto" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
