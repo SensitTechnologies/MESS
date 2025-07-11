@@ -1,0 +1,37 @@
+# This workflow will manually update Mess's database and apply Database Migrations
+
+name: Manually Apply Database Updates
+
+env: 
+  DOTNET_VERSION: '9.0.200' # Current as of 4/19/2025
+
+on: # runs manually for now. will be automated to run after a certain time
+  workflow_dispatch:
+
+jobs:
+  Apply-Migrations:
+    name: Apply Database Migrations
+    runs-on: ${{ matrix.os }} # Run on Ubuntu. Not Windows. Not MacOS.
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+        
+    - uses: actions/checkout@v4
+    
+    # Setup .NET Core with the latest version
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    # Apply database Migration updates
+    - name: Apply migrations
+      run: |
+        dotnet tool install --global dotnet-ef
+        dotnet ef database update --context ApplicationContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
+        dotnet ef database update --context UserContext --project ./MESS/MESS.Data --startup-project ./MESS/MESS.Blazor
+      env:
+        ConnectionStrings__MESSConnection: Server=${{ secrets.CLOUD_DB_SERVER }};Initial Catalog=MESS Database;Persist Security Info=False;User ID=${{ secrets.CLOUD_DB_USERNAME }};Password=${{ secrets.CLOUD_DB_PASSWORD }};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30; 
+        #ConnectionStrings__MESSConnection: Server=localhost;Database=mess_test;User Id=sa;Password=${{ secrets.TEST_DB_PASSWORD }};TrustServerCertificate=True
