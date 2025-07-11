@@ -3,6 +3,10 @@
 
 @if (PartNode?.Parts is not null)
 {
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <NodeActionMenu OnAction="HandleNodeAction" />
+    </div>
+    
     <div class="row">
     @foreach (var part in PartNode.Parts)
     {
@@ -34,10 +38,31 @@ else
 
 @code {
     /// <summary>
+    /// An event callback that is triggered when an action is performed on the entire <see cref="PartNode"/>.
+    /// </summary>
+    /// <remarks>
+    /// This allows the parent component to handle actions such as moving or deleting the entire PartNode,
+    /// similar to the top-level move/insert/remove controls for a step node.
+    /// The callback receives a tuple containing the <see cref="PartNode"/> itself and the action string.
+    /// </remarks>
+    [Parameter]
+    public EventCallback<(PartNode node, string action)> OnNodeAction { get; set; }
+
+    /// <summary>
     /// The <see cref="PartNode"/> containing one or more parts to render and edit.
     /// </summary>
     [Parameter, EditorRequired]
     public PartNode? PartNode { get; set; }
+    
+    private async Task HandleNodeAction(string action)
+    {
+        if (PartNode is null) return;
+
+        if (OnNodeAction.HasDelegate)
+        {
+            await OnNodeAction.InvokeAsync((PartNode, action));
+        }
+    }
     
     private void HandlePartAction(Part part, string action)
     {
