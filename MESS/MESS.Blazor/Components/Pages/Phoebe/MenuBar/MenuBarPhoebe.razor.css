@@ -6,7 +6,7 @@
     --menu-bg: #ffffff;
     --menu-border: #ffd502;
     --menu-item-color: #212529;
-    --menu-item-hover-bg: #fff8cc;
+    --menu-item-hover-bg: #fff8cc; /* unused on hover now */
 }
 
 body.dark-mode {
@@ -17,7 +17,7 @@ body.dark-mode {
     --menu-bg: #1a1a1a;
     --menu-border: #4a4300;
     --menu-item-color: #ffffff;
-    --menu-item-hover-bg: #333300;
+    --menu-item-hover-bg: #333300; /* unused on hover now */
 }
 
 /* === Menu Bar Layout === */
@@ -100,11 +100,12 @@ body.dark-mode .menu-bar-card {
     line-height: 1;
 }
 
+/* Hover with bright yellow */
 .btn-small:hover,
 .btn-small:focus,
 .btn-logout:hover,
 .btn-logout:focus {
-    background-color: var(--btn-hover-bg);
+    background-color: #ffdf33;
     color: black;
     outline: none;
 }
@@ -171,8 +172,9 @@ fluent-menu-item::part(control) {
     transition: background-color 0.2s ease;
 }
 
+/* Hover with bright yellow */
 fluent-menu-item:hover::part(control) {
-    background-color: var(--menu-item-hover-bg) !important;
+    background-color: #ffdf33 !important;
     color: var(--menu-item-color) !important;
 }
 
@@ -183,6 +185,6 @@ body.dark-mode fluent-menu-item::part(control) {
 }
 
 body.dark-mode fluent-menu-item:hover::part(control) {
-    background-color: var(--menu-item-hover-bg) !important;
+    background-color: #ffdf33 !important;
     color: #fff !important;
 }
