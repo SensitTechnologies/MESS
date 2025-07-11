@@ -1,7 +1,6 @@
 @using MESS.Data.Models
 @using Serilog
 
-<div class="step-node border rounded p-2 mb-2">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <button class="btn btn-sm btn-primary" @onclick="SwapField">
             @(ShowBody ? "Hide Details" : "Show Details")
@@ -37,9 +36,6 @@
                 OnMediaChanged="HandleImageMediaChanged" />
         </div>
     </div>
-
-</div>
-
 
 @code {
     /// <summary>
