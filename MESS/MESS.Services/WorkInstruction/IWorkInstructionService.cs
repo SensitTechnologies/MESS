@@ -129,6 +129,19 @@ public interface IWorkInstructionService
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
     /// <summary>
+    /// Marks all versions of a WorkInstruction within a version chain as not the latest.
+    /// This is typically used before creating a new version to ensure only one is flagged as the latest.
+    /// </summary>
+    /// <param name="originalId">
+    /// The ID of the original WorkInstruction representing the root of the version chain.
+    /// All WorkInstructions with this OriginalId, or with an Id equal to this value,
+    /// will have their <c>IsLatest</c> flag set to <c>false</c>.
+    /// </param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result is <c>true</c> if the update succeeded; otherwise, <c>false</c>.
+    /// </returns>
+    Task<bool> MarkAllVersionsNotLatestAsync(int originalId);
+    /// <summary>
     /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
     /// </summary>
     /// <param name="file">The uploaded browser file.</param>

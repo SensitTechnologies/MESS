@@ -1448,6 +1448,22 @@ public partial class WorkInstructionService : IWorkInstructionService
             return [];
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<bool> MarkAllVersionsNotLatestAsync(int originalId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var versions = await context.WorkInstructions
+            .Where(w => w.OriginalId == originalId || w.Id == originalId)
+            .ToListAsync();
+
+        foreach (var wi in versions)
+            wi.IsLatest = false;
+
+        await context.SaveChangesAsync();
+        return true;
+    }
+
 
     /// <summary>
     /// Creates a new work instruction in the database.
