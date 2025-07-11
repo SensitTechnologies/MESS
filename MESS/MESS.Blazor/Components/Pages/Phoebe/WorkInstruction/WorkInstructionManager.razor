@@ -6,9 +6,11 @@
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using MESS.Blazor.Components.Navigator
+@using Microsoft.AspNetCore.Authorization
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject IToastService ToastService
+@attribute [Authorize(Roles = "Technician, Administrator")]
 
 <MenuBarPhoebe OnSidebarToggle="ToggleSidebar" />
 
