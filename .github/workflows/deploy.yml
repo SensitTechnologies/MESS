@@ -95,5 +95,5 @@ jobs:
         id: compare
         run: |
           ls
-          cat ${{ env.LAST_DEPLOY_COMMIT }}
-          cat ${{ env.BUILD_COMMIT }}
+          cat ${{ env.LAST_DEPLOY_COMMIT }}.txt
+          cat ${{ env.BUILD_COMMIT }}.txt
