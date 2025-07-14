@@ -27,30 +27,26 @@ jobs:
 #          path: VERSION.txt
 
 #       Steps to read last deployed artifact 
-#      - name: Get run ID of last Deploy workflow
-#        id: get-prev-run-id  
-#        run: |
-#          OTHER_REPO="${{ github.repository }}"
-#          WF_NAME="Deploy"
-#          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[1].databaseId`
-#          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
-#          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
-#        env:
-#          GH_TOKEN: ${{ github.token }}
+      - name: Get run ID of last Deploy workflow
+        id: get-prev-run-id  
+        run: |
+          OTHER_REPO="${{ github.repository }}"
+          WF_NAME="Deploy"
+          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[1].databaseId`
+          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
+          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
-#      - name: Download last artifact from this workflow
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: ${{ env.LAST_DEPLOY_COMMIT }}
-#          github-token: ${{ github.token }}
-#          repository: ${{ github.repository }}
-#          run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
+      - name: Download last artifact from this workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.LAST_DEPLOY_COMMIT }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
 
-#      Steps to re-upload the version number artifact
-      - name: Record commit SHA
-        run: echo "${{ github.sha }}" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
-
-      - name: Archive New version number
+      - name: Archive old version number (in case job doesn't finish)
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.LAST_DEPLOY_COMMIT }}
@@ -90,7 +86,6 @@ jobs:
         run: |
           echo "sha=$(cat ${{ env.BUILD_COMMIT }}.txt)" >> $GITHUB_OUTPUT
 
-
       - name: Compare SHAs
         id: compare
         run: |
@@ -104,3 +99,25 @@ jobs:
 #          ls                                       lists downloaded artifacts
 #          cat ${{ env.LAST_DEPLOY_COMMIT }}.txt    display slast deploy commit artifact
 #          cat ${{ env.BUILD_COMMIT }}.txt          displays last build commit artifact
+
+      - name: Re-upload old version number if no new build
+        if: steps.compare.outputs.deploy == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.LAST_DEPLOY_COMMIT }}
+          path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
+
+      - name: Exit if no new build
+        if: steps.compare.outputs.deploy == 'false'
+        run: exit 0
+
+#      DO PUBLISH TO AZURE THINGS HERE
+
+      - name: Record build SHA into last deployed sha 
+        run: echo "$(cat ${{ env.BUILD_COMMIT }}.txt)" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
+
+      - name: Archive New version number
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.LAST_DEPLOY_COMMIT }}
+          path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
