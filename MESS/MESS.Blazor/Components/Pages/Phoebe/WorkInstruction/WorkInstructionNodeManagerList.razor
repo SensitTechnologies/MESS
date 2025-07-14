@@ -23,6 +23,13 @@
     /// /// </remarks>
     [Parameter, EditorRequired]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
+    
+    /// <summary>
+    /// Event callback that is triggered when *any* of the steps in this list has been changed.
+    /// Use this to notify the parent page that the editor state should be marked as dirty.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
 
     private Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; } = new();
     private Dictionary<int, string> ActiveFields { get; set; } = new();
@@ -45,7 +52,8 @@
                             Step="stepNode"
                             EditorRefs="EditorRefs"
                             ActiveFields="ActiveFields"
-                            OnAction="HandleStepNodeAction" />
+                            OnAction="HandleStepNodeAction" 
+                            OnChanged="OnChanged" />
                         break;
 
                     default:
