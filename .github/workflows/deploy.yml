@@ -1,9 +1,6 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      main
   #schedule:
   #  - cron: '0 0 * * *'  # midnight UTC (NOTE: convert UTC to EST for local timezone)
   workflow_dispatch:
@@ -30,7 +27,7 @@ jobs:
 #          path: VERSION.txt
 
 #       Steps to download Previous artifact 
-      - name: Get run ID of Build workflow
+      - name: Get run ID of last Deploy workflow
         id: get-prev-run-id  
         run: |
           OTHER_REPO="${{ github.repository }}"
@@ -49,11 +46,31 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
 
+
+      - name: Get run ID of Build workflow
+        id: get-run-id  
+        run: |
+          OTHER_REPO="${{ github.repository }}"
+          WF_NAME="Build"
+          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[0].databaseId`
+          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
+          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download artifact from "Build .Net Project" workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BUILD_COMMIT }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.get-run-id.outputs.run-id }}
+
+
       - name: Show Downloaded files
         run: ls -la
 
-
-#      Steps do re-upload the version number artifact
+#      Steps to re-upload the version number artifact
       - name: Record commit SHA
         run: echo "${{ github.sha }}" > VERSION.txt
 
@@ -62,36 +79,3 @@ jobs:
         with:
           name: ${{ env.PREV_DEPLOY_COMMIT }}
           path: VERSION.txt
-
-
-#      - name: Record commit SHA
-#        run: echo "${{ github.sha }}" > VERSION.txt
-
-#      - name: Archive
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: ${{ env.PREV_DEPLOY_COMMIT }}
-#          path: VERSION.txt
-
-#      - name: Get run ID of Build workflow
-#        id: get-run-id  
-#        run: |
-#          OTHER_REPO="${{ github.repository }}"
-#          WF_NAME="Build"
-#          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[0].databaseId`
-#          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
-#          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
-#        env:
-#          GH_TOKEN: ${{ github.token }}
-
-#      - name: Download artifact from "Build .Net Project" workflow
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: ${{ env.BUILD_COMMIT }}
-#          github-token: ${{ github.token }}
-#          repository: ${{ github.repository }}
-#          run-id: ${{ steps.get-run-id.outputs.run-id }}
-
-
-#      - name: Show Downloaded files
-#        run: ls -la
