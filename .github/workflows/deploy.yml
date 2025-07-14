@@ -68,7 +68,7 @@ jobs:
 
 
       - name: Show Downloaded files
-        run: ls -la
+        run: ls
 
 #      Steps to re-upload the version number artifact
       - name: Record commit SHA
