@@ -84,8 +84,8 @@ jobs:
       - name: Compare SHAs
         id: compare
         run: |
-          echo "cat ${{ env.LAST_DEPLOY_COMMIT }}"
-          echo "cat ${{ env.BUILD_COMMIT }}"
+          cat ${{ env.LAST_DEPLOY_COMMIT }}
+          cat ${{ env.BUILD_COMMIT }}
 
 #      Steps to re-upload the version number artifact
       - name: Record commit SHA
