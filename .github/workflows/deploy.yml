@@ -1,0 +1,38 @@
+name: Nightly Deploy to Azure
+
+on:
+  #schedule:
+  #  - cron: '0 0 * * *'  # midnight UTC (NOTE: convert UTC to EST for local timezone)
+  workflow_dispatch:
+
+env:
+  DEPLOY_STATE_ARTIFACT: 'deployed-version'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Get run ID of Build workflow
+        id: get-run-id  
+        run: |
+          OTHER_REPO="${{ github.repository }}"
+          WF_NAME="Build .NET Project"
+          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[0].databaseId`
+          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
+          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download artifact from "Build .Net Project" workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: version-file
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.get-run-id.outputs.run-id }}
+
+
+      - name: Show Downloaded files
+        run: ls -la
