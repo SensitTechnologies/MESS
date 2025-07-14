@@ -88,18 +88,13 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         return new WorkInstruction
         {
             Title = template.Title,
-            Version = IncrementVersion(template.Version),
+            Version = template.Version,
             OriginalId = template.OriginalId ?? template.Id,
             IsActive = false,
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             CollectsProductSerialNumber = template.CollectsProductSerialNumber,
-            Products = template.Products
-                .Select(p => new Product
-                {
-                    Name = p.Name,
-                })
-                .ToList(),
+            Products = template.Products?.ToList() ?? new List<Product>(),
             Nodes = template.Nodes
                 .Select(CloneNode)
                 .ToList()
@@ -127,7 +122,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             {
                 Name = stepNode.Name,
                 Body = stepNode.Body,
-                DetailedBody = stepNode.DetailedBody
+                DetailedBody = stepNode.DetailedBody,
+                PrimaryMedia = stepNode.PrimaryMedia?.ToList() ?? new List<string>(),
+                SecondaryMedia = stepNode.SecondaryMedia?.ToList() ?? new List<string>()
             };
         }
 
