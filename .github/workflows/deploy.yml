@@ -18,14 +18,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Record commit SHA
-        run: echo "${{ github.sha }}" > VERSION.txt
+      - name: Get run ID of Build workflow
+        id: get-prev-run-id  
+        run: |
+          OTHER_REPO="${{ github.repository }}"
+          WF_NAME="Nightly Deploy to Azure"
+          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[0].databaseId`
+          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
+          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
-      - name: Archive
-        uses: actions/upload-artifact@v4
+      - name: Download last artifact from this workflow
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREV_DEPLOY_COMMIT }}
-          path: VERSION.txt
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
+
+      - name: Show Downloaded files
+        run: ls -la
+
+#      - name: Record commit SHA
+#        run: echo "${{ github.sha }}" > VERSION.txt
+
+#      - name: Archive
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: ${{ env.PREV_DEPLOY_COMMIT }}
+#          path: VERSION.txt
 
 #      - name: Get run ID of Build workflow
 #        id: get-run-id  
