@@ -22,7 +22,7 @@ jobs:
         id: get-prev-run-id  
         run: |
           OTHER_REPO="${{ github.repository }}"
-          WF_NAME="Nightly Deploy to Azure"
+          WF_NAME='Nightly Deploy to Azure'
           RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[0].databaseId`
           echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
           echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
