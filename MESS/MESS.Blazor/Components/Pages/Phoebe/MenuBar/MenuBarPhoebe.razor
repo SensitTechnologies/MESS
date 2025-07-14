@@ -1,9 +1,12 @@
 ﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using Microsoft.AspNetCore.Components.Authorization
 @using MESS.Data.Models
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
+@using MESS.Services.WorkInstruction
 @inject AuthenticationStateProvider AuthProvider
 @inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
+@inject IWorkInstructionEditorService EditorService
 
 <div class="menu-bar-card">
     <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
@@ -11,44 +14,66 @@
     <div class="menu-left-buttons">
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
-            <FluentMenuItem OnClick="@(() => LogAndClose("New"))">New</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNew))">New</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Save"))">Save</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
         </FluentMenu>
 
         <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
         <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
-            <FluentMenuItem Checked="@qrChecked" OnClick="@(() => ToggleOption(nameof(qrChecked)))">QR Code</FluentMenuItem>
-            <FluentMenuItem Checked="@serialChecked" OnClick="@(() => ToggleOption(nameof(serialChecked)))">Serial Number</FluentMenuItem>
-            <FluentMenuItem Checked="@activeChecked" OnClick="@(() => ToggleOption(nameof(activeChecked)))">Active</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.ShouldGenerateQrCode ?? false)"
+                            OnClick="ToggleQrCode">Generates QR Code</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.CollectsProductSerialNumber ?? false)" OnClick="ToggleSerial">Collects Product Serial Number</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" OnClick="ToggleActive">Active</FluentMenuItem>
         </FluentMenu>
     </div>
 
     <div class="inputs-container">
-        <input type="text" class="menu-input" placeholder="Enter Title Here..." @bind="inputText" @onkeydown="HandleKeyDown" />
-        <input type="text" class="menu-input-secondary" placeholder="Version..." @bind="additionalInput" />
+        <input
+            type="text"
+            class="menu-input"
+            placeholder="Enter Title Here..."
+            value="@CurrentInstruction?.Title"
+            @oninput="OnTitleChanged"
+            disabled="@(!HasInstruction)" />
+
+        <input
+            type="text"
+            class="menu-input-secondary"
+            placeholder="Version..."
+            value="@CurrentInstruction?.Version"
+            @oninput="OnVersionChanged"
+            disabled="@(!HasInstruction)" />
     </div>
 
-    @*<InstructionProductDropdown TItem="Product"
-                                Items="@Products"
-                                SelectedId="@selectedProductId"
-                                SelectedIdChanged="OnProductSelected"
-                                Label="Product"
-                                Disabled="false" />
+    
+    <div class="inputs-container">
+        <ProductDropdown
+            Products="@Products"
+            SelectedProductId="@SelectedProductId"
+            OnProductSelected="@OnProductSelected" />
 
-    <InstructionProductDropdown TItem="WorkInstruction"
-                                Items="@WorkInstructions"
-                                SelectedId="@selectedWorkInstructionId"
-                                SelectedIdChanged="OnWorkInstructionSelected"
-                                Label="Instruction"
-                                Disabled="false" /> *@  <!-- original dropdown skeleton code -->
-
+        <WorkInstructionDropdown
+            WorkInstructions="@WorkInstructions"
+            SelectedWorkInstructionId="@SelectedWorkInstructionId"
+            OnWorkInstructionSelected="@OnWorkInstructionSelected" />
+    </div>
+    
     <div class="menu-right-content">
         <button class="btn-small" title="Version History">⏲</button>
-        <button class="btn-small" title="Save">🖫</button>
+        <div class="save-button-container">
+            <button class="btn-small" title="Save" @onclick="HandleSave" disabled="@(!IsDirty)">
+                🖫
+                @if (IsDirty)
+                {
+                    <span class="red-dot"></span>
+                }
+            </button>
+        </div>
         <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">@darkModeIcon</button>
 
         @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
@@ -71,22 +96,77 @@
     /// </summary>
     [Parameter] 
     public EventCallback OnSidebarToggle { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when the user selects "New" to create a new work instruction.
+    /// </summary>
+    [Parameter] public EventCallback OnNew { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when the user selects "Save" to persist current edits to the work instruction either
+    /// via versioning or direct edits.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when the user selects "Revert Changes" to discard unsaved edits and restore the last saved state.
+    /// </summary>
+    [Parameter] 
+    public EventCallback OnRevertChanges { get; set; }
+
+    /// <summary>
+    /// Indicates whether there are unsaved changes in the current work instruction editor session.
+    /// Used to enable or disable menu actions like Save or Revert Changes.
+    /// </summary>
+    [Parameter] public bool IsDirty { get; set; }
+    
+    /// <summary>
+    /// The currently loaded work instruction being edited. 
+    /// Used to display or bind title, version, and other properties in the toolbar.
+    /// </summary>
+    [Parameter] public WorkInstruction? CurrentInstruction { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when a product is selected.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnProductSelected { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when a work instruction is selected.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnWorkInstructionSelected { get; set; }
+    
+    /// <summary>
+    /// The ID of the currently selected product.
+    /// </summary>
+    [Parameter]
+    public int? SelectedProductId { get; set; }
+
+    /// <summary>
+    /// The ID of the currently selected work instruction.
+    /// </summary>
+    [Parameter]
+    public int? SelectedWorkInstructionId { get; set; }
 
     private bool open = false;
     private bool openOptions = false;
-    private bool qrChecked = false;
-    private bool serialChecked = false;
-    private bool activeChecked = false;
-    private string inputText = "";
-    private string additionalInput = "";
     private string darkModeIcon = "🌙";
+    private bool HasInstruction => CurrentInstruction != null;
 
-    // Data sources for dropdowns
-    private List<Product>? Products { get; set; }
-    private List<WorkInstruction>? WorkInstructions { get; set; }
+    /// <summary>
+    /// The list of products to show in the dropdown.
+    /// </summary>
+    [Parameter]
+    public List<Product>? Products { get; set; }
 
-    private int selectedProductId = -1;
-    private int selectedWorkInstructionId = -1;
+    /// <summary>
+    /// The list of work instructions to show in the dropdown.
+    /// </summary>
+    [Parameter]
+    public List<WorkInstruction>? WorkInstructions { get; set; }
 
     /// <summary>
     /// Called when the component is initialized.
@@ -102,6 +182,13 @@
         // Products = await LoadProductsAsync();
         // WorkInstructions = new List<WorkInstruction>();
     }
+    
+    /// <inheritdoc />
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        await base.SetParametersAsync(parameters);
+    }
+
 
     private void ToggleFileMenu()
     {
@@ -127,26 +214,26 @@
         openOptions = false;
         DemoLogger.LogInformation($"Clicked: {item}");
     }
-
-    private void ToggleOption(string field)
+    
+    private void ToggleQrCode()
     {
-        switch (field)
-        {
-            case nameof(qrChecked): qrChecked = !qrChecked; break;
-            case nameof(serialChecked): serialChecked = !serialChecked; break;
-            case nameof(activeChecked): activeChecked = !activeChecked; break;
-        }
-        openOptions = false;
-        DemoLogger.LogInformation($"Toggled: {field}");
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.ShouldGenerateQrCode = !CurrentInstruction.ShouldGenerateQrCode;
+        MarkDirty();
+    }
+    
+    private void ToggleSerial()
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.CollectsProductSerialNumber = !CurrentInstruction.CollectsProductSerialNumber;
+        MarkDirty();
     }
 
-    private void HandleKeyDown(KeyboardEventArgs e)
+    private void ToggleActive()
     {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(inputText))
-        {
-            DemoLogger.LogInformation($"Entered: {inputText}");
-            inputText = "";
-        }
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.IsActive = !CurrentInstruction.IsActive;
+        MarkDirty();
     }
 
     private async Task ToggleDarkMode()
@@ -163,27 +250,45 @@
             await OnSidebarToggle.InvokeAsync(null);
     }
 
-    private async Task OnProductSelected(int id)
-    {
-        selectedProductId = id;
-        DemoLogger.LogInformation($"Product selected: {id}");
-        // Optionally load related instructions
-        WorkInstructions = await LoadWorkInstructionsForProduct(id);
-        selectedWorkInstructionId = -1; // reset
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnWorkInstructionSelected(int id)
-    {
-        selectedWorkInstructionId = id;
-        DemoLogger.LogInformation($"Work Instruction selected: {id}");
-        await InvokeAsync(StateHasChanged);
-    }
-
     // Dummy async loader - replace with real data call
     private Task<List<WorkInstruction>> LoadWorkInstructionsForProduct(int productId)
     {
         // TODO: implement loading based on productId
         return Task.FromResult(new List<WorkInstruction>());
     }
+    
+    private async Task TriggerAndClose(EventCallback callback)
+    {
+        open = false;
+        openOptions = false;
+        if (callback.HasDelegate)
+        {
+            await callback.InvokeAsync();
+        }
+    }
+    
+    private async Task HandleSave()
+    {
+        await OnSave.InvokeAsync();
+    }
+    
+    private void MarkDirty()
+    {
+        EditorService.MarkDirty();
+    }
+    
+    private void OnTitleChanged(ChangeEventArgs e)
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.Title = e.Value?.ToString() ?? "";
+        MarkDirty();
+    }
+
+    private void OnVersionChanged(ChangeEventArgs e)
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.Version = e.Value?.ToString() ?? "";
+        MarkDirty();
+    }
+
 }
