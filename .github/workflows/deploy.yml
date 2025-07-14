@@ -66,16 +66,15 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.get-run-id.outputs.run-id }}
 
-
       - name: Show Downloaded files
         run: ls
 
 #      Steps to re-upload the version number artifact
       - name: Record commit SHA
-        run: echo "${{ github.sha }}" > VERSION.txt
+        run: echo "${{ github.sha }}" > ${{ env.PREV_DEPLOY_COMMIT }}.txt
 
       - name: Archive New version number
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PREV_DEPLOY_COMMIT }}
-          path: VERSION.txt
+          path: ${{ env.PREV_DEPLOY_COMMIT }}.txt
