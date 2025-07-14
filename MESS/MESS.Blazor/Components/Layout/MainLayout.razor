@@ -10,31 +10,36 @@
     <script src="darkmode.js"></script>
 </HeadContent>
 
-<div class="position-sticky top-0 d-flex align-items-center justify-content-between px-3 py-1 custom-top-bar"
-     style="z-index: 1040; min-height: 36px; background: transparent; padding: 0 12px;">
+<!-- Fixed Top Bar with Left and Right Buttons -->
+<div class="position-fixed top-0 start-0 end-0 d-flex justify-content-between align-items-center px-3 custom-top-bar"
+     style="z-index: 1050; height: 50px;">
 
-    <AuthorizeView Roles="Technician, Administrator">
-        @if (ShowSidebarToggle)
+    <!-- Left-side button -->
+    <div class="d-flex align-items-center">
+        <AuthorizeView Roles="Technician, Administrator">
+            @if (ShowSidebarToggle)
+            {
+                <button class="btn btn-outline-secondary"
+                        @onclick="ToggleSidebar"
+                        style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                    ☰
+                </button>
+            }
+        </AuthorizeView>
+    </div>
+
+    <!-- Right-side button -->
+    <div class="d-flex align-items-center">
+        @if (ShowDarkModeToggle)
         {
             <button class="btn btn-outline-secondary"
-                    @onclick="ToggleSidebar"
-                    style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-                ☰
+                    @onclick="ToggleDarkMode"
+                    title="Toggle Dark Mode"
+                    style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
             </button>
         }
-    </AuthorizeView>
-    
-    <div class="flex-grow-1"></div>
-    
-    @if (ShowDarkModeToggle)
-    {
-        <button class="btn btn-outline-secondary"
-                @onclick="ToggleDarkMode"
-                title="Toggle Dark Mode"
-                style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-            @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
-        </button>
-    }
+    </div>
 </div>
 
 <!-- Sidebar -->
@@ -43,7 +48,11 @@
 </AuthorizeView>
 
 <!-- Main Content -->
-<main class="content px-4 mx-auto" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+<main class="content px-4 mx-auto"
+      style="
+          margin-left:@(isSidebarOpen ? "250px" : "0");
+          padding-top: 36px;
+          transition: margin-left 0.3s ease;">
     @Body
 </main>
 
@@ -79,8 +88,7 @@
         ShowSidebarToggle = !relativeUri.Equals("WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
 
         // Also hide dark mode toggle on WorkInstructionManager page
-        ShowDarkModeToggle = ShowSidebarToggle; // same logic, or explicitly:
-        // ShowDarkModeToggle = !relativeUri.Equals("WorkInstructionManager", StringComparison.OrdinalIgnoreCase);
+        ShowDarkModeToggle = ShowSidebarToggle;
     }
 
     /// <summary>
