@@ -7,7 +7,7 @@ on:
 
 env:
   BUILD_COMMIT: 'last-build-version'
-  PREV_DEPLOY_COMMIT: 'last-deploy-version'
+  LAST_DEPLOY_COMMIT: 'last-deploy-version'
   DEPLOY_STATE_ARTIFACT: 'deployed-version'
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
 #      - name: Archive
 #        uses: actions/upload-artifact@v4
 #        with:
-#          name: ${{ env.PREV_DEPLOY_COMMIT }}
+#          name: ${{ env.LAST_DEPLOY_COMMIT }}
 #          path: VERSION.txt
 
 #       Steps to read last deployed artifact 
@@ -41,7 +41,7 @@ jobs:
       - name: Download last artifact from this workflow
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.PREV_DEPLOY_COMMIT }}
+          name: ${{ env.LAST_DEPLOY_COMMIT }}
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
@@ -49,12 +49,11 @@ jobs:
       - name: Read last deployed SHA (if exists)
         id: last-version
         run: |
-          if [ -f ${{ env.PREV_DEPLOY_COMMIT }}.txt ]; then
-            echo "sha=$(cat ${{ env.PREV_DEPLOY_COMMIT }}.txt)" >> $GITHUB_OUTPUT
+          if [ -f ${{ env.LAST_DEPLOY_COMMIT }}.txt ]; then
+            echo "sha=$(cat ${{ env.LAST_DEPLOY_COMMIT }}.txt)" >> $GITHUB_OUTPUT
           else
             echo "sha=" >> $GITHUB_OUTPUT
           fi
-
 
 #       Steps to download Build artifact 
       - name: Get run ID of Build workflow
@@ -82,12 +81,18 @@ jobs:
           echo "sha=$(cat ${{ env.BUILD_COMMIT }}.txt)" >> $GITHUB_OUTPUT
 
 
+      - name: Compare SHAs
+        id: compare
+        run: |
+          echo "cat ${{ env.LAST_DEPLOY_COMMIT }}"
+          echo "cat ${{ env.BUILD_COMMIT }}"
+
 #      Steps to re-upload the version number artifact
       - name: Record commit SHA
-        run: echo "${{ github.sha }}" > ${{ env.PREV_DEPLOY_COMMIT }}.txt
+        run: echo "${{ github.sha }}" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
 
       - name: Archive New version number
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PREV_DEPLOY_COMMIT }}
-          path: ${{ env.PREV_DEPLOY_COMMIT }}.txt
+          name: ${{ env.LAST_DEPLOY_COMMIT }}
+          path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
