@@ -84,6 +84,11 @@
         }
 
         RecalculatePositions();
+        
+        if (OnChanged.HasDelegate)
+        {
+            await OnChanged.InvokeAsync();
+        }
     }
     
     private void RecalculatePositions()
@@ -136,6 +141,11 @@
         }
 
         RecalculatePositions();
+        
+        if (OnChanged.HasDelegate)
+        {
+            await OnChanged.InvokeAsync();
+        }
     }
     
     /// <summary>
