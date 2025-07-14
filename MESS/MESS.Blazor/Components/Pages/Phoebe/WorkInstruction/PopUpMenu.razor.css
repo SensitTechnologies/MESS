@@ -3,8 +3,8 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 380px;
-    max-width: 90vw;
+    width: 420px;
+    max-width: 95vw;
     background-color: #f3f3f3;
     border: 1px solid #ababab;
     border-radius: 6px;
@@ -20,45 +20,23 @@
     transition: opacity 0.3s ease;
 }
 
-/* Dark mode popup */
-body.dark-mode .win-popup {
-    background-color: #1e1e1e;
-    border: 1px solid #3c3c3c;
-    box-shadow: 0 0 15px rgba(255,255,255,0.1);
-    color: #eee;
-}
-
-/* Fluent UI - Light mode (optional default) */
-fluent-menu,
-fluent-menu-item {
-    background-color: white;
-    color: black;
-}
-
-/* Fluent UI - Dark mode override */
-body.dark-mode fluent-menu,
-body.dark-mode fluent-menu-item {
-    background-color: #252526 !important;
-    color: #f3f3f3 !important;
-    border-color: #3c3c3c;
-}
-
-/* Fluent UI - Dark mode hover & focus */
-body.dark-mode fluent-menu-item:hover,
-body.dark-mode fluent-menu-item:focus {
-    background-color: #333333 !important;
-    color: #ffffff !important;
-}
-
-/* Fluent divider in dark mode */
-body.dark-mode fluent-divider {
-    background-color: #444 !important;
+/* Enable text selection for specific elements */
+.win-popup input,
+.win-popup label {
+    user-select: text !important;
 }
 
 /* Hidden state */
 .win-popup-hide {
     opacity: 0;
     pointer-events: none;
+}
+
+/* Dark mode container */
+body.dark-mode .win-popup {
+    background-color: #1e1e1e;
+    border-color: #3c3c3c;
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
 }
 
 /* Title Bar */
@@ -75,18 +53,17 @@ body.dark-mode fluent-divider {
     border-top-right-radius: 6px;
 }
 
-/* Title Bar dark mode */
-body.dark-mode .win-popup .win-titlebar {
+/* Preserve titlebar color in dark mode */
+body.dark-mode .win-titlebar {
     background: #ffd502;
     color: black;
 }
 
-/* Title text */
 .win-title-text {
     user-select: text;
 }
 
-/* Popup body */
+/* Body content */
 .win-body {
     padding: 16px 20px;
     font-size: 1rem;
@@ -96,14 +73,14 @@ body.dark-mode .win-popup .win-titlebar {
     color: #000;
     overflow: auto;
     max-width: 100%;
-    max-height: 50vh;
+    max-height: 60vh;
     box-sizing: border-box;
 }
 
-/* Popup body dark mode */
-body.dark-mode .win-popup .win-body {
+/* Dark mode body */
+body.dark-mode .win-body {
     background-color: #252526;
-    border-bottom: 1px solid #3c3c3c;
+    border-bottom-color: #3c3c3c;
     color: #ddd;
 }
 
@@ -117,12 +94,12 @@ body.dark-mode .win-popup .win-body {
     border-bottom-right-radius: 6px;
 }
 
-/* Footer dark mode */
-body.dark-mode .win-popup .win-footer {
+/* Dark mode footer */
+body.dark-mode .win-footer {
     background-color: #1e1e1e;
 }
 
-/* Buttons: Save and Cancel */
+/* Buttons */
 .win-btn-primary,
 .win-btn-cancel {
     background-color: #ffd502;
@@ -136,31 +113,28 @@ body.dark-mode .win-popup .win-footer {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Hover states */
+.win-btn-cancel {
+    margin-left: 8px;
+}
+
 .win-btn-primary:hover,
 .win-btn-cancel:hover {
     background-color: #e6c700;
 }
 
-/* Dark mode buttons */
-body.dark-mode .win-popup .win-btn-primary,
-body.dark-mode .win-popup .win-btn-cancel {
+/* Preserve button styling in dark mode */
+body.dark-mode .win-btn-primary,
+body.dark-mode .win-btn-cancel {
     background-color: #ffd502;
     color: black;
 }
 
-/* Hover in dark mode */
-body.dark-mode .win-popup .win-btn-primary:hover,
-body.dark-mode .win-popup .win-btn-cancel:hover {
+body.dark-mode .win-btn-primary:hover,
+body.dark-mode .win-btn-cancel:hover {
     background-color: #e6c700;
 }
 
-/* Add spacing between buttons */
-.win-btn-cancel {
-    margin-left: 8px;
-}
-
-/* Transparent resizable textarea */
+/* Transparent textarea */
 .transparent-textarea {
     background-color: transparent;
     border: 1px solid #ccc;
@@ -173,9 +147,8 @@ body.dark-mode .win-popup .win-btn-cancel:hover {
     box-shadow: none;
 }
 
-/* Dark mode adjustments */
+/* Dark mode textarea */
 body.dark-mode .transparent-textarea {
     border: 1px solid #555;
-    color: #eee;
+    color: #f3f3f3;
 }
-

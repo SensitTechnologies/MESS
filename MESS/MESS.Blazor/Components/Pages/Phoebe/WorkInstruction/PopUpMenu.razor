@@ -1,4 +1,5 @@
-﻿@using MESS.Data.Models
+﻿@using System
+@using MESS.Data.Models
 @using MESS.Services.Product
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
 
@@ -13,48 +14,22 @@
     </div>
 
     <div id="popupBody" class="win-body">
-
-        <!-- Fluent-style Placeholder Menu (active for testing) -->
-        <fluent-menu>
-            <fluent-menu-item role="menuitemcheckbox">Product 1</fluent-menu-item>
-            <fluent-menu-item role="menuitemcheckbox">Product 2</fluent-menu-item>
-            <fluent-divider></fluent-divider>
-            <fluent-menu-item>New</fluent-menu-item>
-        </fluent-menu>
-
-        <!-- Resizable Transparent Notes Textarea -->
+        <!-- Editable Title textarea bound to WorkInstruction.Title -->
         <div class="resizable-textarea-container mt-3">
             <label for="nameInput" class="form-label">Name:</label>
             <textarea id="nameInput"
                       class="form-control transparent-textarea"
                       placeholder="Enter name here..."
-                      rows="4"></textarea>
+                      rows="4"
+                      @bind="WorkInstruction.Title"></textarea>
         </div>
 
         <hr />
 
-        @* Fluent UI styled product checkbox list with real inputs *@
-        @if (AllProducts == null)
-        {
-            <div class="text-muted">Loading products...</div>
-        }
-        else
-        {
-            <fluent-menu class="product-selector-menu" role="list">
-                @foreach (var product in AllProducts)
-                {
-                    <fluent-menu-item role="menuitemcheckbox" aria-checked="@IsProductSelected(product.Id).ToString().ToLower()">
-                        <label class="d-flex align-items-center" style="cursor:pointer; width:100%;">
-                            <input type="checkbox"
-                                   class="fluent-checkbox me-2"
-                                   checked="@IsProductSelected(product.Id)"
-                                   @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)"/>
-                            <span>@product.Name</span>
-                        </label>
-                    </fluent-menu-item>
-                }
-            </fluent-menu>
-        }
+        <!-- Reusable product checkbox list -->
+        <ProductSelector WorkInstruction="WorkInstruction"
+                         AllProducts="AllProducts"
+                         OnProductsChanged="OnProductsChanged" />
     </div>
 
     <div class="win-footer">
@@ -71,52 +46,55 @@
     public bool IsVisible { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the visibility of the popup changes.
+    /// Event callback invoked when the visibility changes.
     /// </summary>
     [Parameter]
     public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
-    /// Gets or sets the text displayed in the popup header.
+    /// Gets or sets the header text to display in the popup's title bar.
     /// </summary>
     [Parameter]
     public string? HeaderText { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether dark mode styling should be applied.
+    /// Gets or sets a value indicating whether dark mode styles should be applied.
     /// </summary>
     [Parameter]
     public bool IsDarkMode { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the Save button is clicked.
+    /// Event callback invoked when the Save button is clicked.
     /// </summary>
     [Parameter]
     public EventCallback OnSave { get; set; }
 
     /// <summary>
-    /// Gets or sets the work instruction associated with the product selection.
+    /// Gets or sets the work instruction currently being edited.
     /// </summary>
     [Parameter]
-    public WorkInstruction WorkInstruction { get; set; } = default!;
+    public WorkInstruction WorkInstruction { get; set; } = new WorkInstruction
+    {
+        Title = string.Empty
+    };
 
     /// <summary>
-    /// Gets or sets the list of all available products to display as checkboxes.
+    /// Gets or sets the full list of available products.
     /// </summary>
     [Parameter]
     public required List<Product> AllProducts { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the selected products are changed.
+    /// Event callback invoked when the selected products list changes.
     /// </summary>
     [Parameter]
     public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
-    /// Displays the popup with the specified header text.
+    /// Shows the popup with optional body text and header.
     /// </summary>
-    /// <param name="bodyText">Unused in current implementation; reserved for future use.</param>
-    /// <param name="headerText">The title text to display in the popup header.</param>
+    /// <param name="bodyText">The optional body text (currently unused).</param>
+    /// <param name="headerText">The header text to display.</param>
     public void Show(string bodyText, string headerText = "")
     {
         HeaderText = headerText;
@@ -125,7 +103,7 @@
     }
 
     /// <summary>
-    /// Hides the popup and clears the header text.
+    /// Closes the popup and clears the header text.
     /// </summary>
     private void Close()
     {
@@ -135,47 +113,13 @@
     }
 
     /// <summary>
-    /// Invokes the <see cref="OnSave"/> callback when the Save button is clicked.
+    /// Handles the Save button click, invokes the OnSave callback and closes the popup.
     /// </summary>
     private async Task OnSaveClicked()
     {
         if (OnSave.HasDelegate)
-        {
             await OnSave.InvokeAsync(null);
-        }
-    }
 
-    /// <summary>
-    /// Determines whether the specified product is currently selected.
-    /// </summary>
-    /// <param name="productId">The product ID to check.</param>
-    /// <returns><c>true</c> if the product is selected; otherwise, <c>false</c>.</returns>
-    private bool IsProductSelected(int productId)
-    {
-        return WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
-    }
-
-    /// <summary>
-    /// Toggles a product's selected state when a checkbox is changed.
-    /// </summary>
-    /// <param name="product">The product to toggle selection for.</param>
-    /// <param name="isChecked"><c>true</c> to add the product; <c>false</c> to remove.</param>
-    private async Task ToggleProductSelection(Product product, bool isChecked)
-    {
-        WorkInstruction.Products ??= new();
-
-        if (isChecked)
-        {
-            if (WorkInstruction.Products.All(p => p.Id != product.Id))
-            {
-                WorkInstruction.Products.Add(product);
-            }
-        }
-        else
-        {
-            WorkInstruction.Products.RemoveAll(p => p.Id == product.Id);
-        }
-
-        await OnProductsChanged.InvokeAsync(WorkInstruction.Products);
+        await IsVisibleChanged.InvokeAsync(false);
     }
 }
