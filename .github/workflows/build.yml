@@ -1,6 +1,6 @@
 # This workflow will build a .NET project for deployment and store the commit that triggered it via an artifact
 
-name: Build .NET Project
+name: Build
 
 on:
   push:
