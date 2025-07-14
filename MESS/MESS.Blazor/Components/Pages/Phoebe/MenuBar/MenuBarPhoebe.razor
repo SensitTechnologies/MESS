@@ -186,11 +186,6 @@
     {
         var state = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = state.User.Identity?.Name;
-
-        // TODO: Load Products and WorkInstructions here or via cascading params
-        // Example:
-        // Products = await LoadProductsAsync();
-        // WorkInstructions = new List<WorkInstruction>();
     }
     
     /// <inheritdoc />
@@ -210,12 +205,6 @@
     {
         openOptions = !openOptions;
         open = false;
-    }
-
-    private void OnMenuChange(MenuChangeEventArgs args)
-    {
-        if (args?.Value is not null)
-            DemoLogger.LogInformation($"Item '{args.Value}' clicked");
     }
 
     private void LogAndClose(string item)
@@ -259,13 +248,7 @@
         if (OnSidebarToggle.HasDelegate)
             await OnSidebarToggle.InvokeAsync(null);
     }
-
-    // Dummy async loader - replace with real data call
-    private Task<List<WorkInstruction>> LoadWorkInstructionsForProduct(int productId)
-    {
-        // TODO: implement loading based on productId
-        return Task.FromResult(new List<WorkInstruction>());
-    }
+    
     // ** Toggle Version History Sidebar **
     private void ToggleVersionHistorySidebar()
     {
