@@ -4,12 +4,13 @@ name: Build
 
 on:
   workflow_dispatch:
-#  push:
-#    branches:
-#      - deployment-automation # will be main when action is out of testing phase
+  push:
+    branches:
+      - main # will be main when action is out of testing phase
 
 env:
   BUILD_COMMIT: 'last-build-version'
+  APP_ARTIFACT: .net-app
   SOLUTION_PATH: './MESS/MESS.sln'
 
 jobs:
@@ -30,11 +31,17 @@ jobs:
       - name: Publish
         run: dotnet publish ${{ env.SOLUTION_PATH }} -c Release -o ${{ env.DOTNET_ROOT }}/myapp
 
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_ARTIFACT }}
+          path: ${{ env.DOTNET_ROOT }}/myapp
+
       - name: Record commit SHA
-        run: echo "${{ github.sha }}" > ${{ env.DOTNET_ROOT }}/myapp/${{ env.BUILD_COMMIT }}.txt
+        run: echo "${{ github.sha }}" > ${{ env.BUILD_COMMIT }}.txt
 
       - name: Archive
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BUILD_COMMIT }}
-          path: ${{ env.DOTNET_ROOT }}/myapp/${{ env.BUILD_COMMIT }}.txt
+          path: ${{ env.BUILD_COMMIT }}.txt
