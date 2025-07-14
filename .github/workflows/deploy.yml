@@ -27,24 +27,34 @@ jobs:
 #          path: VERSION.txt
 
 #       Steps to read last deployed artifact 
-      - name: Get run ID of last Deploy workflow
-        id: get-prev-run-id  
-        run: |
-          OTHER_REPO="${{ github.repository }}"
-          WF_NAME="Deploy"
-          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[1].databaseId`
-          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
-          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ github.token }}
+#      - name: Get run ID of last Deploy workflow
+#        id: get-prev-run-id  
+#        run: |
+#          OTHER_REPO="${{ github.repository }}"
+#          WF_NAME="Deploy"
+#          RUN_ID=`gh run --repo ${OTHER_REPO} list --workflow ${WF_NAME} --json databaseId --jq .[1].databaseId`
+#          echo "Detected latest run id of ${RUN_ID} for workflow ${WF_NAME}"
+#          echo "run-id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+#        env:
+#          GH_TOKEN: ${{ github.token }}
 
-      - name: Download last artifact from this workflow
-        uses: actions/download-artifact@v4
+#      - name: Download last artifact from this workflow
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: ${{ env.LAST_DEPLOY_COMMIT }}
+#          github-token: ${{ github.token }}
+#          repository: ${{ github.repository }}
+#          run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
+
+#      Steps to re-upload the version number artifact
+      - name: Record commit SHA
+        run: echo "${{ github.sha }}" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
+
+      - name: Archive New version number
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.LAST_DEPLOY_COMMIT }}
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
+          path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
 
       - name: Read last deployed SHA (if exists)
         id: last-version
@@ -87,13 +97,3 @@ jobs:
           ls
           cat ${{ env.LAST_DEPLOY_COMMIT }}
           cat ${{ env.BUILD_COMMIT }}
-
-#      Steps to re-upload the version number artifact
-      - name: Record commit SHA
-        run: echo "${{ github.sha }}" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
-
-      - name: Archive New version number
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.LAST_DEPLOY_COMMIT }}
-          path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
