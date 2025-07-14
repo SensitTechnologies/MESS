@@ -94,6 +94,13 @@ jobs:
       - name: Compare SHAs
         id: compare
         run: |
-          ls
-          cat ${{ env.LAST_DEPLOY_COMMIT }}.txt
-          cat ${{ env.BUILD_COMMIT }}.txt
+          if [ "${{ steps.built-version.outputs.sha }}" == "${{ steps.last-version.outputs.sha }}" ]; then
+            echo "No new build to deploy."
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "New build detected!"
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          fi
+#          ls                                       lists downloaded artifacts
+#          cat ${{ env.LAST_DEPLOY_COMMIT }}.txt    display slast deploy commit artifact
+#          cat ${{ env.BUILD_COMMIT }}.txt          displays last build commit artifact
