@@ -114,10 +114,14 @@ jobs:
 #      DO PUBLISH TO AZURE THINGS HERE
 
       - name: Record build SHA into last deployed sha 
-        run: echo "$(cat ${{ env.BUILD_COMMIT }}.txt)" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
+        run: |
+          cat ${{ env.BUILD_COMMIT }}.txt
+          echo "$(cat ${{ env.BUILD_COMMIT }}.txt)" > ${{ env.LAST_DEPLOY_COMMIT }}.txt
+          cat ${{ env.LAST_DEPLOY_COMMIT }}.txt
 
       - name: Archive New version number
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.LAST_DEPLOY_COMMIT }}
           path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
+          overwrite: true
