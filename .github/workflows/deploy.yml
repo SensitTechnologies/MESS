@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  BUILD_COMMIT: 'version-file'
+  BUILD_COMMIT: 'last-build-version'
   PREV_DEPLOY_COMMIT: 'last-deploy-version'
   DEPLOY_STATE_ARTIFACT: 'deployed-version'
 
@@ -26,7 +26,7 @@ jobs:
 #          name: ${{ env.PREV_DEPLOY_COMMIT }}
 #          path: VERSION.txt
 
-#       Steps to download Previous artifact 
+#       Steps to read last deployed artifact 
       - name: Get run ID of last Deploy workflow
         id: get-prev-run-id  
         run: |
@@ -46,7 +46,17 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.get-prev-run-id.outputs.run-id }}
 
+      - name: Read last deployed SHA (if exists)
+        id: last-version
+        run: |
+          if [ -f ${{ env.PREV_DEPLOY_COMMIT }}.txt ]; then
+            echo "sha=$(cat ${{ env.PREV_DEPLOY_COMMIT }}.txt)" >> $GITHUB_OUTPUT
+          else
+            echo "sha=" >> $GITHUB_OUTPUT
+          fi
 
+
+#       Steps to download Build artifact 
       - name: Get run ID of Build workflow
         id: get-run-id  
         run: |
@@ -66,8 +76,11 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.get-run-id.outputs.run-id }}
 
-      - name: Show Downloaded files
-        run: ls
+      - name: Read built commit SHA
+        id: built-version
+        run: |
+          echo "sha=$(cat ${{ env.BUILD_COMMIT }}.txt)" >> $GITHUB_OUTPUT
+
 
 #      Steps to re-upload the version number artifact
       - name: Record commit SHA
