@@ -19,13 +19,13 @@ jobs:
 
     steps:
       - name: Record commit SHA
-        run: echo "${{ github.sha }}" > ./myapp/VERSION.txt
+        run: echo "${{ github.sha }}" > VERSION.txt
 
       - name: Archive
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PREV_DEPLOY_COMMIT }}
-          path: ./myapp/VERSION.txt
+          path: VERSION.txt
 
 #      - name: Get run ID of Build workflow
 #        id: get-run-id  
