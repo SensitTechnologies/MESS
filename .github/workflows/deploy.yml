@@ -84,6 +84,7 @@ jobs:
       - name: Compare SHAs
         id: compare
         run: |
+          ls
           cat ${{ env.LAST_DEPLOY_COMMIT }}
           cat ${{ env.BUILD_COMMIT }}
 
