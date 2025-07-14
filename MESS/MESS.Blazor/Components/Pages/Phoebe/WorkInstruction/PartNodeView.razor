@@ -15,11 +15,11 @@
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-md-4">
                     <label class="form-label"><strong>Part Number</strong></label>
-                    <input type="text" class="form-control" @bind="part.PartNumber" @bind:event="oninput" />
+                    <input type="text" class="form-control" value="@part.PartNumber" @oninput="e => OnPartChanged(e, part, nameof(Part.PartNumber))" />
                 </div>
                 <div class="col-12 col-md-6">
                     <label class="form-label"><strong>Part Name</strong></label>
-                    <input type="text" class="form-control" @bind="part.PartName" @bind:event="oninput" />
+                    <input type="text" class="form-control" value="@part.PartName" @oninput="e => OnPartChanged(e, part, nameof(Part.PartName))" />
                 </div>
                 <div class="col-12 col-md-2 d-grid">
                     <NodeActionMenu OnAction="(action) => HandlePartAction(part, action)" />
@@ -47,6 +47,19 @@ else
     /// </remarks>
     [Parameter]
     public EventCallback<(PartNode node, string action)> OnNodeAction { get; set; }
+    
+    /// <summary>
+    /// Event callback that is invoked whenever any data within the <see cref="PartNode"/> or its parts
+    /// has been modified by the user.
+    /// </summary>
+    /// <remarks>
+    /// This callback should be used by the parent component to mark the editor state as dirty,
+    /// enable save actions, or perform other UI updates in response to changes.
+    /// It is triggered on changes to part properties as well as when parts are reordered,
+    /// added, or removed.
+    /// </remarks>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
 
     /// <summary>
     /// The <see cref="PartNode"/> containing one or more parts to render and edit.
@@ -62,9 +75,11 @@ else
         {
             await OnNodeAction.InvokeAsync((PartNode, action));
         }
+        
+        await NotifyChangedAsync();
     }
     
-    private void HandlePartAction(Part part, string action)
+    private async Task HandlePartAction(Part part, string action)
     {
         if (PartNode?.Parts == null) return;
 
@@ -99,6 +114,27 @@ else
                 PartNode.Parts.Insert(index + 1, new Part { PartNumber = "", PartName = "" });
                 break;
 
+        }
+        await NotifyChangedAsync();
+    }
+    
+    private async Task OnPartChanged(ChangeEventArgs e, Part part, string propertyName)
+    {
+        var newValue = e.Value?.ToString() ?? "";
+
+        if (propertyName == nameof(Part.PartNumber))
+            part.PartNumber = newValue;
+        else if (propertyName == nameof(Part.PartName))
+            part.PartName = newValue;
+
+        await NotifyChangedAsync();
+    }
+    
+    private async Task NotifyChangedAsync()
+    {
+        if (OnChanged.HasDelegate)
+        {
+            await OnChanged.InvokeAsync();
         }
     }
 
