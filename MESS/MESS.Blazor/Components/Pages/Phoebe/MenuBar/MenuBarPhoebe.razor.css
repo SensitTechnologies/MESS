@@ -188,3 +188,18 @@ body.dark-mode fluent-menu-item:hover::part(control) {
     background-color: #ffdf33 !important;
     color: #fff !important;
 }
+
+.save-button-container {
+    position: relative;
+    display: inline-block;
+}
+
+.red-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    height: 8px;
+    width: 8px;
+    background-color: red;
+    border-radius: 50%;
+}
