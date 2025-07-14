@@ -67,6 +67,10 @@ let currentDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 let manualOverride = null;
 
 function detectAndApplyTheme() {
+    const stored = localStorage.getItem("manualDarkMode");
+    if (stored === "dark") manualOverride = true;
+    else if (stored === "light") manualOverride = false;
+
     const isDark = manualOverride !== null ? manualOverride : currentDark;
     applyTheme(isDark);
 }
@@ -76,17 +80,24 @@ document.addEventListener("DOMContentLoaded", detectAndApplyTheme);
 window.toggleDarkMode = function () {
     const isCurrentlyDark = document.body.classList.contains("dark-mode");
     manualOverride = !isCurrentlyDark;
+    localStorage.setItem("manualDarkMode", manualOverride ? "dark" : "light");
     applyTheme(manualOverride);
 };
 
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
     currentDark = e.matches;
-    manualOverride = null;
-    detectAndApplyTheme();
+    if (manualOverride === null) {
+        detectAndApplyTheme(); // only auto-toggle if user hasn't manually overridden
+    }
 });
 
+// Only re-apply text area styling on DOM changes (not full theme switching)
 const observer = new MutationObserver(() => {
-    detectAndApplyTheme();
+    if (document.body.classList.contains("dark-mode")) {
+        applyDarkModeToFluentTextAreas(true);
+    } else {
+        applyDarkModeToFluentTextAreas(false);
+    }
 });
 observer.observe(document.body, { childList: true, subtree: true });
 

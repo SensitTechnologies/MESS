@@ -64,7 +64,7 @@
     </div>
     
     <div class="menu-right-content">
-        <button class="btn-small" title="Version History">⏲</button>
+        <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">⏲</button>
         <div class="save-button-container">
             <button class="btn-small" title="Save" @onclick="HandleSave" disabled="@(!IsDirty)">
                 🖫
@@ -81,18 +81,25 @@
             <div class="logout-container">
                 <span>@ActiveLineOperator</span>
                 <form method="post" action="/api/auth/logout" class="logout-form">
-                    <button type="submit" class="btn btn-logout btn-logout-icon" title="Logout">👥</button>
+                    <button type="submit" class="btn-small" title="Logout">Logout</button>
                 </form>
             </div>
         }
     </div>
 </div>
 
+<!-- Version History Sidebar Component -->
+<VersionHistoryMenu 
+    IsOpen="isVersionHistoryOpen" 
+    OnToggle="ToggleVersionHistorySidebar" 
+    OnRestore="OnVersionHistoryRestore" />
+
 @code {
     private string? ActiveLineOperator { get; set; }
 
     /// <summary>
     /// Raised when the sidebar toggle button is clicked.
+    /// Used by the parent layout to control sidebar visibility.
     /// </summary>
     [Parameter] 
     public EventCallback OnSidebarToggle { get; set; }
@@ -167,6 +174,9 @@
     /// </summary>
     [Parameter]
     public List<WorkInstruction>? WorkInstructions { get; set; }
+
+    // ** Version History Sidebar Open State **
+    private bool isVersionHistoryOpen = false;
 
     /// <summary>
     /// Called when the component is initialized.
@@ -255,6 +265,18 @@
     {
         // TODO: implement loading based on productId
         return Task.FromResult(new List<WorkInstruction>());
+    }
+    // ** Toggle Version History Sidebar **
+    private void ToggleVersionHistorySidebar()
+    {
+        isVersionHistoryOpen = !isVersionHistoryOpen;
+    }
+
+    // ** Restore action from Version History Sidebar **
+    private void OnVersionHistoryRestore()
+    {
+        DemoLogger.LogInformation("Version history restore clicked.");
+        // Add your restore logic here
     }
     
     private async Task TriggerAndClose(EventCallback callback)
