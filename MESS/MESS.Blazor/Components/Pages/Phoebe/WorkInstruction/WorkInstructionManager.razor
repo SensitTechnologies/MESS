@@ -38,12 +38,23 @@
         OnChanged="MarkEditorDirty" />
 </div>
 
-<PopUpMenu @ref="popupRef"/>
+<PopUpMenu 
+    @ref="popupRef"
+    IsVisible="@isPopupVisible"
+    IsVisibleChanged="@(v => isPopupVisible = v)"
+    HeaderText="New Work Instruction"
+    IsDarkMode="@IsDarkMode"
+    WorkInstruction="WorkInstructionEditorService.Current"
+    AllProducts="Products"
+    OnProductsChanged="HandleProductsChanged"
+    OnSave="SaveEditorChanges" />
 
 @code {
     private WorkInstructionNodeManagerList? NodeManagerRef;
 
     private bool isSidebarOpen = false;
+    
+    private bool IsDarkMode { get; set; } = false;  // or get from your app theme
 
     private List<Product> Products { get; set; } = new();
     private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
@@ -55,7 +66,8 @@
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
-    
+
+    private bool isPopupVisible;
     private PopUpMenu? popupRef;
 
     /// <inheritdoc />
@@ -66,7 +78,6 @@
         // Load initial data
         Products = (await ProductService.GetAllProductsAsync())?.ToList() ?? new List<Product>();
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
-
 
         await base.OnInitializedAsync();
     }
@@ -144,9 +155,10 @@
         WorkInstructionEditorService.StartNew();
         SelectedWorkInstructionId = null;
         ToastService.ShowInfo("Started new Work Instruction.");
-        
-        // Trigger popup if popupRef exists
-        popupRef?.Show("A new Work Instruction has been started.", "New");
+
+        // Show popup menu on new instruction
+        isPopupVisible = true;
+        popupRef?.Show("A new Work Instruction has been started.", "New Work Instruction");
     }
 
     private void RevertEditorChanges()
@@ -161,7 +173,7 @@
         SelectedWorkInstructionId = null;
 
         WorkInstructionEditorService.RevertChanges(); // clear the loaded WI
-        
+
         StateHasChanged();
 
         return Task.CompletedTask;
@@ -188,15 +200,21 @@
             WorkInstructionEditorService.RevertChanges();
         }
     }
-    
+
     private async Task MarkEditorDirty()
     {
         WorkInstructionEditorService.MarkDirty();
         await InvokeAsync(StateHasChanged);
     }
-    
+
     private void HandleRestoredFromVersionHistory()
     {
         ToastService.ShowInfo("Version restored from history.");
+    }
+
+    private Task HandleProductsChanged(List<Product> updatedProducts)
+    {
+        // Handle product selection changes here if needed
+        return Task.CompletedTask;
     }
 }

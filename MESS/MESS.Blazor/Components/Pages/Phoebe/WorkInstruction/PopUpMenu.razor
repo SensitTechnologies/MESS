@@ -2,41 +2,41 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
+@using Microsoft.AspNetCore.Components
 
-@{
-    var showClass = IsVisible ? "win-popup-show" : "win-popup-hide";
-    var darkModeClass = IsDarkMode ? "dark-mode" : "";
-}
-
-<div class="win-popup @showClass @darkModeClass" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-describedby="popupBody">
-    <div class="win-titlebar">
-        <span id="popupTitle" class="win-title-text">@HeaderText</span>
-    </div>
-
-    <div id="popupBody" class="win-body">
-        <!-- Editable Title textarea bound to WorkInstruction.Title -->
-        <div class="textarea-container mt-3">
-            <label for="nameInput" class="form-label">Name:</label>
-            <textarea id="nameInput"
-                      class="form-control transparent-textarea"
-                      placeholder="Enter name here..."
-                      rows="1"
-                      @bind="WorkInstruction.Title"></textarea>
+@if (IsVisible)
+{
+    <!-- Removed the backdrop to avoid darkening the background -->
+    <div class="win-popup @darkModeClass" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-describedby="popupBody">
+        <div class="win-titlebar">
+            <span id="popupTitle" class="win-title-text">@HeaderText</span>
         </div>
 
-        <hr />
+        <div id="popupBody" class="win-body">
+            <!-- Editable Title textarea bound to WorkInstruction.Title -->
+            <div class="textarea-container mt-3">
+                <label for="nameInput" class="form-label">Name:</label>
+                <textarea id="nameInput"
+                          class="form-control transparent-textarea"
+                          placeholder="Enter name here..."
+                          rows="1"
+                          @bind="WorkInstruction.Title"></textarea>
+            </div>
 
-        <!-- Reusable product checkbox list -->
-        <ProductSelector WorkInstruction="WorkInstruction"
-                         AllProducts="AllProducts"
-                         OnProductsChanged="OnProductsChanged" />
-    </div>
+            <hr />
 
-    <div class="win-footer">
-        <button class="win-btn-primary" @onclick="OnSaveClicked">Save</button>
-        <button class="win-btn-cancel" @onclick="Close">Cancel</button>
+            <!-- Reusable product checkbox list -->
+            <ProductSelector WorkInstruction="WorkInstruction"
+                             AllProducts="AllProducts"
+                             OnProductsChanged="OnProductsChanged" />
+        </div>
+
+        <div class="win-footer">
+            <button class="win-btn-primary" @onclick="HandleSave">Save</button>
+            <button class="win-btn-cancel" @onclick="Close">Cancel</button>
+        </div>
     </div>
-</div>
+}
 
 @code {
     /// <summary>
@@ -55,7 +55,7 @@
     /// Gets or sets the header text to display in the popup's title bar.
     /// </summary>
     [Parameter]
-    public string? HeaderText { get; set; }
+    public string? HeaderText { get; set; } = "Edit Work Instruction";
 
     /// <summary>
     /// Gets or sets a value indicating whether dark mode styles should be applied.
@@ -91,13 +91,18 @@
     public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
+    /// CSS class for dark mode.
+    /// </summary>
+    private string darkModeClass => IsDarkMode ? "dark-mode" : "";
+
+    /// <summary>
     /// Shows the popup with optional body text and header.
     /// </summary>
     /// <param name="bodyText">The optional body text (currently unused).</param>
     /// <param name="headerText">The header text to display.</param>
-    public void Show(string bodyText, string headerText = "")
+    public void Show(string bodyText = "", string headerText = "")
     {
-        HeaderText = headerText;
+        HeaderText = string.IsNullOrWhiteSpace(headerText) ? "Edit Work Instruction" : headerText;
         IsVisible = true;
         StateHasChanged();
     }
@@ -105,17 +110,15 @@
     /// <summary>
     /// Closes the popup and clears the header text.
     /// </summary>
-    private void Close()
+    private async Task Close()
     {
-        HeaderText = string.Empty;
-        IsVisible = false;
-        StateHasChanged();
+        await IsVisibleChanged.InvokeAsync(false);
     }
 
     /// <summary>
     /// Handles the Save button click, invokes the OnSave callback and closes the popup.
     /// </summary>
-    private async Task OnSaveClicked()
+    private async Task HandleSave()
     {
         if (OnSave.HasDelegate)
             await OnSave.InvokeAsync(null);
