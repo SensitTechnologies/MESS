@@ -62,7 +62,7 @@
         WorkInstructionEditorService.OnChanged += HandleEditorChanged;
 
         // Load initial data
-        Products = (await ProductService.GetAllProductsAsync())?.ToList() ?? new List<Product>();
+        Products = (await ProductService.GetAllAsync())?.ToList() ?? new List<Product>();
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
 
 
