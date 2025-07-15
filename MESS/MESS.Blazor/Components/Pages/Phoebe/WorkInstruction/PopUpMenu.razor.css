@@ -139,8 +139,8 @@ body.dark-mode .win-btn-cancel:hover {
     background-color: transparent;
     border: 1px solid #ccc;
     width: 100%;
-    resize: vertical;
-    padding: 8px;
+    resize: none; /* disable resizing */
+    padding: 1px;
     color: inherit;
     font-family: inherit;
     font-size: 1rem;
