@@ -5,8 +5,13 @@ name: Build
 on:
   # scheduled to execute on every push to the main branch
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+    paths: # Only runs when a file ending in any of these markers is changed
+    - '**.cs'
+    - '**.csproj'
+    - '**.cshtml'
+    - '**.razor'
+    - '**.js'
 
   # Scheduled to run a backup every 3 months
   # scheduled to execute every 3 months on the 3rd wednsday of the month at 10:59 pm CDT ( translated to UTC )

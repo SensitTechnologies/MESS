@@ -9,6 +9,7 @@ on:
     # see cron syntax: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
     # see CDT to UTC conversion: https://savvytime.com/converter/cdt-to-utc
     - cron: '59 4 * * 2-5'
+
   # Can be manually triggered from the github actions page: https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
   workflow_dispatch:
 
@@ -24,7 +25,6 @@ jobs:
 
     outputs:
       last-version: ${{ steps.last-version.outputs.sha }}
-
     
     steps:  # Steps to read last deployed artifact
       
@@ -63,6 +63,7 @@ jobs:
             echo "sha=" >> $GITHUB_OUTPUT
           fi
 
+
   download-last-built:
     runs-on: ubuntu-latest
 
@@ -96,10 +97,12 @@ jobs:
         run: |    # write file contents into output to be used in "compare-results" job
           echo "sha=$(cat ${{ env.BUILD_COMMIT }}.txt)" >> $GITHUB_OUTPUT
 
+
   # compares the SHA outputs from the previous two jobs to be used in the rest of the program
   compare-results:
     runs-on: ubuntu-latest
 
+    # wait for these jobs to finish first
     needs: 
       - download-last-deployed 
       - download-last-built
@@ -124,6 +127,7 @@ jobs:
   upload-new-artifacts:
     runs-on: ubuntu-latest
 
+    # wait for these jobs to finish first
     needs: 
       - compare-results
       - download-last-built
@@ -143,38 +147,37 @@ jobs:
           path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
           overwrite: true
 
+
 # There is a new version. Deploy it to Azure
-#  deploy:
-#    runs-on: ubuntu-latest
-#    needs: 
-#      - compare-results
-#      - download-last-built
+  deploy:
+    runs-on: ubuntu-latest
 
-#    environment:
-#        name: 'Production'
-#        url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    # wait for these jobs to finish first
+    needs: 
+      - compare-results
+      - download-last-built
 
-#    steps:
+    environment:
+        name: 'Production'
+        url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
-#      There is a new version. Deploy!
-#      DO PUBLISH TO AZURE THINGS HERE
+    steps:  # There is a new version. Deploy!
 
+      - name: Download artifact from "Build .Net Project" workflow
+        if: needs.compare-results.outputs.new-build == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.APP_ARTIFACT }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.download-last-built.outputs.run-id }}
 
-#      - name: Download artifact from "Build .Net Project" workflow
-#        if: needs.compare-results.outputs.new-build == 'true'
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: ${{ env.APP_ARTIFACT }}
-#          github-token: ${{ github.token }}
-#          repository: ${{ github.repository }}
-#          run-id: ${{ needs.download-last-built.outputs.run-id }}
-
-#      - name: Deploy to Azure Web App
-#        if: needs.compare-results.outputs.new-build == 'true'
-#        id: deploy-to-webapp
-#        uses: azure/webapps-deploy@v3
-#        with:
-#          app-name: 'sensit-mess'
-#          slot-name: 'Production'
-#          package: .
-#          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
+      - name: Deploy to Azure Web App
+        if: needs.compare-results.outputs.new-build == 'true'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'sensit-mess'
+          slot-name: 'Production'
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
