@@ -1,3 +1,11 @@
+:root {
+    --top-bar-bg: #ffffff; /* default for light mode */
+}
+
+.dark-mode {
+    --top-bar-bg: #1e1e1e; /* optional: override for dark mode */
+}
+
 .page {
     position: relative;
     display: flex;

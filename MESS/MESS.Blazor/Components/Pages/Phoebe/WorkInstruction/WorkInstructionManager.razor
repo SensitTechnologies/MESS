@@ -6,6 +6,7 @@
 @using MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using MESS.Blazor.Components.Navigator
 @using Microsoft.AspNetCore.Authorization
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject IToastService ToastService
@@ -37,6 +38,8 @@
         OnChanged="MarkEditorDirty" />
 </div>
 
+<PopUpMenu @ref="popupRef"/>
+
 @code {
     private WorkInstructionNodeManagerList? NodeManagerRef;
 
@@ -52,6 +55,8 @@
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
+    
+    private PopUpMenu? popupRef;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -139,6 +144,9 @@
         WorkInstructionEditorService.StartNew();
         SelectedWorkInstructionId = null;
         ToastService.ShowInfo("Started new Work Instruction.");
+        
+        // Trigger popup if popupRef exists
+        popupRef?.Show("A new Work Instruction has been started.", "New");
     }
 
     private void RevertEditorChanges()
