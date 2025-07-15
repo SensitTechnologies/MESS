@@ -145,6 +145,12 @@
     /// </summary>
     [Parameter]
     public EventCallback OnRestoredFromVersionHistory { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered after a work instruction has successfully been imported.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkInstruction> OnImportComplete { get; set; }
 
     /// <summary>
     /// Indicates whether there are unsaved changes in the current work instruction editor session.
@@ -271,7 +277,6 @@
         await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
         var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
         darkModeIcon = isDark ? "☀️" : "🌙";
-        DemoLogger.LogInformation("Toggled dark mode");
     }
 
     private async Task ToggleSidebar()
@@ -423,6 +428,12 @@
 
         // Hide the import dialog
         showImportDialog = false;
+        
+        // Fire the event callback so the parent knows about it
+        if (OnImportComplete.HasDelegate)
+        {
+            await OnImportComplete.InvokeAsync(wi);
+        }
 
         // Trigger UI refresh
         StateHasChanged();

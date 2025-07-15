@@ -24,6 +24,7 @@
     OnSave="SaveEditorChanges"
     OnRevertChanges="RevertEditorChanges"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
+    OnImportComplete="HandleImportComplete"
     IsDirty="WorkInstructionEditorService.IsDirty"
     CurrentInstruction="WorkInstructionEditorService.Current" />
 
@@ -132,9 +133,10 @@
         }
     }
 
-    private void HandleImportComplete(WorkInstruction importedWorkInstruction)
+    private Task HandleImportComplete(WorkInstruction importedWorkInstruction)
     {
         ToastService.ShowSuccess($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}", 3000);
+        return Task.CompletedTask;
     }
 
     private void StartNewInstruction()
