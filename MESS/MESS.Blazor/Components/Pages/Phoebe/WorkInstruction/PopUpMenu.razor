@@ -1,4 +1,3 @@
-﻿@using System
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
@@ -100,7 +99,7 @@
     /// </summary>
     /// <param name="bodyText">The optional body text (currently unused).</param>
     /// <param name="headerText">The header text to display.</param>
-    public void Show(string bodyText = "", string headerText = "")
+    public void Show(string bodyText, string headerText = "")
     {
         HeaderText = string.IsNullOrWhiteSpace(headerText) ? "Edit Work Instruction" : headerText;
         IsVisible = true;

@@ -86,10 +86,12 @@ public interface IWorkInstructionEditorService
     Task LoadForNewVersionAsync(int originalId);
 
     /// <summary>
-    /// Initializes a new, blank WorkInstruction in memory for user editing.
+    /// Initializes a new WorkInstruction in memory for user editing.
     /// Sets the editing mode to CreateNew and marks the editing state as dirty.
+    /// Optionally pre-populates the WorkInstruction with a list of products.
     /// </summary>
-    void StartNew();
+    /// <param name="products">Optional list of products to prefill the WorkInstruction.</param>
+    void StartNew(List<Product>? products = null);
 
     /// <summary>
     /// Marks the current editing session as having unsaved changes.

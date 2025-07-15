@@ -749,7 +749,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             // Retrieve Product and assign relationship
             var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
-            var product = await _productService.FindByTitleAsync(productString);
+            var product = await _productService.GetByTitleAsync(productString);
 
             if (product == null)
             {

@@ -34,7 +34,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public void StartNew()
+    public void StartNew(List<Product>? products = null)
     {
         Current = new WorkInstruction
         {
@@ -44,7 +44,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = false,
             CollectsProductSerialNumber = false,
-            Products = new List<Product>(),
+            Products = products ?? new List<Product>(),
             Nodes = new List<WorkInstructionNode>()
         };
 

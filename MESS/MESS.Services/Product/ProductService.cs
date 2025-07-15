@@ -19,7 +19,7 @@ public class ProductService : IProductService
     }
     
     /// <inheritdoc />
-    public async Task DuplicateProductAsync(Product productToDuplicate)
+    public async Task DuplicateAsync(Product productToDuplicate)
     {
         try
         {
@@ -62,7 +62,7 @@ public class ProductService : IProductService
     }
 
     /// <inheritdoc />
-    public async Task AddProductAsync(Product product)
+    public async Task CreateAsync(Product product)
     {
         try
         {
@@ -80,7 +80,7 @@ public class ProductService : IProductService
     }
     
     /// <inheritdoc />
-    public async Task<Product?> FindProductByIdAsync(int id)
+    public async Task<Product?> GetByIdAsync(int id)
     {
         try
         {
@@ -102,7 +102,7 @@ public class ProductService : IProductService
     }
     
     /// <inheritdoc />
-    public async Task<Product?> FindByTitleAsync(string title)
+    public async Task<Product?> GetByTitleAsync(string title)
     {
         try
         {
@@ -122,7 +122,7 @@ public class ProductService : IProductService
     }
     
     /// <inheritdoc />
-    public async Task<IEnumerable<Product>> GetAllProductsAsync()
+    public async Task<IEnumerable<Product>> GetAllAsync()
     {
         try
         {
@@ -139,23 +139,52 @@ public class ProductService : IProductService
     }
 
     /// <inheritdoc />
-    public async Task ModifyProductAsync(Product product)
+    public async Task UpdateProductAsync(Product product)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            context.Products.Update(product);
+
+            var existingProduct = await context.Products
+                .Include(p => p.WorkInstructions)
+                .FirstOrDefaultAsync(p => p.Id == product.Id);
+
+            if (existingProduct is null)
+            {
+                Log.Warning("Product with ID {inputId} not found during modification.", product.Id);
+                return;
+            }
+
+            // Update scalar properties
+            existingProduct.Name = product.Name;
+            existingProduct.IsActive = product.IsActive;
+
+            // Defensive: ensure list is initialized
+            existingProduct.WorkInstructions ??= new List<WorkInstruction>();
+            existingProduct.WorkInstructions.Clear();
+
+            if (product.WorkInstructions != null)
+            {
+                foreach (var wi in product.WorkInstructions)
+                {
+                    var trackedWi = await context.WorkInstructions.FindAsync(wi.Id);
+                    if (trackedWi != null)
+                    {
+                        existingProduct.WorkInstructions.Add(trackedWi);
+                    }
+                }
+            }
+
             await context.SaveChangesAsync();
         }
         catch (Exception e)
         {
-            Log.Warning(e, "Exception occured while modifying product. Product ID: {inputId}", product.Id);
+            Log.Warning(e, "Exception occurred while modifying product. Product ID: {inputId}", product.Id);
         }
-        
     }
 
     /// <inheritdoc />
-    public async Task RemoveProductAsync(int id)
+    public async Task DeleteByIdAsync(int id)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
 

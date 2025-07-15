@@ -4,6 +4,8 @@
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
 @using MESS.Services.WorkInstruction
 @using Serilog
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
 @inject AuthenticationStateProvider AuthProvider
 @inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
@@ -17,8 +19,8 @@
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNew))">New</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Import"))">Import</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Export"))">Export</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
@@ -100,6 +102,16 @@
     OnRestore="HandleRestoreVersion"
     OnDelete="HandleDeleteVersion" />
 
+<WorkInstructionImportDialog 
+    Visible="@showImportDialog" 
+    VisibleChanged="HandleImportDialogClosed" 
+    OnImportComplete="HandleImportComplete" />
+
+<WorkInstructionExportDialog
+    WorkInstruction="CurrentInstruction"
+    Visible="@showExportDialog"
+    VisibleChanged="@(val => showExportDialog = val)" />
+
 @code {
     private string? ActiveLineOperator { get; set; }
 
@@ -177,6 +189,10 @@
     
     private List<WorkInstruction> _versionHistoryList = new();
     private bool _isLoadingVersions = false;
+    
+    private bool showImportDialog;
+    
+    private bool showExportDialog = false;
 
     /// <summary>
     /// The list of products to show in the dropdown.
@@ -336,7 +352,6 @@
         MarkDirty();
     }
     
-  
     private async Task HandleRestoreVersion(int versionId)
     {
         var version = await WorkInstructionService.GetByIdAsync(versionId);
@@ -378,5 +393,43 @@
             await LoadVersionHistoryAsync(originalId); // Refresh sidebar list
         }
     }
+    
+    private void TriggerImport()
+    {
+        open = false;
+        openOptions = false;
+        showImportDialog = true;
+    }
+    
+    private void TriggerExport()
+    {
+        open = false;
+        openOptions = false;
+        showExportDialog = true;
+    }
 
+    private async Task HandleImportComplete(WorkInstruction wi)
+    {
+        Log.Information("Imported WorkInstruction: {WiTitle}", wi.Title);
+
+        // Load the imported instruction into the editor service (edit mode)
+        await EditorService.LoadForEditAsync(wi.Id);
+
+        // Update the CurrentInstruction property so the UI reflects the new instruction
+        CurrentInstruction = wi;
+
+        // Update dropdown selection if relevant
+        SelectedWorkInstructionId = wi.Id;
+
+        // Hide the import dialog
+        showImportDialog = false;
+
+        // Trigger UI refresh
+        StateHasChanged();
+    }
+    
+    private void HandleImportDialogClosed(bool isOpen)
+    {
+        showImportDialog = isOpen;
+    }
 }

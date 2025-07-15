@@ -1,7 +1,5 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
-@inject IProductService ProductService
-@inject NavigationManager NavigationManager
 
 <tr>
     <td>
@@ -14,7 +12,10 @@
         <WorkInstructionSelector @bind-SelectedInstructions="Product.WorkInstructions" AllInstructions="AllInstructions"/>
     </td>
     <td>
-        <button class="btn btn-primary btn-sm" @onclick="HandleSubmit">@(IsNewProduct ? "Create Product" : "Create New Product from Edited Data")</button>
+        <button class="btn btn-sm @(IsNewProduct ? "btn-primary" : "btn-success")"
+                @onclick="HandleSubmit" disabled="@isSaving">
+            @(IsNewProduct ? "Create" : "Save")
+        </button>
     </td>
 </tr>
 
@@ -38,9 +39,12 @@
     public List<WorkInstruction>? AllInstructions { get; set; } = [];
 
     private bool IsNewProduct => Product.Id == 0;
+    private bool isSaving = false;
 
     private async Task HandleSubmit()
     {
+        isSaving = true;
         await OnSubmit.InvokeAsync(Product);
+        isSaving = false;
     }
 }

@@ -1,0 +1,48 @@
+@using MESS.Data.Models
+
+@if (Visible)
+{
+    <FluentDialog Open="@Visible" OnDismiss="Close">
+        <FluentDialogHeader>
+            Export Work Instruction
+        </FluentDialogHeader>
+        <FluentDialogBody>
+            <p><strong>@WorkInstruction?.Title</strong> - Version @WorkInstruction?.Version</p>
+            <WorkInstructionExportButton 
+                WorkInstruction="WorkInstruction"
+                OnDownloadComplete="Close" />
+        </FluentDialogBody>
+    </FluentDialog>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the <see cref="WorkInstruction"/> to be exported.
+    /// This parameter is required and provides the data displayed in the dialog
+    /// and passed to the export logic.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public WorkInstruction? WorkInstruction { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the dialog is visible.
+    /// Setting this to <c>true</c> will show the dialog; <c>false</c> will hide it.
+    /// This parameter supports two-way binding.
+    /// </summary>
+    [Parameter]
+    public bool Visible { get; set; }
+
+    /// <summary>
+    /// Event callback that is invoked when the <see cref="Visible"/> parameter changes.
+    /// Used to notify the parent component of visibility changes, enabling two-way binding.
+    /// The boolean parameter indicates the new visibility state.
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    private async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}

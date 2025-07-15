@@ -249,7 +249,7 @@ private async Task SetActiveProduct(int productId)
     {
         try
         {
-            var productsAsync = await ProductService.GetAllProductsAsync();
+            var productsAsync = await ProductService.GetAllAsync();
             Products = productsAsync.ToList();
         }
         catch (Exception e)

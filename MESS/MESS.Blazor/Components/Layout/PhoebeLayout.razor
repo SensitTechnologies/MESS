@@ -5,8 +5,8 @@
 <LayoutView Layout="typeof(MainLayout)">
     <AuthorizeView Roles="Technician, Administrator">
 
-        <!-- Sticky Top Bar with Logout -->
-        <div class="position-sticky top-0 d-flex align-items-center justify-content-end gap-2 px-2 py-1 custom-top-bar"
+        <!-- Top Bar with Logout -->
+        <div class="top-0 d-flex align-items-center justify-content-end gap-2 px-2 py-1 custom-top-bar"
              style="z-index: 1040; min-height: 36px; background: transparent; padding: 0;">
             @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
             {
