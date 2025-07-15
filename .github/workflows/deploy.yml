@@ -3,7 +3,7 @@
 name: Deploy
 
 on:
-  # scheduled to execute on Monday - Thursday at 11:59 pm CDT ( translated into UTC )
+  # scheduled to execute every Monday - Thursday at 11:59 pm CDT ( translated into UTC )
   schedule: 
     # see schedule docs: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule
     # see cron syntax: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
@@ -20,6 +20,7 @@ env:
 
 jobs:
 
+  # read last deployed artifact
   download-last-deployed:
     runs-on: ubuntu-latest
 
@@ -63,7 +64,7 @@ jobs:
             echo "sha=" >> $GITHUB_OUTPUT
           fi
 
-
+  # read last built artifact
   download-last-built:
     runs-on: ubuntu-latest
 
@@ -92,9 +93,10 @@ jobs:
           repository: ${{ github.repository }}            # use this repository
           run-id: ${{ steps.get-run-id.outputs.run-id }}  # run id from previous step
 
+      # write file contents into output to be used in "compare-results" job  
       - name: Read built commit SHA
         id: built-version
-        run: |    # write file contents into output to be used in "compare-results" job
+        run: |
           echo "sha=$(cat ${{ env.BUILD_COMMIT }}.txt)" >> $GITHUB_OUTPUT
 
 
@@ -104,8 +106,8 @@ jobs:
 
     # wait for these jobs to finish first
     needs: 
-      - download-last-deployed 
-      - download-last-built
+      - download-last-deployed      # needed for last deployment commit SHA
+      - download-last-built         # needed for commit SHA of build action
 
     outputs:
       new-build: ${{ steps.compare.outputs.deploy }}
@@ -123,14 +125,14 @@ jobs:
           fi
 
 
-# There is a new version. upload an updated artifact
+  # There is a new version. upload an updated artifact
   upload-new-artifacts:
     runs-on: ubuntu-latest
 
     # wait for these jobs to finish first
     needs: 
-      - compare-results
-      - download-last-built
+      - compare-results         # needed for results comparrison
+      - download-last-built     # needed for commit SHA of build action
     
     steps:
       # write SHA output from download-last-build job into a txt file
@@ -148,14 +150,14 @@ jobs:
           overwrite: true
 
 
-# There is a new version. Deploy it to Azure
+  # There is a new version. Deploy it to Azure
   deploy:
     runs-on: ubuntu-latest
 
     # wait for these jobs to finish first
     needs: 
-      - compare-results
-      - download-last-built
+      - compare-results         # needed for results comparrison
+      - download-last-built     # needed for run-id of build action
 
     environment:
         name: 'Production'

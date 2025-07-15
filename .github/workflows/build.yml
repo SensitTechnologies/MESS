@@ -13,8 +13,8 @@ on:
     - '**.razor'
     - '**.js'
 
-  # Scheduled to run a backup every 3 months
-  # scheduled to execute every 3 months on the 3rd wednsday of the month at 10:59 pm CDT ( translated to UTC )
+  # Scheduled to run a backup every month
+  # scheduled to execute on the 3rd wednsday of every month at 10:59 pm CDT ( translated to UTC )
   schedule:
     # see schedule docs: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule
     # see cron syntax: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
