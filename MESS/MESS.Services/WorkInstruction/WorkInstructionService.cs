@@ -1458,7 +1458,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             .ToListAsync();
 
         foreach (var wi in versions)
+        {
             wi.IsLatest = false;
+            wi.IsActive = false;
+        }
 
         await context.SaveChangesAsync();
         return true;
