@@ -22,6 +22,13 @@
     [Parameter]
     public required WorkInstruction WorkInstruction { get; set; }
     
+    /// <summary>
+    /// Event callback that is invoked when the download operation completes successfully.
+    /// This allows the parent component to react to the completion of the export, such as closing a dialog or updating UI state.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnDownloadComplete { get; set; }
+    
     private async Task DownloadWorkInstruction()
     {
         isLoading = true;
@@ -46,6 +53,12 @@
             fileName = $"{fileName}.xlsx";
             
             await JsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            
+            // Notify parent that download is done
+            if (OnDownloadComplete.HasDelegate)
+            {
+                await OnDownloadComplete.InvokeAsync();
+            }
         }
         catch (Exception ex)
         {
