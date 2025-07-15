@@ -23,6 +23,7 @@
     OnNew="StartNewInstruction"
     OnSave="SaveEditorChanges"
     OnRevertChanges="RevertEditorChanges"
+    OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     IsDirty="WorkInstructionEditorService.IsDirty"
     CurrentInstruction="WorkInstructionEditorService.Current" />
 
@@ -107,7 +108,7 @@
             else
             {
                 // Create new version, then save
-                await WorkInstructionEditorService.LoadForNewVersionAsync(current.Id);
+                await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
                 success = await WorkInstructionEditorService.SaveAsync();
                 if (success)
                     ToastService.ShowSuccess("New version of Work Instruction created successfully.");
@@ -184,5 +185,10 @@
     {
         WorkInstructionEditorService.MarkDirty();
         await InvokeAsync(StateHasChanged);
+    }
+    
+    private void HandleRestoredFromVersionHistory()
+    {
+        ToastService.ShowInfo("Version restored from history.");
     }
 }

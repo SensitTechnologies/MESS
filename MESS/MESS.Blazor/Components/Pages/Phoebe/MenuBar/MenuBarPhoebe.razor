@@ -3,10 +3,12 @@
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
 @using MESS.Services.WorkInstruction
+@using Serilog
 @inject AuthenticationStateProvider AuthProvider
 @inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
 @inject IWorkInstructionEditorService EditorService
+@inject IWorkInstructionService WorkInstructionService
 
 <div class="menu-bar-card">
     <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
@@ -89,10 +91,14 @@
 </div>
 
 <!-- Version History Sidebar Component -->
-<VersionHistoryMenu 
-    IsOpen="isVersionHistoryOpen" 
-    OnToggle="ToggleVersionHistorySidebar" 
-    OnRestore="OnVersionHistoryRestore" />
+<VersionHistoryMenu
+    IsOpen="isVersionHistoryOpen"
+    OnToggle="ToggleVersionHistorySidebar"
+    Versions="_versionHistoryList"
+    CurrentInstruction="CurrentInstruction"
+    IsLoading="_isLoadingVersions"
+    OnRestore="HandleRestoreVersion"
+    OnDelete="HandleDeleteVersion" />
 
 @code {
     private string? ActiveLineOperator { get; set; }
@@ -121,6 +127,12 @@
     /// </summary>
     [Parameter] 
     public EventCallback OnRevertChanges { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when the user restores a previous version from the version history sidebar.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRestoredFromVersionHistory { get; set; }
 
     /// <summary>
     /// Indicates whether there are unsaved changes in the current work instruction editor session.
@@ -162,6 +174,9 @@
     private bool openOptions = false;
     private string darkModeIcon = "🌙";
     private bool HasInstruction => CurrentInstruction != null;
+    
+    private List<WorkInstruction> _versionHistoryList = new();
+    private bool _isLoadingVersions = false;
 
     /// <summary>
     /// The list of products to show in the dropdown.
@@ -250,9 +265,34 @@
     }
     
     // ** Toggle Version History Sidebar **
-    private void ToggleVersionHistorySidebar()
+    private async Task ToggleVersionHistorySidebar()
     {
         isVersionHistoryOpen = !isVersionHistoryOpen;
+
+        if (isVersionHistoryOpen)
+        {
+            if (CurrentInstruction?.OriginalId is int originalId)
+            {
+                await LoadVersionHistoryAsync(originalId);
+            }
+            else
+            {
+                _versionHistoryList = new List<WorkInstruction>(); // or null, as you prefer
+            }
+        }
+    }
+    
+    private async Task LoadVersionHistoryAsync(int originalId)
+    {
+        _isLoadingVersions = true;
+        try
+        {
+            _versionHistoryList = await WorkInstructionService.GetVersionHistoryAsync(originalId);
+        }
+        finally
+        {
+            _isLoadingVersions = false;
+        }
     }
 
     // ** Restore action from Version History Sidebar **
@@ -294,6 +334,49 @@
         if (CurrentInstruction == null) return;
         CurrentInstruction.Version = e.Value?.ToString() ?? "";
         MarkDirty();
+    }
+    
+  
+    private async Task HandleRestoreVersion(int versionId)
+    {
+        var version = await WorkInstructionService.GetByIdAsync(versionId);
+        if (version == null) return;
+
+        bool editable = await WorkInstructionService.IsEditable(version);
+
+        if (editable)
+        {
+            await EditorService.LoadForEditAsync(versionId);
+        }
+        else
+        {
+            if (version.OriginalId is int originalId)
+            {
+                await EditorService.LoadForNewVersionAsync(originalId);
+            }
+            else
+            {
+                Log.Error("Cannot restore version: OriginalId is null.");
+                return;
+            }
+        }
+        
+        if (OnRestoredFromVersionHistory.HasDelegate)
+        {
+            await OnRestoredFromVersionHistory.InvokeAsync();
+        }
+        
+        await ToggleVersionHistorySidebar();
+    }
+    
+    private async Task HandleDeleteVersion(int versionId)
+    {
+        await WorkInstructionService.DeleteByIdAsync(versionId);
+
+        if (CurrentInstruction?.OriginalId is int originalId)
+        {
+            await LoadVersionHistoryAsync(originalId); // Refresh sidebar list
+        }
     }
 
 }
