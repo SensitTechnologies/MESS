@@ -10,9 +10,8 @@
     }
     else
     {
-        @for (int i = 0; i < AllProducts.Count; i++)
+        @foreach (var product in AllProducts)
         {
-            var product = AllProducts[i];
             <div class="list-group-item d-flex align-items-center gap-2" @key="product.Id">
                 <input type="checkbox"
                        class="form-check-input me-1"
@@ -20,8 +19,8 @@
                        @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)" />
                 <input type="text"
                        class="form-control form-control-sm flex-grow-1"
-                       value="@product.Name"
-                       @oninput="async e => await OnProductNameChanged(i, ((ChangeEventArgs)e).Value?.ToString() ?? string.Empty)" />
+                       @bind="product.Name"
+                       @onblur="() => SaveProductNameById(product.Id)" />
             </div>
         }
 
@@ -55,17 +54,12 @@
     /// <summary>
     /// Determines if a product is selected for the current work instruction.
     /// </summary>
-    /// <param name="productId">Product identifier.</param>
-    /// <returns>True if selected; otherwise false.</returns>
     private bool IsProductSelected(int productId) =>
         WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
 
     /// <summary>
     /// Toggles the selection state of a product.
-    /// Adds or removes the product from the work instruction's products list.
     /// </summary>
-    /// <param name="product">The product to toggle.</param>
-    /// <param name="isChecked">Whether the product is selected.</param>
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
         WorkInstruction.Products ??= new List<Product>();
@@ -84,8 +78,7 @@
     }
 
     /// <summary>
-    /// Adds a new product with a timestamped name, persists it, refreshes the product list,
-    /// selects the new product, and notifies the parent component.
+    /// Adds a new product, persists it, refreshes the list, and selects it.
     /// </summary>
     private async Task AddNewProduct()
     {
@@ -95,14 +88,12 @@
         try
         {
             await ProductService.CreateAsync(newProduct);
-
             var updatedProducts = (await ProductService.GetAllAsync()).ToList();
 
             AllProducts.Clear();
             AllProducts.AddRange(updatedProducts);
 
             var added = updatedProducts.FirstOrDefault(p => p.Name == newProduct.Name);
-
             if (added != null)
             {
                 await ToggleProductSelection(added, true);
@@ -122,29 +113,31 @@
     }
 
     /// <summary>
-    /// Handles changes to a product's name in the UI and updates the database.
+    /// Saves the product name by finding it via ID (to avoid index issues).
     /// </summary>
-    /// <param name="index">Index of the product in the list.</param>
-    /// <param name="newName">The new name for the product.</param>
-    private async Task OnProductNameChanged(int index, string newName)
+    private async Task SaveProductNameById(int productId)
     {
-        if (index < 0 || index >= AllProducts.Count || string.IsNullOrWhiteSpace(newName))
+        var product = AllProducts.FirstOrDefault(p => p.Id == productId);
+        if (product == null || string.IsNullOrWhiteSpace(product.Name))
             return;
 
-        var product = AllProducts[index];
-        product.Name = newName.Trim();
+        var trimmed = product.Name.Trim();
+
+        if (product.Name == trimmed)
+            return;
+
+        product.Name = trimmed;
 
         try
         {
             await ProductService.UpdateProductAsync(product);
-            StateHasChanged();
+            ToastService.ShowSuccess("Product name saved.");
+            await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new());
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
-            ToastService.ShowError("Failed to update product name.");
+            ToastService.ShowError("Failed to save product name.");
         }
-
-        await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new());
     }
 }
