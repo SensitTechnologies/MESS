@@ -27,6 +27,7 @@ public interface IWorkInstructionService
     /// The file will be saved with a filename based on the work instruction title and a timestamp.
     /// </remarks>
     public string? ExportToXlsx(WorkInstruction workInstructionToExport);
+
     /// <summary>
     /// Creates a duplicate of an existing work instruction with a unique title.
     /// </summary>
@@ -40,6 +41,7 @@ public interface IWorkInstructionService
     /// The duplicate will be created with IsActive set to false.
     /// </remarks>
     public Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate);
+
     /// <summary>
     /// Determines whether the specified work instruction is editable.
     /// A work instruction is considered non-editable if it has associated production logs.
@@ -50,6 +52,7 @@ public interface IWorkInstructionService
     /// True if editable (i.e., no production logs exist for it); otherwise, false.
     /// </returns>
     public Task<bool> IsEditable(WorkInstruction workInstruction);
+
     /// <summary>
     /// Imports work instructions from an Excel file.
     /// </summary>
@@ -88,46 +91,54 @@ public interface IWorkInstructionService
     /// </summary>
     /// <returns>List of WorkInstruction objects</returns>
     public Task<List<WorkInstruction>> GetAllAsync();
+
     /// <summary>
     /// Retrieves only the latest versions of all work instructions (IsLatest = true).
     /// </summary>
     Task<List<WorkInstruction>> GetAllLatestAsync();
+
     /// <summary>
     /// Retrieves all versions of a work instruction lineage given its OriginalId.
     /// </summary>
     /// <param name="originalId">The OriginalId of the lineage.</param>
     /// <returns>List of all versions for that lineage.</returns>
     Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId);
+
     /// <summary>
     /// Retrieves a WorkInstruction by its title.
     /// </summary>
     /// <param name="title">The title of the WorkInstruction to retrieve.</param>
     /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
     public WorkInstruction? GetByTitle(string title);
+
     /// <summary>
     /// Retrieves a WorkInstruction by its ID.
     /// </summary>
     /// <param name="id">The ID of the WorkInstruction to retrieve.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the WorkInstruction if found; otherwise, <c>null</c>.</returns>
     public Task<WorkInstruction?> GetByIdAsync(int id);
+
     /// <summary>
     /// Creates a WorkInstruction object and saves it to the database.
     /// </summary>
     /// <param name="workInstruction">An instance of WorkInstruction.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> Create(WorkInstruction workInstruction);
+
     /// <summary>
     /// Deletes a WorkInstruction from the database.
     /// </summary>
     /// <param name="id">The ID of the desired WorkInstruction.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> DeleteByIdAsync(int id);
+
     /// <summary>
     /// Updates a WorkInstruction that is currently saved in the Database.
     /// </summary>
     /// <param name="workInstruction">A WorkInstruction instance.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
+
     /// <summary>
     /// Marks all versions of a WorkInstruction within a version chain as not the latest.
     /// This is typically used before creating a new version to ensure only one is flagged as the latest.
@@ -141,6 +152,7 @@ public interface IWorkInstructionService
     /// A task that represents the asynchronous operation. The task result is <c>true</c> if the update succeeded; otherwise, <c>false</c>.
     /// </returns>
     Task<bool> MarkAllVersionsNotLatestAsync(int originalId);
+
     /// <summary>
     /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
     /// </summary>
@@ -150,4 +162,12 @@ public interface IWorkInstructionService
     /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
     /// </returns>
     Task<string> SaveImageFileAsync(IBrowserFile file);
+    
+    /// <summary>
+    /// Generates the next unique version string for a given work instruction title and current version.
+    /// </summary>
+    /// <param name="title">The title of the work instruction.</param>
+    /// <param name="currentVersion">The current version string.</param>
+    /// <returns>A new unique version string.</returns>
+    Task<string> GenerateNextVersionAsync(string title, string currentVersion);
 }

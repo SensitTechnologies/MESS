@@ -1,5 +1,7 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
+@inject IProductService ProductService
+@inject IToastService ToastService
 
 <div class="list-group scrollable-checkbox-container">
     @if (AllProducts == null)
@@ -19,7 +21,7 @@
                 <input type="text"
                        class="form-control form-control-sm flex-grow-1"
                        value="@product.Name"
-                       @oninput="e => OnProductNameChanged(i, e.Value?.ToString())" />
+                       @oninput="async e => await OnProductNameChanged(i, ((ChangeEventArgs)e).Value?.ToString() ?? string.Empty)" />
             </div>
         }
 
@@ -33,39 +35,45 @@
 
 @code {
     /// <summary>
-    /// The work instruction associated with the product selection.
+    /// The current work instruction for which products are selected.
     /// </summary>
-    [Parameter] public WorkInstruction WorkInstruction { get; set; } = default!;
+    [Parameter, EditorRequired]
+    public WorkInstruction WorkInstruction { get; set; } = default!;
 
     /// <summary>
-    /// The list of all available products.
+    /// The full list of products available to select from.
     /// </summary>
-    [Parameter] public required List<Product> AllProducts { get; set; }
+    [Parameter, EditorRequired]
+    public List<Product> AllProducts { get; set; } = new();
 
     /// <summary>
-    /// Event callback triggered when the selected products or product names change.
+    /// Event triggered when the selected products list changes.
     /// </summary>
-    [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
+    [Parameter]
+    public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
-    /// Checks if a product is selected in the current work instruction.
+    /// Determines if a product is selected for the current work instruction.
     /// </summary>
-    private bool IsProductSelected(int productId)
-        => WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
+    /// <param name="productId">Product identifier.</param>
+    /// <returns>True if selected; otherwise false.</returns>
+    private bool IsProductSelected(int productId) =>
+        WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
 
     /// <summary>
-    /// Toggles the selection state of a product in the current work instruction.
+    /// Toggles the selection state of a product.
+    /// Adds or removes the product from the work instruction's products list.
     /// </summary>
+    /// <param name="product">The product to toggle.</param>
+    /// <param name="isChecked">Whether the product is selected.</param>
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
-        WorkInstruction.Products ??= new();
+        WorkInstruction.Products ??= new List<Product>();
 
         if (isChecked)
         {
-            if (WorkInstruction.Products.All(p => p.Id != product.Id))
-            {
+            if (!WorkInstruction.Products.Any(p => p.Id == product.Id))
                 WorkInstruction.Products.Add(product);
-            }
         }
         else
         {
@@ -76,41 +84,67 @@
     }
 
     /// <summary>
-    /// Adds a new product with a temporary negative ID and default name, then selects it.
+    /// Adds a new product with a timestamped name, persists it, refreshes the product list,
+    /// selects the new product, and notifies the parent component.
     /// </summary>
     private async Task AddNewProduct()
     {
-        var newProduct = new Product
+        var timestamp = DateTime.Now.ToString("HHmmss");
+        var newProduct = new Product { Name = $"New Product {timestamp}" };
+
+        try
         {
-            Id = -1 * (AllProducts.Count + 1), // temporary unique negative ID
-            Name = "New Product"
-        };
-        AllProducts.Add(newProduct);
+            await ProductService.CreateAsync(newProduct);
 
-        // Immediately select the new product in the work instruction
-        await ToggleProductSelection(newProduct, true);
+            var updatedProducts = (await ProductService.GetAllAsync()).ToList();
 
-        StateHasChanged();
+            AllProducts.Clear();
+            AllProducts.AddRange(updatedProducts);
+
+            var added = updatedProducts.FirstOrDefault(p => p.Name == newProduct.Name);
+
+            if (added != null)
+            {
+                await ToggleProductSelection(added, true);
+                await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new());
+                StateHasChanged();
+            }
+            else
+            {
+                ToastService.ShowWarning("Product added but not found in refreshed list.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            ToastService.ShowError("Failed to add and save new product.");
+        }
     }
 
     /// <summary>
-    /// Updates the product name and notifies parent component of the change.
-    /// Validates index to avoid exceptions.
+    /// Handles changes to a product's name in the UI and updates the database.
     /// </summary>
-    private async Task OnProductNameChanged(int index, string? newName)
+    /// <param name="index">Index of the product in the list.</param>
+    /// <param name="newName">The new name for the product.</param>
+    private async Task OnProductNameChanged(int index, string newName)
     {
-        if (index < 0 || index >= AllProducts.Count)
-        {
-            // Invalid index, ignore gracefully
+        if (index < 0 || index >= AllProducts.Count || string.IsNullOrWhiteSpace(newName))
             return;
-        }
 
-        if (!string.IsNullOrWhiteSpace(newName))
+        var product = AllProducts[index];
+        product.Name = newName.Trim();
+
+        try
         {
-            AllProducts[index].Name = newName;
-
-            // Notify parent about the product list changes
-            await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new List<Product>());
+            await ProductService.UpdateProductAsync(product);
+            StateHasChanged();
         }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            ToastService.ShowError("Failed to update product name.");
+        }
+
+        await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new());
     }
 }

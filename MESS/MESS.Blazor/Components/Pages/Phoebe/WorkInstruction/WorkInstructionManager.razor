@@ -13,23 +13,17 @@
 @inject IWorkInstructionEditorService WorkInstructionEditorService
 @attribute [Authorize(Roles = "Technician, Administrator")]
 
-<!--
-    The main page for managing Work Instructions.
-    Displays menus and lists for products and work instructions,
-    and handles editing, saving, versioning, and popup UI.
--->
-
 <MenuBarPhoebe 
+    @ref="menuBarRef"
     Products="@Products"
     WorkInstructions="@FilteredWorkInstructions"
     SelectedProductId="@SelectedProductId"
     SelectedWorkInstructionId="@SelectedWorkInstructionId"
-    OnProductSelected="@(id => OnProductSelected(id))"
-    OnWorkInstructionSelected="@(id => OnWorkInstructionSelected(id))"
+    OnProductSelected="OnProductSelected"
+    OnWorkInstructionSelected="OnWorkInstructionSelected"
     OnSidebarToggle="ToggleSidebar"
-    OnNew="StartNewInstruction"
+    OnNew="() => StartNewInstruction()"
     OnSave="SaveEditorChanges"
-    OnSaveAs="StartSaveAsInstruction"
     OnRevertChanges="RevertEditorChanges"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     IsDirty="WorkInstructionEditorService.IsDirty"
@@ -41,92 +35,31 @@
     <WorkInstructionNodeManagerList
         @ref="NodeManagerRef"
         WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
-        OnChanged="() => MarkEditorDirty()" />
+        OnChanged="MarkEditorDirty" />
 </div>
 
-<PopUpMenu 
-    @ref="popupRef"
-    IsVisible="@isPopupVisible"
-    IsVisibleChanged="@(v => isPopupVisible = v)"
-    HeaderText="@popupHeaderText"
-    IsDarkMode="@IsDarkMode"
-    WorkInstruction="WorkInstructionEditorService.Current"
-    AllProducts="Products"
-    OnProductsChanged="HandleProductsChanged"
-    OnSave="SaveEditorChanges"
-    PrimaryButtonText="@popupPrimaryButtonText" />
-
 @code {
-    /// <summary>
-    /// Reference to the WorkInstructionNodeManagerList component.
-    /// </summary>
     private WorkInstructionNodeManagerList? NodeManagerRef;
+    private MenuBarPhoebe? menuBarRef;
 
-    /// <summary>
-    /// Controls sidebar open/closed state.
-    /// </summary>
     private bool isSidebarOpen = false;
-
-    /// <summary>
-    /// Controls whether dark mode is enabled.
-    /// </summary>
     private bool IsDarkMode { get; set; } = false;
 
-    /// <summary>
-    /// List of all products loaded from the service.
-    /// </summary>
     private List<Product> Products { get; set; } = new();
-
-    /// <summary>
-    /// List of all latest work instructions loaded.
-    /// </summary>
     private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
 
-    /// <summary>
-    /// Filtered list of work instructions based on selected product.
-    /// </summary>
-    private List<WorkInstruction> FilteredWorkInstructions => 
+    private List<WorkInstruction> FilteredWorkInstructions =>
         SelectedProductId == null || SelectedProductId == -1
             ? AllWorkInstructions
             : AllWorkInstructions.Where(wi => wi.Products?.Any(p => p.Id == SelectedProductId) == true).ToList();
 
-    /// <summary>
-    /// Currently selected Product Id.
-    /// </summary>
     private int? SelectedProductId { get; set; }
-
-    /// <summary>
-    /// Currently selected Work Instruction Id.
-    /// </summary>
     private int? SelectedWorkInstructionId { get; set; }
 
-    /// <summary>
-    /// Controls whether the popup dialog is visible.
-    /// </summary>
-    private bool isPopupVisible;
-
-    /// <summary>
-    /// Reference to the PopUpMenu component instance.
-    /// </summary>
-    private PopUpMenu? popupRef;
-
-    /// <summary>
-    /// Text to display in the popup header.
-    /// </summary>
-    private string popupHeaderText = "";
-
-    /// <summary>
-    /// Text to display on the popup's primary action button.
-    /// </summary>
-    private string popupPrimaryButtonText = "";
-
-    /// <summary>
-    /// Flag to track whether Dispose has been called.
-    /// </summary>
     private bool _disposed;
 
     /// <summary>
-    /// Called when the component is initialized. Loads initial data asynchronously.
+    /// Called when the component is initialized. Subscribes to editor change events and loads initial data.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
@@ -138,10 +71,6 @@
         await base.OnInitializedAsync();
     }
 
-    /// <summary>
-    /// Event handler for when the work instruction editor signals changes.
-    /// Triggers UI update.
-    /// </summary>
     private void HandleEditorChanged()
     {
         if (!_disposed)
@@ -150,9 +79,6 @@
         }
     }
 
-    /// <summary>
-    /// Toggles the sidebar open or closed.
-    /// </summary>
     private void ToggleSidebar()
     {
         isSidebarOpen = !isSidebarOpen;
@@ -162,149 +88,154 @@
         }
     }
 
-    /// <summary>
-    /// Saves changes made in the work instruction editor asynchronously.
-    /// Handles checking editability and creating new versions as needed.
-    /// </summary>
-    /// <returns>A Task representing the async operation.</returns>
     private async Task SaveEditorChanges()
+{
+    var current = WorkInstructionEditorService.Current;
+    if (current == null)
     {
-        var current = WorkInstructionEditorService.Current;
-        if (current == null)
-        {
-            ToastService.ShowError("No Work Instruction is currently loaded.");
-            return;
-        }
+        ToastService.ShowError("No Work Instruction is currently loaded.");
+        return;
+    }
 
-        if (string.IsNullOrWhiteSpace(current.Title))
-        {
-            ToastService.ShowError("A Work Instruction must have a title.");
-            return;
-        }
+    if (string.IsNullOrWhiteSpace(current.Title))
+    {
+        ToastService.ShowError("A Work Instruction must have a title.");
+        return;
+    }
 
-        try
+    if (string.IsNullOrWhiteSpace(current.Version))
+    {
+        ToastService.ShowError("A Work Instruction must have a version.");
+        return;
+    }
+
+    bool isUnique = await WorkInstructionService.IsUnique(current);
+    if (!isUnique)
+    {
+        ToastService.ShowError("A Work Instruction with this Title and Version already exists. Please choose a unique version.");
+        return;
+    }
+
+    try
+    {
+        bool success;
+
+        bool isNewInstruction = current.Id <= 0 && (current.OriginalId == null || current.OriginalId == 0);
+
+        if (isNewInstruction)
+        {
+            // Saving brand new Work Instruction
+            success = await WorkInstructionEditorService.SaveAsync();
+            if (success)
+                ToastService.ShowSuccess("New Work Instruction created successfully.");
+            else
+                ToastService.ShowError("Failed to save new Work Instruction. Please ensure Title and Version are unique.");
+        }
+        else
         {
             bool isEditable = await WorkInstructionService.IsEditable(current);
 
-            bool success;
             if (isEditable)
             {
+                // Updating existing Work Instruction
                 success = await WorkInstructionEditorService.SaveAsync();
-                ToastService.ShowInfo(success ? "Work Instruction updated successfully." : "Unable to save Work Instruction. Please ensure Title and Version are unique.");
+                if (success)
+                    ToastService.ShowSuccess("Work Instruction updated successfully.");
+                else
+                    ToastService.ShowError("Unable to save Work Instruction. Please ensure Title and Version are unique.");
             }
             else
             {
-                await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
-                success = await WorkInstructionEditorService.SaveAsync();
-                ToastService.ShowInfo(success ? "New version of Work Instruction created successfully." : "Unable to save new version. Please ensure Title and Version are unique.");
-            }
+                // Create new version of existing Work Instruction
+                int originalIdToUse = (current.OriginalId.HasValue && current.OriginalId.Value > 0)
+                    ? current.OriginalId.Value
+                    : current.Id;
 
-            if (success)
-            {
-                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
-                if (!_disposed)
+                if (originalIdToUse <= 0)
                 {
-                    StateHasChanged();
+                    ToastService.ShowError("Cannot create a new version because the original Work Instruction ID is invalid.");
+                    return;
                 }
+
+                // Load fresh untracked new version with OriginalId set, Id = 0
+                await WorkInstructionEditorService.LoadForNewVersionAsync(originalIdToUse);
+
+                var newVersion = WorkInstructionEditorService.Current;
+                if (newVersion == null)
+                {
+                    ToastService.ShowError("Failed to load new version for saving.");
+                    return;
+                }
+
+                // Set a new unique version string (you need to implement this method)
+                string currentVersion = newVersion.Version ?? "0.0"; // fallback if null
+                newVersion.Version = await WorkInstructionService.GenerateNextVersionAsync(newVersion.Title, currentVersion);
+
+
+
+                // Save the new version - EF Core will assign a new ID
+                success = await WorkInstructionEditorService.SaveAsync();
+
+                if (success)
+                    ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+                else
+                    ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
             }
         }
-        catch (Exception ex)
+
+        if (success)
         {
-            Log.Error(ex, "Error saving Work Instruction");
-            ToastService.ShowError("An error occurred while saving changes.");
+            AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
-
-    /// <summary>
-    /// Helper method to set popup header and button text, and then display the popup.
-    /// </summary>
-    /// <param name="header">Popup header text.</param>
-    /// <param name="buttonText">Popup primary button text.</param>
-    /// <returns>A Task representing the async operation.</returns>
-    private async Task ShowPopup(string header, string buttonText)
+    catch (Exception ex)
     {
-        popupHeaderText = header;
-        popupPrimaryButtonText = buttonText;
-        isPopupVisible = true;
-        if (!_disposed)
-        {
-            await InvokeAsync(StateHasChanged);
-        }
+        Log.Error(ex, "Error saving Work Instruction");
+        ToastService.ShowError("An error occurred while saving changes.");
     }
+}
 
-    /// <summary>
-    /// Starts a new Work Instruction and shows the popup dialog.
-    /// </summary>
-    /// <returns>A Task representing the async operation.</returns>
-    private async Task StartNewInstruction()
+
+
+    private async Task StartNewInstruction(string headerText = "New", string buttonText = "Create")
     {
         WorkInstructionEditorService.StartNew();
         SelectedWorkInstructionId = null;
         ToastService.ShowInfo("Started new Work Instruction.");
-        await ShowPopup("New", "New");
+
+        menuBarRef?.ShowPopup(headerText, buttonText);
+        await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>
-    /// Prepares the current Work Instruction for Save As (new version), then shows the popup.
-    /// </summary>
-    /// <returns>A Task representing the async operation.</returns>
-    private async Task StartSaveAsInstruction()
-    {
-        var current = WorkInstructionEditorService.Current;
-        if (current == null)
-        {
-            ToastService.ShowError("No Work Instruction is currently loaded.");
-            return;
-        }
-
-        try
-        {
-            await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
-            ToastService.ShowInfo("Loaded Work Instruction for Save As.");
-            await ShowPopup("Save Work Instruction As", "Save As");
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to load Work Instruction for Save As");
-            ToastService.ShowError("Failed to prepare Work Instruction for Save As.");
-        }
-    }
-
-    /// <summary>
-    /// Reverts any unsaved changes in the editor.
-    /// </summary>
     private void RevertEditorChanges()
     {
         WorkInstructionEditorService.RevertChanges();
         ToastService.ShowWarning("Unsaved changes reverted.");
     }
 
-    /// <summary>
-    /// Handles product selection changes.
-    /// </summary>
-    /// <param name="productId">The selected product ID.</param>
-    /// <returns>A completed Task.</returns>
     private Task OnProductSelected(int productId)
     {
         SelectedProductId = (productId == -1) ? null : productId;
         SelectedWorkInstructionId = null;
+
         WorkInstructionEditorService.RevertChanges();
+
         if (!_disposed)
         {
             StateHasChanged();
         }
+
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Handles work instruction selection changes asynchronously.
-    /// Loads the selected work instruction for editing.
-    /// </summary>
-    /// <param name="instructionId">The selected work instruction ID.</param>
-    /// <returns>A Task representing the async operation.</returns>
     private async Task OnWorkInstructionSelected(int instructionId)
     {
         SelectedWorkInstructionId = instructionId;
+
         if (instructionId != -1)
         {
             try
@@ -323,10 +254,6 @@
         }
     }
 
-    /// <summary>
-    /// Marks the editor as dirty and triggers UI update.
-    /// </summary>
-    /// <returns>A Task representing the async operation.</returns>
     private async Task MarkEditorDirty()
     {
         WorkInstructionEditorService.MarkDirty();
@@ -336,27 +263,19 @@
         }
     }
 
-    /// <summary>
-    /// Handles when a version of the Work Instruction is restored from history.
-    /// </summary>
     private void HandleRestoredFromVersionHistory()
     {
         ToastService.ShowInfo("Version restored from history.");
     }
 
-    /// <summary>
-    /// Handles updates to the product list from child components.
-    /// </summary>
-    /// <param name="updatedProducts">The updated list of products.</param>
-    /// <returns>A completed Task.</returns>
     private Task HandleProductsChanged(List<Product> updatedProducts)
     {
-        // Implement product handling here if needed
         return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Dispose pattern implementation to unsubscribe events.
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// Unsubscribes from editor change events to avoid memory leaks.
     /// </summary>
     public void Dispose()
     {

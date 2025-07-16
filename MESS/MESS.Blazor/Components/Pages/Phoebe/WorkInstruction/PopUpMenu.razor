@@ -1,11 +1,13 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
-@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionEditorService EditorService
+@inject IToastService ToastService
+@inject IProductService ProductService
 @using Microsoft.AspNetCore.Components
 
 @if (IsVisible)
 {
-    <!-- Removed the backdrop to avoid darkening the background -->
     <div class="win-popup @darkModeClass" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-describedby="popupBody">
         <div class="win-titlebar">
             <span id="popupTitle" class="win-title-text">@HeaderText</span>
@@ -17,7 +19,7 @@
                 {
                     <ProductSelector WorkInstruction="WorkInstruction"
                                      AllProducts="AllProducts"
-                                     OnProductsChanged="OnProductsChanged" />
+                                     OnProductsChanged="OnProductsChangedInternal" />
                 }
                 else
                 {
@@ -45,79 +47,77 @@
 @code {
     /// <summary>
     /// Gets or sets a value indicating whether the popup is currently visible.
-    /// Parent controls visibility by setting this parameter.
+    /// Controlled by the parent component.
     /// </summary>
     [Parameter]
     public bool IsVisible { get; set; }
 
     /// <summary>
     /// Event callback invoked when the visibility of the popup changes.
-    /// Used for two-way binding to close the dialog externally.
+    /// Enables two-way binding.
     /// </summary>
     [Parameter]
     public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
-    /// Gets or sets the header text to display in the popup's title bar.
-    /// Controlled by parent component.
+    /// Gets or sets the header text displayed in the popup title bar.
     /// </summary>
     [Parameter]
     public string? HeaderText { get; set; } = "Edit Work Instruction";
 
     /// <summary>
-    /// Gets or sets the text label for the primary action button (e.g., Save, Create).
-    /// Controlled by parent component.
+    /// Gets or sets the label text for the primary action button (e.g., "Save", "Create").
     /// </summary>
     [Parameter]
     public string PrimaryButtonText { get; set; } = "Save";
 
     /// <summary>
-    /// Gets or sets a value indicating whether dark mode styles should be applied.
+    /// Gets or sets a value indicating whether dark mode styles are applied.
     /// </summary>
     [Parameter]
     public bool IsDarkMode { get; set; }
 
     /// <summary>
     /// Callback invoked when the Save button is clicked.
-    /// Typically triggers persistence logic in the parent component.
     /// </summary>
     [Parameter]
     public EventCallback OnSave { get; set; }
 
     /// <summary>
-    /// Callback invoked for Save As logic if implemented externally.
+    /// Callback invoked when the Save As operation is requested.
     /// </summary>
     [Parameter]
     public EventCallback OnSaveAs { get; set; }
 
     /// <summary>
-    /// Gets or sets the current <see cref="WorkInstruction"/> being edited.
-    /// This object is bound to the UI input fields.
+    /// Gets or sets the current WorkInstruction being edited.
+    /// Bound to the title input and product selector.
     /// </summary>
     [Parameter]
     public WorkInstruction? WorkInstruction { get; set; }
 
     /// <summary>
-    /// Gets or sets the full list of available <see cref="Product"/> options.
+    /// Gets or sets the list of all products available for selection.
+    /// Used by the <see cref="ProductSelector"/> child component.
     /// </summary>
     [Parameter]
     public List<Product>? AllProducts { get; set; }
 
     /// <summary>
-    /// Callback triggered when the set of selected products changes.
-    /// Invoked by the child <c>ProductSelector</c> component.
+    /// Event callback triggered when the product selection changes inside the popup.
+    /// Used to propagate changes to the parent component.
     /// </summary>
     [Parameter]
     public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
-    /// Gets the CSS class used to apply dark mode styling.
+    /// Returns the CSS class string for enabling dark mode.
     /// </summary>
     private string darkModeClass => IsDarkMode ? "dark-mode" : string.Empty;
 
     /// <summary>
-    /// Gets or sets the editable title of the current <see cref="WorkInstruction"/>.
-    /// Binds the textarea input to the instruction title field.
+    /// Gets or sets the editable title of the current WorkInstruction.
+    /// Binds the textarea to this property and updates the EditorService state.
     /// </summary>
     private string WorkInstructionTitle
     {
@@ -127,12 +127,39 @@
             if (WorkInstruction != null && WorkInstruction.Title != value)
             {
                 WorkInstruction.Title = value;
+                EditorService.MarkDirty();
             }
         }
     }
 
     /// <summary>
-    /// Closes the popup and notifies the parent component by invoking <see cref="IsVisibleChanged"/>.
+    /// Handles product selection updates from the child <see cref="ProductSelector"/> component.
+    /// Updates the current WorkInstruction products and marks the editor as dirty.
+    /// Refreshes the full product list from the database.
+    /// </summary>
+    /// <param name="updatedProducts">The list of newly selected products.</param>
+    private async Task OnProductsChangedInternal(List<Product> updatedProducts)
+    {
+        if (WorkInstruction != null)
+        {
+            WorkInstruction.Products = updatedProducts;
+            EditorService.MarkDirty();
+        }
+
+        if (OnProductsChanged.HasDelegate)
+            await OnProductsChanged.InvokeAsync(updatedProducts);
+
+        if (ProductService != null)
+        {
+            var refreshedProducts = (await ProductService.GetAllAsync()).ToList();
+            AllProducts?.Clear();
+            AllProducts?.AddRange(refreshedProducts);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Closes the popup and notifies the parent to update the visibility state.
     /// </summary>
     private async Task Close()
     {
@@ -141,25 +168,69 @@
     }
 
     /// <summary>
-    /// Handles the Save button logic.
-    /// Ensures a valid OriginalId is set, invokes save logic from parent, and then closes the popup.
+    /// Handles the primary save button logic.
+    /// Decides between normal save and save as based on <see cref="PrimaryButtonText"/>,
+    /// calls callbacks, saves through EditorService, and handles error display.
     /// </summary>
     private async Task HandleSave()
     {
-        if (WorkInstruction != null)
+        if (WorkInstruction == null)
         {
-            // Ensure OriginalId is set for version tracking
-            if (WorkInstruction.OriginalId == 0)
+            ToastService.ShowError("No Work Instruction loaded.");
+            return;
+        }
+
+        string trimmedTitle = WorkInstruction.Title?.Trim() ?? "";
+        string trimmedVersion = WorkInstruction.Version?.Trim() ?? "";
+
+        if (string.IsNullOrWhiteSpace(trimmedTitle))
+        {
+            ToastService.ShowError("Title is required.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(trimmedVersion))
+        {
+            ToastService.ShowError("Version is required.");
+            return;
+        }
+
+        // Apply trimmed values back to the work instruction
+        WorkInstruction.Title = trimmedTitle;
+        WorkInstruction.Version = trimmedVersion;
+
+        try
+        {
+            bool success;
+
+            if (PrimaryButtonText.Equals("Save As", StringComparison.OrdinalIgnoreCase))
             {
-                WorkInstruction.OriginalId = WorkInstruction.Id != 0 ? WorkInstruction.Id : -1;
+                if (OnSaveAs.HasDelegate)
+                    await OnSaveAs.InvokeAsync();
+
+                success = await EditorService.SaveAsync();
             }
-        }
+            else
+            {
+                if (OnSave.HasDelegate)
+                    await OnSave.InvokeAsync();
 
-        if (OnSave.HasDelegate)
+                success = await EditorService.SaveAsync();
+            }
+
+            if (!success)
+            {
+                ToastService.ShowError("Failed to save Work Instruction. Ensure the Title and Version are unique.");
+                return;
+            }
+
+            ToastService.ShowSuccess("Work Instruction saved successfully.");
+            await Close();
+        }
+        catch (Exception ex)
         {
-            await OnSave.InvokeAsync(null);
+            ToastService.ShowError("An error occurred while saving the Work Instruction.");
+            Console.Error.WriteLine(ex);
         }
-
-        await Close();
     }
 }

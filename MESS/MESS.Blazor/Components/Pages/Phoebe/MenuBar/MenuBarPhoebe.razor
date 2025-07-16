@@ -323,4 +323,20 @@
         if (callback.HasDelegate)
             await callback.InvokeAsync();
     }
+    
+    /// <summary>
+    /// Programmatically shows the popup with specified header and button text.
+    /// Called from parent (WorkInstructionManager).
+    /// </summary>
+    /// <param name="header">The title/header of the popup.</param>
+    /// <param name="buttonText">The label on the primary button.</param>
+    public void ShowPopup(string header, string buttonText)
+    {
+        popupHeader = header;
+        popupSaveButtonText = buttonText;
+        isPopupVisible = true;
+
+        StateHasChanged();
+    }
+
 }

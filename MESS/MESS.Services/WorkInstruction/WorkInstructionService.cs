@@ -1477,58 +1477,88 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// Validates the work instruction before saving and invalidates the cache after successful creation.
     /// </remarks>
     public async Task<bool> Create(WorkInstruction workInstruction)
+{
+    try
     {
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            // Validate WorkInstruction
-            var workInstructionValidator = new WorkInstructionValidator();
-            var validationResult = await workInstructionValidator.ValidateAsync(workInstruction);
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-            if (!validationResult.IsValid)
+        // Validate WorkInstruction
+        var workInstructionValidator = new WorkInstructionValidator();
+        var validationResult = await workInstructionValidator.ValidateAsync(workInstruction);
+
+        if (!validationResult.IsValid)
+        {
+            return false;
+        }
+
+        // Reset WorkInstruction Id to zero to ensure EF Core treats it as new
+        workInstruction.Id = 0;
+
+        // Reset IDs for nodes and parts if new, or attach if existing
+        foreach (var node in workInstruction.Nodes)
+        {
+            if (node.Id > 0)
             {
-                return false;
+                context.Attach(node);
+                context.Entry(node).State = EntityState.Unchanged;
+            }
+            else
+            {
+                node.Id = 0; // ensure zero for new nodes
             }
 
-            // Having to refetch data since we are using DbContextFactory and the change-tracker is reset on each instantiation
-            foreach (var product in workInstruction.Products.Where(product => product.Id > 0))
+            if (node is PartNode partNode)
+            {
+                foreach (var part in partNode.Parts)
+                {
+                    if (part.Id > 0)
+                    {
+                        context.Attach(part);
+                        context.Entry(part).State = EntityState.Unchanged;
+                    }
+                    else
+                    {
+                        part.Id = 0; // new part
+                    }
+                }
+            }
+        }
+
+        // Attach existing products, add new products
+        foreach (var product in workInstruction.Products)
+        {
+            if (product.Id > 0)
             {
                 context.Attach(product);
                 context.Entry(product).State = EntityState.Unchanged;
             }
-            
-            foreach (var node in workInstruction.Nodes)
+            else
             {
-                if (node is not PartNode partNode)
-                {
-                    continue;
-                }
-                
-                foreach (var part in partNode.Parts.Where(p => p.Id > 0).ToList())
-                {
-                    // Attach existing part to the context
-                    context.Attach(part);
-                    context.Entry(part).State = EntityState.Unchanged;
-                }
+                // It's a new product? Add or skip? Depends on your logic.
+                // Probably just skip here because you may not want to add products when creating a work instruction.
+                // Otherwise, you can add them:
+                // await context.Products.AddAsync(product);
             }
-            
-            workInstruction.IsActive = false;
-            await context.WorkInstructions.AddAsync(workInstruction);
-            await context.SaveChangesAsync();
-            
-            // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            
-            Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+        }
 
-            return true;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception thrown when attempting to Create a work instruction, in WorkInstructionService. Exception: {Exception}", e.ToString());
-            return false;
-        }
+        workInstruction.IsActive = false;
+
+        await context.WorkInstructions.AddAsync(workInstruction);
+        await context.SaveChangesAsync();
+
+        _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+
+        Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
+
+        return true;
     }
+    catch (Exception e)
+    {
+        Log.Warning("Exception thrown when attempting to Create a work instruction, in WorkInstructionService. Exception: {Exception}", e.ToString());
+        return false;
+    }
+}
+
     
     /// <summary>
     /// Deletes a Work Instruction from the database if there are no Production log relationships.
@@ -1729,6 +1759,32 @@ public partial class WorkInstructionService : IWorkInstructionService
             throw;
         }
     }
+    
+    
+    /// <inheritdoc/>
+    public Task<string> GenerateNextVersionAsync(string title, string currentVersion)
+    {
+        // Simple example: increment version assuming format "1.0", "1.1", "1.2", etc.
+        if (string.IsNullOrWhiteSpace(currentVersion))
+        {
+            return Task.FromResult("1.0"); // default starting version
+        }
+
+        // Try parse currentVersion and increment minor version (basic example)
+        var parts = currentVersion.Split('.');
+        if (parts.Length == 2
+            && int.TryParse(parts[0], out int major)
+            && int.TryParse(parts[1], out int minor))
+        {
+            minor++;
+            return Task.FromResult($"{major}.{minor}");
+        }
+
+        // Fallback if format unexpected
+        return Task.FromResult(currentVersion + ".1");
+    }
+
+    
 
 
     /// <summary>
