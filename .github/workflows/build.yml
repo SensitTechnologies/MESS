@@ -1,0 +1,69 @@
+# This workflow will build a .NET project for deployment and store the commit that triggered it via an artifact
+
+name: Build
+
+on:
+  # scheduled to execute on every push to the main branch
+  push:
+    branches: [ "main" ]
+    paths: # Only runs when a file ending in any of these markers is changed
+    - '**.cs'
+    - '**.csproj'
+    - '**.cshtml'
+    - '**.razor'
+    - '**.js'
+
+  # Scheduled to run a backup every month
+  # scheduled to execute on the 3rd wednsday of every month at 10:59 pm CDT ( translated to UTC )
+  schedule:
+    # see schedule docs: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule
+    # see cron syntax: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
+    # see CDT to UTC conversion: https://savvytime.com/converter/cdt-to-utc
+    - cron: '59 3 15-21 * 4'
+
+  # Can be manually triggered from the github actions page: https://github.com/SensitTechnologies/MESS/actions/workflows/build.yml
+  workflow_dispatch:
+
+env:
+  BUILD_COMMIT: 'last-build-version'
+  APP_ARTIFACT: .net-app
+  SOLUTION_PATH: './MESS/MESS.sln'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # setup .Net enviornment
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      # run build command
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
+
+      # run publish command
+      - name: Publish
+        run: dotnet publish ${{ env.SOLUTION_PATH }} -c Release -o ${{ env.DOTNET_ROOT }}/myapp
+
+      # upload artifact to be used in nightly deployment
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_ARTIFACT }}
+          path: ${{ env.DOTNET_ROOT }}/myapp
+
+      # store commit SHA to compare as a version number
+      - name: Record commit SHA
+        run: echo "${{ github.sha }}" > ${{ env.BUILD_COMMIT }}.txt
+
+      # upload artifact to be used in nightly deployment
+      - name: Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUILD_COMMIT }}
+          path: ${{ env.BUILD_COMMIT }}.txt
