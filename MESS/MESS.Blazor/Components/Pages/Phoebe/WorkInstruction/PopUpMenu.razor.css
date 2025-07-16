@@ -1,35 +1,42 @@
-﻿.win-popup {
+﻿.toast-container {
     position: fixed;
     top: 50%;
     left: 50%;
     width: min(95vw, 700px);
     min-height: 325px;
     max-height: 90vh;
+    transform: translate(-50%, -50%);
+    z-index: 1055;
+    margin: 20px;
+    pointer-events: none; /* so background clicks pass through when hidden */
+}
+
+.toast.show.custom-toast-body {
+    width: 100%;
+    min-height: 325px;
+    max-height: 90vh;
     background-color: #f3f3f3;
     border: 1px solid #ababab;
     border-radius: 6px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.25);
-    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.25);
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     color: #000;
     display: flex;
     flex-direction: column;
     user-select: none;
-    z-index: 1050;
     opacity: 1;
-    transition: opacity 0.3s ease;
-    overflow: visible;
-    margin: 20px;
+    overflow: hidden;
+    pointer-events: auto; /* re-enable inside the toast */
 }
 
-body.dark-mode .win-popup {
+body.dark-mode .toast.show.custom-toast-body {
     background-color: #222;
     border: 1px solid #444;
     color: #eee;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
 }
 
-.win-titlebar {
+.custom-toast-header {
     background: #ffd502;
     color: black;
     padding: 8px 14px;
@@ -42,15 +49,14 @@ body.dark-mode .win-popup {
     border-top-right-radius: 6px;
     min-height: 32px;
     line-height: 1.2;
-    margin: 0;
 }
 
-.win-body {
+.toast-body {
     flex: 1 1 auto;
     overflow-y: auto;
     max-width: 100%;
     max-height: 100%;
-    padding: 12px 24px;       /* increased left/right padding */
+    padding: 12px 24px;
     font-size: 1rem;
     line-height: 1.4;
     background-color: #fff;
@@ -60,24 +66,24 @@ body.dark-mode .win-popup {
     flex-direction: column;
     gap: 8px;
     box-sizing: border-box;
-    margin: 0;
 }
 
-body.dark-mode .win-body {
+body.dark-mode .toast-body {
     background-color: #333;
     border-bottom: 1px solid #555;
     color: #ddd;
 }
 
+/* === Reused from Win Style === */
 .scrollable-checkbox-container {
     max-height: none;
     overflow-y: visible;
-    border: 1px solid rgba(0,0,0,.125);
+    border: 1px solid rgba(0, 0, 0, 0.125);
     border-radius: 4px;
     padding: 10px 14px;
     font-size: 1rem;
     line-height: 1.4;
-    margin: 12px 0 0 0;       /* added margin-top for spacing above checkboxes */
+    margin-top: 12px;
 }
 
 body.dark-mode .scrollable-checkbox-container {
@@ -100,11 +106,6 @@ body.dark-mode .scrollable-checkbox-container {
     margin-bottom: 0;
 }
 
-.textarea-container {
-    margin: 0;
-    padding: 0;
-}
-
 .form-label {
     margin-bottom: 4px !important;
     font-weight: 600;
@@ -112,7 +113,8 @@ body.dark-mode .scrollable-checkbox-container {
     line-height: 1.4;
 }
 
-.transparent-textarea {
+.transparent-textarea,
+.toast-body textarea.form-control {
     background-color: transparent;
     border: 1px solid #ccc;
     width: 100%;
@@ -122,58 +124,50 @@ body.dark-mode .scrollable-checkbox-container {
     font-family: inherit;
     color: inherit;
     box-shadow: none;
-    margin: 0;
 }
 
-body.dark-mode .transparent-textarea {
+body.dark-mode .transparent-textarea,
+body.dark-mode .toast-body textarea.form-control {
     border: 1px solid #555;
     color: #f3f3f3;
     background-color: transparent;
 }
 
-.win-footer {
-    padding: 10px 16px;
-    display: flex;
-    justify-content: flex-end;
-    background-color: #f3f3f3;
-    border-top: 1px solid #ccc;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    gap: 12px;
-    margin: 0;
-}
-
-body.dark-mode .win-footer {
-    background-color: #222;
-    border-top: 1px solid #444;
-}
-
-.win-btn-primary,
-.win-btn-cancel {
-    background-color: #ffd502;
-    border: none;
-    color: #000;
-    padding: 6px 12px;         /* reduced button size */
-    font-size: 0.95rem;        /* smaller font */
+.toast-body .btn {
+    padding: 6px 12px;
+    font-size: 0.95rem;
+    border-radius: 6px;
     font-weight: normal;
-    border-radius: 6px;        /* slightly smaller radius */
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
     margin: 0;
 }
 
-.win-btn-primary:hover,
-.win-btn-cancel:hover {
+.toast-body .btn-primary,
+.toast-body .btn-secondary {
+    background-color: #ffd502;
+    border: none;
+    color: #000;
+}
+
+.toast-body .btn-primary:hover,
+.toast-body .btn-secondary:hover {
     background-color: #e6c700;
 }
 
-body.dark-mode .win-btn-primary,
-body.dark-mode .win-btn-cancel {
+body.dark-mode .toast-body .btn-primary,
+body.dark-mode .toast-body .btn-secondary {
     background-color: #ffd502;
     color: black;
 }
 
-body.dark-mode .win-btn-primary:hover,
-body.dark-mode .win-btn-cancel:hover {
+body.dark-mode .toast-body .btn-primary:hover,
+body.dark-mode .toast-body .btn-secondary:hover {
     background-color: #e6c700;
 }
+
+body.dark-mode .custom-toast-header {
+    background: #ffd502;
+    color: black;
+}
+

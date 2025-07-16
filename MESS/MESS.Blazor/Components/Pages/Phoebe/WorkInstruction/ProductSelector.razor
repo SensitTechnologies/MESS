@@ -1,5 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
+@using Serilog
 @inject IProductService ProductService
 @inject IToastService ToastService
 
@@ -131,6 +132,7 @@
         try
         {
             await ProductService.UpdateProductAsync(product);
+            Log.Information("Lost Focus...");
             ToastService.ShowSuccess("Product name saved.");
             await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new());
         }

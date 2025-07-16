@@ -6,15 +6,14 @@
 @inject IProductService ProductService
 @using Microsoft.AspNetCore.Components
 
-@if (IsVisible)
-{
-    <div class="win-popup @darkModeClass" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-describedby="popupBody">
-        <div class="win-titlebar">
-            <span id="popupTitle" class="win-title-text">@HeaderText</span>
+<div class="toast-container position-fixed top-50 start-50 translate-middle p-3 @(IsVisible ? "d-block" : "d-none")" style="z-index: 1055;">
+    <div class="toast show custom-toast-body @darkModeClass" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header custom-toast-header">
+            <span class="me-auto">@HeaderText</span>
         </div>
 
-        <div id="popupBody" class="win-body">
-            <div class="product-selector-wrapper">
+        <div class="toast-body">
+            <div class="mb-3">
                 @if (WorkInstruction != null && AllProducts != null)
                 {
                     <ProductSelector WorkInstruction="WorkInstruction"
@@ -27,97 +26,81 @@
                 }
             </div>
 
-            <div class="textarea-container">
+            <div class="mb-3">
                 <label for="nameInput" class="form-label">Name:</label>
                 <textarea id="nameInput"
-                          class="form-control transparent-textarea"
+                          class="form-control"
                           placeholder="Enter name here..."
                           rows="1"
                           @bind="WorkInstructionTitle"></textarea>
             </div>
-        </div>
 
-        <div class="win-footer">
-            <button class="win-btn-primary" @onclick="HandleSave">@PrimaryButtonText</button>
-            <button class="win-btn-cancel" @onclick="Close">Cancel</button>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-primary" @onclick="HandleSave">@PrimaryButtonText</button>
+                <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+            </div>
         </div>
     </div>
-}
+</div>
 
 @code {
     /// <summary>
-    /// Gets or sets a value indicating whether the popup is currently visible.
-    /// Controlled by the parent component.
+    /// Indicates whether the popup is currently visible.
     /// </summary>
-    [Parameter]
-    public bool IsVisible { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the visibility of the popup changes.
-    /// Enables two-way binding.
+    /// Callback triggered when the visibility of the popup changes.
     /// </summary>
-    [Parameter]
-    public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
-    /// Gets or sets the header text displayed in the popup title bar.
+    /// Header text shown in the toast title bar.
     /// </summary>
-    [Parameter]
-    public string? HeaderText { get; set; } = "Edit Work Instruction";
+    [Parameter] public string? HeaderText { get; set; } = "Edit Work Instruction";
 
     /// <summary>
-    /// Gets or sets the label text for the primary action button (e.g., "Save", "Create").
+    /// Text label for the primary button (e.g. "Save", "Save As").
     /// </summary>
-    [Parameter]
-    public string PrimaryButtonText { get; set; } = "Save";
+    [Parameter] public string PrimaryButtonText { get; set; } = "Save";
 
     /// <summary>
-    /// Gets or sets a value indicating whether dark mode styles are applied.
+    /// Indicates whether dark mode styling should be applied.
     /// </summary>
-    [Parameter]
-    public bool IsDarkMode { get; set; }
+    [Parameter] public bool IsDarkMode { get; set; }
 
     /// <summary>
-    /// Callback invoked when the Save button is clicked.
+    /// Event callback invoked when the Save button is clicked.
     /// </summary>
-    [Parameter]
-    public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
 
     /// <summary>
-    /// Callback invoked when the Save As operation is requested.
+    /// Event callback invoked when the "Save As" operation is requested.
     /// </summary>
-    [Parameter]
-    public EventCallback OnSaveAs { get; set; }
+    [Parameter] public EventCallback OnSaveAs { get; set; }
 
     /// <summary>
-    /// Gets or sets the current WorkInstruction being edited.
-    /// Bound to the title input and product selector.
+    /// The current work instruction being edited.
     /// </summary>
-    [Parameter]
-    public WorkInstruction? WorkInstruction { get; set; }
+    [Parameter] public WorkInstruction? WorkInstruction { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of all products available for selection.
-    /// Used by the <see cref="ProductSelector"/> child component.
+    /// List of all available products for selection.
     /// </summary>
-    [Parameter]
-    public List<Product>? AllProducts { get; set; }
+    [Parameter] public List<Product>? AllProducts { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the product selection changes inside the popup.
-    /// Used to propagate changes to the parent component.
+    /// Callback triggered when the selected products are modified.
     /// </summary>
-    [Parameter]
-    public EventCallback<List<Product>> OnProductsChanged { get; set; }
+    [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
-    /// Returns the CSS class string for enabling dark mode.
+    /// Returns the dark mode CSS class if dark mode is enabled.
     /// </summary>
     private string darkModeClass => IsDarkMode ? "dark-mode" : string.Empty;
 
     /// <summary>
-    /// Gets or sets the editable title of the current WorkInstruction.
-    /// Binds the textarea to this property and updates the EditorService state.
+    /// Two-way binding property for the work instruction title input field.
     /// </summary>
     private string WorkInstructionTitle
     {
@@ -133,11 +116,10 @@
     }
 
     /// <summary>
-    /// Handles product selection updates from the child <see cref="ProductSelector"/> component.
-    /// Updates the current WorkInstruction products and marks the editor as dirty.
-    /// Refreshes the full product list from the database.
+    /// Handles the updated product list coming from the ProductSelector.
+    /// Updates the WorkInstruction and refreshes product list.
     /// </summary>
-    /// <param name="updatedProducts">The list of newly selected products.</param>
+    /// <param name="updatedProducts">New list of selected products.</param>
     private async Task OnProductsChangedInternal(List<Product> updatedProducts)
     {
         if (WorkInstruction != null)
@@ -159,7 +141,7 @@
     }
 
     /// <summary>
-    /// Closes the popup and notifies the parent to update the visibility state.
+    /// Closes the popup and updates the visibility binding.
     /// </summary>
     private async Task Close()
     {
@@ -168,9 +150,8 @@
     }
 
     /// <summary>
-    /// Handles the primary save button logic.
-    /// Decides between normal save and save as based on <see cref="PrimaryButtonText"/>,
-    /// calls callbacks, saves through EditorService, and handles error display.
+    /// Handles saving logic for both regular Save and "Save As" operations.
+    /// Performs validation and triggers the relevant callbacks.
     /// </summary>
     private async Task HandleSave()
     {
@@ -195,7 +176,6 @@
             return;
         }
 
-        // Apply trimmed values back to the work instruction
         WorkInstruction.Title = trimmedTitle;
         WorkInstruction.Version = trimmedVersion;
 
@@ -220,7 +200,7 @@
 
             if (!success)
             {
-                ToastService.ShowError("Failed to save Work Instruction. Ensure the Title and Version are unique.");
+                ToastService.ShowError("Failed to save Work Instruction. Ensure Title and Version are unique.");
                 return;
             }
 
