@@ -1,11 +1,28 @@
 .scrollable-checkbox-container {
     max-height: 300px;
     overflow-y: auto;
-    border: 1px solid rgba(0,0,0,.125);
+    border: 1px solid rgba(0, 0, 0, 0.125);
     border-radius: 0.25rem;
+    background-color: transparent !important; /* force override */
 }
 
-/* Adding hover effect */
+/* Ensure list group container is also transparent */
+.list-group {
+    background-color: transparent !important;
+    border: none;
+}
+
+/* Ensure individual items have no background */
+.list-group-item {
+    background-color: transparent !important;
+    border: none;
+}
+
+/* Optional: subtle hover effect */
 .list-group-item:hover {
-    background-color: #f8f9fa;
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+body.dark-mode .list-group-item:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
 }

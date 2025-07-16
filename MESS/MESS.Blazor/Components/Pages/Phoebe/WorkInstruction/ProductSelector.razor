@@ -1,5 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
+
 <div class="list-group scrollable-checkbox-container">
     @if (AllProducts == null)
     {
@@ -7,19 +8,28 @@
     }
     else
     {
-        @foreach (var product in AllProducts)
+        @for (int i = 0; i < AllProducts.Count; i++)
         {
-            <label class="list-group-item">
+            var product = AllProducts[i];
+            <div class="list-group-item d-flex align-items-center gap-2" @key="product.Id">
                 <input type="checkbox"
                        class="form-check-input me-1"
                        checked="@IsProductSelected(product.Id)"
                        @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)" />
-                @($"{product.Name}")
-            </label>
+                <input type="text"
+                       class="form-control form-control-sm flex-grow-1"
+                       value="@product.Name"
+                       @oninput="e => OnProductNameChanged(i, e.Value?.ToString())" />
+            </div>
         }
+
+        <div class="mt-2 text-end">
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddNewProduct">
+                Add Product
+            </button>
+        </div>
     }
 </div>
-
 
 @code {
     /// <summary>
@@ -33,15 +43,19 @@
     [Parameter] public required List<Product> AllProducts { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the selected products change.
+    /// Event callback triggered when the selected products or product names change.
     /// </summary>
     [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
+    /// <summary>
+    /// Checks if a product is selected in the current work instruction.
+    /// </summary>
     private bool IsProductSelected(int productId)
-    {
-        return WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
-    }
+        => WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
 
+    /// <summary>
+    /// Toggles the selection state of a product in the current work instruction.
+    /// </summary>
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
         WorkInstruction.Products ??= new();
@@ -60,10 +74,43 @@
 
         await OnProductsChanged.InvokeAsync(WorkInstruction.Products);
     }
-    
-    private void OnSelectionChanged()
+
+    /// <summary>
+    /// Adds a new product with a temporary negative ID and default name, then selects it.
+    /// </summary>
+    private async Task AddNewProduct()
     {
-        var selectedProducts = AllProducts.Where(p => p.IsActive).ToList();
-        OnProductsChanged.InvokeAsync(selectedProducts); // Only passing selected products.
+        var newProduct = new Product
+        {
+            Id = -1 * (AllProducts.Count + 1), // temporary unique negative ID
+            Name = "New Product"
+        };
+        AllProducts.Add(newProduct);
+
+        // Immediately select the new product in the work instruction
+        await ToggleProductSelection(newProduct, true);
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Updates the product name and notifies parent component of the change.
+    /// Validates index to avoid exceptions.
+    /// </summary>
+    private async Task OnProductNameChanged(int index, string? newName)
+    {
+        if (index < 0 || index >= AllProducts.Count)
+        {
+            // Invalid index, ignore gracefully
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(newName))
+        {
+            AllProducts[index].Name = newName;
+
+            // Notify parent about the product list changes
+            await OnProductsChanged.InvokeAsync(WorkInstruction.Products ?? new List<Product>());
+        }
     }
 }

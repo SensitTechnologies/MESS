@@ -13,25 +13,30 @@
 
         <div id="popupBody" class="win-body">
             <div class="product-selector-wrapper">
-                <ProductSelector WorkInstruction="WorkInstruction"
-                                 AllProducts="AllProducts"
-                                 OnProductsChanged="OnProductsChanged" />
+                @if (WorkInstruction != null && AllProducts != null)
+                {
+                    <ProductSelector WorkInstruction="WorkInstruction"
+                                     AllProducts="AllProducts"
+                                     OnProductsChanged="OnProductsChanged" />
+                }
+                else
+                {
+                    <div class="text-muted">Loading products or work instruction...</div>
+                }
             </div>
 
             <div class="textarea-container">
                 <label for="nameInput" class="form-label">Name:</label>
                 <textarea id="nameInput"
-                  class="form-control transparent-textarea"
-                  placeholder="Enter name here..."
-                  rows="1"
-                  @bind="WorkInstruction.Title"></textarea>
+                          class="form-control transparent-textarea"
+                          placeholder="Enter name here..."
+                          rows="1"
+                          @bind="WorkInstructionTitle"></textarea>
             </div>
         </div>
 
-
-
         <div class="win-footer">
-            <button class="win-btn-primary" @onclick="HandleSave">Save</button>
+            <button class="win-btn-primary" @onclick="HandleSave">@PrimaryButtonText</button>
             <button class="win-btn-cancel" @onclick="Close">Cancel</button>
         </div>
     </div>
@@ -40,21 +45,31 @@
 @code {
     /// <summary>
     /// Gets or sets a value indicating whether the popup is currently visible.
+    /// Parent controls visibility by setting this parameter.
     /// </summary>
     [Parameter]
     public bool IsVisible { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the visibility changes.
+    /// Event callback invoked when the visibility of the popup changes.
+    /// Used for two-way binding to close the dialog externally.
     /// </summary>
     [Parameter]
     public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
     /// Gets or sets the header text to display in the popup's title bar.
+    /// Controlled by parent component.
     /// </summary>
     [Parameter]
     public string? HeaderText { get; set; } = "Edit Work Instruction";
+
+    /// <summary>
+    /// Gets or sets the text label for the primary action button (e.g., Save, Create).
+    /// Controlled by parent component.
+    /// </summary>
+    [Parameter]
+    public string PrimaryButtonText { get; set; } = "Save";
 
     /// <summary>
     /// Gets or sets a value indicating whether dark mode styles should be applied.
@@ -63,65 +78,88 @@
     public bool IsDarkMode { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the Save button is clicked.
+    /// Callback invoked when the Save button is clicked.
+    /// Typically triggers persistence logic in the parent component.
     /// </summary>
     [Parameter]
     public EventCallback OnSave { get; set; }
 
     /// <summary>
-    /// Gets or sets the work instruction currently being edited.
+    /// Callback invoked for Save As logic if implemented externally.
     /// </summary>
     [Parameter]
-    public WorkInstruction WorkInstruction { get; set; } = new WorkInstruction
-    {
-        Title = string.Empty
-    };
+    public EventCallback OnSaveAs { get; set; }
 
     /// <summary>
-    /// Gets or sets the full list of available products.
+    /// Gets or sets the current <see cref="WorkInstruction"/> being edited.
+    /// This object is bound to the UI input fields.
     /// </summary>
     [Parameter]
-    public required List<Product> AllProducts { get; set; }
+    public WorkInstruction? WorkInstruction { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the selected products list changes.
+    /// Gets or sets the full list of available <see cref="Product"/> options.
+    /// </summary>
+    [Parameter]
+    public List<Product>? AllProducts { get; set; }
+
+    /// <summary>
+    /// Callback triggered when the set of selected products changes.
+    /// Invoked by the child <c>ProductSelector</c> component.
     /// </summary>
     [Parameter]
     public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
-    /// CSS class for dark mode.
+    /// Gets the CSS class used to apply dark mode styling.
     /// </summary>
-    private string darkModeClass => IsDarkMode ? "dark-mode" : "";
+    private string darkModeClass => IsDarkMode ? "dark-mode" : string.Empty;
 
     /// <summary>
-    /// Shows the popup with optional body text and header.
+    /// Gets or sets the editable title of the current <see cref="WorkInstruction"/>.
+    /// Binds the textarea input to the instruction title field.
     /// </summary>
-    /// <param name="bodyText">The optional body text (currently unused).</param>
-    /// <param name="headerText">The header text to display.</param>
-    public void Show(string bodyText, string headerText = "")
+    private string WorkInstructionTitle
     {
-        HeaderText = string.IsNullOrWhiteSpace(headerText) ? "Edit Work Instruction" : headerText;
-        IsVisible = true;
-        StateHasChanged();
+        get => WorkInstruction?.Title ?? string.Empty;
+        set
+        {
+            if (WorkInstruction != null && WorkInstruction.Title != value)
+            {
+                WorkInstruction.Title = value;
+            }
+        }
     }
 
     /// <summary>
-    /// Closes the popup and clears the header text.
+    /// Closes the popup and notifies the parent component by invoking <see cref="IsVisibleChanged"/>.
     /// </summary>
     private async Task Close()
     {
+        IsVisible = false;
         await IsVisibleChanged.InvokeAsync(false);
     }
 
     /// <summary>
-    /// Handles the Save button click, invokes the OnSave callback and closes the popup.
+    /// Handles the Save button logic.
+    /// Ensures a valid OriginalId is set, invokes save logic from parent, and then closes the popup.
     /// </summary>
     private async Task HandleSave()
     {
-        if (OnSave.HasDelegate)
-            await OnSave.InvokeAsync(null);
+        if (WorkInstruction != null)
+        {
+            // Ensure OriginalId is set for version tracking
+            if (WorkInstruction.OriginalId == 0)
+            {
+                WorkInstruction.OriginalId = WorkInstruction.Id != 0 ? WorkInstruction.Id : -1;
+            }
+        }
 
-        await IsVisibleChanged.InvokeAsync(false);
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync(null);
+        }
+
+        await Close();
     }
 }
