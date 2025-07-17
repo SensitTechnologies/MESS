@@ -84,6 +84,16 @@ public interface IWorkInstructionEditorService
     /// Throws an exception if the latest version cannot be found.
     /// </returns>
     Task LoadForNewVersionAsync(int originalId);
+    
+    /// <summary>
+    /// Loads a specific existing WorkInstruction version by its ID and creates a new editable version
+    /// based on it. The new version will copy the version string from the old version.
+    /// allowing the technician to modify it before saving. The new version is marked as dirty and
+    /// set to <see cref="EditorMode.CreateNewVersion"/> mode.
+    /// </summary>
+    /// <param name="versionId">The ID of the WorkInstruction version to clone as a new version.</param>
+    /// <returns>A task that completes when the new version is loaded and ready for editing.</returns>
+    Task LoadForNewVersionFromVersionAsync(int versionId);
 
     /// <summary>
     /// Initializes a new WorkInstruction in memory for user editing.
@@ -126,5 +136,12 @@ public interface IWorkInstructionEditorService
     /// when the Current model, dirty flag, or mode changes.
     /// </summary>
     event Action? OnChanged;
+
+    /// <summary>
+    /// Toggles the <c>IsActive</c> property of the currently loaded work instruction in memory.
+    /// Marks the editor state as dirty to indicate that changes need to be saved.
+    /// This does not persist the change to the database immediately; the update will be applied when <see cref="SaveAsync"/> is called.
+    /// </summary>
+    void ToggleActive();
 }
 
