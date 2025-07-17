@@ -1577,6 +1577,66 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> DeleteAllVersionsByIdAsync(int id)
+    {
+        try
+        {
+            // assuming the input work instruction is the original
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var originalWorkInstruction = await context.WorkInstructions
+                .Include(w => w.Nodes)
+                .FirstOrDefaultAsync(w => w.Id == id);
+            
+            if (originalWorkInstruction == null)
+            {
+                return false;
+            }
+
+
+            // if input work instruction is not the original, find it
+            if (originalWorkInstruction.OriginalId != null)
+            {
+                var ogId = originalWorkInstruction.OriginalId;
+
+                originalWorkInstruction = await context.WorkInstructions
+                    .Include(w => w.Nodes)
+                    .FirstOrDefaultAsync(w => w.Id ==ogId);
+
+                if (originalWorkInstruction == null)
+                {
+                    return false;
+                }
+            }
+
+            // query for all work instructions associated with the original
+            var versions = await GetVersionHistoryAsync(originalWorkInstruction.Id);
+
+            // delete each one
+            foreach (var version in versions)
+            {
+                // Remove associated Work Instruction Nodes first
+                context.WorkInstructionNodes.RemoveRange(version.Nodes);
+                context.WorkInstructions.Remove(version);
+            }
+
+            //save
+            await context.SaveChangesAsync();
+
+            // Invalidate cache so that on next request users retrieve the latest data
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+
+            Log.Information("Successfully deleted all versions associated with WorkInstruction ID: {workInstructionID}", originalWorkInstruction.Id);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown when attempting to Delete all versions associated with WorkInstruction ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
+            return false;
+        }
+    }
+
     /// <summary>
     /// Updates an existing work instruction in the database.
     /// </summary>

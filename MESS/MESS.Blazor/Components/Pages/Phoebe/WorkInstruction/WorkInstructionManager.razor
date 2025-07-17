@@ -21,6 +21,7 @@
     OnWorkInstructionSelected="OnWorkInstructionSelected"
     OnSidebarToggle="ToggleSidebar"
     OnNew="StartNewInstruction"
+    OnDelete="DeleteInstruction"
     OnSave="SaveEditorChanges"
     OnRevertChanges="RevertEditorChanges"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
@@ -54,7 +55,7 @@
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
-    
+
     private PopUpMenu? popupRef;
 
     /// <inheritdoc />
@@ -130,6 +131,42 @@
         {
             Log.Error(ex, "Error saving Work Instruction");
             ToastService.ShowError("An error occurred while saving changes.");
+        }
+    }
+
+    private async Task DeleteInstruction()
+    {
+        var current = WorkInstructionEditorService.Current;
+        if (current == null)
+        {
+            ToastService.ShowError("No Work Instruction is currently loaded.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(current.Title))
+        {
+            ToastService.ShowError("A Work Instruction must have a title.");
+            return;
+        }
+
+        try
+        {
+            bool success = await WorkInstructionService.DeleteAllVersionsByIdAsync(current.Id);
+            if (success)
+                ToastService.ShowSuccess("Work Instructions deleted successfully.");
+            else
+                ToastService.ShowError("Unable to delete Work Instruction. Please ensure Title and Version are unique.");
+
+            if (success)
+            {
+                // Refresh all latest work instructions list after save
+                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error deleting Work Instruction");
+            ToastService.ShowError("An error occurred while deleting Instructions");
         }
     }
 

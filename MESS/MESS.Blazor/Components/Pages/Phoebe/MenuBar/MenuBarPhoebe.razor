@@ -24,7 +24,9 @@
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
+            <AuthorizeView Roles="Administrator">
+                <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))">Delete</FluentMenuItem>
+            </AuthorizeView>
         </FluentMenu>
 
         <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
@@ -121,19 +123,25 @@
     /// </summary>
     [Parameter] 
     public EventCallback OnSidebarToggle { get; set; }
-    
+
     /// <summary>
     /// Event callback triggered when the user selects "New" to create a new work instruction.
     /// </summary>
     [Parameter] public EventCallback OnNew { get; set; }
-    
+
     /// <summary>
     /// Event callback triggered when the user selects "Save" to persist current edits to the work instruction either
     /// via versioning or direct edits.
     /// </summary>
     [Parameter]
     public EventCallback OnSave { get; set; }
-    
+
+    /// <summary>
+    /// Event callback triggered when the user selects "Delete" to completely remove a work instruction.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnDelete { get; set; }
+
     /// <summary>
     /// Event callback triggered when the user selects "Revert Changes" to discard unsaved edits and restore the last saved state.
     /// </summary>

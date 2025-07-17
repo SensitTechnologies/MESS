@@ -122,6 +122,14 @@ public interface IWorkInstructionService
     /// <param name="id">The ID of the desired WorkInstruction.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> DeleteByIdAsync(int id);
+
+    /// <summary>
+    /// Deletes all versions of a WorkInstruction associated with an id from the database.
+    /// </summary>
+    /// <param name="id">the id of the starting instruction</param>
+    /// <returns></returns>
+    public Task<bool> DeleteAllVersionsByIdAsync(int id);
+
     /// <summary>
     /// Updates a WorkInstruction that is currently saved in the Database.
     /// </summary>
