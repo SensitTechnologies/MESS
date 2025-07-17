@@ -609,7 +609,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                     {
                         Title = copiedTitle,
                         Version = freshWorkInstruction.Version,
-                        IsActive = false
+                        IsActive = false,
+                        IsLatest = true
                     };
 
                     await context.WorkInstructions.AddAsync(newWorkInstruction);
@@ -1614,100 +1615,166 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </remarks>
     public async Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction)
     {
-        // if ID is 0 that means it has NOT been saved to the database
+        Log.Information("Beginning to update Work Instruction: {Id}", workInstruction.Id);
         if (workInstruction.Id == 0)
-        {
             return false;
-        }
-        
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        await using ApplicationContext context = await _contextFactory.CreateDbContextAsync();
+
         try
         {
-            var existingWorkInstruction = await context.WorkInstructions
+            var existing = await context.WorkInstructions
                 .Include(w => w.Products)
                 .Include(w => w.Nodes)
-                .ThenInclude(n => ((PartNode)n).Parts)
                 .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
 
-            if (existingWorkInstruction == null)
-            {
+            if (existing == null)
                 return false;
-            }
-            
-            // Ensure updated Title + Version combination is unique. If count is > 0 it is not unique
-            if (string.Compare(existingWorkInstruction.Title, workInstruction.Title, StringComparison.OrdinalIgnoreCase) != 0)
-            {
-                var isUnique = await IsUnique(workInstruction);
-                if (!isUnique)
-                {
-                    return false;
-                }
-            }
-            
-            // If version is different ensure uniqueness
-            if (string.Compare(existingWorkInstruction.Version, workInstruction.Version, StringComparison.OrdinalIgnoreCase) != 0)
-            {
-                var isUnique = await IsUnique(workInstruction);
-                if (!isUnique)
-                {
-                    return false;
-                }
-            }
-            
-            context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
 
-            // Update Product Relationships
-            existingWorkInstruction.Products.RemoveAll(product =>
-                !workInstruction.Products.Exists(p => p.Id == product.Id));
-            
-            // Insert any new Products
-            foreach (var newProduct in workInstruction.Products)
-            {
-                var existingProduct = existingWorkInstruction.Products.FirstOrDefault(p =>
-                    p.Id == newProduct.Id);
-                
-                if (existingProduct == null)
-                {
-                    existingWorkInstruction.Products.Add(newProduct);
-                }
-            }
-            
-            // Update any applicable nodes
-            foreach (var newNode in workInstruction.Nodes)
-            {
-                var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+            // Load parts for PartNodes
+            foreach (var partNode in existing.Nodes.OfType<PartNode>())
+                await context.Entry(partNode).Collection(p => p.Parts).LoadAsync();
 
-                if (existingNode != null)
-                {
-                    if (newNode is PartNode && existingNode is PartNode)
-                    {
-                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                    }
-                    else if (newNode is Step && existingNode is Step)
-                    {
-                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                    }
-                    else
-                    {
-                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                    }
-                }
+            // Enforce uniqueness
+            if (!string.Equals(existing.Title, workInstruction.Title, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(existing.Version, workInstruction.Version, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!await IsUnique(workInstruction))
+                    return false;
             }
-            
+
+            // Update basic fields
+            context.Entry(existing).CurrentValues.SetValues(workInstruction);
+
+            await UpdateProducts(context, existing, workInstruction);
+            await UpdateNodes(context, existing, workInstruction);
+
             await context.SaveChangesAsync();
-
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
-                workInstruction.Id);
+
+            Log.Information("Successfully updated WorkInstruction with ID: {Id}", workInstruction.Id);
             return true;
         }
         catch (Exception e)
         {
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            Log.Warning("Exception caught when trying to update work instruction {Id}. Exception {Exception}", workInstruction.Id, e.ToString());
+            Log.Warning("Error updating WorkInstruction {Id}: {Exception}", workInstruction.Id, e);
             return false;
         }
+    }
+
+    private static async Task UpdateProducts(DbContext context, WorkInstruction existing, WorkInstruction updated)
+    {
+        var productIds = updated.Products.Select(p => p.Id).ToHashSet();
+
+        var attachedProducts = await context.Set<Product>()
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync();
+
+        existing.Products = attachedProducts;
+    }
+    
+    private async Task UpdateNodes(ApplicationContext context, WorkInstruction existing, WorkInstruction updated)
+    {
+        var newNodeIds = updated.Nodes.Select(n => n.Id).ToHashSet();
+
+        // Remove deleted nodes
+        existing.Nodes.RemoveAll(n => n.Id != 0 && !newNodeIds.Contains(n.Id));
+
+        // Add new nodes
+        foreach (var newNode in updated.Nodes.Where(n => n.Id == 0))
+            existing.Nodes.Add(newNode);
+
+        // Update existing nodes
+        foreach (var newNode in updated.Nodes.Where(n => n.Id != 0))
+        {
+            var existingNode = existing.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+            if (existingNode == null) continue;
+
+            context.Entry(existingNode).CurrentValues.SetValues(newNode);
+
+            if (existingNode is Step step && newNode is Step newStep)
+                UpdateStep(context, step, newStep);
+
+            else if (existingNode is PartNode partNode && newNode is PartNode newPartNode)
+                await UpdatePartNode(context, partNode, newPartNode);
+        }
+    }
+    
+    private static void UpdateStep(DbContext context, Step existing, Step updated)
+    {
+        // Merge PrimaryMedia
+        foreach (var item in updated.PrimaryMedia)
+        {
+            if (!existing.PrimaryMedia.Contains(item))
+                existing.PrimaryMedia.Add(item);
+        }
+
+        // Merge SecondaryMedia
+        foreach (var item in updated.SecondaryMedia)
+        {
+            if (!existing.SecondaryMedia.Contains(item))
+                existing.SecondaryMedia.Add(item);
+        }
+
+        //remove any images no longer present in the update
+        existing.PrimaryMedia = existing.PrimaryMedia
+            .Where(m => updated.PrimaryMedia.Contains(m))
+            .ToList();
+        existing.SecondaryMedia = existing.SecondaryMedia
+            .Where(m => updated.SecondaryMedia.Contains(m))
+            .ToList();
+
+        // EF will track the changes automatically since these are scalar properties (strings).
+        context.Entry(existing).State = EntityState.Modified;
+    }
+    
+    private async Task UpdatePartNode(ApplicationContext context, PartNode existing, PartNode updated)
+    {
+        Log.Information("Updating PartNode ID {Id}: Incoming parts = {Count}", updated.Id, updated.Parts?.Count ?? 0);
+
+        context.Entry(existing).CurrentValues.SetValues(updated);
+
+        var newParts = new List<Part>();
+
+        if (updated.Parts != null)
+        {
+            foreach (var incoming in updated.Parts)
+            {
+                if (incoming.Id == 0)
+                {
+                    context.Parts.Add(incoming);
+                    newParts.Add(incoming);
+                }
+                else
+                {
+                    var existingPart = await context.Parts.FindAsync(incoming.Id);
+                    if (existingPart != null)
+                    {
+                        context.Entry(existingPart).CurrentValues.SetValues(incoming);
+                        newParts.Add(existingPart);
+                    }
+                    else
+                    {
+                        Log.Warning("Part ID {Id} not found for PartNode {NodeId}", incoming.Id, updated.Id);
+                    }
+                }
+            }
+        }
+
+        // Remove old parts
+        var toRemove = existing.Parts.Where(p => newParts.All(np => np.Id != p.Id)).ToList();
+        foreach (var part in toRemove)
+            existing.Parts.Remove(part);
+
+        // Add new parts
+        var toAdd = newParts.Where(np => existing.Parts.All(p => p.Id != np.Id)).ToList();
+        foreach (var part in toAdd)
+            existing.Parts.Add(part);
+
+        Log.Information("PartNode ID {Id} now has {Count} parts", existing.Id, existing.Parts.Count);
+
+        context.Entry(existing).State = EntityState.Modified;
     }
     
     /// <summary>
