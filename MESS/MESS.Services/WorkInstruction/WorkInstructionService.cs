@@ -811,10 +811,16 @@ public partial class WorkInstructionService : IWorkInstructionService
 
                 if (existingChain.Any())
                 {
+                    Log.Information("Found {Count} existing work instructions with OriginalId {OriginalId} to mark as not latest", existingChain.Count, originalId.Value);
+
                     foreach (var old in existingChain)
                     {
                         old.IsLatest = false;
                     }
+                    
+                    Log.Information("Saving changes to demote old versions");
+                    await context.SaveChangesAsync();
+                    Log.Information("Demotion save completed");
 
                     workInstruction.OriginalId = originalId.Value;
                 }
@@ -1395,6 +1401,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             await using var context = await _contextFactory.CreateDbContextAsync();
             var workInstruction = await context.WorkInstructions
+                .Include(w => w.Products)
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .FirstOrDefaultAsync(w => w.Id == id);
@@ -1460,14 +1467,34 @@ public partial class WorkInstructionService : IWorkInstructionService
         foreach (var wi in versions)
         {
             wi.IsLatest = false;
-            wi.IsActive = false;
         }
 
         await context.SaveChangesAsync();
         return true;
     }
+    
+    /// <inheritdoc />
+    public async Task MarkOtherVersionsInactiveAsync(int workInstructionId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
+        var target = await context.WorkInstructions.FindAsync(workInstructionId);
+        if (target == null) return;
 
+        int rootId = target.OriginalId ?? target.Id;
+
+        var chain = await context.WorkInstructions
+            .Where(w => (w.Id == rootId || w.OriginalId == rootId) && w.Id != workInstructionId)
+            .ToListAsync();
+
+        foreach (var wi in chain)
+        {
+            wi.IsActive = false;
+        }
+
+        await context.SaveChangesAsync();
+    }
+    
     /// <summary>
     /// Creates a new work instruction in the database.
     /// </summary>
