@@ -34,11 +34,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public void StartNew(List<Product>? products = null)
+    public void StartNew(string? title = null, List<Product>? products = null)
     {
         Current = new WorkInstruction
         {
-            Title = "",
+            Title = title ?? "",
             Version = "1.0",
             IsActive = false,
             IsLatest = true,
@@ -52,7 +52,32 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         IsDirty = true;
         NotifyChanged();
     }
+    
+    /// <inheritdoc />
+    public void StartNewFromCurrent(string? title = null, List<Product>? products = null)
+    {
+        if (Current == null)
+            throw new InvalidOperationException("Cannot start a new work instruction from current because it is null.");
 
+        var newInstruction = new WorkInstruction
+        {
+            Title = title ?? Current.Title,
+            Version = "1.0",
+            OriginalId = Current.OriginalId ?? Current.Id,
+            IsActive = false,
+            IsLatest = true,
+            ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
+            CollectsProductSerialNumber = Current.CollectsProductSerialNumber,
+            Products = products ?? Current.Products?.ToList() ?? new List<Product>(),
+            Nodes = Current.Nodes.Select(CloneNode).ToList()
+        };
+
+        Current = newInstruction;
+        Mode = EditorMode.CreateNew;
+        IsDirty = true;
+        NotifyChanged();
+    }
+    
     /// <inheritdoc />
     public async Task LoadForEditAsync(int id)
     {
