@@ -33,10 +33,11 @@ public partial class WorkInstructionService : IWorkInstructionService
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
     private const int STEP_START_ROW = 9;
     private const int PART_COLUMN = 1;
-    private const int STEP_TITLE_COLUMN = 2;
-    private const int STEP_PRIMARY_MEDIA_COLUMN = 3;
-    private const int STEP_DESCRIPTION_COLUMN = 4;
-    private const int STEP_SECONDARY_MEDIA_COLUMN = 5;
+    private const int STEP_NAME_COLUMN = 2;
+    private const int STEP_BODY_COLUMN = 3;
+    private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
+    private const int STEP_DETAILED_BODY_COLUMN = 5;
+    private const int STEP_SECONDARY_MEDIA_COLUMN = 6;
 
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -109,9 +110,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Step Header row. With bold.
             var currentRow = STEP_START_ROW;
             worksheet.Cell(currentRow, PART_COLUMN).Value = "Parts";
-            worksheet.Cell(currentRow, STEP_TITLE_COLUMN).Value = "Primary Instructions";
+            worksheet.Cell(currentRow, STEP_NAME_COLUMN).Value = "Name";
+            worksheet.Cell(currentRow, STEP_BODY_COLUMN).Value = "Body";
             worksheet.Cell(currentRow, STEP_PRIMARY_MEDIA_COLUMN).Value = "Primary Media";
-            worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN).Value = "Secondary Instructions";
+            worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN).Value = "Detailed Body";
             worksheet.Cell(currentRow, STEP_SECONDARY_MEDIA_COLUMN).Value = "Secondary Media";
 
             // Make them bold
@@ -137,10 +139,12 @@ public partial class WorkInstructionService : IWorkInstructionService
                 else if (node is Step step)
                 {
                     worksheet.Cell(currentRow, PART_COLUMN).Value = ""; // no part
+                    
+                    worksheet.Cell(currentRow, STEP_NAME_COLUMN).Value = step.Name;
 
                     //Applying Text
-                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), step.Name);
-                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), step.Body);
+                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_BODY_COLUMN), step.Body);
+                    ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), step.DetailedBody);
                     
                     //Inserting Images
                     InsertImagesIntoCell(
@@ -163,9 +167,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             //Set Column Widths
             worksheet.Column(PART_COLUMN).Width = 30;
-            worksheet.Column(STEP_TITLE_COLUMN).Width = 40;
+            worksheet.Column(STEP_NAME_COLUMN).Width = 30;
+            worksheet.Column(STEP_BODY_COLUMN).Width = 40;
             worksheet.Column(STEP_PRIMARY_MEDIA_COLUMN).Width = 40;
-            worksheet.Column(STEP_DESCRIPTION_COLUMN).Width = 40;
+            worksheet.Column(STEP_DETAILED_BODY_COLUMN).Width = 40;
             worksheet.Column(STEP_SECONDARY_MEDIA_COLUMN).Width = 40;
             
             // Enable wrapping on data rows starting from STEP_START_ROW downward
@@ -483,77 +488,77 @@ public partial class WorkInstructionService : IWorkInstructionService
     }
     
     private void InsertImagesIntoCell(IXLWorksheet worksheet, int row, int column, List<string> mediaPaths)
-{
-    if (mediaPaths == null || mediaPaths.Count == 0)
-        return;
-
-    // Settings
-    const int targetDisplayHeightPx = 100; // All images scaled to this height
-    const int cellEdgePaddingPx = 5;       // Padding from cell edges
-    const int imageSpacingPx = 5;          // Spacing between images horizontally and vertically
-
-    // Determine wrap width *more conservatively*
-    double excelColumnWidthUnits = worksheet.Column(column).Width;
-    double approxWrapWidthPx = (excelColumnWidthUnits * 7);
-    
-    if (approxWrapWidthPx <= 0) approxWrapWidthPx = 500;
-
-    int offsetX = cellEdgePaddingPx;
-    int offsetY = cellEdgePaddingPx;
-    int lineMaxHeight = 0;
-    bool anyImageInserted = false;
-
-    foreach (var media in mediaPaths)
     {
-        var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
-        var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
+        if (mediaPaths == null || mediaPaths.Count == 0)
+            return;
 
-        if (!File.Exists(imagePath))
-            continue;
+        // Settings
+        const int targetDisplayHeightPx = 100; // All images scaled to this height
+        const int cellEdgePaddingPx = 5;       // Padding from cell edges
+        const int imageSpacingPx = 5;          // Spacing between images horizontally and vertically
 
-        using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
-        using (var image = Image.Load(stream))
+        // Determine wrap width *more conservatively*
+        double excelColumnWidthUnits = worksheet.Column(column).Width;
+        double approxWrapWidthPx = (excelColumnWidthUnits * 7);
+        
+        if (approxWrapWidthPx <= 0) approxWrapWidthPx = 500;
+
+        int offsetX = cellEdgePaddingPx;
+        int offsetY = cellEdgePaddingPx;
+        int lineMaxHeight = 0;
+        bool anyImageInserted = false;
+
+        foreach (var media in mediaPaths)
         {
-            int originalWidth = image.Width;
-            int originalHeight = image.Height;
+            var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
+            var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
 
-            // Scale to target height
-            double scale = (double)targetDisplayHeightPx / originalHeight;
-            int scaledWidth = (int)(originalWidth * scale);
-            int scaledHeight = targetDisplayHeightPx;
+            if (!File.Exists(imagePath))
+                continue;
 
-            // Check if image fits on current line
-            if (offsetX + scaledWidth + cellEdgePaddingPx > approxWrapWidthPx)
+            using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
+            using (var image = Image.Load(stream))
             {
-                // Wrap to next line
-                offsetX = cellEdgePaddingPx;
-                offsetY += lineMaxHeight + imageSpacingPx;
-                lineMaxHeight = 0;
+                int originalWidth = image.Width;
+                int originalHeight = image.Height;
+
+                // Scale to target height
+                double scale = (double)targetDisplayHeightPx / originalHeight;
+                int scaledWidth = (int)(originalWidth * scale);
+                int scaledHeight = targetDisplayHeightPx;
+
+                // Check if image fits on current line
+                if (offsetX + scaledWidth + cellEdgePaddingPx > approxWrapWidthPx)
+                {
+                    // Wrap to next line
+                    offsetX = cellEdgePaddingPx;
+                    offsetY += lineMaxHeight + imageSpacingPx;
+                    lineMaxHeight = 0;
+                }
+
+                // Save image to memory
+                using var rawStream = new MemoryStream();
+                image.Save(rawStream, new PngEncoder());
+                rawStream.Position = 0;
+
+                // Add to Excel
+                worksheet.AddPicture(rawStream)
+                    .MoveTo(worksheet.Cell(row, column), new System.Drawing.Point(offsetX, offsetY))
+                    .WithSize(scaledWidth, scaledHeight);
+
+                offsetX += scaledWidth + imageSpacingPx;
+                lineMaxHeight = Math.Max(lineMaxHeight, scaledHeight);
+                anyImageInserted = true;
             }
+        }
 
-            // Save image to memory
-            using var rawStream = new MemoryStream();
-            image.Save(rawStream, new PngEncoder());
-            rawStream.Position = 0;
-
-            // Add to Excel
-            worksheet.AddPicture(rawStream)
-                .MoveTo(worksheet.Cell(row, column), new System.Drawing.Point(offsetX, offsetY))
-                .WithSize(scaledWidth, scaledHeight);
-
-            offsetX += scaledWidth + imageSpacingPx;
-            lineMaxHeight = Math.Max(lineMaxHeight, scaledHeight);
-            anyImageInserted = true;
+        // Adjust row height
+        if (anyImageInserted)
+        {
+            double totalHeightPx = offsetY + lineMaxHeight + cellEdgePaddingPx;
+            worksheet.Row(row).Height = totalHeightPx * 0.75; // Excel points ≈ 0.75 px
         }
     }
-
-    // Adjust row height
-    if (anyImageInserted)
-    {
-        double totalHeightPx = offsetY + lineMaxHeight + cellEdgePaddingPx;
-        worksheet.Row(row).Height = totalHeightPx * 0.75; // Excel points ≈ 0.75 px
-    }
-}
     
     /// <summary>
     /// Removes HTML tags from a string.
@@ -604,7 +609,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                     {
                         Title = copiedTitle,
                         Version = freshWorkInstruction.Version,
-                        IsActive = false
+                        IsActive = false,
+                        IsLatest = true
                     };
 
                     await context.WorkInstructions.AddAsync(newWorkInstruction);
@@ -637,6 +643,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                             {
                                 Name = originalStep.Name,
                                 Body = originalStep.Body,
+                                DetailedBody = originalStep.DetailedBody,
                                 Position = originalStep.Position,
                                 NodeType = originalStep.NodeType,
                                 PrimaryMedia = [..originalStep.PrimaryMedia],
@@ -743,7 +750,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             // Retrieve Product and assign relationship
             var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
-            var product = await _productService.FindByTitleAsync(productString);
+            var product = await _productService.GetByTitleAsync(productString);
 
             if (product == null)
             {
@@ -805,10 +812,16 @@ public partial class WorkInstructionService : IWorkInstructionService
 
                 if (existingChain.Any())
                 {
+                    Log.Information("Found {Count} existing work instructions with OriginalId {OriginalId} to mark as not latest", existingChain.Count, originalId.Value);
+
                     foreach (var old in existingChain)
                     {
                         old.IsLatest = false;
                     }
+                    
+                    Log.Information("Saving changes to demote old versions");
+                    await context.SaveChangesAsync();
+                    Log.Information("Demotion save completed");
 
                     workInstruction.OriginalId = originalId.Value;
                 }
@@ -824,10 +837,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             while (true)
             {
                 var partCell = worksheet.Cell(currentRow, PART_COLUMN).GetString()?.Trim();
-                var stepTitleCell = worksheet.Cell(currentRow, STEP_TITLE_COLUMN).GetString()?.Trim();
+                var stepBodyCell = worksheet.Cell(currentRow, STEP_BODY_COLUMN).GetString()?.Trim();
 
                 var isPartRow = !string.IsNullOrWhiteSpace(partCell);
-                var isStepRow = !string.IsNullOrWhiteSpace(stepTitleCell);
+                var isStepRow = !string.IsNullOrWhiteSpace(stepBodyCell);
 
                 if (!isPartRow && !isStepRow)
                 {
@@ -862,8 +875,13 @@ public partial class WorkInstructionService : IWorkInstructionService
                 {
                     var step = new Step
                     {
-                        Name = ProcessCellText(worksheet.Cell(currentRow, STEP_TITLE_COLUMN), workbook),
-                        Body = ProcessCellText(worksheet.Cell(currentRow, STEP_DESCRIPTION_COLUMN), workbook),
+                        Name = System.Text.RegularExpressions.Regex.Replace(
+                            string.Join(" ", worksheet.Cell(currentRow, STEP_NAME_COLUMN)
+                                .GetRichText()
+                                .Select(r => r.Text.Trim())),
+                            @"\s+", " ").Trim(),
+                        Body = ProcessCellText(worksheet.Cell(currentRow, STEP_BODY_COLUMN), workbook),
+                        DetailedBody = ProcessCellText(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), workbook),
                         NodeType = WorkInstructionNodeType.Step,
                         Position = position
                     };
@@ -871,7 +889,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     await ProcessStepMedia(worksheet, step, currentRow);
 
                     workInstruction.Nodes.Add(step);
-                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Name);
+                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Body);
                 }
 
                 position++;
@@ -1072,7 +1090,6 @@ public partial class WorkInstructionService : IWorkInstructionService
         try
         {
             var sb = new StringBuilder();
-            sb.Append("<div>");
 
             var hasHyperLink = cell.HasHyperlink;
             string? hyperLinkUri = null;
@@ -1164,8 +1181,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                     sb.Append(richTextContent);
                 }
             }
-
-            sb.Append("</div>");
+            
             return sb.ToString();
         }
         catch (Exception e)
@@ -1304,7 +1320,48 @@ public partial class WorkInstructionService : IWorkInstructionService
             return [];
         }
     }
-    
+
+    /// <summary>
+    /// Asynchronously retrieves only the latest versions of all work instructions,
+    /// using caching for performance.
+    /// </summary>
+    /// <returns>List of work instructions where IsLatest is true.</returns>
+    /// <remarks>
+    /// Results are cached for 15 minutes to improve performance.
+    /// </remarks>
+    public async Task<List<WorkInstruction>> GetAllLatestAsync()
+    {
+        const string WORK_INSTRUCTION_LATEST_CACHE_KEY = WORK_INSTRUCTION_CACHE_KEY + "_Latest";
+
+        if (_cache.TryGetValue(WORK_INSTRUCTION_LATEST_CACHE_KEY, out List<WorkInstruction>? cachedLatestList) &&
+            cachedLatestList != null)
+        {
+            return cachedLatestList;
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var latestWorkInstructions = await context.WorkInstructions
+                .Where(w => w.IsLatest)
+                .Include(w => w.Products)
+                .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
+                .ToListAsync();
+
+            // Cache data for 15 minutes
+            _cache.Set(WORK_INSTRUCTION_LATEST_CACHE_KEY, latestWorkInstructions, TimeSpan.FromMinutes(15));
+
+            Log.Information("GetAllLatestAsync successfully retrieved {WorkInstructionCount} latest WorkInstructions", latestWorkInstructions.Count);
+            return latestWorkInstructions;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown in GetAllLatestAsync in WorkInstructionService. Exception: {Exception}", e.ToString());
+            return [];
+        }
+    }
+
     /// <summary>
     /// Retrieves a work instruction by its title.
     /// </summary>
@@ -1345,6 +1402,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             await using var context = await _contextFactory.CreateDbContextAsync();
             var workInstruction = await context.WorkInstructions
+                .Include(w => w.Products)
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .FirstOrDefaultAsync(w => w.Id == id);
@@ -1357,7 +1415,87 @@ public partial class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
+    
+    /// <summary>
+    /// Asynchronously retrieves the full version history for a given work instruction lineage,
+    /// identified by its OriginalId. Results are ordered by LastModifiedOn descending (most recent edits first).
+    /// </summary>
+    /// <param name="originalId">The OriginalId of the work instruction lineage to retrieve.</param>
+    /// <returns>
+    /// List of all versions in the lineage, including the original itself,
+    /// ordered by LastModifiedOn descending.
+    /// </returns>
+    public async Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
+            var versionHistory = await context.WorkInstructions
+                .Where(w => w.OriginalId == originalId || w.Id == originalId)
+                .Include(w => w.Products)
+                .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
+                .OrderByDescending(w => w.LastModifiedOn)
+                .ToListAsync();
+
+            Log.Information(
+                "GetVersionHistoryAsync successfully retrieved {Count} versions for OriginalId {OriginalId}",
+                versionHistory.Count,
+                originalId
+            );
+
+            return versionHistory;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown in GetVersionHistoryAsync in WorkInstructionService. Exception: {Exception}",
+                e.ToString()
+            );
+            return [];
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<bool> MarkAllVersionsNotLatestAsync(int originalId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var versions = await context.WorkInstructions
+            .Where(w => w.OriginalId == originalId || w.Id == originalId)
+            .ToListAsync();
+
+        foreach (var wi in versions)
+        {
+            wi.IsLatest = false;
+        }
+
+        await context.SaveChangesAsync();
+        return true;
+    }
+    
+    /// <inheritdoc />
+    public async Task MarkOtherVersionsInactiveAsync(int workInstructionId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var target = await context.WorkInstructions.FindAsync(workInstructionId);
+        if (target == null) return;
+
+        int rootId = target.OriginalId ?? target.Id;
+
+        var chain = await context.WorkInstructions
+            .Where(w => (w.Id == rootId || w.OriginalId == rootId) && w.Id != workInstructionId)
+            .ToListAsync();
+
+        foreach (var wi in chain)
+        {
+            wi.IsActive = false;
+        }
+
+        await context.SaveChangesAsync();
+    }
+    
     /// <summary>
     /// Creates a new work instruction in the database.
     /// </summary>
@@ -1467,6 +1605,66 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> DeleteAllVersionsByIdAsync(int id)
+    {
+        try
+        {
+            // assuming the input work instruction is the original
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var originalWorkInstruction = await context.WorkInstructions
+                .Include(w => w.Nodes)
+                .FirstOrDefaultAsync(w => w.Id == id);
+            
+            if (originalWorkInstruction == null)
+            {
+                return false;
+            }
+
+
+            // if input work instruction is not the original, find it
+            if (originalWorkInstruction.OriginalId != null)
+            {
+                var ogId = originalWorkInstruction.OriginalId;
+
+                originalWorkInstruction = await context.WorkInstructions
+                    .Include(w => w.Nodes)
+                    .FirstOrDefaultAsync(w => w.Id ==ogId);
+
+                if (originalWorkInstruction == null)
+                {
+                    return false;
+                }
+            }
+
+            // query for all work instructions associated with the original
+            var versions = await GetVersionHistoryAsync(originalWorkInstruction.Id);
+
+            // delete each one
+            foreach (var version in versions)
+            {
+                // Remove associated Work Instruction Nodes first
+                context.WorkInstructionNodes.RemoveRange(version.Nodes);
+                context.WorkInstructions.Remove(version);
+            }
+
+            //save
+            await context.SaveChangesAsync();
+
+            // Invalidate cache so that on next request users retrieve the latest data
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+
+            Log.Information("Successfully deleted all versions associated with WorkInstruction ID: {workInstructionID}", originalWorkInstruction.Id);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown when attempting to Delete all versions associated with WorkInstruction ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
+            return false;
+        }
+    }
+
     /// <summary>
     /// Updates an existing work instruction in the database.
     /// </summary>
@@ -1477,101 +1675,215 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// </remarks>
     public async Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction)
     {
-        // if ID is 0 that means it has NOT been saved to the database
+        Log.Information("Beginning to update Work Instruction: {Id}", workInstruction.Id);
         if (workInstruction.Id == 0)
-        {
             return false;
-        }
-        
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        await using ApplicationContext context = await _contextFactory.CreateDbContextAsync();
+
         try
         {
-            var existingWorkInstruction = await context.WorkInstructions
+            var existing = await context.WorkInstructions
                 .Include(w => w.Products)
                 .Include(w => w.Nodes)
-                .ThenInclude(n => ((PartNode)n).Parts)
                 .FirstOrDefaultAsync(w => w.Id == workInstruction.Id);
 
-            if (existingWorkInstruction == null)
-            {
+            if (existing == null)
                 return false;
-            }
-            
-            // Ensure updated Title + Version combination is unique. If count is > 0 it is not unique
-            if (string.Compare(existingWorkInstruction.Title, workInstruction.Title, StringComparison.OrdinalIgnoreCase) != 0)
-            {
-                var isUnique = await IsUnique(workInstruction);
-                if (!isUnique)
-                {
-                    return false;
-                }
-            }
-            
-            // If version is different ensure uniqueness
-            if (string.Compare(existingWorkInstruction.Version, workInstruction.Version, StringComparison.OrdinalIgnoreCase) != 0)
-            {
-                var isUnique = await IsUnique(workInstruction);
-                if (!isUnique)
-                {
-                    return false;
-                }
-            }
-            
-            context.Entry(existingWorkInstruction).CurrentValues.SetValues(workInstruction);
 
-            // Update Product Relationships
-            existingWorkInstruction.Products.RemoveAll(product =>
-                !workInstruction.Products.Exists(p => p.Id == product.Id));
-            
-            // Insert any new Products
-            foreach (var newProduct in workInstruction.Products)
-            {
-                var existingProduct = existingWorkInstruction.Products.FirstOrDefault(p =>
-                    p.Id == newProduct.Id);
-                
-                if (existingProduct == null)
-                {
-                    existingWorkInstruction.Products.Add(newProduct);
-                }
-            }
-            
-            // Update any applicable nodes
-            foreach (var newNode in workInstruction.Nodes)
-            {
-                var existingNode = existingWorkInstruction.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+            // Load parts for PartNodes
+            foreach (var partNode in existing.Nodes.OfType<PartNode>())
+                await context.Entry(partNode).Collection(p => p.Parts).LoadAsync();
 
-                if (existingNode != null)
-                {
-                    if (newNode is PartNode && existingNode is PartNode)
-                    {
-                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                    }
-                    else if (newNode is Step && existingNode is Step)
-                    {
-                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                    }
-                    else
-                    {
-                        context.Entry(existingNode).CurrentValues.SetValues(newNode);
-                    }
-                }
+            // Enforce uniqueness
+            if (!string.Equals(existing.Title, workInstruction.Title, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(existing.Version, workInstruction.Version, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!await IsUnique(workInstruction))
+                    return false;
             }
-            
+
+            // Update basic fields
+            context.Entry(existing).CurrentValues.SetValues(workInstruction);
+
+            await UpdateProducts(context, existing, workInstruction);
+            await UpdateNodes(context, existing, workInstruction);
+
             await context.SaveChangesAsync();
-
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            Log.Information("Successfully updated WorkInstruction with ID: {workInstructionID}",
-                workInstruction.Id);
+
+            Log.Information("Successfully updated WorkInstruction with ID: {Id}", workInstruction.Id);
             return true;
         }
         catch (Exception e)
         {
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            Log.Warning("Exception caught when trying to update work instruction {Id}. Exception {Exception}", workInstruction.Id, e.ToString());
+            Log.Warning("Error updating WorkInstruction {Id}: {Exception}", workInstruction.Id, e);
             return false;
         }
     }
+
+    private static async Task UpdateProducts(DbContext context, WorkInstruction existing, WorkInstruction updated)
+    {
+        var productIds = updated.Products.Select(p => p.Id).ToHashSet();
+
+        var attachedProducts = await context.Set<Product>()
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync();
+
+        existing.Products = attachedProducts;
+    }
+    
+    private async Task UpdateNodes(ApplicationContext context, WorkInstruction existing, WorkInstruction updated)
+    {
+        var newNodeIds = updated.Nodes.Select(n => n.Id).ToHashSet();
+
+        // Remove deleted nodes
+        existing.Nodes.RemoveAll(n => n.Id != 0 && !newNodeIds.Contains(n.Id));
+
+        // Add new nodes
+        foreach (var newNode in updated.Nodes.Where(n => n.Id == 0))
+            existing.Nodes.Add(newNode);
+
+        // Update existing nodes
+        foreach (var newNode in updated.Nodes.Where(n => n.Id != 0))
+        {
+            var existingNode = existing.Nodes.FirstOrDefault(n => n.Id == newNode.Id);
+            if (existingNode == null) continue;
+
+            context.Entry(existingNode).CurrentValues.SetValues(newNode);
+
+            if (existingNode is Step step && newNode is Step newStep)
+                UpdateStep(context, step, newStep);
+
+            else if (existingNode is PartNode partNode && newNode is PartNode newPartNode)
+                await UpdatePartNode(context, partNode, newPartNode);
+        }
+    }
+    
+    private static void UpdateStep(DbContext context, Step existing, Step updated)
+    {
+        // Merge PrimaryMedia
+        foreach (var item in updated.PrimaryMedia)
+        {
+            if (!existing.PrimaryMedia.Contains(item))
+                existing.PrimaryMedia.Add(item);
+        }
+
+        // Merge SecondaryMedia
+        foreach (var item in updated.SecondaryMedia)
+        {
+            if (!existing.SecondaryMedia.Contains(item))
+                existing.SecondaryMedia.Add(item);
+        }
+
+        //remove any images no longer present in the update
+        existing.PrimaryMedia = existing.PrimaryMedia
+            .Where(m => updated.PrimaryMedia.Contains(m))
+            .ToList();
+        existing.SecondaryMedia = existing.SecondaryMedia
+            .Where(m => updated.SecondaryMedia.Contains(m))
+            .ToList();
+
+        // EF will track the changes automatically since these are scalar properties (strings).
+        context.Entry(existing).State = EntityState.Modified;
+    }
+    
+    private async Task UpdatePartNode(ApplicationContext context, PartNode existing, PartNode updated)
+    {
+        Log.Information("Updating PartNode ID {Id}: Incoming parts = {Count}", updated.Id, updated.Parts?.Count ?? 0);
+
+        context.Entry(existing).CurrentValues.SetValues(updated);
+
+        var newParts = new List<Part>();
+
+        if (updated.Parts != null)
+        {
+            foreach (var incoming in updated.Parts)
+            {
+                if (incoming.Id == 0)
+                {
+                    context.Parts.Add(incoming);
+                    newParts.Add(incoming);
+                }
+                else
+                {
+                    var existingPart = await context.Parts.FindAsync(incoming.Id);
+                    if (existingPart != null)
+                    {
+                        context.Entry(existingPart).CurrentValues.SetValues(incoming);
+                        newParts.Add(existingPart);
+                    }
+                    else
+                    {
+                        Log.Warning("Part ID {Id} not found for PartNode {NodeId}", incoming.Id, updated.Id);
+                    }
+                }
+            }
+        }
+
+        // Remove old parts
+        var toRemove = existing.Parts.Where(p => newParts.All(np => np.Id != p.Id)).ToList();
+        foreach (var part in toRemove)
+            existing.Parts.Remove(part);
+
+        // Add new parts
+        var toAdd = newParts.Where(np => existing.Parts.All(p => p.Id != np.Id)).ToList();
+        foreach (var part in toAdd)
+            existing.Parts.Add(part);
+
+        Log.Information("PartNode ID {Id} now has {Count} parts", existing.Id, existing.Parts.Count);
+
+        context.Entry(existing).State = EntityState.Modified;
+    }
+    
+    /// <summary>
+    /// Saves an uploaded image file to the work instruction images directory and returns its relative path.
+    /// </summary>
+    /// <param name="file">The uploaded browser file.</param>
+    /// <returns>The relative path to the saved image (for database storage).</returns>
+    public async Task<string> SaveImageFileAsync(IBrowserFile file)
+    {
+        try
+        {
+            // Decide where on disk to save
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+            if (!Directory.Exists(imageDir))
+            {
+                Directory.CreateDirectory(imageDir);
+            }
+
+            // Create a unique filename with original extension preserved
+            var extension = Path.GetExtension(file.Name);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";  // Default to png if browser doesn't send extension
+            }
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var fullPath = Path.Combine(imageDir, fileName);
+
+            // Save file contents
+            await using (var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024))
+            await using (var fileStream = new FileStream(fullPath, FileMode.Create))
+            {
+                await stream.CopyToAsync(fileStream);
+            }
+
+            // Return the relative path for storing in the DB
+            var relativePath = Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
+            Log.Information("Saved image file: {RelativePath}", relativePath);
+
+            return relativePath;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error saving uploaded image file: {FileName}", file?.Name ?? "unknown");
+            throw;
+        }
+    }
+
 
     /// <summary>
     /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"

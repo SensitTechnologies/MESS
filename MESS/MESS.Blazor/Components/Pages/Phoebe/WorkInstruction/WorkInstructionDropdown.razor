@@ -1,0 +1,60 @@
+@using MESS.Data.Models
+
+@if (WorkInstructions?.Any() == true)
+{
+    <select class="form-select" value="@_selectedWorkInstructionId" @onchange="HandleChange">
+        <option value="-1">Select Instruction</option>
+        @foreach (var wi in WorkInstructions
+                      .OrderBy(w => w.Title ?? string.Empty)
+                      .ThenBy(w => w.Version))
+        {
+            <option value="@wi.Id">
+                @($"{wi.Title} v{wi.Version}")
+            </option>
+        }
+    </select>
+}
+else
+{
+    <p>No work instructions available.</p>
+}
+
+@code {
+    private int _selectedWorkInstructionId = -1;
+
+    /// <summary>
+    /// The list of available work instructions to display in the dropdown.
+    /// Typically filtered by the selected product in the parent component.
+    /// </summary>
+    [Parameter]
+    public List<WorkInstruction>? WorkInstructions { get; set; }
+
+    /// <summary>
+    /// The currently selected work instruction ID, set by the parent.
+    /// </summary>
+    [Parameter]
+    public int? SelectedWorkInstructionId { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the user selects a work instruction.
+    /// The selected instruction's ID is passed to the parent.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnWorkInstructionSelected { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // Keep local field in sync with parent
+        _selectedWorkInstructionId = SelectedWorkInstructionId ?? -1;
+    }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var val))
+        {
+            _selectedWorkInstructionId = val;
+            await OnWorkInstructionSelected.InvokeAsync(val);
+        }
+    }
+}

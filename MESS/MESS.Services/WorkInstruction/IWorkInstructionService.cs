@@ -89,11 +89,20 @@ public interface IWorkInstructionService
     /// <returns>List of WorkInstruction objects</returns>
     public Task<List<WorkInstruction>> GetAllAsync();
     /// <summary>
+    /// Retrieves only the latest versions of all work instructions (IsLatest = true).
+    /// </summary>
+    Task<List<WorkInstruction>> GetAllLatestAsync();
+    /// <summary>
+    /// Retrieves all versions of a work instruction lineage given its OriginalId.
+    /// </summary>
+    /// <param name="originalId">The OriginalId of the lineage.</param>
+    /// <returns>List of all versions for that lineage.</returns>
+    Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId);
+    /// <summary>
     /// Retrieves a WorkInstruction by its title.
     /// </summary>
     /// <param name="title">The title of the WorkInstruction to retrieve.</param>
     /// <returns>The WorkInstruction if found; otherwise, <c>null</c>.</returns>
-
     public WorkInstruction? GetByTitle(string title);
     /// <summary>
     /// Retrieves a WorkInstruction by its ID.
@@ -113,11 +122,46 @@ public interface IWorkInstructionService
     /// <param name="id">The ID of the desired WorkInstruction.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> DeleteByIdAsync(int id);
+
+    /// <summary>
+    /// Deletes all versions of a WorkInstruction associated with an id from the database.
+    /// </summary>
+    /// <param name="id">the id of the starting instruction</param>
+    /// <returns></returns>
+    public Task<bool> DeleteAllVersionsByIdAsync(int id);
+
     /// <summary>
     /// Updates a WorkInstruction that is currently saved in the Database.
     /// </summary>
     /// <param name="workInstruction">A WorkInstruction instance.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
-
+    /// <summary>
+    /// Marks all versions of a WorkInstruction within a version chain as not the latest.
+    /// This is typically used before creating a new version to ensure only one is flagged as the latest.
+    /// </summary>
+    /// <param name="originalId">
+    /// The ID of the original WorkInstruction representing the root of the version chain.
+    /// All WorkInstructions with this OriginalId, or with an Id equal to this value,
+    /// will have their <c>IsLatest</c> flag set to <c>false</c>.
+    /// </param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result is <c>true</c> if the update succeeded; otherwise, <c>false</c>.
+    /// </returns>
+    Task<bool> MarkAllVersionsNotLatestAsync(int originalId);
+    /// <summary>
+    /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
+    /// </summary>
+    /// <param name="file">The uploaded browser file.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is the relative path
+    /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
+    /// </returns>
+    Task<string> SaveImageFileAsync(IBrowserFile file);
+    /// <summary>
+    /// Sets IsActive = false for all other versions in this version chain.
+    /// </summary>
+    /// <param name="workInstructionId"></param>
+    /// <returns></returns>
+    Task MarkOtherVersionsInactiveAsync(int workInstructionId);
 }

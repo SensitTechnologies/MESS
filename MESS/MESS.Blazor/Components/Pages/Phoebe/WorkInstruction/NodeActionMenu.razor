@@ -1,0 +1,54 @@
+<div class="dropdown-container" style="position: relative;">
+    <button class="btn btn-sm btn-secondary" @onclick="ToggleDropdown">
+        ...
+    </button>
+
+    @if (IsMenuOpen)
+    {
+        <div class="dropdown-menu-custom">
+            <button class="dropdown-item" @onclick="() => InvokeAction(Up)">Move Up</button>
+            <button class="dropdown-item" @onclick="() => InvokeAction(Down)">Move Down</button>
+            <button class="dropdown-item" @onclick="() => InvokeAction(Top)">Move to Top</button>
+            <button class="dropdown-item" @onclick="() => InvokeAction(Bottom)">Move to Bottom</button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" @onclick="() => InvokeAction(InsertBefore)">Insert New Before</button>
+            <button class="dropdown-item" @onclick="() => InvokeAction(InsertAfter)">Insert New After</button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item text-danger" @onclick="() => InvokeAction(Remove)">Remove</button>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Invoked when the user selects an action.
+    /// Action will be one of the defined constants.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnAction { get; set; }
+
+    private bool IsMenuOpen { get; set; } = false;
+
+    private const string Up = "up";
+    private const string Down = "down";
+    private const string Top = "top";
+    private const string Bottom = "bottom";
+    private const string Remove = "remove";
+    private const string InsertBefore = "insertBefore";
+    private const string InsertAfter = "insertAfter";
+
+    private void ToggleDropdown()
+    {
+        IsMenuOpen = !IsMenuOpen;
+    }
+
+    private async Task InvokeAction(string action)
+    {
+        IsMenuOpen = false;
+
+        if (OnAction.HasDelegate)
+        {
+            await OnAction.InvokeAsync(action);
+        }
+    }
+}

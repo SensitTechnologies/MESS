@@ -1,171 +1,180 @@
 @using MESS.Data.Models
-@inject IJSRuntime JSRuntime
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.SortableList
 
-<div>
-    <FluentDragContainer TItem="WorkInstructionNode" OnDropEnd="OnDropEnd">
-        <FluentGrid Justify="JustifyContent.Center">
-            @* Placing drop zone here to account for the 1st step not having a drop zone above it from the previous Action *@
-            <FluentGridItem Justify="JustifyContent.Center" xs="7" sm="12" md="12" lg="12">
-                <FluentDropZone Class="w-100" Id="dropzone-top" Draggable="false" Droppable="true">
-                    <FluentCard Class="w-100 container" Style="background-color: transparent; color: gray;">
-                        <div class="d-flex justify-content-center align-items-center" style="height: 100%; font-size: x-large;">𓃎</div>
-                    </FluentCard>
-                </FluentDropZone>
-            </FluentGridItem>
-            @foreach (var node in WorkInstructionNodes.OrderBy(n => n.Position))
-            {
-                <FluentGridItem xs="7" sm="12" md="12" lg="12">
-
-                    <FluentDropZone Id="@($"dropzone-node-{node.Id}")" Item="node" TItem="WorkInstructionNode" Draggable="true" Droppable="false">
-                        <FluentCard>
-                            <FluentGrid>
-                                <FluentGridItem xs="1">
-                                    @node.Position
-                                </FluentGridItem>
-                                <FluentGridItem xs="1">
-                                    @node.NodeType.ToString()
-                                </FluentGridItem>
-                                <FluentGridItem xs="9">
-                                    @switch (node.NodeType)
-                                    {
-                                        case WorkInstructionNodeType.Part when node is PartNode partNode:
-                                            @foreach (var part in partNode.Parts)
-                                            {
-                                                <div class="part-node">
-                                                    <div><strong>Serial Number:</strong> @part.PartNumber</div>
-                                                    <div><strong>Part Name:</strong> @part.PartName</div>
-                                                </div>
-                                            }
-
-                                            break;
-
-                                        case WorkInstructionNodeType.Step when node is Step stepNode:
-                                            <div class="step-node">
-                                                <div class="step-name"><strong>Name:</strong> @((MarkupString)stepNode.Name)</div>
-                                                <div class="step-body"><strong>Body:</strong>
-                                                    @if (stepNode.Body != null)
-                                                    {
-                                                        @((MarkupString)stepNode.Body)
-                                                    }
-                                                </div>
-
-                                                @foreach (var pMedia in stepNode.PrimaryMedia)
-                                                {
-                                                    <div class="image-node">
-                                                        <img src="@((MarkupString)pMedia)" alt="Primary Image" class="img-fluid"/>
-                                                    </div>
-                                                }
-
-                                                @foreach (var sMedia in stepNode.SecondaryMedia)
-                                                {
-                                                    <div class="image-node">
-                                                        <img src="@((MarkupString)sMedia)" alt="Secondary Image" class="img-fluid"/>
-                                                    </div>
-                                                }
-                                            </div>
-                                            break;
-
-                                        default:
-                                            <div>Unknown node type: @node.NodeType</div>
-                                            break;
-                                    }
-                                </FluentGridItem>
-
-                            </FluentGrid>
-
-                        </FluentCard>
-                    </FluentDropZone>
-                </FluentGridItem>
-                <FluentGridItem xs="7" sm="12" md="12" lg="12" Justify="JustifyContent.Center">
-                    <FluentDropZone Class="w-100" Id="@($"dropzone-below-{node.Id}")" Draggable="false" Droppable="true">
-                        <FluentCard Class="w-100 container" Style="background-color: transparent; color: gray;">
-                            <div class="d-flex justify-content-center align-items-center" style="height: 100%; font-size: x-large;">𓃎</div>
-                        </FluentCard>
-                    </FluentDropZone>
-                </FluentGridItem>
-            }
-        </FluentGrid>
-    </FluentDragContainer>
-</div>
+<SortableList T="WorkInstructionNode"
+              Items="WorkInstructionNodes"
+              OnUpdate="OnItemsChanged"
+              Context="node">
+    <SortableItemTemplate>
+        @NodeTemplate(node)
+    </SortableItemTemplate>
+</SortableList>
 
 @code {
     /// <summary>
-    /// A list of work instruction nodes to be displayed and managed in the component.
+    /// Gets or sets the list of work instruction nodes to render and manage in the sortable list.
     /// </summary>
     /// <remarks>
-    /// This parameter is required and is used as the data source for the drag-and-drop functionality.
-    /// </remarks>
-    [Parameter]
+    /// Each <see cref="WorkInstructionNode"/> in the list can represent either a <see cref="PartNode"/> or a <see cref="Step"/>.
+    /// This parameter is required and serves as the data source for drag-and-drop reordering,
+    /// as well as for displaying and editing the content of the nodes.
+    /// /// </remarks>
+    [Parameter, EditorRequired]
     public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
     
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    /// <summary>
+    /// Event callback that is triggered when *any* of the steps in this list has been changed.
+    /// Use this to notify the parent page that the editor state should be marked as dirty.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; } = new();
+    private Dictionary<int, string> ActiveFields { get; set; } = new();
+
+    private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
+    @<div class="mb-3 p-3 border rounded">
+        <div class="d-flex align-items-center">
+            <div class="position me-3">
+                <strong>@node.Position</strong>
+            </div>
+            <div class="content flex-grow-1">
+                @switch (node)
+                {
+                    case PartNode partNode:
+                        <PartNodeView PartNode="partNode" OnChanged="OnChanged" />
+                        break;
+
+                    case Step stepNode:
+                        <StepNodeView
+                            Step="stepNode"
+                            EditorRefs="EditorRefs"
+                            ActiveFields="ActiveFields"
+                            OnAction="HandleStepNodeAction" 
+                            OnChanged="OnChanged" />
+                        break;
+
+                    default:
+                        <div>Unknown node type: @node.NodeType</div>
+                        break;
+                }
+            </div>
+        </div>
+    </div>;
+    
+    private async Task OnItemsChanged((int oldIndex, int newIndex) indices)
     {
-        if (firstRender)
+        var (oldIndex, newIndex) = indices;
+        if (oldIndex == newIndex) return;
+
+        await SaveAllEditorsContentAsync();
+
+        var itemToMove = WorkInstructionNodes[oldIndex];
+        WorkInstructionNodes.RemoveAt(oldIndex);
+
+        if (newIndex < WorkInstructionNodes.Count)
         {
-            await JSRuntime.InvokeVoidAsync("initializeDragScrolling");
+            WorkInstructionNodes.Insert(newIndex, itemToMove);
+        }
+        else
+        {
+            WorkInstructionNodes.Add(itemToMove);
+        }
+
+        RecalculatePositions();
+        
+        if (OnChanged.HasDelegate)
+        {
+            await OnChanged.InvokeAsync();
         }
     }
     
-    private void OnDropEnd(FluentDragEventArgs<WorkInstructionNode> obj)
+    private void RecalculatePositions()
     {
-        var sourceNode = obj.Source.Item;
-        var oldPosition = sourceNode.Position;
-        var targetId = obj.Target.Id;
-
-        int newPosition;
-
-        if (targetId == "dropzone-top")
+        for (var i = 0; i < WorkInstructionNodes.Count; i++)
         {
-            newPosition = 0;
-        } else if (targetId != null && targetId.StartsWith("dropzone-below-"))
+            WorkInstructionNodes[i].Position = i;
+        }
+    }
+    
+    private async Task HandleStepNodeAction((Step step, string action) actionTuple)
+    {
+        var (step, action) = actionTuple;
+        var index = WorkInstructionNodes.IndexOf(step);
+        if (index == -1) return;
+
+        // Only save if moving or removing
+        if (action is not ("insertBefore" or "insertAfter"))
         {
-            string nodeIdStr = targetId.Substring("dropzone-below-".Length);
-            if (int.TryParse(nodeIdStr, out int nodeId))
+            await SaveAllEditorsContentAsync();
+        }
+
+        WorkInstructionNodes.Remove(step);
+
+        switch (action)
+        {
+            case "up":
+                WorkInstructionNodes.Insert(Math.Max(0, index - 1), step);
+                break;
+            case "down":
+                WorkInstructionNodes.Insert(Math.Min(WorkInstructionNodes.Count, index + 1), step);
+                break;
+            case "top":
+                WorkInstructionNodes.Insert(0, step);
+                break;
+            case "bottom":
+                WorkInstructionNodes.Add(step);
+                break;
+            case "insertBefore":
+                WorkInstructionNodes.Insert(index, new Step { Name = "", Body = "", DetailedBody = "" }); // new step at index
+                WorkInstructionNodes.Insert(index + 1, step);                        // original step after
+                break;
+            case "insertAfter":
+                WorkInstructionNodes.Insert(index, step);                            // original step at index
+                WorkInstructionNodes.Insert(index + 1, new Step { Name = "", Body = "", DetailedBody = "" }); // new step after
+                break;
+            case "remove":
+                // already removed above
+                break;
+        }
+
+        RecalculatePositions();
+        
+        if (OnChanged.HasDelegate)
+        {
+            await OnChanged.InvokeAsync();
+        }
+    }
+    
+    /// <summary>
+    /// Iterates over all tracked BlazoredTextEditor instances and saves their current HTML content
+    /// into the corresponding <see cref="Step"/> objects in <see cref="WorkInstructionNodes"/>.
+    /// </summary>
+    /// <remarks>
+    /// This ensures that any in-progress edits in the rich text editors are persisted
+    /// back to the underlying data model before performing actions like saving to the database
+    /// or navigating away from the page.
+    /// </remarks>
+    /// <returns>A task that represents the asynchronous save operation.</returns>
+    public async Task SaveAllEditorsContentAsync()
+    {
+        foreach (var kvp in EditorRefs)
+        {
+            var stepId = kvp.Key;
+            var editor = kvp.Value;
+            if (editor == null) continue;
+
+            var currentHtml = await editor.GetHTML();
+
+            // Find the node, check if Step (only steps have editable content)
+            var node = WorkInstructionNodes.FirstOrDefault(n => n.Id == stepId);
+            if (node is Step step)
             {
-                var targetNode = WorkInstructionNodes.FirstOrDefault(n => n.Id == nodeId);
-                if (targetNode != null)
-                {
-                    newPosition = targetNode.Position + 1;
-                }
+                if (ActiveFields.TryGetValue(stepId, out var field) && field == "Body")
+                    step.DetailedBody = currentHtml;
                 else
-                {
-                    return;
-                }
-            }
-            else
-            {
-                return;
+                    step.Body = currentHtml;
             }
         }
-        else
-        {
-            return;
-        }
-        
-        // Skip if dropping in original position or right after original position
-        if (newPosition == oldPosition || newPosition == oldPosition + 1)
-            return;
-        
-        if (newPosition > oldPosition)
-        {
-            foreach (var node in WorkInstructionNodes
-                         .Where(n => n.Position > oldPosition && n.Position < newPosition))
-            {
-                node.Position--;
-            }
-            sourceNode.Position = newPosition - 1;
-        }
-        else
-        {
-            foreach (var node in WorkInstructionNodes
-                         .Where(n => n.Position >= newPosition && n.Position < oldPosition))
-            {
-                node.Position++;
-            }
-            sourceNode.Position = newPosition;
-        }
-
-        StateHasChanged();
     }
 }

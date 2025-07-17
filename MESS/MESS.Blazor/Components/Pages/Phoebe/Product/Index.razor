@@ -1,6 +1,6 @@
 @page "/products"
 @layout PhoebeLayout
-@attribute [Authorize(Roles = "Technician")]
+@attribute [Authorize(Roles = "Technician, Administrator")]
 @using MESS.Blazor.Components.Layout
 @using MESS.Data.Models
 @using MESS.Services.Product
@@ -9,6 +9,7 @@
 @using Serilog
 @inject IProductService ProductService
 @inject IWorkInstructionService WorkInstructionService
+@inject IToastService ToastService
 
 <PageTitle>Product List</PageTitle>
 
@@ -52,41 +53,41 @@ else
 
     private async Task LoadProducts()
     {
-        Products = (await ProductService.GetAllProductsAsync()).ToList();
+        Products = (await ProductService.GetAllAsync()).ToList();
     }
 
     private async Task HandleSubmitProduct(Product product)
     {
         try
         {
-            // Log the start of the submission process
             Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
 
-            // Check if it's a new product or a modified product (which is actually a new product)
             if (product.Id == 0) 
             {
-                await ProductService.AddProductAsync(product);  // Create new product
+                await ProductService.CreateAsync(product);  // Create new product
+                ToastService.ShowSuccess($"Product '{product.Name}' created successfully!");
             }
             else
             {
-                await ProductService.DuplicateProductAsync(product);  // Create a new product from modified data
+                await ProductService.UpdateProductAsync(product);  // Update existing product
+                ToastService.ShowSuccess($"Product '{product.Name}' updated successfully!");
             }
 
-            // Reload products after submission
             await LoadProducts();
 
             _newProduct = new Product
             {
-                Name = ""
+                Name = "",
+                IsActive = true
             };
 
-            // Log the success of the operation
             Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
         }
         catch (Exception ex)
         {
-            // Log the exception using Serilog
             Log.Error(ex, "Error occurred while submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+            ToastService.ShowError($"Error submitting product '{product.Name}'. Please try again.");
         }
     }
+
 }

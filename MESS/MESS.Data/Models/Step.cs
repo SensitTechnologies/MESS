@@ -9,11 +9,16 @@ public class Step : WorkInstructionNode
     /// Gets or sets the name of the step. This property is required.
     /// </summary>
     public required string Name { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the body of the step. This property is required.
+    /// </summary>
+    public required string Body { get; set; }
 
     /// <summary>
-    /// Gets or sets the body content of the step. This property is optional.
+    /// Gets or sets the detailed body content of the step. This property is optional.
     /// </summary>
-    public string? Body { get; set; }
+    public string? DetailedBody { get; set; }
 
     /// <summary>
     /// Gets or sets the list of primary media associated with the step.

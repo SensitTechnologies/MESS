@@ -1,0 +1,56 @@
+@using MESS.Data.Models
+
+@if (Products?.Any() == true)
+{
+    <select class="form-select" value="@_selectedProductId" @onchange="HandleChange">
+        <option value="-1">All Products</option>
+        @foreach (var product in Products.OrderBy(p => p.Name ?? string.Empty))
+        {
+            <option value="@product.Id">@product.Name</option>
+        }
+    </select>
+}
+else
+{
+    <p>No products available.</p>
+}
+
+@code {
+    private int _selectedProductId = -1;
+
+    /// <summary>
+    /// The list of products to display in the dropdown.
+    /// </summary>
+    [Parameter]
+    public List<Product>? Products { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currently selected product ID.
+    /// This is set by the parent component.
+    /// </summary>
+    [Parameter]
+    public int? SelectedProductId { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the user selects a product.
+    /// Passes the selected product ID to the parent component.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnProductSelected { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // Sync local field with parent
+        _selectedProductId = SelectedProductId ?? -1;
+    }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var val))
+        {
+            _selectedProductId = val;
+            await OnProductSelected.InvokeAsync(val);
+        }
+    }
+}

@@ -1,0 +1,48 @@
+﻿.sidebar-panel {
+    position: fixed;
+    top: 0;
+    left: 0;                 /* pinned to left */
+    height: 100vh;
+    width: 300px;            /* adjust width */
+    background-color: white; /* light mode background */
+    color: black;            /* light mode text */
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* shadow on right side */
+    overflow-y: auto;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-100%); /* hidden off screen to the left */
+    z-index: 1050;
+    padding: 1rem;
+}
+
+.sidebar-panel.open {
+    transform: translateX(0);    /* slide in */
+}
+
+.sidebar-panel.closed {
+    transform: translateX(-100%); /* slide out */
+}
+
+/* Dark mode overrides */
+body.dark-mode .sidebar-panel {
+    background-color: #1e1e1e;
+    color: white;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+/* Buttons in sidebar in dark mode */
+body.dark-mode .sidebar-panel .btn-outline-secondary {
+    color: white;
+    border-color: #555;
+    background-color: transparent;
+}
+
+body.dark-mode .sidebar-panel .btn-outline-secondary:hover {
+    background-color: #444;
+    border-color: #ffd502;
+    color: #ffd502;
+}
+
+/* Dark mode close button */
+body.dark-mode .sidebar-panel .btn-close {
+    filter: invert(1);
+}

@@ -1,101 +1,239 @@
 @page "/WorkInstructionManager"
-@layout PhoebeLayout
-@using MESS.Blazor.Components.Layout
-@using MESS.Data.DTO
 @using MESS.Data.Models
 @using MESS.Services.Product
 @using MESS.Services.WorkInstruction
 @using Serilog
+@using MESS.Blazor.Components.Pages.Phoebe.MenuBar
+@using MESS.Blazor.Components.Navigator
+@using Microsoft.AspNetCore.Authorization
 @inject IWorkInstructionService WorkInstructionService
 @inject IProductService ProductService
 @inject IToastService ToastService
+@inject IWorkInstructionEditorService WorkInstructionEditorService
+@attribute [Authorize(Roles = "Technician, Administrator")]
 
+<MenuBarPhoebe 
+    Products="@Products"
+    WorkInstructions="@FilteredWorkInstructions"
+    SelectedProductId="@SelectedProductId"
+    SelectedWorkInstructionId="@SelectedWorkInstructionId"
+    OnProductSelected="OnProductSelected"
+    OnWorkInstructionSelected="OnWorkInstructionSelected"
+    OnSidebarToggle="ToggleSidebar"
+    OnNew="StartNewInstruction"
+    OnDelete="DeleteInstruction"
+    OnSave="SaveEditorChanges"
+    OnRevertChanges="RevertEditorChanges"
+    OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
+    OnImportComplete="HandleImportComplete"
+    IsDirty="WorkInstructionEditorService.IsDirty"
+    CurrentInstruction="WorkInstructionEditorService.Current" />
 
-    <div class="container justify-content-center">
-        <WorkInstructionImport OnImportComplete="HandleImportComplete"/>
-        <FluentGrid Class="mt-5" Justify="JustifyContent.Center">
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
-                <FluentLabel>
-                    Title
-                </FluentLabel>
-                <FluentLabel>
-                    Version
-                </FluentLabel>
-                <FluentLabel>
-                    Actions
-                </FluentLabel>
-            </FluentStack>
-            @foreach (var (instruction, index) in WorkInstructions.Select((instruction, index) => (instruction, index)))
-            {
-                <FluentGridItem xs="12">
-                    <WorkInstructionTableRow RowNumber="index" WorkInstruction="instruction" SaveChanges="SaveChanges" 
-                                             OnDuplicate="HandleDuplicate" OnDelete="HandleDelete"
-                                             AllProducts="AllProducts"></WorkInstructionTableRow>
-                </FluentGridItem>
-            }
-        </FluentGrid>
-    </div>
+<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
+<div class="container justify-content-center" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+    <WorkInstructionNodeManagerList
+        @ref="NodeManagerRef"
+        WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
+        OnChanged="MarkEditorDirty" />
+</div>
+
+<PopUpMenu @ref="popupRef"/>
 
 @code {
-    private List<WorkInstruction> WorkInstructions { get; set; } = [];
-    private List<Product>? AllProducts { get; set; }
-    
+    private WorkInstructionNodeManagerList? NodeManagerRef;
+
+    private bool isSidebarOpen = false;
+
+    private List<Product> Products { get; set; } = new();
+    private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
+
+    private List<WorkInstruction> FilteredWorkInstructions => 
+        SelectedProductId == null || SelectedProductId == -1
+            ? AllWorkInstructions
+            : AllWorkInstructions.Where(wi => wi.Products?.Any(p => p.Id == SelectedProductId) == true).ToList();
+
+    private int? SelectedProductId { get; set; }
+    private int? SelectedWorkInstructionId { get; set; }
+
+    private PopUpMenu? popupRef;
+
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
-        WorkInstructions = await WorkInstructionService.GetAllAsync();
-        AllProducts = (await ProductService.GetAllProductsAsync()).ToList();
+        WorkInstructionEditorService.OnChanged += HandleEditorChanged;
+
+        // Load initial data
+        Products = (await ProductService.GetAllAsync())?.ToList() ?? new List<Product>();
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+
+
+        await base.OnInitializedAsync();
     }
-    
-    private async Task SaveChanges(WorkInstruction instruction)
+
+    private void HandleEditorChanged()
     {
-        if (instruction is { Title: {Length: <= 0 } })
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+        StateHasChanged();
+    }
+
+    private async Task SaveEditorChanges()
+    {
+        var current = WorkInstructionEditorService.Current;
+        if (current == null)
         {
-            Log.Information("Attempted Work Instruction save changes with empty or null Title, for instruction ID: {InstructionId}", instruction.Id);
+            ToastService.ShowError("No Work Instruction is currently loaded.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(current.Title))
+        {
             ToastService.ShowError("A Work Instruction must have a title.");
             return;
         }
 
         try
         {
-            // Only have to account for updates here since a work instruction can currently
-            // only be created via importation as of 4/3/2025.
-            var saveResult = await WorkInstructionService.UpdateWorkInstructionAsync(instruction);
-            if (saveResult)
+            bool isEditable = await WorkInstructionService.IsEditable(current);
+
+            bool success;
+            if (isEditable)
             {
-                ToastService.ShowSuccess($"Work Instruction: {instruction.Title} Version: {instruction.Version}, was successfully saved.");
+                success = await WorkInstructionEditorService.SaveAsync();
+                if (success)
+                    ToastService.ShowSuccess("Work Instruction updated successfully.");
+                else
+                    ToastService.ShowError("Unable to save Work Instruction. Please ensure Title and Version are unique.");
             }
             else
             {
-                ToastService.ShowError($"Unable to save Work Instruction: {instruction.Title}. Please ensure that both the Title and Version are unique.");
+                // Create new version, then save
+                await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
+                success = await WorkInstructionEditorService.SaveAsync();
+                if (success)
+                    ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+                else
+                    ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
+            }
+
+            if (success)
+            {
+                // Refresh all latest work instructions list after save
+                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
             }
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log.Error("Error saving Work Instruction changes: {errorMessage}", e.Message);
-            ToastService.ShowError("An error occurred while saving changes");
+            Log.Error(ex, "Error saving Work Instruction");
+            ToastService.ShowError("An error occurred while saving changes.");
         }
     }
 
-    private Task HandleDuplicate(WorkInstruction newInstruction)
+    private async Task DeleteInstruction()
     {
-        WorkInstructions.Add(newInstruction);
-        StateHasChanged();
-        return Task.CompletedTask;
+        var current = WorkInstructionEditorService.Current;
+        if (current == null)
+        {
+            ToastService.ShowError("No Work Instruction is currently loaded.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(current.Title))
+        {
+            ToastService.ShowError("A Work Instruction must have a title.");
+            return;
+        }
+
+        try
+        {
+            bool success = await WorkInstructionService.DeleteAllVersionsByIdAsync(current.Id);
+            if (success)
+                ToastService.ShowSuccess("Work Instructions deleted successfully.");
+            else
+                ToastService.ShowError("Unable to delete Work Instruction. Please ensure Title and Version are unique.");
+
+            if (success)
+            {
+                // Refresh all latest work instructions list after save
+                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error deleting Work Instruction");
+            ToastService.ShowError("An error occurred while deleting Instructions");
+        }
     }
 
-    private Task HandleDelete(WorkInstruction workInstructionToRemove)
+    private Task HandleImportComplete(WorkInstruction importedWorkInstruction)
     {
-        WorkInstructions.Remove(workInstructionToRemove);
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private void HandleImportComplete(WorkInstruction importedWorkInstruction)
-    {
-        WorkInstructions.Add(importedWorkInstruction);
         ToastService.ShowSuccess($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}", 3000);
+        return Task.CompletedTask;
     }
 
+    private void StartNewInstruction()
+    {
+        WorkInstructionEditorService.StartNew();
+        SelectedWorkInstructionId = null;
+        ToastService.ShowInfo("Started new Work Instruction.");
+        
+        // Trigger popup if popupRef exists
+        popupRef?.Show("A new Work Instruction has been started.", "New");
+    }
+
+    private void RevertEditorChanges()
+    {
+        WorkInstructionEditorService.RevertChanges();
+        ToastService.ShowWarning("Unsaved changes reverted.");
+    }
+
+    private Task OnProductSelected(int productId)
+    {
+        SelectedProductId = (productId == -1) ? null : productId;
+        SelectedWorkInstructionId = null;
+
+        WorkInstructionEditorService.RevertChanges(); // clear the loaded WI
+        
+        StateHasChanged();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OnWorkInstructionSelected(int instructionId)
+    {
+        SelectedWorkInstructionId = instructionId;
+
+        if (instructionId != -1)
+        {
+            try
+            {
+                await WorkInstructionEditorService.LoadForEditAsync(instructionId);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to load Work Instruction");
+                ToastService.ShowError("Failed to load Work Instruction for editing.");
+            }
+        }
+        else
+        {
+            WorkInstructionEditorService.RevertChanges();
+        }
+    }
+    
+    private async Task MarkEditorDirty()
+    {
+        WorkInstructionEditorService.MarkDirty();
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    private void HandleRestoredFromVersionHistory()
+    {
+        ToastService.ShowInfo("Version restored from history.");
+    }
 }

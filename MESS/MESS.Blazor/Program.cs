@@ -65,6 +65,7 @@ builder.Services.AddScoped<ISessionManager, SessionManager>();
 builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
+builder.Services.AddScoped<IWorkInstructionEditorService, WorkInstructionEditorService>();
 builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();

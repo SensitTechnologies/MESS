@@ -38,8 +38,9 @@ public static class SeedWorkInstructions
                     {
                         Position = 0,
                         NodeType = WorkInstructionNodeType.Step,
-                        Name = "Test display and Humidity Sensor.",
-                        Body = "Gather all required parts and tools",
+                        Name = "Test display and Humidity Sensor",
+                        Body = "Test display and Humidity Sensor.",
+                        DetailedBody = "Gather all required parts and tools",
                     },
                     new PartNode
                     {
@@ -67,8 +68,9 @@ public static class SeedWorkInstructions
                     {
                         Position = 2,
                         NodeType = WorkInstructionNodeType.Step,
-                        Name = "Attach the Display Board to the Primary Circuit Board.",
-                        Body = "Attach the Display Board (5512-G221) to the Primary Circuit Board (1234-G231) using 4x T4 Screws."
+                        Name = "Attach the Display Board tp the Primary Circuit Board",
+                        Body = "Attach the Display Board to the Primary Circuit Board.",
+                        DetailedBody = "Attach the Display Board (5512-G221) to the Primary Circuit Board (1234-G231) using 4x T4 Screws."
                     }
                 }
             };

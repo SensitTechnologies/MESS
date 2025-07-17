@@ -1,0 +1,137 @@
+﻿@using MESS.Data.Models
+<div class="sidebar-panel @(IsOpen ? "open" : "closed")">
+    <div class="sidebar-header d-flex justify-content-between align-items-center mb-3">
+        <h5>Version History</h5>
+        <button class="btn-close" @onclick="OnToggleClicked" aria-label="Close sidebar" />
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status" aria-hidden="true"></div>
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else if ((Versions is null || !Versions.Any()) && CurrentInstruction == null)
+    {
+        <p class="text-muted">No versions available for this work instruction.</p>
+    }
+    else
+    {
+        <div class="version-list">
+
+            @if (CurrentInstruction != null)
+            {
+                <div class="version-item border rounded p-2 mb-2 bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Current Version: @CurrentInstruction.Version</strong>
+                            <div class="text-muted small">
+                                @CurrentInstruction.LastModifiedOn.ToLocalTime().ToString("g")
+                            </div>
+                            <div class="text-muted small">
+                                @CurrentInstruction.Title
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-secondary" disabled>Loaded</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (Versions != null)
+            {
+                @foreach (var version in Versions.Where(v => CurrentInstruction == null || v.Id != CurrentInstruction.Id).OrderByDescending(v => v.Version))
+                {
+                    <div @key="version.Id" class="version-item border rounded p-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Version: @version.Version</strong>
+                                <div class="text-muted small">
+                                    @version.LastModifiedOn.ToLocalTime().ToString("g")
+                                </div>
+                                <div class="text-muted small">
+                                    @version.Title
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-success" aria-label="Restore version @version.Version" @onclick="() => OnRestoreClicked(version.Id)">Restore</button>
+                                <button class="btn btn-sm btn-danger" aria-label="Delete version @version.Version" @onclick="() => OnDeleteClicked(version.Id)">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets a value indicating whether the version history sidebar is open or closed.
+    /// </summary>
+    /// <remarks>
+    /// When <c>true</c>, the sidebar is visible to the user. When <c>false</c>, it is hidden.
+    /// This allows the parent component to control the sidebar's visibility.
+    /// </remarks>
+    [Parameter] public bool IsOpen { get; set; } = false;
+    
+    /// <summary>
+    /// Event callback triggered when the user clicks the close button or otherwise toggles the sidebar's visibility.
+    /// </summary>
+    /// <remarks>
+    /// The parent component should handle this event to update the <see cref="IsOpen"/> state accordingly.
+    /// This enables two-way interaction between the sidebar and its parent for open/close behavior.
+    /// </remarks>
+    [Parameter] public EventCallback OnToggle { get; set; }
+
+    /// <summary>
+    /// The current (active) work instruction being edited. 
+    /// Displayed at the top of the version list.
+    /// </summary>
+    [Parameter]
+    public WorkInstruction? CurrentInstruction { get; set; }
+    
+    /// <summary>
+    /// The list of all historical versions of the current work instruction.
+    /// </summary>
+    [Parameter]
+    public List<WorkInstruction>? Versions { get; set; }
+
+    /// <summary>
+    /// Whether the parent is still loading them.
+    /// </summary>
+    [Parameter]
+    public bool IsLoading { get; set; } = false;
+
+    /// <summary>
+    /// Event callback to restore a given version by ID.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnRestore { get; set; }
+
+    /// <summary>
+    /// Event callback to delete a given version by ID.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnDelete { get; set; }
+    
+    private async Task OnToggleClicked()
+    {
+        if (OnToggle.HasDelegate)
+            await OnToggle.InvokeAsync(null);
+    }
+
+    private async Task OnRestoreClicked(int versionId)
+    {
+        if (OnRestore.HasDelegate)
+            await OnRestore.InvokeAsync(versionId);
+    }
+
+    private async Task OnDeleteClicked(int versionId)
+    {
+        if (OnDelete.HasDelegate)
+            await OnDelete.InvokeAsync(versionId);
+    }
+}

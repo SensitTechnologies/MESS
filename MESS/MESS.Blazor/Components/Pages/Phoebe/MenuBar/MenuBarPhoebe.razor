@@ -1,0 +1,438 @@
+﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
+@using Microsoft.AspNetCore.Components.Authorization
+@using MESS.Data.Models
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
+@using MESS.Services.WorkInstruction
+@using Serilog
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
+@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
+@inject AuthenticationStateProvider AuthProvider
+@inject ILogger<MenuBarPhoebe> DemoLogger
+@inject IJSRuntime JS
+@inject IWorkInstructionEditorService EditorService
+@inject IWorkInstructionService WorkInstructionService
+
+<div class="menu-bar-card">
+    <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
+
+    <div class="menu-left-buttons">
+        <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
+        <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNew))">New</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
+            <AuthorizeView Roles="Administrator">
+                <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))">Delete</FluentMenuItem>
+            </AuthorizeView>
+        </FluentMenu>
+
+        <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
+        <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+            <FluentMenuItem Checked="@(CurrentInstruction?.ShouldGenerateQrCode ?? false)"
+                            OnClick="ToggleQrCode">Generates QR Code</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.CollectsProductSerialNumber ?? false)" OnClick="ToggleSerial">Collects Product Serial Number</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" OnClick="ToggleActive">Active</FluentMenuItem>
+        </FluentMenu>
+    </div>
+
+    <div class="inputs-container">
+        <input
+            type="text"
+            class="menu-input"
+            placeholder="Enter Title Here..."
+            value="@CurrentInstruction?.Title"
+            @oninput="OnTitleChanged"
+            disabled="@(!HasInstruction)" />
+
+        <input
+            type="text"
+            class="menu-input-secondary"
+            placeholder="Version..."
+            value="@CurrentInstruction?.Version"
+            @oninput="OnVersionChanged"
+            disabled="@(!HasInstruction)" />
+    </div>
+
+    
+    <div class="inputs-container">
+        <ProductDropdown
+            Products="@Products"
+            SelectedProductId="@SelectedProductId"
+            OnProductSelected="@OnProductSelected" />
+
+        <WorkInstructionDropdown
+            WorkInstructions="@WorkInstructions"
+            SelectedWorkInstructionId="@SelectedWorkInstructionId"
+            OnWorkInstructionSelected="@OnWorkInstructionSelected" />
+    </div>
+    
+    <div class="menu-right-content">
+        <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">⏲</button>
+        <div class="save-button-container">
+            <button class="btn-small" title="Save" @onclick="HandleSave" disabled="@(!IsDirty)">
+                🖫
+                @if (IsDirty)
+                {
+                    <span class="red-dot"></span>
+                }
+            </button>
+        </div>
+        <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">@darkModeIcon</button>
+
+        @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
+        {
+            <div class="logout-container">
+                <span>@ActiveLineOperator</span>
+                <form method="post" action="/api/auth/logout" class="logout-form">
+                    <button type="submit" class="btn-small" title="Logout">Logout</button>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Version History Sidebar Component -->
+<VersionHistoryMenu
+    IsOpen="isVersionHistoryOpen"
+    OnToggle="ToggleVersionHistorySidebar"
+    Versions="_versionHistoryList"
+    CurrentInstruction="CurrentInstruction"
+    IsLoading="_isLoadingVersions"
+    OnRestore="HandleRestoreVersion"
+    OnDelete="HandleDeleteVersion" />
+
+<WorkInstructionImportDialog 
+    Visible="@showImportDialog" 
+    VisibleChanged="HandleImportDialogClosed" 
+    OnImportComplete="HandleImportComplete" />
+
+<WorkInstructionExportDialog
+    WorkInstruction="CurrentInstruction"
+    Visible="@showExportDialog"
+    VisibleChanged="@(val => showExportDialog = val)" />
+
+@code {
+    private string? ActiveLineOperator { get; set; }
+
+    /// <summary>
+    /// Raised when the sidebar toggle button is clicked.
+    /// Used by the parent layout to control sidebar visibility.
+    /// </summary>
+    [Parameter] 
+    public EventCallback OnSidebarToggle { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the user selects "New" to create a new work instruction.
+    /// </summary>
+    [Parameter] public EventCallback OnNew { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the user selects "Save" to persist current edits to the work instruction either
+    /// via versioning or direct edits.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the user selects "Delete" to completely remove a work instruction.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnDelete { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the user selects "Revert Changes" to discard unsaved edits and restore the last saved state.
+    /// </summary>
+    [Parameter] 
+    public EventCallback OnRevertChanges { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when the user restores a previous version from the version history sidebar.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRestoredFromVersionHistory { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered after a work instruction has successfully been imported.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkInstruction> OnImportComplete { get; set; }
+
+    /// <summary>
+    /// Indicates whether there are unsaved changes in the current work instruction editor session.
+    /// Used to enable or disable menu actions like Save or Revert Changes.
+    /// </summary>
+    [Parameter] public bool IsDirty { get; set; }
+    
+    /// <summary>
+    /// The currently loaded work instruction being edited. 
+    /// Used to display or bind title, version, and other properties in the toolbar.
+    /// </summary>
+    [Parameter] public WorkInstruction? CurrentInstruction { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when a product is selected.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnProductSelected { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when a work instruction is selected.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnWorkInstructionSelected { get; set; }
+    
+    /// <summary>
+    /// The ID of the currently selected product.
+    /// </summary>
+    [Parameter]
+    public int? SelectedProductId { get; set; }
+
+    /// <summary>
+    /// The ID of the currently selected work instruction.
+    /// </summary>
+    [Parameter]
+    public int? SelectedWorkInstructionId { get; set; }
+
+    private bool open = false;
+    private bool openOptions = false;
+    private string darkModeIcon = "🌙";
+    private bool HasInstruction => CurrentInstruction != null;
+    
+    private List<WorkInstruction> _versionHistoryList = new();
+    private bool _isLoadingVersions = false;
+    
+    private bool showImportDialog;
+    
+    private bool showExportDialog = false;
+
+    /// <summary>
+    /// The list of products to show in the dropdown.
+    /// </summary>
+    [Parameter]
+    public List<Product>? Products { get; set; }
+
+    /// <summary>
+    /// The list of work instructions to show in the dropdown.
+    /// </summary>
+    [Parameter]
+    public List<WorkInstruction>? WorkInstructions { get; set; }
+
+    // ** Version History Sidebar Open State **
+    private bool isVersionHistoryOpen = false;
+
+    /// <summary>
+    /// Called when the component is initialized.
+    /// Fetches the authenticated user and initializes data.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        ActiveLineOperator = state.User.Identity?.Name;
+    }
+    
+    /// <inheritdoc />
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        await base.SetParametersAsync(parameters);
+    }
+
+
+    private void ToggleFileMenu()
+    {
+        open = !open;
+        openOptions = false;
+    }
+
+    private void ToggleOptionsMenu()
+    {
+        openOptions = !openOptions;
+        open = false;
+    }
+
+    private void LogAndClose(string item)
+    {
+        open = false;
+        openOptions = false;
+        DemoLogger.LogInformation($"Clicked: {item}");
+    }
+    
+    private void ToggleQrCode()
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.ShouldGenerateQrCode = !CurrentInstruction.ShouldGenerateQrCode;
+        MarkDirty();
+    }
+    
+    private void ToggleSerial()
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.CollectsProductSerialNumber = !CurrentInstruction.CollectsProductSerialNumber;
+        MarkDirty();
+    }
+
+    private void ToggleActive()
+    {
+        EditorService.ToggleActive();
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
+        var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
+        darkModeIcon = isDark ? "☀️" : "🌙";
+    }
+
+    private async Task ToggleSidebar()
+    {
+        if (OnSidebarToggle.HasDelegate)
+            await OnSidebarToggle.InvokeAsync(null);
+    }
+    
+    // ** Toggle Version History Sidebar **
+    private async Task ToggleVersionHistorySidebar()
+    {
+        isVersionHistoryOpen = !isVersionHistoryOpen;
+
+        if (isVersionHistoryOpen)
+        {
+            if (CurrentInstruction?.OriginalId is int originalId)
+            {
+                await LoadVersionHistoryAsync(originalId);
+            }
+            else
+            {
+                _versionHistoryList = new List<WorkInstruction>(); // or null, as you prefer
+            }
+        }
+    }
+    
+    private async Task LoadVersionHistoryAsync(int originalId)
+    {
+        _isLoadingVersions = true;
+        try
+        {
+            _versionHistoryList = await WorkInstructionService.GetVersionHistoryAsync(originalId);
+        }
+        finally
+        {
+            _isLoadingVersions = false;
+        }
+    }
+
+    // ** Restore action from Version History Sidebar **
+    private void OnVersionHistoryRestore()
+    {
+        DemoLogger.LogInformation("Version history restore clicked.");
+        // Add your restore logic here
+    }
+    
+    private async Task TriggerAndClose(EventCallback callback)
+    {
+        open = false;
+        openOptions = false;
+        if (callback.HasDelegate)
+        {
+            await callback.InvokeAsync();
+        }
+    }
+    
+    private async Task HandleSave()
+    {
+        await OnSave.InvokeAsync();
+    }
+    
+    private void MarkDirty()
+    {
+        EditorService.MarkDirty();
+    }
+    
+    private void OnTitleChanged(ChangeEventArgs e)
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.Title = e.Value?.ToString() ?? "";
+        MarkDirty();
+    }
+
+    private void OnVersionChanged(ChangeEventArgs e)
+    {
+        if (CurrentInstruction == null) return;
+        CurrentInstruction.Version = e.Value?.ToString() ?? "";
+        MarkDirty();
+    }
+    
+    private async Task HandleRestoreVersion(int versionId)
+    {
+        var version = await WorkInstructionService.GetByIdAsync(versionId);
+        if (version == null)
+            return;
+
+        // Always load a new version based on the specific version being restored,
+        // never edit in place.
+        await EditorService.LoadForNewVersionFromVersionAsync(versionId);
+
+        if (OnRestoredFromVersionHistory.HasDelegate)
+        {
+            await OnRestoredFromVersionHistory.InvokeAsync();
+        }
+
+        await ToggleVersionHistorySidebar();
+    }
+    
+    private async Task HandleDeleteVersion(int versionId)
+    {
+        await WorkInstructionService.DeleteByIdAsync(versionId);
+
+        if (CurrentInstruction?.OriginalId is int originalId)
+        {
+            await LoadVersionHistoryAsync(originalId); // Refresh sidebar list
+        }
+    }
+    
+    private void TriggerImport()
+    {
+        open = false;
+        openOptions = false;
+        showImportDialog = true;
+    }
+    
+    private void TriggerExport()
+    {
+        open = false;
+        openOptions = false;
+        showExportDialog = true;
+    }
+
+    private async Task HandleImportComplete(WorkInstruction wi)
+    {
+        Log.Information("Imported WorkInstruction: {WiTitle}", wi.Title);
+
+        // Load the imported instruction into the editor service (edit mode)
+        await EditorService.LoadForEditAsync(wi.Id);
+
+        // Update the CurrentInstruction property so the UI reflects the new instruction
+        CurrentInstruction = wi;
+
+        // Update dropdown selection if relevant
+        SelectedWorkInstructionId = wi.Id;
+
+        // Hide the import dialog
+        showImportDialog = false;
+        
+        // Fire the event callback so the parent knows about it
+        if (OnImportComplete.HasDelegate)
+        {
+            await OnImportComplete.InvokeAsync(wi);
+        }
+
+        // Trigger UI refresh
+        StateHasChanged();
+    }
+    
+    private void HandleImportDialogClosed(bool isOpen)
+    {
+        showImportDialog = isOpen;
+    }
+}

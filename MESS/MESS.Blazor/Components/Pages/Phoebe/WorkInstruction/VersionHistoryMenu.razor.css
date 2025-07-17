@@ -1,0 +1,53 @@
+﻿.sidebar-panel {
+    position: fixed;
+    top: 0;
+    right: 0;       /* pinned to right */
+    height: 100vh;
+    width: 300px;   /* or whatever width you want */
+    background-color: white;  /* light mode background */
+    color: black;             /* light mode text */
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    transform: translateX(100%); /* Initially hidden off-screen to the right */
+    z-index: 1050;
+}
+
+.sidebar-panel.open {
+    transform: translateX(0);    /* Slide in fully */
+}
+
+.sidebar-panel.closed {
+    transform: translateX(100%); /* Slide out off-screen */
+}
+
+/* Dark mode overrides when body (or a parent) has 'dark-mode' class */
+body.dark-mode .sidebar-panel {
+    background-color: #1e1e1e;  /* dark background */
+    color: white;
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+}
+
+/* Table styling for light/dark */
+.sidebar-panel table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sidebar-panel th,
+.sidebar-panel td {
+    border: 1px solid currentColor;
+    padding: 0.5rem;
+}
+
+/* Button styling in dark mode */
+body.dark-mode .sidebar-panel .btn-primary {
+    background-color: #ffd502;
+    border-color: #ffd502;
+    color: black;
+}
+
+body.dark-mode .sidebar-panel .btn-primary:hover {
+    background-color: #ffd502;
+    border-color: #ffd502;
+}

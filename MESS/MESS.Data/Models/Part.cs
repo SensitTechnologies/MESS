@@ -2,7 +2,6 @@ namespace MESS.Data.Models;
 
 /// <summary>
 /// Represents a part entity with an ID, part number, and part name.
-/// Inherits from <see cref="AuditableEntity"/>.
 /// </summary>
 public class Part
 {

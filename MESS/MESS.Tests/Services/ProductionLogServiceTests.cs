@@ -84,7 +84,7 @@ public class ProductionLogServiceTests
         var workInstruction = new WorkInstruction
         {
             Title = "Test Instruction",
-            Nodes = [new Step() { Name = "Test Node" }]
+            Nodes = [new Step() { Name = "Test Node", Body = "Test Node" }]
         };
     
         // Adding the Work Instruction to the database since CreateAsync pulls from the DB

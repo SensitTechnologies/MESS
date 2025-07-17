@@ -1,0 +1,142 @@
+@using MESS.Data.Models
+@inherits ComponentBase
+
+@if (PartNode?.Parts is not null)
+{
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <NodeActionMenu OnAction="HandleNodeAction" />
+    </div>
+    
+    <div class="row">
+    @foreach (var part in PartNode.Parts)
+    {
+        <div class="col-12 col-md-6 col-lg-4 mb-3">
+        <div class="part-node border rounded p-3 h-100">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label"><strong>Part Number</strong></label>
+                    <input type="text" class="form-control" value="@part.PartNumber" @oninput="e => OnPartChanged(e, part, nameof(Part.PartNumber))" />
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label"><strong>Part Name</strong></label>
+                    <input type="text" class="form-control" value="@part.PartName" @oninput="e => OnPartChanged(e, part, nameof(Part.PartName))" />
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <NodeActionMenu OnAction="(action) => HandlePartAction(part, action)" />
+                </div>
+            </div>
+
+        </div>
+        </div>
+    }
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">No part data available.</div>
+}
+
+@code {
+    /// <summary>
+    /// An event callback that is triggered when an action is performed on the entire <see cref="PartNode"/>.
+    /// </summary>
+    /// <remarks>
+    /// This allows the parent component to handle actions such as moving or deleting the entire PartNode,
+    /// similar to the top-level move/insert/remove controls for a step node.
+    /// The callback receives a tuple containing the <see cref="PartNode"/> itself and the action string.
+    /// </remarks>
+    [Parameter]
+    public EventCallback<(PartNode node, string action)> OnNodeAction { get; set; }
+    
+    /// <summary>
+    /// Event callback that is invoked whenever any data within the <see cref="PartNode"/> or its parts
+    /// has been modified by the user.
+    /// </summary>
+    /// <remarks>
+    /// This callback should be used by the parent component to mark the editor state as dirty,
+    /// enable save actions, or perform other UI updates in response to changes.
+    /// It is triggered on changes to part properties as well as when parts are reordered,
+    /// added, or removed.
+    /// </remarks>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    /// <summary>
+    /// The <see cref="PartNode"/> containing one or more parts to render and edit.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public PartNode? PartNode { get; set; }
+    
+    private async Task HandleNodeAction(string action)
+    {
+        if (PartNode is null) return;
+
+        if (OnNodeAction.HasDelegate)
+        {
+            await OnNodeAction.InvokeAsync((PartNode, action));
+        }
+        
+        await NotifyChangedAsync();
+    }
+    
+    private async Task HandlePartAction(Part part, string action)
+    {
+        if (PartNode?.Parts == null) return;
+
+        var index = PartNode.Parts.IndexOf(part);
+        if (index == -1) return;
+
+        PartNode.Parts.Remove(part);
+
+        switch (action)
+        {
+            case "up":
+                PartNode.Parts.Insert(Math.Max(0, index - 1), part);
+                break;
+            case "down":
+                PartNode.Parts.Insert(Math.Min(PartNode.Parts.Count, index + 1), part);
+                break;
+            case "top":
+                PartNode.Parts.Insert(0, part);
+                break;
+            case "bottom":
+                PartNode.Parts.Add(part);
+                break;
+            case "remove":
+                // Already removed above, nothing to do
+                break;
+            case "insertBefore":
+                PartNode.Parts.Insert(index, part);
+                PartNode.Parts.Insert(index, new Part { PartNumber = "", PartName = "" });
+                break;
+            case "insertAfter":
+                PartNode.Parts.Insert(index, part);
+                PartNode.Parts.Insert(index + 1, new Part { PartNumber = "", PartName = "" });
+                break;
+
+        }
+        await NotifyChangedAsync();
+    }
+    
+    private async Task OnPartChanged(ChangeEventArgs e, Part part, string propertyName)
+    {
+        var newValue = e.Value?.ToString() ?? "";
+
+        if (propertyName == nameof(Part.PartNumber))
+            part.PartNumber = newValue;
+        else if (propertyName == nameof(Part.PartName))
+            part.PartName = newValue;
+
+        await NotifyChangedAsync();
+    }
+    
+    private async Task NotifyChangedAsync()
+    {
+        if (OnChanged.HasDelegate)
+        {
+            await OnChanged.InvokeAsync();
+        }
+    }
+
+
+}

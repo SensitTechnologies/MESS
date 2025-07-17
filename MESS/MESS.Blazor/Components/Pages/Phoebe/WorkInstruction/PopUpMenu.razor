@@ -1,0 +1,122 @@
+﻿@using MESS.Data.Models
+
+@{
+    var showClass = IsVisible ? "win-popup-show" : "win-popup-hide";
+    var darkModeClass = IsDarkMode ? "dark-mode" : "";
+}
+
+<div class="win-popup @showClass @darkModeClass" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-describedby="popupBody">
+    <div class="win-titlebar">
+        <span id="popupTitle" class="win-title-text">@HeaderText</span>
+    </div>
+
+    <div id="popupBody" class="win-body">
+        <!-- Editable Title textarea bound to WorkInstruction.Title -->
+        <div class="resizable-textarea-container mt-3">
+            <label for="nameInput" class="form-label">Name:</label>
+            <textarea id="nameInput"
+                      class="form-control transparent-textarea"
+                      placeholder="Enter name here..."
+                      rows="4"
+                      @bind="WorkInstruction.Title"></textarea>
+        </div>
+
+        <hr />
+
+        <!-- Reusable product checkbox list -->
+        <ProductSelector WorkInstruction="WorkInstruction"
+                         AllProducts="AllProducts"
+                         OnProductsChanged="OnProductsChanged" />
+    </div>
+
+    <div class="win-footer">
+        <button class="win-btn-primary" @onclick="OnSaveClicked">Save</button>
+        <button class="win-btn-cancel" @onclick="Close">Cancel</button>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets a value indicating whether the popup is currently visible.
+    /// </summary>
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// Event callback invoked when the visibility changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets the header text to display in the popup's title bar.
+    /// </summary>
+    [Parameter]
+    public string? HeaderText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether dark mode styles should be applied.
+    /// </summary>
+    [Parameter]
+    public bool IsDarkMode { get; set; }
+
+    /// <summary>
+    /// Event callback invoked when the Save button is clicked.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    /// <summary>
+    /// Gets or sets the work instruction currently being edited.
+    /// </summary>
+    [Parameter]
+    public WorkInstruction WorkInstruction { get; set; } = new WorkInstruction
+    {
+        Title = string.Empty
+    };
+
+    /// <summary>
+    /// Gets or sets the full list of available products.
+    /// </summary>
+    [Parameter]
+    public required List<Product> AllProducts { get; set; }
+
+    /// <summary>
+    /// Event callback invoked when the selected products list changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<Product>> OnProductsChanged { get; set; }
+
+    /// <summary>
+    /// Shows the popup with optional body text and header.
+    /// </summary>
+    /// <param name="bodyText">The optional body text (currently unused).</param>
+    /// <param name="headerText">The header text to display.</param>
+    public void Show(string bodyText, string headerText = "")
+    {
+        HeaderText = headerText;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Closes the popup and clears the header text.
+    /// </summary>
+    private void Close()
+    {
+        HeaderText = string.Empty;
+        IsVisible = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles the Save button click, invokes the OnSave callback and closes the popup.
+    /// </summary>
+    private async Task OnSaveClicked()
+    {
+        if (OnSave.HasDelegate)
+            await OnSave.InvokeAsync(null);
+
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+}
