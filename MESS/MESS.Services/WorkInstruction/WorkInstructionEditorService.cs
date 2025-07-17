@@ -70,9 +70,13 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     public async Task LoadForNewVersionAsync(int originalId)
     {
         var latest = await _workInstructionService.GetAllAsync();
+        
+        // Finds the latest version in the same version chain as the given originalId.
+        // Matches any work instruction that is marked as IsLatest and belongs to the chain
+        // identified by originalId. We allow matching either OriginalId or Id because
+        // the very first version in a chain has OriginalId == Id.
         var template = latest
-            .Where(w => w.IsLatest && (w.OriginalId == originalId || w.Id == originalId))
-            .FirstOrDefault();
+            .FirstOrDefault(w => w.IsLatest && (w.OriginalId == originalId || w.Id == originalId));
 
         if (template == null)
             throw new Exception($"No latest version found for OriginalId {originalId}.");
@@ -82,7 +86,31 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         IsDirty = true;
         NotifyChanged();
     }
+    
+    /// <inheritdoc />
+    public async Task LoadForNewVersionFromVersionAsync(int versionId)
+    {
+        // Load the version to restore by ID
+        var oldVersion = await _workInstructionService.GetByIdAsync(versionId);
+        if (oldVersion == null)
+            throw new Exception($"Version with ID {versionId} not found.");
 
+        // Clone it
+        var newVersion = CloneForNewVersion(oldVersion);
+        
+        newVersion.Version = oldVersion.Version;
+
+        // Assign OriginalId from the old version
+        newVersion.OriginalId = oldVersion.OriginalId;
+
+        // Set mode and mark as dirty
+        Current = newVersion;
+        Mode = EditorMode.CreateNewVersion;
+        IsDirty = true;
+
+        NotifyChanged();
+    }
+    
     private WorkInstruction CloneForNewVersion(WorkInstruction template)
     {
         return new WorkInstruction
@@ -174,7 +202,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 success = await _workInstructionService.Create(Current);
                 break;
         }
-
+        if (success && Current.IsActive)
+        {
+            await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
+        }
+        
         if (success)
         {
             IsDirty = false;
@@ -191,5 +223,13 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         IsDirty = false;
         Mode = EditorMode.None;
         NotifyChanged();
+    }
+    
+    /// <inheritdoc />
+    public void ToggleActive()
+    {
+        if (Current == null) return;
+        Current.IsActive = !Current.IsActive;
+        MarkDirty();
     }
 }

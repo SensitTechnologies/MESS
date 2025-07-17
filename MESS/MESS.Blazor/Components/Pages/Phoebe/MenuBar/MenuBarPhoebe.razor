@@ -275,9 +275,7 @@
 
     private void ToggleActive()
     {
-        if (CurrentInstruction == null) return;
-        CurrentInstruction.IsActive = !CurrentInstruction.IsActive;
-        MarkDirty();
+        EditorService.ToggleActive();
     }
 
     private async Task ToggleDarkMode()
@@ -368,32 +366,18 @@
     private async Task HandleRestoreVersion(int versionId)
     {
         var version = await WorkInstructionService.GetByIdAsync(versionId);
-        if (version == null) return;
+        if (version == null)
+            return;
 
-        bool editable = await WorkInstructionService.IsEditable(version);
+        // Always load a new version based on the specific version being restored,
+        // never edit in place.
+        await EditorService.LoadForNewVersionFromVersionAsync(versionId);
 
-        if (editable)
-        {
-            await EditorService.LoadForEditAsync(versionId);
-        }
-        else
-        {
-            if (version.OriginalId is int originalId)
-            {
-                await EditorService.LoadForNewVersionAsync(originalId);
-            }
-            else
-            {
-                Log.Error("Cannot restore version: OriginalId is null.");
-                return;
-            }
-        }
-        
         if (OnRestoredFromVersionHistory.HasDelegate)
         {
             await OnRestoredFromVersionHistory.InvokeAsync();
         }
-        
+
         await ToggleVersionHistorySidebar();
     }
     

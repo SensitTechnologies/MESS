@@ -42,9 +42,9 @@
 
             @if (Versions != null)
             {
-                @foreach (var version in Versions.OrderByDescending(v => v.Version))
+                @foreach (var version in Versions.Where(v => CurrentInstruction == null || v.Id != CurrentInstruction.Id).OrderByDescending(v => v.Version))
                 {
-                    <div class="version-item border rounded p-2 mb-2">
+                    <div @key="version.Id" class="version-item border rounded p-2 mb-2">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>Version: @version.Version</strong>
@@ -56,8 +56,8 @@
                                 </div>
                             </div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-success" @onclick="() => OnRestoreClicked(version.Id)">Restore</button>
-                                <button class="btn btn-sm btn-danger" @onclick="() => OnDeleteClicked(version.Id)">Delete</button>
+                                <button class="btn btn-sm btn-success" aria-label="Restore version @version.Version" @onclick="() => OnRestoreClicked(version.Id)">Restore</button>
+                                <button class="btn btn-sm btn-danger" aria-label="Delete version @version.Version" @onclick="() => OnDeleteClicked(version.Id)">Delete</button>
                             </div>
                         </div>
                     </div>

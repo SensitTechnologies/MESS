@@ -158,4 +158,10 @@ public interface IWorkInstructionService
     /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
     /// </returns>
     Task<string> SaveImageFileAsync(IBrowserFile file);
+    /// <summary>
+    /// Sets IsActive = false for all other versions in this version chain.
+    /// </summary>
+    /// <param name="workInstructionId"></param>
+    /// <returns></returns>
+    Task MarkOtherVersionsInactiveAsync(int workInstructionId);
 }
