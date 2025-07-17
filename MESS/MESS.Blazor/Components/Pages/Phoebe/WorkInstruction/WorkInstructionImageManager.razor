@@ -11,6 +11,7 @@
     {
         <div class="carousel-wrapper mb-3">
             <Carousel
+                @key="ActiveImages.ElementAtOrDefault(CurrentIndex)"
                 Images="ActiveImages"
                 AutoPlay="false"
                 Interval="3000"
@@ -146,6 +147,7 @@
                 if (item != null)
                 {
                     ActiveImages.RemoveAt(CurrentIndex);
+                    CurrentIndex = Math.Min(CurrentIndex, ActiveImages.Count - 1);
                 }
                 break;
             case "insertBefore":
@@ -159,7 +161,15 @@
                 return;
         }
 
-        CurrentIndex = Math.Clamp(CurrentIndex, 0, ActiveImages.Count - 1);
+        if (ActiveImages.Count > 0)
+        {
+            CurrentIndex = Math.Clamp(CurrentIndex, 0, ActiveImages.Count - 1);
+        }
+        else
+        {
+            CurrentIndex = 0;
+        }
+        
         await NotifyChange();
     }
     
