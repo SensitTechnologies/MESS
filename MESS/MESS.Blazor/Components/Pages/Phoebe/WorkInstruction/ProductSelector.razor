@@ -1,5 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Services.Product
+
 <div class="list-group scrollable-checkbox-container">
     @if (AllProducts == null)
     {
@@ -20,28 +21,42 @@
     }
 </div>
 
-
 @code {
     /// <summary>
-    /// The work instruction associated with the product selection.
+    /// The WorkInstruction instance whose selected products are being edited.
     /// </summary>
-    [Parameter] public WorkInstruction WorkInstruction { get; set; } = default!;
+    [Parameter]
+    public WorkInstruction WorkInstruction { get; set; } = default!;
 
     /// <summary>
-    /// The list of all available products.
+    /// The full list of available products to choose from.
     /// </summary>
-    [Parameter] public required List<Product> AllProducts { get; set; }
+    [Parameter]
+    public required List<Product> AllProducts { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the selected products change.
+    /// Event callback triggered when the selected products list changes.
+    /// Passes the updated list of selected products.
     /// </summary>
-    [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
+    [Parameter]
+    public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
+    /// <summary>
+    /// Returns true if the product with the given ID is currently selected for the WorkInstruction.
+    /// </summary>
+    /// <param name="productId">The product ID to check.</param>
+    /// <returns>True if selected; otherwise false.</returns>
     private bool IsProductSelected(int productId)
     {
         return WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
     }
 
+    /// <summary>
+    /// Toggles the selection state of a product.
+    /// Adds or removes the product from the WorkInstruction's product list.
+    /// </summary>
+    /// <param name="product">The product to toggle.</param>
+    /// <param name="isChecked">True if checked, false if unchecked.</param>
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
         WorkInstruction.Products ??= new();
@@ -59,11 +74,5 @@
         }
 
         await OnProductsChanged.InvokeAsync(WorkInstruction.Products);
-    }
-    
-    private void OnSelectionChanged()
-    {
-        var selectedProducts = AllProducts.Where(p => p.IsActive).ToList();
-        OnProductsChanged.InvokeAsync(selectedProducts); // Only passing selected products.
     }
 }

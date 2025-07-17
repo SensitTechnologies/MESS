@@ -37,7 +37,8 @@
         OnChanged="MarkEditorDirty" />
 </div>
 
-<PopUpMenu @ref="popupRef"/>
+<!-- Pass Products to popup -->
+<PopUpMenu @ref="popupRef" OnProductSaved="HandleProductSaved" AllProducts="Products" />
 
 @code {
     private WorkInstructionNodeManagerList? NodeManagerRef;
@@ -57,15 +58,17 @@
     
     private PopUpMenu? popupRef;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Called when the component is initialized.
+    /// Subscribes to editor change events and loads initial data for products and work instructions.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task OnInitializedAsync()
     {
         WorkInstructionEditorService.OnChanged += HandleEditorChanged;
 
-        // Load initial data
         Products = (await ProductService.GetAllAsync())?.ToList() ?? new List<Product>();
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
-
 
         await base.OnInitializedAsync();
     }
@@ -111,7 +114,6 @@
             }
             else
             {
-                // Create new version, then save
                 await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
                 success = await WorkInstructionEditorService.SaveAsync();
                 if (success)
@@ -122,7 +124,6 @@
 
             if (success)
             {
-                // Refresh all latest work instructions list after save
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
             }
         }
@@ -144,8 +145,7 @@
         WorkInstructionEditorService.StartNew();
         SelectedWorkInstructionId = null;
         ToastService.ShowInfo("Started new Work Instruction.");
-        
-        // Trigger popup if popupRef exists
+
         popupRef?.Show("A new Work Instruction has been started.", "New");
     }
 
@@ -160,8 +160,8 @@
         SelectedProductId = (productId == -1) ? null : productId;
         SelectedWorkInstructionId = null;
 
-        WorkInstructionEditorService.RevertChanges(); // clear the loaded WI
-        
+        WorkInstructionEditorService.RevertChanges();
+
         StateHasChanged();
 
         return Task.CompletedTask;
@@ -188,15 +188,26 @@
             WorkInstructionEditorService.RevertChanges();
         }
     }
-    
+
     private async Task MarkEditorDirty()
     {
         WorkInstructionEditorService.MarkDirty();
         await InvokeAsync(StateHasChanged);
     }
-    
+
     private void HandleRestoredFromVersionHistory()
     {
         ToastService.ShowInfo("Version restored from history.");
+    }
+
+    private async Task HandleProductSaved(Product savedProduct)
+    {
+        Products = (await ProductService.GetAllAsync())?.ToList() ?? new List<Product>();
+
+        SelectedProductId = savedProduct.Id;
+
+        ToastService.ShowSuccess($"Product '{savedProduct.Name}' saved successfully.");
+
+        StateHasChanged();
     }
 }
