@@ -2,15 +2,13 @@
 
 @if (WorkInstructions?.Any() == true)
 {
-    <select class="form-select" value="@_selectedWorkInstructionId" @onchange="HandleChange">
+    <select class="form-select" @bind="_selectedWorkInstructionId">
         <option value="-1">Select Instruction</option>
         @foreach (var wi in WorkInstructions
                       .OrderBy(w => w.Title ?? string.Empty)
                       .ThenBy(w => w.Version))
         {
-            <option value="@wi.Id">
-                @($"{wi.Title} v{wi.Version}")
-            </option>
+            <option value="@wi.Id">@($"{wi.Title} v{wi.Version}")</option>
         }
     </select>
 }
@@ -20,7 +18,21 @@ else
 }
 
 @code {
-    private int _selectedWorkInstructionId = -1;
+    private int _selectedWorkInstructionIdBacking = -1;
+
+    // This is the property bound in the select tag
+    private int _selectedWorkInstructionId
+    {
+        get => _selectedWorkInstructionIdBacking;
+        set
+        {
+            if (_selectedWorkInstructionIdBacking != value)
+            {
+                _selectedWorkInstructionIdBacking = value;
+                _ = OnWorkInstructionSelected.InvokeAsync(value);
+            }
+        }
+    }
 
     /// <summary>
     /// The list of available work instructions to display in the dropdown.
@@ -47,14 +59,5 @@ else
     {
         // Keep local field in sync with parent
         _selectedWorkInstructionId = SelectedWorkInstructionId ?? -1;
-    }
-
-    private async Task HandleChange(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var val))
-        {
-            _selectedWorkInstructionId = val;
-            await OnWorkInstructionSelected.InvokeAsync(val);
-        }
     }
 }

@@ -48,10 +48,12 @@
     private List<Product> Products { get; set; } = new();
     private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
 
-    private List<WorkInstruction> FilteredWorkInstructions => 
+    private List<WorkInstruction> FilteredWorkInstructions =>
         SelectedProductId == null || SelectedProductId == -1
             ? AllWorkInstructions
-            : AllWorkInstructions.Where(wi => wi.Products?.Any(p => p.Id == SelectedProductId) == true).ToList();
+            : AllWorkInstructions
+                .Where(wi => wi.Products?.Any(p => p.Id == SelectedProductId) == true)
+                .ToList();
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
@@ -170,12 +172,28 @@
         }
     }
 
-    private Task HandleImportComplete(WorkInstruction importedWorkInstruction)
+    private async Task HandleImportComplete(WorkInstruction importedWorkInstruction)
     {
-        ToastService.ShowSuccess($"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}", 3000);
-        return Task.CompletedTask;
-    }
+        ToastService.ShowSuccess(
+            $"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}",
+            3000);
 
+        // Refresh latest instructions list
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
+
+        // Reset product filter to show all
+        SelectedProductId = null;
+
+        // Set selection to the newly imported instruction
+        SelectedWorkInstructionId = importedWorkInstruction.Id;
+
+        // Load into editor service to sync editor state
+        await WorkInstructionEditorService.LoadForEditAsync(importedWorkInstruction.Id);
+
+        // Trigger UI refresh
+        StateHasChanged();
+    }
+    
     private void StartNewInstruction()
     {
         WorkInstructionEditorService.StartNew();

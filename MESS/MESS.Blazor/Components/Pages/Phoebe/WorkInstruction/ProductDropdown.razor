@@ -2,7 +2,7 @@
 
 @if (Products?.Any() == true)
 {
-    <select class="form-select" value="@_selectedProductId" @onchange="HandleChange">
+    <select class="form-select" @bind="_selectedProductId">
         <option value="-1">All Products</option>
         @foreach (var product in Products.OrderBy(p => p.Name ?? string.Empty))
         {
@@ -16,7 +16,20 @@ else
 }
 
 @code {
-    private int _selectedProductId = -1;
+    private int _selectedProductIdBacking = -1;
+
+    private int _selectedProductId
+    {
+        get => _selectedProductIdBacking;
+        set
+        {
+            if (_selectedProductIdBacking != value)
+            {
+                _selectedProductIdBacking = value;
+                _ = OnProductSelected.InvokeAsync(value);
+            }
+        }
+    }
 
     /// <summary>
     /// The list of products to display in the dropdown.
@@ -43,14 +56,5 @@ else
     {
         // Sync local field with parent
         _selectedProductId = SelectedProductId ?? -1;
-    }
-
-    private async Task HandleChange(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var val))
-        {
-            _selectedProductId = val;
-            await OnProductSelected.InvokeAsync(val);
-        }
     }
 }
