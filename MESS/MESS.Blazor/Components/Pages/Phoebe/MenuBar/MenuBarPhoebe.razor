@@ -407,27 +407,19 @@
 
     private async Task HandleImportComplete(WorkInstruction wi)
     {
-        Log.Information("Imported WorkInstruction: {WiTitle}", wi.Title);
-
-        // Load the imported instruction into the editor service (edit mode)
-        await EditorService.LoadForEditAsync(wi.Id);
-
-        // Update the CurrentInstruction property so the UI reflects the new instruction
+        // Update UI state to reflect the imported instruction
         CurrentInstruction = wi;
-
-        // Update dropdown selection if relevant
         SelectedWorkInstructionId = wi.Id;
 
         // Hide the import dialog
         showImportDialog = false;
-        
-        // Fire the event callback so the parent knows about it
+
+        // Notify parent component so it can do the data reload and editor load
         if (OnImportComplete.HasDelegate)
         {
             await OnImportComplete.InvokeAsync(wi);
         }
 
-        // Trigger UI refresh
         StateHasChanged();
     }
     

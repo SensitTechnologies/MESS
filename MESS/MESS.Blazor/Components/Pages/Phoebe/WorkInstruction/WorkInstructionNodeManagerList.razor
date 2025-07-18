@@ -1,8 +1,9 @@
-@using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.SortableList
+@using MESS.Data.Models
 
 <SortableList T="WorkInstructionNode"
               Items="WorkInstructionNodes"
+              Handle=".drag-handle"
               OnUpdate="OnItemsChanged"
               Context="node">
     <SortableItemTemplate>
@@ -33,34 +34,35 @@
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-    @<div class="mb-3 p-3 border rounded">
-        <div class="d-flex align-items-center">
-            <div class="position me-3">
-                <strong>@node.Position</strong>
-            </div>
-            <div class="content flex-grow-1">
-                @switch (node)
-                {
-                    case PartNode partNode:
-                        <PartNodeView PartNode="partNode" OnChanged="OnChanged" />
-                        break;
-
-                    case Step stepNode:
-                        <StepNodeView
-                            Step="stepNode"
-                            EditorRefs="EditorRefs"
-                            ActiveFields="ActiveFields"
-                            OnAction="HandleStepNodeAction" 
-                            OnChanged="OnChanged" />
-                        break;
-
-                    default:
-                        <div>Unknown node type: @node.NodeType</div>
-                        break;
-                }
+    @<div class="mb-3 p-3 border rounded disable-highlight">
+    <div class="d-flex align-items-center">
+        <div class="position me-3">
+            <div class="drag-handle mr-4">
+                <i class="bi bi-grip-vertical h3"></i>
             </div>
         </div>
-    </div>;
+        <div class="content flex-grow-1">
+            @switch (node)
+                        {
+                        case PartNode partNode:
+            <PartNodeView PartNode="partNode" OnChanged="OnChanged" />
+                        break;
+
+                        case Step stepNode:
+            <StepNodeView Step="stepNode"
+                          EditorRefs="EditorRefs"
+                          ActiveFields="ActiveFields"
+                          OnAction="HandleStepNodeAction"
+                          OnChanged="OnChanged" />
+                        break;
+
+                        default:
+            <div>Unknown node type: @node.NodeType</div>
+                        break;
+                        }
+        </div>
+    </div>
+</div>;
     
     private async Task OnItemsChanged((int oldIndex, int newIndex) indices)
     {
