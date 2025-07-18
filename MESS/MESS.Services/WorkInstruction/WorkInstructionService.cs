@@ -1546,6 +1546,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
             
             Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
