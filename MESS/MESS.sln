@@ -1,5 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36310.24 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MESS.Data", "MESS.Data\MESS.Data.csproj", "{15AB4BF5-E2D6-4AB0-8359-0A404452824E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MESS.Blazor", "MESS.Blazor\MESS.Blazor.csproj", "{0EC6C71A-0728-4C76-B07E-B078994B465E}"
@@ -30,5 +33,11 @@ Global
 		{FCF27D91-E9FC-4BF0-8600-23BE664EDFCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FCF27D91-E9FC-4BF0-8600-23BE664EDFCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FCF27D91-E9FC-4BF0-8600-23BE664EDFCF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {26127A94-36FC-4F70-8351-CA9A04A16C8D}
 	EndGlobalSection
 EndGlobal
