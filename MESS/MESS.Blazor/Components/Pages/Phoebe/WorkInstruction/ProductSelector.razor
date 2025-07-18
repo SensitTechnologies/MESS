@@ -18,7 +18,7 @@
 
                 <input class="form-control"
                        value="@product.Name"
-                       @onchange="@((ChangeEventArgs e) => OnProductNameChanged.InvokeAsync((product, e.Value?.ToString() ?? string.Empty)))"
+                       @onchange="@((ChangeEventArgs e) => OnProductChanged.InvokeAsync((product, e.Value?.ToString() ?? string.Empty)))"
                        placeholder="Product name" />
             </div>
         }
@@ -56,10 +56,17 @@
     public EventCallback<List<int>> SelectedProductIdsChanged { get; set; }
 
     /// <summary>
+    /// Event callback triggered when the list of selected products changes.
+    /// Sends a list of the currently selected <see cref="Product"/> instances.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<Product>> OnProductsChanged { get; set; }
+
+    /// <summary>
     /// Invoked when a product's name changes.
     /// </summary>
     [Parameter]
-    public EventCallback<(Product product, string newName)> OnProductNameChanged { get; set; }
+    public EventCallback<(Product product, string newName)> OnProductChanged { get; set; }
 
     /// <summary>
     /// Invoked when a new product is added.
@@ -87,7 +94,13 @@
         {
             SelectedProductIds.Remove(product.Id);
         }
+
         await SelectedProductIdsChanged.InvokeAsync(SelectedProductIds);
+        if (OnProductsChanged.HasDelegate)
+            await OnProductsChanged.InvokeAsync(
+                AllProducts.Where(p => SelectedProductIds.Contains(p.Id)).ToList()
+            );
+
     }
 
     private async Task AddNewProduct()
@@ -95,9 +108,13 @@
         var newProduct = new Product { Id = 0, Name = "New Product" };
         AllProducts.Add(newProduct);
 
-        // Optionally auto-select the new product:
+        // Optionally auto-select the new product
         SelectedProductIds.Add(newProduct.Id);
         await SelectedProductIdsChanged.InvokeAsync(SelectedProductIds);
+        if (OnProductsChanged.HasDelegate)
+            await OnProductsChanged.InvokeAsync(
+                AllProducts.Where(p => SelectedProductIds.Contains(p.Id)).ToList()
+            );
 
         if (OnProductAdded.HasDelegate)
             await OnProductAdded.InvokeAsync(newProduct);
