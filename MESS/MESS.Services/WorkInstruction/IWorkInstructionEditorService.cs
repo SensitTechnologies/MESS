@@ -100,8 +100,23 @@ public interface IWorkInstructionEditorService
     /// Sets the editing mode to CreateNew and marks the editing state as dirty.
     /// Optionally pre-populates the WorkInstruction with a list of products.
     /// </summary>
+    /// <param name="title">An optional title for the new work instruction. If not provided, the title will be an empty string.</param>
     /// <param name="products">Optional list of products to prefill the WorkInstruction.</param>
-    void StartNew(List<Product>? products = null);
+    void StartNew(string? title = null, List<Product>? products = null);
+
+    /// <summary>
+    /// Creates a new work instruction based on the current one, resets versioning and status flags,
+    /// copies all child nodes, and optionally overrides the title and associated products.
+    /// </summary>
+    /// <param name="title">An optional title for the new work instruction. If not provided, the title from the current instruction is used.</param>
+    /// <param name="products">An optional list of <see cref="Product"/>s to associate with the new instruction. 
+    /// If not provided, the products from the current instruction will be cloned.</param>
+    /// <exception cref="InvalidOperationException">Thrown if the current work instruction is null.</exception>
+    /// <remarks>
+    /// This method deep-copies all nodes from the current instruction using the <c>CloneNode</c> method,
+    /// resets the version to "1.0", and marks the instruction as inactive and the latest version.
+    /// </remarks>
+    public void StartNewFromCurrent(string? title = null, List<Product>? products = null);
 
     /// <summary>
     /// Marks the current editing session as having unsaved changes.
