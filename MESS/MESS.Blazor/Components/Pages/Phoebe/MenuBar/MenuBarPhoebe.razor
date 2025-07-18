@@ -22,7 +22,7 @@
             <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSaveAs))">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => LogAndClose("Delete"))">Delete</FluentMenuItem>
         </FluentMenu>
@@ -66,6 +66,10 @@
             SelectedWorkInstructionId="@SelectedWorkInstructionId"
             OnWorkInstructionSelected="@OnWorkInstructionSelected" />
     </div>
+    
+    <PopUpMenu @ref="popupRef"
+               AllProducts="Products"
+               OnStartNewInstruction="HandleStartNewInstruction" />
     
     <div class="menu-right-content">
         <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">⏲</button>
@@ -135,6 +139,12 @@
     public EventCallback OnSave { get; set; }
     
     /// <summary>
+    /// Event callback triggered when the user selects "Save As" to create a new version of the current work instruction.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnSaveAs { get; set; }
+    
+    /// <summary>
     /// Event callback triggered when the user selects "Revert Changes" to discard unsaved edits and restore the last saved state.
     /// </summary>
     [Parameter] 
@@ -199,6 +209,8 @@
     private bool showImportDialog;
     
     private bool showExportDialog = false;
+    
+    private PopUpMenu? popupRef;
 
     /// <summary>
     /// The list of products to show in the dropdown.
@@ -325,11 +337,25 @@
     {
         open = false;
         openOptions = false;
+
+        if (callback.Equals(OnNew))
+        {
+            popupRef?.Show("", "New");
+            return;
+        }
+
+        if (callback.Equals(OnSaveAs))
+        {
+            popupRef?.Show("", "Save As");
+            return;
+        }
+
         if (callback.HasDelegate)
         {
             await callback.InvokeAsync();
         }
     }
+
     
     private async Task HandleSave()
     {
@@ -427,4 +453,17 @@
     {
         showImportDialog = isOpen;
     }
+    
+    /// <summary>
+    /// Handles logic when the user clicks "Start New Instruction" in the popup.
+    /// </summary>
+    private async Task HandleStartNewInstruction()
+    {
+        Log.Information("Starting new instruction from popup...");
+        if (OnNew.HasDelegate)
+        {
+            await OnNew.InvokeAsync();
+        }
+    }
+
 }

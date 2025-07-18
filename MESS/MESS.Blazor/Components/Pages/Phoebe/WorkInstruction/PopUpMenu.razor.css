@@ -3,8 +3,10 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 700px;             /* increased from 420px */
+    width: 900px;             /* increased from 420px */
     max-width: 95vw;
+    max-height: 95vh;
+    height: 700px;
     background-color: #f3f3f3;
     border: 1px solid #ababab;
     border-radius: 8px;       /* slightly bigger radius */
@@ -46,7 +48,7 @@ body.dark-mode .win-popup {
     background: #ffd502;
     color: black;
     padding: 14px 20px;       /* increased padding */
-    font-weight: 700;
+    font-weight: 500;
     font-size: 1.3rem;        /* larger font size */
     display: flex;
     justify-content: space-between;

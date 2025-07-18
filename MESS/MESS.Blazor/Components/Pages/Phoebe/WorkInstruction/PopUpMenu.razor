@@ -12,91 +12,85 @@
     </div>
 
     <div id="popupBody" class="win-body">
-
-        <ProductSelector WorkInstruction="WorkInstruction"
-                         AllProducts="AllProducts"
-                         OnProductsChanged="OnProductsChanged" />
-        
+        <ProductSelector AllProducts="AllProducts"
+                         OnProductsChanged="OnProductsChanged"
+                         OnProductNameChanged="HandleProductNameChanged"
+                         OnProductAdded="HandleProductAdded" />
         <hr />
-        
+
         <div class="resizable-textarea-container mt-3">
             <label for="nameInput" class="form-label">Name:</label>
             <textarea id="nameInput"
                       class="form-control transparent-textarea"
                       placeholder="Enter name here..."
                       rows="1"
-                      @bind="WorkInstruction.Title"></textarea>
+                      @bind="WorkInstructionTitle"></textarea>
         </div>
     </div>
 
     <div class="win-footer">
-        <button class="win-btn-primary" @onclick="OnSaveClicked">Save</button>
+        <button class="win-btn-cancel" @onclick="StartNewInstruction">New</button>
         <button class="win-btn-cancel" @onclick="Close">Cancel</button>
     </div>
 </div>
 
 @code {
     /// <summary>
-    /// Gets or sets a value indicating whether the popup is currently visible.
+    /// Gets or sets whether the popup is visible.
     /// </summary>
-    [Parameter]
-    public bool IsVisible { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the popup visibility changes.
+    /// Event callback triggered when the popup's visibility changes.
     /// </summary>
-    [Parameter]
-    public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
-    /// Gets or sets the header text displayed in the popup's title bar.
+    /// The header text shown at the top of the popup.
     /// </summary>
-    [Parameter]
-    public string? HeaderText { get; set; }
+    [Parameter] public string? HeaderText { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether dark mode styles should be applied.
+    /// Indicates whether dark mode is active for the popup UI.
     /// </summary>
-    [Parameter]
-    public bool IsDarkMode { get; set; }
+    [Parameter] public bool IsDarkMode { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the Save button is clicked.
+    /// A required list of all available products for selection.
     /// </summary>
-    [Parameter]
-    public EventCallback OnSave { get; set; }
+    [Parameter] public required List<Product> AllProducts { get; set; }
 
     /// <summary>
-    /// Event callback invoked when a product is saved inside the popup.
-    /// Passes the saved product as an argument.
+    /// Invoked when the product selection changes.
     /// </summary>
-    [Parameter]
-    public EventCallback<Product> OnProductSaved { get; set; }
+    [Parameter] public EventCallback<List<Product>> OnProductsChanged { get; set; }
 
     /// <summary>
-    /// Gets or sets the WorkInstruction currently being edited.
+    /// Invoked after a product is saved (created or renamed).
     /// </summary>
-    [Parameter]
-    public WorkInstruction WorkInstruction { get; set; } = new WorkInstruction { Title = string.Empty };
+    [Parameter] public EventCallback<Product> OnProductSaved { get; set; }
 
     /// <summary>
-    /// Gets or sets the full list of available products.
+    /// Invoked after a work instruction is duplicated or saved.
     /// </summary>
-    [Parameter]
-    public required List<Product> AllProducts { get; set; }
+    [Parameter] public EventCallback<WorkInstruction> OnWorkInstructionDuplicated { get; set; }
 
     /// <summary>
-    /// Event callback invoked when the selected products list changes.
-    /// Passes the updated list of selected products.
+    /// Event callback triggered when the user starts a new instruction from the popup.
     /// </summary>
-    [Parameter]
-    public EventCallback<List<Product>> OnProductsChanged { get; set; }
+    [Parameter] public EventCallback OnStartNewInstruction { get; set; }
 
     /// <summary>
-    /// Shows the popup with optional body text and header text.
+    /// Gets or sets the title of the work instruction entered by the user.
+    /// This value is bound to the name input field in the UI.
     /// </summary>
-    /// <param name="bodyText">The optional body text (currently unused).</param>
-    /// <param name="headerText">The header text to display in the popup.</param>
+    private string WorkInstructionTitle { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Shows the popup with the specified body and header text.
+    /// </summary>
+    /// <param name="bodyText">The content body text (unused).</param>
+    /// <param name="headerText">The header text to display.</param>
     public void Show(string bodyText, string headerText = "")
     {
         HeaderText = headerText;
@@ -105,7 +99,7 @@
     }
 
     /// <summary>
-    /// Closes the popup and clears the header text.
+    /// Closes the popup and clears its header.
     /// </summary>
     private void Close()
     {
@@ -115,34 +109,52 @@
     }
 
     /// <summary>
-    /// Handles the Save button click event.
-    /// Creates a new product using the ProductService,
-    /// then triggers OnSave and OnProductSaved callbacks,
-    /// and finally hides the popup.
+    /// Invokes the start new instruction callback.
     /// </summary>
-    private async Task OnSaveClicked()
+    private async Task StartNewInstruction()
+    {
+        if (OnStartNewInstruction.HasDelegate)
+        {
+            await OnStartNewInstruction.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Handles renaming a product and updates it via the product service.
+    /// </summary>
+    /// <param name="args">Tuple containing the product and the new name.</param>
+    private async Task HandleProductNameChanged((Product product, string newName) args)
     {
         try
         {
-            var product = new Product
-            {
-                Name = WorkInstruction.Title,
-                IsActive = true,
-            };
-
-            await ProductService.CreateAsync(product);
-
-            if (OnSave.HasDelegate)
-                await OnSave.InvokeAsync(null);
+            args.product.Name = args.newName;
+            await ProductService.UpdateProductAsync(args.product);
 
             if (OnProductSaved.HasDelegate)
-                await OnProductSaved.InvokeAsync(product);
-
-            await IsVisibleChanged.InvokeAsync(false);
+                await OnProductSaved.InvokeAsync(args.product);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error saving product: {ex.Message}");
+            Console.Error.WriteLine($"Error saving product name: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handles product creation and notifies the UI via callback.
+    /// </summary>
+    /// <param name="newProduct">The newly created product to persist.</param>
+    private async Task HandleProductAdded(Product newProduct)
+    {
+        try
+        {
+            await ProductService.CreateAsync(newProduct);
+
+            if (OnProductSaved.HasDelegate)
+                await OnProductSaved.InvokeAsync(newProduct);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error adding new product: {ex.Message}");
         }
     }
 }

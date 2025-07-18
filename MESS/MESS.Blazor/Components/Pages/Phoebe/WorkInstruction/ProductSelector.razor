@@ -1,5 +1,5 @@
 @using MESS.Data.Models
-@using MESS.Services.Product
+@using Microsoft.AspNetCore.Components
 
 <div class="list-group scrollable-checkbox-container">
     @if (AllProducts == null)
@@ -10,69 +10,96 @@
     {
         @foreach (var product in AllProducts)
         {
-            <label class="list-group-item">
+            <div class="list-group-item d-flex align-items-center gap-2">
                 <input type="checkbox"
                        class="form-check-input me-1"
                        checked="@IsProductSelected(product.Id)"
-                       @onchange="e => ToggleProductSelection(product, e.Value as bool? ?? false)" />
-                @($"{product.Name}")
-            </label>
+                       @onchange="@((ChangeEventArgs e) => ToggleProductSelection(product, e.Value?.ToString() == "true"))" />
+
+                <input class="form-control"
+                       value="@product.Name"
+                       @onchange="@((ChangeEventArgs e) => OnProductNameChanged.InvokeAsync((product, e.Value?.ToString() ?? string.Empty)))"
+                       placeholder="Product name" />
+            </div>
         }
+
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <button class="btn btn-sm btn-outline-primary" @onclick="AddNewProduct">
+                + Add Product
+            </button>
+            <div class="ms-auto">
+                <button class="btn btn-sm btn-outline-primary" @onclick="() => OnSaveClicked.InvokeAsync()">
+                    Save
+                </button>
+            </div>
+        </div>
     }
 </div>
 
 @code {
     /// <summary>
-    /// The WorkInstruction instance whose selected products are being edited.
+    /// List of all products to show.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public List<Product> AllProducts { get; set; } = new();
+
+    /// <summary>
+    /// List of selected product IDs.
     /// </summary>
     [Parameter]
-    public WorkInstruction WorkInstruction { get; set; } = default!;
+    public List<int> SelectedProductIds { get; set; } = new();
 
     /// <summary>
-    /// The full list of available products to choose from.
+    /// Event fired when selected products change, passing list of selected product IDs.
     /// </summary>
     [Parameter]
-    public required List<Product> AllProducts { get; set; }
+    public EventCallback<List<int>> SelectedProductIdsChanged { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the selected products list changes.
-    /// Passes the updated list of selected products.
+    /// Invoked when a product's name changes.
     /// </summary>
     [Parameter]
-    public EventCallback<List<Product>> OnProductsChanged { get; set; }
+    public EventCallback<(Product product, string newName)> OnProductNameChanged { get; set; }
 
     /// <summary>
-    /// Returns true if the product with the given ID is currently selected for the WorkInstruction.
+    /// Invoked when a new product is added.
     /// </summary>
-    /// <param name="productId">The product ID to check.</param>
-    /// <returns>True if selected; otherwise false.</returns>
-    private bool IsProductSelected(int productId)
-    {
-        return WorkInstruction.Products?.Any(p => p.Id == productId) ?? false;
-    }
+    [Parameter]
+    public EventCallback<Product> OnProductAdded { get; set; }
 
     /// <summary>
-    /// Toggles the selection state of a product.
-    /// Adds or removes the product from the WorkInstruction's product list.
+    /// Invoked when the user clicks the Save button.
     /// </summary>
-    /// <param name="product">The product to toggle.</param>
-    /// <param name="isChecked">True if checked, false if unchecked.</param>
+    [Parameter]
+    public EventCallback OnSaveClicked { get; set; }
+
+    private bool IsProductSelected(int productId) =>
+        SelectedProductIds.Contains(productId);
+
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
-        WorkInstruction.Products ??= new();
-
         if (isChecked)
         {
-            if (WorkInstruction.Products.All(p => p.Id != product.Id))
-            {
-                WorkInstruction.Products.Add(product);
-            }
+            if (!SelectedProductIds.Contains(product.Id))
+                SelectedProductIds.Add(product.Id);
         }
         else
         {
-            WorkInstruction.Products.RemoveAll(p => p.Id == product.Id);
+            SelectedProductIds.Remove(product.Id);
         }
+        await SelectedProductIdsChanged.InvokeAsync(SelectedProductIds);
+    }
 
-        await OnProductsChanged.InvokeAsync(WorkInstruction.Products);
+    private async Task AddNewProduct()
+    {
+        var newProduct = new Product { Id = 0, Name = "New Product" };
+        AllProducts.Add(newProduct);
+
+        // Optionally auto-select the new product:
+        SelectedProductIds.Add(newProduct.Id);
+        await SelectedProductIdsChanged.InvokeAsync(SelectedProductIds);
+
+        if (OnProductAdded.HasDelegate)
+            await OnProductAdded.InvokeAsync(newProduct);
     }
 }

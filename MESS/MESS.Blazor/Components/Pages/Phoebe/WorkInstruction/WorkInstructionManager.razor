@@ -10,6 +10,7 @@
 @inject IProductService ProductService
 @inject IToastService ToastService
 @inject IWorkInstructionEditorService WorkInstructionEditorService
+@implements IDisposable
 @attribute [Authorize(Roles = "Technician, Administrator")]
 
 <MenuBarPhoebe 
@@ -22,6 +23,7 @@
     OnSidebarToggle="ToggleSidebar"
     OnNew="StartNewInstruction"
     OnSave="SaveEditorChanges"
+    OnSaveAs="SaveCurrentInstruction"
     OnRevertChanges="RevertEditorChanges"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     OnImportComplete="HandleImportComplete"
@@ -31,38 +33,63 @@
 <NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
 <div class="container justify-content-center" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
-    <WorkInstructionNodeManagerList
-        @ref="NodeManagerRef"
-        WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
-        OnChanged="MarkEditorDirty" />
+    @if (WorkInstructionEditorService.Current != null)
+    {
+        <WorkInstructionNodeManagerList
+            @ref="NodeManagerRef"
+            WorkInstructionNodes="WorkInstructionEditorService.Current.Nodes"
+            OnChanged="MarkEditorDirty" />
+    }
 </div>
 
-<!-- Pass Products to popup -->
-<PopUpMenu @ref="popupRef" OnProductSaved="HandleProductSaved" AllProducts="Products" />
+@if (isSaveAsPopupVisible && WorkInstructionEditorService.Current != null)
+{
+    <div id="popupBody" class="win-body">
+        <!-- ProductSelector component -->
+        <ProductSelector 
+            WorkInstruction="WorkInstructionEditorService.Current"
+            AllProducts="Products"
+            OnProductsChanged="HandlePopupProductsChanged"
+            OnProductNameChanged="HandleProductNameChanged"
+            OnProductAdded="HandleProductSaved" />
+        <hr />
+
+        <div class="resizable-textarea-container mt-3">
+            <label for="nameInput" class="form-label">Name:</label>
+            <textarea id="nameInput"
+                      class="form-control transparent-textarea"
+                      placeholder="Enter name here..."
+                      rows="1"
+                      @bind="WorkInstructionEditorService.Current.Title"></textarea>
+        </div>
+
+        <div class="text-end mt-3">
+            <button class="btn btn-primary" @onclick="HandleSaveAsConfirmed">Save As</button>
+            <button class="btn btn-secondary ms-2" @onclick="() => isSaveAsPopupVisible = false">Cancel</button>
+        </div>
+    </div>
+}
 
 @code {
     private WorkInstructionNodeManagerList? NodeManagerRef;
-
     private bool isSidebarOpen = false;
+    private bool isSaveAsPopupVisible = false;
 
     private List<Product> Products { get; set; } = new();
     private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
 
-    private List<WorkInstruction> FilteredWorkInstructions => 
+    private List<WorkInstruction> FilteredWorkInstructions =>
         SelectedProductId == null || SelectedProductId == -1
             ? AllWorkInstructions
             : AllWorkInstructions.Where(wi => wi.Products?.Any(p => p.Id == SelectedProductId) == true).ToList();
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
-    
-    private PopUpMenu? popupRef;
 
     /// <summary>
-    /// Called when the component is initialized.
-    /// Subscribes to editor change events and loads initial data for products and work instructions.
+    /// Initializes the component, subscribes to editor change events,
+    /// and loads the list of products and work instructions.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task OnInitializedAsync()
     {
         WorkInstructionEditorService.OnChanged += HandleEditorChanged;
@@ -73,10 +100,17 @@
         await base.OnInitializedAsync();
     }
 
-    private void HandleEditorChanged()
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing,
+    /// releasing, or resetting unmanaged resources.
+    /// Unsubscribes from the editor change event to avoid memory leaks.
+    /// </summary>
+    public void Dispose()
     {
-        InvokeAsync(StateHasChanged);
+        WorkInstructionEditorService.OnChanged -= HandleEditorChanged;
     }
+
+    private void HandleEditorChanged() => _ = InvokeAsync(StateHasChanged);
 
     private void ToggleSidebar()
     {
@@ -102,30 +136,29 @@
         try
         {
             bool isEditable = await WorkInstructionService.IsEditable(current);
-
             bool success;
+
             if (isEditable)
             {
                 success = await WorkInstructionEditorService.SaveAsync();
                 if (success)
                     ToastService.ShowSuccess("Work Instruction updated successfully.");
                 else
-                    ToastService.ShowError("Unable to save Work Instruction. Please ensure Title and Version are unique.");
+                    ToastService.ShowError("Unable to save Work Instruction. Ensure Title and Version are unique.");
             }
             else
             {
                 await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
                 success = await WorkInstructionEditorService.SaveAsync();
+
                 if (success)
-                    ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+                    ToastService.ShowSuccess("New version created successfully.");
                 else
-                    ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
+                    ToastService.ShowError("Unable to save new version. Ensure Title and Version are unique.");
             }
 
             if (success)
-            {
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
-            }
         }
         catch (Exception ex)
         {
@@ -145,8 +178,6 @@
         WorkInstructionEditorService.StartNew();
         SelectedWorkInstructionId = null;
         ToastService.ShowInfo("Started new Work Instruction.");
-
-        popupRef?.Show("A new Work Instruction has been started.", "New");
     }
 
     private void RevertEditorChanges()
@@ -159,18 +190,14 @@
     {
         SelectedProductId = (productId == -1) ? null : productId;
         SelectedWorkInstructionId = null;
-
         WorkInstructionEditorService.RevertChanges();
-
         StateHasChanged();
-
         return Task.CompletedTask;
     }
 
     private async Task OnWorkInstructionSelected(int instructionId)
     {
         SelectedWorkInstructionId = instructionId;
-
         if (instructionId != -1)
         {
             try
@@ -203,11 +230,69 @@
     private async Task HandleProductSaved(Product savedProduct)
     {
         Products = (await ProductService.GetAllAsync())?.ToList() ?? new List<Product>();
-
         SelectedProductId = savedProduct.Id;
-
         ToastService.ShowSuccess($"Product '{savedProduct.Name}' saved successfully.");
-
         StateHasChanged();
+    }
+
+    private void SaveCurrentInstruction()
+    {
+        if (WorkInstructionEditorService.Current == null)
+        {
+            ToastService.ShowError("No current work instruction to save as.");
+            return;
+        }
+
+        isSaveAsPopupVisible = true;
+        StateHasChanged();
+    }
+
+    private async Task HandleSaveAsConfirmed()
+    {
+        try
+        {
+            var originalId = WorkInstructionEditorService.Current?.OriginalId ?? WorkInstructionEditorService.Current?.Id;
+
+            if (originalId == null)
+            {
+                ToastService.ShowError("No base instruction found to duplicate.");
+                return;
+            }
+
+            await WorkInstructionEditorService.LoadForNewVersionAsync(originalId.Value);
+
+            bool success = await WorkInstructionEditorService.SaveAsync();
+
+            if (success)
+            {
+                ToastService.ShowSuccess("Saved as new Work Instruction.");
+                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                isSaveAsPopupVisible = false;
+            }
+            else
+            {
+                ToastService.ShowError("Save failed. Ensure Title and Version are unique.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Save As failed.");
+            ToastService.ShowError("An error occurred while saving.");
+        }
+    }
+
+    private void HandlePopupProductsChanged(List<Product> updatedProducts)
+    {
+        if (WorkInstructionEditorService.Current != null)
+        {
+            WorkInstructionEditorService.Current.Products = updatedProducts;
+            WorkInstructionEditorService.MarkDirty();
+        }
+    }
+
+    private void HandleProductNameChanged((Product product, string newName) args)
+    {
+        args.product.Name = args.newName;
+        WorkInstructionEditorService.MarkDirty();
     }
 }
