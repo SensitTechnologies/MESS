@@ -1,0 +1,172 @@
+﻿@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.SortableList
+@using MESS.Services.WorkInstruction
+@inject IWorkInstructionService WorkInstructionService
+
+@if (ActiveImages == null || ActiveImages.Count == 0)
+{
+    <p>No images in @ActiveLabel. Add some below.</p>
+}
+else
+{
+    
+    <div class="panel panel-primary">
+        <h4>Images for this step:</h4>
+        <div class="mb-3 p-3 border rounded">
+            <SortableList T="string"
+                          Items="@(ActiveImages)"
+                          OnUpdate="@SortList"
+                          Context="image"
+                          >
+
+                <SortableItemTemplate>
+                    <div class="is-flex is-align-items-center">
+                        <div class="row">
+                            <div class="has-cursor-grab col-auto">
+                                <div class="mr-4">
+                                    <i class="bi bi-grip-vertical h3"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <img src="@image" style="@ImageStyle" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--
+                    <div class="is-flex is-align-items-center">
+ 
+                        <div class="is-flex-grow-1">
+                            <div class=" card has-border has-background-blazor has-text-white">
+                                <p class="is-size-4 p-2 ml-4">@(ActiveImages.IndexOf(image)): @(Path.GetFileName(image))</p>
+                                
+                                
+                                <div class="row">
+                                    <div class="col-12 col-md-2 col-lg-4 mb-3">
+                                        <label>@(ActiveImages.IndexOf(image)): @(Path.GetFileName(image))</label>
+                                    </div>
+                                    <div class="col-12 col-md-10 col-lg-4 mb-3">
+                                        <img src="@image" style="@ImageStyle" />
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    -->
+
+                    
+                </SortableItemTemplate>
+            </SortableList>            
+        </div>
+    </div>
+}
+
+<div class="upload-area">
+    <label class="form-label">Upload New @ActiveLabel Image(s)</label>
+    <InputFile OnChange="HandleUpload" multiple accept="image/*" />
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the list of primary media image paths (used when the component is in "Name" view).
+    /// These images are shown and edited when <see cref="ShowBody"/> is <c>false</c>.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required List<string> PrimaryMedia { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of secondary media image paths (used when the component is in "Body" view).
+    /// These images are shown and edited when <see cref="ShowBody"/> is <c>true</c>.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required List<string> SecondaryMedia { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the component is currently in "Body" view mode.
+    /// When <c>true</c>, the component manages <see cref="SecondaryMedia"/>; when <c>false</c>, it manages <see cref="PrimaryMedia"/>.
+    /// </summary>
+    [Parameter]
+    public required bool ShowBody { get; set; }
+
+    /// <summary>
+    /// Callback invoked when either the primary or secondary media list changes.
+    /// The updated primary and secondary lists are provided as the callback argument.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(List<string> Primary, List<string> Secondary)> OnMediaChanged { get; set; }
+
+    private List<string> ActiveImages =>
+        ShowBody ? SecondaryMedia : PrimaryMedia;
+
+
+    private string ActiveLabel => ShowBody ? "Secondary" : "Primary";
+
+    /// <summary>
+    /// Gets or sets the inline style applied to the image.
+    /// </summary>
+    [Parameter]
+    public string ImageStyle { get; set; } = "height: 80px; object-fit: cover;";
+
+    private async Task SortList((int oldIndex, int newIndex) indices)
+    {
+        // deconstruct the tuple
+        var (oldIndex, newIndex) = indices;
+        if (oldIndex == newIndex) return;
+
+        var itemToMove = ActiveImages[oldIndex];
+        ActiveImages.RemoveAt(oldIndex);
+
+        if (newIndex < ActiveImages.Count)
+        {
+            ActiveImages.Insert(newIndex, itemToMove);
+        }
+        else
+        {
+            ActiveImages.Add(itemToMove);
+        }
+
+        await NotifyChange();
+    }
+
+    private async Task HandleUpload(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            var newPath = await WorkInstructionService.SaveImageFileAsync(file);
+
+            List<string> updatedList;
+
+            if (ShowBody)
+            {
+                updatedList = new List<string>(SecondaryMedia);
+            }
+            else
+            {
+                updatedList = new List<string>(PrimaryMedia);
+            }
+
+            updatedList.Add(newPath);
+
+
+            if (ShowBody)
+            {
+                SecondaryMedia = updatedList;
+            }
+            else
+            {
+                PrimaryMedia = updatedList;
+            }
+        }
+
+        await NotifyChange();
+    }
+
+    private async Task NotifyChange()
+    {
+        if (OnMediaChanged.HasDelegate)
+        {
+            await OnMediaChanged.InvokeAsync((PrimaryMedia, SecondaryMedia));
+        }
+        StateHasChanged();
+    }
+}
