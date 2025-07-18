@@ -9,11 +9,17 @@ on:
     paths: # Only runs when a file ending in .cs or .csproj is changed
     - '**.cs'
     - '**.csproj'
+    - '**.cshtml'
+    - '**.razor'
+    - '**.js'
   pull_request:
     branches: [ "main" ]
     paths:
     - '**.cs'
     - '**.csproj'
+    - '**.cshtml'
+    - '**.razor'
+    - '**.js'
     
 env:
   DOTNET_VERSION: '9.0.200' # Current as of 4/16/2025
