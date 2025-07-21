@@ -3,14 +3,15 @@
     top: 0;
     right: 0;       /* pinned to right */
     height: 100vh;
-    width: 300px;   /* or whatever width you want */
+    width: 400px;   /* or whatever width you want */
     background-color: white;  /* light mode background */
     color: black;             /* light mode text */
     box-shadow: -2px 0 5px rgba(0,0,0,0.1);
     overflow-y: auto;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
     transform: translateX(100%); /* Initially hidden off-screen to the right */
     z-index: 1050;
+    padding-left: 1rem; /* adds space on the left inside the panel */
 }
 
 .sidebar-panel.open {
@@ -21,11 +22,53 @@
     transform: translateX(100%); /* Slide out off-screen */
 }
 
+.sidebar-panel .sidebar-header {
+    padding-top: 0.5rem; /* or try 0.75rem for slightly more space */
+    display: flex;
+    justify-content: space-between;
+    align-items: start; /* aligns items to top */
+}
+
+.sidebar-panel .sidebar-header .btn-close {
+    align-self: start;
+    margin-top: 0.25rem;  /* fine-tune vertical alignment */
+    margin-right: 0.25rem;  /* add horizontal space to the right */
+}
+
+.sidebar-panel .sidebar-header h5 {
+    color: inherit;
+    line-height: 1.2;
+    margin-bottom: 0;
+}
+
 /* Dark mode overrides when body (or a parent) has 'dark-mode' class */
 body.dark-mode .sidebar-panel {
     background-color: #1e1e1e;  /* dark background */
-    color: white;
+    color: #e0e0e0;
     box-shadow: 0 0 15px rgba(255,255,255,0.1);
+}
+
+/* Force all text inside sidebar-panel to white in dark mode */
+body.dark-mode .sidebar-panel,
+body.dark-mode .sidebar-panel * {
+    color: #ffffff !important;
+}
+
+/* Close button styling in dark mode */
+body.dark-mode .sidebar-panel .btn-close {
+    filter: invert(1);
+    background-color: transparent;
+    border: none;
+    color: #ccc;
+}
+
+/* Muted text adjustments */
+.sidebar-panel .text-muted {
+    color: #6c757d;
+}
+
+body.dark-mode .sidebar-panel .text-muted {
+    color: #888888;
 }
 
 /* Table styling for light/dark */
