@@ -17,9 +17,7 @@ body.dark-mode {
     --btn-hover-bg: #ffdf33;
 
     --menu-bg: #1a1a1a;
-    --menu-border: #4a4300;
     --menu-item-color: #ffffff;
-    --menu-item-hover-bg: #333300; /* unused on hover now */
     --input-disabled-bg: rgba(50, 50, 50, 0.8); /* Darker gray */
     --input-disabled-color: #aaa;
 }
@@ -141,7 +139,6 @@ body.dark-mode .menu-bar-card {
 .menu-input:focus,
 .menu-input-secondary:focus {
     outline: none;
-    box-shadow: 0 0 0 0.1rem rgba(255, 215, 0, 0.5);
 }
 
 /* Default: only apply a neutral gray when disabled */
@@ -164,7 +161,6 @@ body.dark-mode .menu-bar-card {
 .menu-input-secondary:enabled:hover,
 .menu-input-secondary:enabled:focus {
     background-color: #f0f0f0; /* slightly lighter gray on hover/focus */
-    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
     outline: none;
 }
 
@@ -180,7 +176,6 @@ body.dark-mode .menu-input:enabled:focus,
 body.dark-mode .menu-input-secondary:enabled:hover,
 body.dark-mode .menu-input-secondary:enabled:focus {
     background-color: #3a3a3a;
-    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
 }
 
 /* === Fluent Menu === */
@@ -235,3 +230,4 @@ body.dark-mode fluent-menu-item:hover::part(control) {
     background-color: red;
     border-radius: 50%;
 }
+
