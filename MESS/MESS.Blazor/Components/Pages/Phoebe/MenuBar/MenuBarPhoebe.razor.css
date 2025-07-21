@@ -221,13 +221,23 @@ body.dark-mode fluent-menu-item:hover::part(control) {
     display: inline-block;
 }
 
+.save-button-container button {
+    position: relative; /* so the icon is the positioning context */
+}
+
 .red-dot {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    height: 8px;
-    width: 8px;
+    bottom: 6px;
+    right: 11px;
+    height: 6px;
+    width: 6px;
     background-color: red;
     border-radius: 50%;
+    border: 1px solid transparent;
+    z-index: 100;
+    pointer-events: none;
 }
+
+
+
 
