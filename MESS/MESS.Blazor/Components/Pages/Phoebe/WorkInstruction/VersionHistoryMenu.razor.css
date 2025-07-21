@@ -41,34 +41,9 @@
     margin-bottom: 0;
 }
 
-/* Dark mode overrides when body (or a parent) has 'dark-mode' class */
-body.dark-mode .sidebar-panel {
-    background-color: #1e1e1e;  /* dark background */
-    color: #e0e0e0;
-    box-shadow: 0 0 15px rgba(255,255,255,0.1);
-}
-
-/* Force all text inside sidebar-panel to white in dark mode */
-body.dark-mode .sidebar-panel,
-body.dark-mode .sidebar-panel * {
-    color: #ffffff !important;
-}
-
-/* Close button styling in dark mode */
-body.dark-mode .sidebar-panel .btn-close {
-    filter: invert(1);
-    background-color: transparent;
-    border: none;
-    color: #ccc;
-}
-
 /* Muted text adjustments */
 .sidebar-panel .text-muted {
     color: #6c757d;
-}
-
-body.dark-mode .sidebar-panel .text-muted {
-    color: #888888;
 }
 
 /* Table styling for light/dark */
@@ -83,7 +58,76 @@ body.dark-mode .sidebar-panel .text-muted {
     padding: 0.5rem;
 }
 
-/* Button styling in dark mode */
+/* ========================================
+   Version List / Version Item Styling
+   ======================================== */
+.sidebar-panel .version-list {
+    margin-top: 0.5rem;
+    padding-right: 1rem;
+}
+
+.sidebar-panel .version-item {
+    background-color: var(--menu-bg, #f8f9fa);
+    border: 1px solid var(--menu-border, rgba(0,0,0,0.125));
+    color: var(--menu-item-color, #212529);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.sidebar-panel .version-item strong {
+    color: inherit;
+    font-weight: 600;
+}
+
+.sidebar-panel .version-item .text-muted.small {
+    display: block;
+    line-height: 1.1;
+    margin-top: 0.125rem;
+    color: #6c757d;
+}
+
+.sidebar-panel .version-item .d-flex.gap-2 {
+    gap: 0.5rem !important;
+}
+
+.sidebar-panel .version-item .btn.btn-secondary[disabled],
+.sidebar-panel .version-item .btn.btn-secondary:disabled {
+    background-color: #e2e6ea;
+    border-color: #d3d9df;
+    color: #6c757d;
+    opacity: 1;
+    cursor: default;
+}
+
+.sidebar-panel .version-item:not(:has(.btn[disabled])):hover {
+    background-color: var(--menu-item-hover-bg, #fff8cc);
+    border-color: var(--btn-bg, #ffd502);
+}
+
+/* ========================================
+   Dark Mode Overrides
+   ======================================== */
+body.dark-mode .sidebar-panel {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+}
+
+body.dark-mode .sidebar-panel,
+body.dark-mode .sidebar-panel * {
+    color: #ffffff !important;
+}
+
+body.dark-mode .sidebar-panel .btn-close {
+    filter: invert(1);
+    background-color: transparent;
+    border: none;
+    color: #ccc;
+}
+
+body.dark-mode .sidebar-panel .text-muted {
+    color: #888888;
+}
+
 body.dark-mode .sidebar-panel .btn-primary {
     background-color: #ffd502;
     border-color: #ffd502;
@@ -93,4 +137,36 @@ body.dark-mode .sidebar-panel .btn-primary {
 body.dark-mode .sidebar-panel .btn-primary:hover {
     background-color: #ffd502;
     border-color: #ffd502;
+}
+
+/* Dark mode for version list/items */
+body.dark-mode .sidebar-panel .version-item {
+    background-color: #2c2c2c !important;  /* override .bg-light */
+    border-color: #555555 !important;
+    color: #ffffff !important;
+}
+
+body.dark-mode .sidebar-panel .version-item strong {
+    color: #ffd502 !important;
+}
+
+body.dark-mode .sidebar-panel .version-item .text-muted.small {
+    color: #aaaaaa !important;
+}
+
+body.dark-mode .sidebar-panel .version-item .btn.btn-secondary[disabled],
+body.dark-mode .sidebar-panel .version-item .btn.btn-secondary:disabled {
+    background-color: #3a3a3a !important;
+    border-color: #5a5a5a !important;
+    color: #bbbbbb !important;
+}
+
+body.dark-mode .sidebar-panel .version-item:not(:has(.btn[disabled])):hover {
+    background-color: rgba(255,213,2,0.15) !important;
+    border-color: #ffd502 !important;
+}
+
+body.dark-mode .sidebar-panel .version-item:focus-within {
+    outline: 2px solid #ffd502;
+    outline-offset: 2px;
 }
