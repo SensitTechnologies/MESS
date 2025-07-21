@@ -34,14 +34,15 @@
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-    @<div class="mb-3 p-3 border rounded disable-highlight">
-    <div class="d-flex align-items-center">
-        <div class="position me-3">
-            <div class="drag-handle mr-4">
-                <i class="bi bi-grip-vertical h3"></i>
-            </div>
+    @<div class="mb-3 pe-3 border rounded disable-highlight">
+
+
+    <div class="d-flex">
+        <div class="d-flex align-items-center drag-handle me-2">
+            <i class="bi bi-grip-vertical h3" />
+            <div class="vr me-2" />
         </div>
-        <div class="content flex-grow-1">
+        <div class="content flex-grow-1 py-2">
             @switch (node)
                         {
                         case PartNode partNode:

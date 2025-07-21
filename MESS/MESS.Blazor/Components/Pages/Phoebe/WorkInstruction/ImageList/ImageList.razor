@@ -8,10 +8,10 @@
 }
 else
 {
-    
+
     <div class="panel panel-primary">
-        <h4>Images for this step:</h4>
-        <div class="mb-3 p-3 border rounded">
+        <label class="form-label">Images:</label>
+        <div class="border rounded px-2">
             <SortableList T="string"
                           Items="@(ActiveImages)"
                           OnUpdate="@SortList"
@@ -19,49 +19,18 @@ else
                           >
 
                 <SortableItemTemplate>
-                    <div class="is-flex is-align-items-center">
-                        <div class="row">
-                            <div class="has-cursor-grab col-auto">
-                                <div class="mr-4">
-                                    <i class="bi bi-grip-vertical h3"></i>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <img src="@image" style="@ImageStyle" />
-                            </div>
-                        </div>
+                    <div class="d-flex align-items-center border rounded my-2 ">
+                        <i class="bi bi-grip-vertical h3"/>
+                        <div class="vr me-2"/>
+                        <img class="py-1" src="@image" style="@ImageStyle"/>
                     </div>
-
-                    <!--
-                    <div class="is-flex is-align-items-center">
- 
-                        <div class="is-flex-grow-1">
-                            <div class=" card has-border has-background-blazor has-text-white">
-                                <p class="is-size-4 p-2 ml-4">@(ActiveImages.IndexOf(image)): @(Path.GetFileName(image))</p>
-                                
-                                
-                                <div class="row">
-                                    <div class="col-12 col-md-2 col-lg-4 mb-3">
-                                        <label>@(ActiveImages.IndexOf(image)): @(Path.GetFileName(image))</label>
-                                    </div>
-                                    <div class="col-12 col-md-10 col-lg-4 mb-3">
-                                        <img src="@image" style="@ImageStyle" />
-                                    </div>
-                                </div>
-                                
-                            </div>
-                        </div>
-                    </div>
-                    -->
-
-                    
                 </SortableItemTemplate>
-            </SortableList>            
+            </SortableList>
         </div>
     </div>
 }
 
-<div class="upload-area">
+<div class="upload-area my-1">
     <label class="form-label">Upload New @ActiveLabel Image(s)</label>
     <InputFile OnChange="HandleUpload" multiple accept="image/*" />
 </div>
