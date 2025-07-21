@@ -154,7 +154,7 @@ body.dark-mode .menu-bar-card {
 /* Enabled inputs: almost white, with hover/focus transition */
 .menu-input:enabled,
 .menu-input-secondary:enabled {
-    background-color: #f9f9f9 !important;
+    background-color: #e8e8e8; /* light gray */
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
     color: black;
 }
@@ -163,7 +163,7 @@ body.dark-mode .menu-bar-card {
 .menu-input:enabled:focus,
 .menu-input-secondary:enabled:hover,
 .menu-input-secondary:enabled:focus {
-    background-color: #ffffff !important;
+    background-color: #f0f0f0; /* slightly lighter gray on hover/focus */
     box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
     outline: none;
 }
@@ -209,15 +209,16 @@ fluent-menu-item:hover::part(control) {
     color: var(--menu-item-color) !important;
 }
 
+/* Dark mode fluent menu overrides */
 body.dark-mode fluent-menu::part(control),
 body.dark-mode fluent-menu-item::part(control) {
     background-color: var(--menu-bg) !important;
-    color: #fff !important;
+    color: var(--menu-item-color) !important;
 }
 
 body.dark-mode fluent-menu-item:hover::part(control) {
     background-color: #ffdf33 !important;
-    color: #fff !important;
+    color: black !important;
 }
 
 .save-button-container {
