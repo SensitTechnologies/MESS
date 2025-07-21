@@ -7,6 +7,8 @@
     --menu-border: #ffd502;
     --menu-item-color: #212529;
     --menu-item-hover-bg: #fff8cc; /* unused on hover now */
+    --input-disabled-bg: rgba(240, 240, 240, 0.85); /* Light neutral gray */
+    --input-disabled-color: #555;
 }
 
 body.dark-mode {
@@ -18,6 +20,8 @@ body.dark-mode {
     --menu-border: #4a4300;
     --menu-item-color: #ffffff;
     --menu-item-hover-bg: #333300; /* unused on hover now */
+    --input-disabled-bg: rgba(50, 50, 50, 0.8); /* Darker gray */
+    --input-disabled-color: #aaa;
 }
 
 /* === Menu Bar Layout === */
@@ -121,7 +125,6 @@ body.dark-mode .menu-bar-card {
     font-size: 0.9rem;
     border: none;
     border-radius: 0.25rem;
-    background-color: rgba(255, 255, 255, 0.8);
     min-width: 120px;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
     color: black;
@@ -141,15 +144,43 @@ body.dark-mode .menu-bar-card {
     box-shadow: 0 0 0 0.1rem rgba(255, 215, 0, 0.5);
 }
 
-body.dark-mode .menu-input,
-body.dark-mode .menu-input-secondary {
-    background-color: rgba(44, 44, 44, 0.7);
-    color: white;
+/* Default: only apply a neutral gray when disabled */
+.menu-input:disabled,
+.menu-input-secondary:disabled {
+    background-color: var(--input-disabled-bg) !important;
+    color: var(--input-disabled-color) !important;
 }
 
-body.dark-mode .menu-input::placeholder,
-body.dark-mode .menu-input-secondary::placeholder {
-    color: #aaa;
+/* Enabled inputs: almost white, with hover/focus transition */
+.menu-input:enabled,
+.menu-input-secondary:enabled {
+    background-color: #f9f9f9 !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    color: black;
+}
+
+.menu-input:enabled:hover,
+.menu-input:enabled:focus,
+.menu-input-secondary:enabled:hover,
+.menu-input-secondary:enabled:focus {
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
+    outline: none;
+}
+
+/* Dark mode support */
+body.dark-mode .menu-input:enabled,
+body.dark-mode .menu-input-secondary:enabled {
+    background-color: #2c2c2c;
+    color: #fff;
+}
+
+body.dark-mode .menu-input:enabled:hover,
+body.dark-mode .menu-input:enabled:focus,
+body.dark-mode .menu-input-secondary:enabled:hover,
+body.dark-mode .menu-input-secondary:enabled:focus {
+    background-color: #3a3a3a;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
 }
 
 /* === Fluent Menu === */
