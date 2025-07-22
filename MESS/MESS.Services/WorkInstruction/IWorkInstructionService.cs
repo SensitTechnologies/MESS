@@ -5,8 +5,9 @@ namespace MESS.Services.WorkInstruction;
 using Data.Models;
 
 /// <summary>
-/// Interface for managing work instructions, including operations such as export, import, duplication, 
-/// retrieval, creation, deletion, and updates.
+/// Interface for managing work instructions, including operations such as export, import, 
+/// retrieval, creation, deletion, and updates. See the WorkInstructionEditor service for more Phoebe
+/// specific work instruction editing functions.
 /// </summary>
 public interface IWorkInstructionService
 {
@@ -27,19 +28,7 @@ public interface IWorkInstructionService
     /// The file will be saved with a filename based on the work instruction title and a timestamp.
     /// </remarks>
     public string? ExportToXlsx(WorkInstruction workInstructionToExport);
-    /// <summary>
-    /// Creates a duplicate of an existing work instruction with a unique title.
-    /// </summary>
-    /// <param name="workInstructionToDuplicate">The work instruction to duplicate.</param>
-    /// <returns>
-    /// The task result contains the newly created work instruction if successful; otherwise, null.
-    /// </returns>
-    /// <remarks>
-    /// The duplicate will have the same version, products, and nodes (steps and parts) as the original.
-    /// Its title will be the original title with a "-copy-[timestamp]" suffix.
-    /// The duplicate will be created with IsActive set to false.
-    /// </remarks>
-    public Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate);
+    
     /// <summary>
     /// Determines whether the specified work instruction is editable.
     /// A work instruction is considered non-editable if it has associated production logs.
@@ -158,6 +147,26 @@ public interface IWorkInstructionService
     /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
     /// </returns>
     Task<string> SaveImageFileAsync(IBrowserFile file);
+
+    /// <summary>
+    /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
+    /// </summary>
+    /// <param name="file">The uploaded file string</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is the relative path
+    /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
+    /// </returns>
+    Task<string> SaveImageFileAsync(string file);
+
+    /// <summary>
+    /// Removes an Image File from the server
+    /// </summary>
+    /// <param name="FileName">The File to be deleted</param>
+    /// <returns>
+    /// A task representing the synchronous operation.
+    /// </returns>
+    Task DeleteImageFile(string FileName);
+
     /// <summary>
     /// Sets IsActive = false for all other versions in this version chain.
     /// </summary>

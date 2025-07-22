@@ -16,7 +16,7 @@
             background: ${isDark ? '#2c2c2c' : '#fff'} !important;
             color: ${isDark ? '#fff' : '#000'} !important;
             caret-color: ${isDark ? '#fff' : '#000'} !important;
-            border: ${isDark ? '1px solid #555' : '1px solid #ccc'} !important;
+            border: none !important; /* removed all borders */
             border-radius: 4px !important;
             padding: 0.5rem !important;
             resize: vertical !important;
@@ -26,11 +26,12 @@
             position: relative !important;
             z-index: 1000 !important;
             font-size: 1rem !important;
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+            transition: background-color 0.3s ease, color 0.3s ease !important;
         }
 
         textarea:focus {
             outline: none !important;
+            box-shadow: none !important;
         }
     `;
 }
@@ -53,10 +54,97 @@ function applyDarkModeToFluentTextAreas(isDark) {
     });
 }
 
+/**
+ * Stronger dark mode style injection into the shadow DOM of fluent-menu and fluent-menu-item,
+ * to forcibly set background, color, and remove all borders (including yellow).
+ */
+function applyDarkModeToFluentMenus(isDark) {
+    const menus = document.querySelectorAll('fluent-menu, fluent-menu-item');
+    menus.forEach(el => {
+        const shadow = el.shadowRoot;
+        if (!shadow) return;
+
+        // Remove previous injected style if any
+        const styleId = 'dark-mode-menu-style';
+        const existingStyle = shadow.getElementById(styleId);
+        if (existingStyle) existingStyle.remove();
+
+        const style = document.createElement('style');
+        style.id = styleId;
+
+        if (isDark) {
+            style.textContent = `
+                [part="root"],
+                [part="control"],
+                [part="field"],
+                [role="presentation"] {
+                    background-color: #1a1a1a !important;
+                    color: #ffffff !important;
+                    border: none !important; /* removed borders */
+                    box-shadow: none !important;
+                    outline: none !important;
+                }
+                [part="control"]:hover,
+                [part="field"]:hover {
+                    background-color: #333333 !important; /* subtle dark hover */
+                    color: #ffffff !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    outline: none !important;
+                }
+                [part="control"][aria-disabled="true"],
+                [part="field"][aria-disabled="true"] {
+                    opacity: 0.5 !important;
+                    cursor: not-allowed !important;
+                    border: none !important;
+                }
+            `;
+        } else {
+            style.textContent = `
+                [part="root"],
+                [part="control"],
+                [part="field"],
+                [role="presentation"] {
+                    background-color: #ffffff !important;
+                    color: #212529 !important;
+                    border: none !important; /* removed borders */
+                    box-shadow: none !important;
+                    outline: none !important;
+                }
+                [part="control"]:hover,
+                [part="field"]:hover {
+                    background-color: #e0e0e0 !important; /* subtle light hover */
+                    color: #000000 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    outline: none !important;
+                }
+                [part="control"][aria-disabled="true"],
+                [part="field"][aria-disabled="true"] {
+                    opacity: 0.5 !important;
+                    cursor: not-allowed !important;
+                    border: none !important;
+                }
+            `;
+        }
+
+        shadow.appendChild(style);
+
+        // Clear border styles on host element as fallback
+        el.style.border = 'none';
+        el.style.backgroundColor = isDark ? '#1a1a1a' : '#fff';
+        el.style.color = isDark ? '#fff' : '#212529';
+    });
+}
+
+// ...rest of your code unchanged...
+
 function applyTheme(isDark) {
     document.body.classList.toggle("dark-mode", isDark);
     document.body.classList.toggle("light-mode", !isDark);
+
     applyDarkModeToFluentTextAreas(isDark);
+    applyDarkModeToFluentMenus(isDark);
 
     if (isDark && typeof window.ApplyDarkModeFixToFailureTextAreas === "function") {
         window.ApplyDarkModeFixToFailureTextAreas();
@@ -91,12 +179,14 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e =
     }
 });
 
-// Only re-apply text area styling on DOM changes (not full theme switching)
+// Only re-apply styling on DOM changes (not full theme switching)
 const observer = new MutationObserver(() => {
     if (document.body.classList.contains("dark-mode")) {
         applyDarkModeToFluentTextAreas(true);
+        applyDarkModeToFluentMenus(true);
     } else {
         applyDarkModeToFluentTextAreas(false);
+        applyDarkModeToFluentMenus(false);
     }
 });
 observer.observe(document.body, { childList: true, subtree: true });

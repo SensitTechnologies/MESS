@@ -12,6 +12,7 @@
     padding: 0.5rem;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    color: #212529; /* default text color */
 }
 
 .dropdown-menu-custom .dropdown-divider {
@@ -29,8 +30,29 @@
     width: 100%;
     text-align: left;
     cursor: pointer;
+    color: #212529; /* default text color */
 }
 
 .dropdown-item:hover {
     background-color: #f1f1f1;
+}
+
+/* === Dark Mode Styles === */
+body.dark-mode .dropdown-menu-custom {
+    background-color: #1a1a1a;
+    border: 1px solid #4a4300;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+body.dark-mode .dropdown-menu-custom .dropdown-divider {
+    background-color: #333300;
+}
+
+body.dark-mode .dropdown-item {
+    color: #fff;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: #333300;
 }

@@ -116,7 +116,7 @@ public interface IWorkInstructionEditorService
     /// This method deep-copies all nodes from the current instruction using the <c>CloneNode</c> method,
     /// resets the version to "1.0", and marks the instruction as inactive and the latest version.
     /// </remarks>
-    public void StartNewFromCurrent(string? title = null, List<Product>? products = null);
+    public Task StartNewFromCurrent(string? title = null, List<Product>? products = null);
 
     /// <summary>
     /// Marks the current editing session as having unsaved changes.
@@ -126,11 +126,10 @@ public interface IWorkInstructionEditorService
     void MarkDirty();
 
     /// <summary>
-    /// Reverts the current editing session, clearing any in-memory
+    /// Resets the current editing session, clearing any in-memory
     /// WorkInstruction and resetting the dirty flag and editing mode.
-    /// Typically used when the user cancels editing.
     /// </summary>
-    void RevertChanges();
+    void Reset();
 
     /// <summary>
     /// Persists the current WorkInstruction to the database based on its editing mode.

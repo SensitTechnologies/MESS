@@ -570,136 +570,6 @@ public partial class WorkInstructionService : IWorkInstructionService
         
         return RemoveHtmlRegex().Replace(input, string.Empty);
     }
-
-    /// <inheritdoc />
-    public async Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate)
-    {
-        if (workInstructionToDuplicate == null)
-        {
-            Log.Warning("Cannot duplicate null work instruction");
-            return null;
-        }
-
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            context.ChangeTracker.Clear();
-            
-            // Use the execution strategy pattern instead of manual transactions
-            return await context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
-            {
-                await using var transaction = await context.Database.BeginTransactionAsync();
-                try
-                {
-                    var freshWorkInstruction = await context.WorkInstructions
-                        .Include(w => w.Products)
-                        .Include(w => w.Nodes)
-                        .ThenInclude(partNode => ((PartNode)partNode).Parts)
-                        .FirstOrDefaultAsync(w => w.Id == workInstructionToDuplicate.Id);
-
-                    if (freshWorkInstruction == null)
-                    {
-                        return null;
-                    }
-                    
-                    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
-                    var copiedTitle = $"{freshWorkInstruction.Title}-copy-{timestamp}";
-
-                    var newWorkInstruction = new WorkInstruction
-                    {
-                        Title = copiedTitle,
-                        Version = freshWorkInstruction.Version,
-                        IsActive = false,
-                        IsLatest = true
-                    };
-
-                    await context.WorkInstructions.AddAsync(newWorkInstruction);
-                    await context.SaveChangesAsync();
-
-                    foreach (var product in freshWorkInstruction.Products)
-                    {
-                        var trackedProduct = await context.Products
-                            .AsNoTracking()
-                            .FirstOrDefaultAsync(p => p.Id == product.Id);
-                        
-                        if (trackedProduct != null)
-                        {
-                            var attachedProduct = await context.Products.FindAsync(product.Id);
-                            if (attachedProduct != null)
-                            {
-                                attachedProduct.WorkInstructions?.Add(newWorkInstruction);
-                                newWorkInstruction.Products.Add(attachedProduct);
-                            }
-                        }
-                    }
-
-                    foreach (var originalNode in freshWorkInstruction.Nodes)
-                    {
-                        WorkInstructionNode newNode;
-            
-                        if (originalNode is Step originalStep)
-                        {
-                            var newStep = new Step
-                            {
-                                Name = originalStep.Name,
-                                Body = originalStep.Body,
-                                DetailedBody = originalStep.DetailedBody,
-                                Position = originalStep.Position,
-                                NodeType = originalStep.NodeType,
-                                PrimaryMedia = [..originalStep.PrimaryMedia],
-                                SecondaryMedia = [..originalStep.SecondaryMedia]
-                            };
-                            
-                            newNode = newStep;
-                        }
-                        else if (originalNode is PartNode originalPartNode)
-                        {
-                            var newPartNode = new PartNode
-                            {
-                                Position = originalPartNode.Position,
-                                NodeType = originalPartNode.NodeType,
-                                Parts = []
-                            };
-                
-                            foreach (var part in originalPartNode.Parts)
-                            {
-                                newPartNode.Parts.Add(part);
-                            }
-                
-                            newNode = newPartNode;
-                        }
-                        else
-                        {
-                            return null;
-                        }
-            
-                        newWorkInstruction.Nodes.Add(newNode);
-                    }
-
-                    await context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-
-                    Log.Information("Successfully duplicated WorkInstruction {OriginalId} to new ID {NewId}",
-                        freshWorkInstruction.Id, newWorkInstruction.Id);
-
-                    return newWorkInstruction;
-                }
-                catch (Exception e)
-                {
-                    await transaction.RollbackAsync();
-                    Log.Error("An exception occurred while duplicating the work instruction: {Message}", e.Message);
-                    return null;
-                }
-            });
-        }
-        catch (Exception e)
-        {
-            Log.Error("Failed to execute duplication strategy: {Message}", e.Message);
-            return null;
-        }
-    }
     
     /// <inheritdoc />
     public async Task<bool> IsEditable(WorkInstruction workInstruction)
@@ -1868,7 +1738,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Save file contents
             await using (var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024))
             await using (var fileStream = new FileStream(fullPath, FileMode.Create))
-            {
+            {                
                 await stream.CopyToAsync(fileStream);
             }
 
@@ -1883,6 +1753,77 @@ public partial class WorkInstructionService : IWorkInstructionService
             Log.Error(ex, "Error saving uploaded image file: {FileName}", file?.Name ?? "unknown");
             throw;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> SaveImageFileAsync(string file)
+    {
+        try
+        {
+            // Decide where on disk to save
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+            if (!Directory.Exists(imageDir))
+            {
+                Directory.CreateDirectory(imageDir);
+            }
+
+            var extension = Path.GetExtension(file);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";  // Default to png if browser doesn't send extension
+            }
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var fullPath = Path.Combine(imageDir, fileName);
+
+            // Save file contents
+            await using (var stream = new FileStream(Path.Combine(_webHostEnvironment.WebRootPath, file), FileMode.Open, FileAccess.Read))
+            await using (var fileStream = new FileStream(fullPath, FileMode.Create))
+            {
+                await stream.CopyToAsync(fileStream);
+            }
+
+            // Return the relative path for storing in the DB
+            var relativePath = Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
+            Log.Information("Saved image file: {RelativePath}", relativePath);
+
+            return relativePath;
+        }
+        catch(Exception ex)
+        {
+            Log.Error(ex, "Error saving uploaded image file: {FileName}", file ?? "unknown");
+            throw;
+        }
+    }
+
+
+    /// <inheritdoc/>
+    public Task DeleteImageFile(string FileName)
+    {
+        try
+        {
+            // find where on disk is saved
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+            if (Directory.Exists(imageDir))
+            {
+                var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, FileName);
+
+                if (File.Exists(fullPath))
+                {
+                    File.Delete(fullPath);
+                    Log.Information("Deleted image file: {FileName}", FileName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error Deleting stored image file: {FileName}", FileName);
+            throw;
+        }
+
+        return Task.CompletedTask;
     }
 
 
