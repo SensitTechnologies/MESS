@@ -1,0 +1,121 @@
+﻿@using MESS.Data.Models
+
+@if (IsVisible)
+{
+    <FluentDialog Open="IsVisible" OnDismiss="Close">
+        <FluentDialogHeader>
+            @HeaderText
+        </FluentDialogHeader>
+
+        <FluentDialogBody>
+            <ProductSelector 
+                AllProducts="AllProducts" 
+                SelectedProducts="SelectedProducts" 
+                SelectedProductsChanged="OnSelectedProductsChanged" />
+            
+            <hr />
+
+            <div class="resizable-textarea-container mt-3">
+                <label for="nameInput" class="form-label">Name:</label>
+                <textarea id="nameInput"
+                          class="form-control transparent-textarea"
+                          placeholder="Enter name here..."
+                          rows="1"
+                          @bind="WorkInstructionTitle"></textarea>
+            </div>
+        </FluentDialogBody>
+
+        <FluentDialogFooter>
+            <FluentButton Appearance="@Appearance.Outline" OnClick="Confirm">
+                New
+            </FluentButton>
+            <FluentButton Appearance="@Appearance.Outline" OnClick="Close">
+                Cancel
+            </FluentButton>
+        </FluentDialogFooter>
+    </FluentDialog>
+}
+
+@code {
+    /// <summary>
+    /// Indicates whether the dialog is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the dialog's visibility changes.
+    /// Supports two-way binding of the <see cref="IsVisible"/> property.
+    /// </summary>
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    /// <summary>
+    /// The header text displayed at the top of the dialog.
+    /// </summary>
+    [Parameter] public string? HeaderText { get; set; }
+
+    /// <summary>
+    /// A list of all available products to display in the selector.
+    /// </summary>
+    [Parameter] public required List<Product> AllProducts { get; set; }
+    
+    /// <summary>
+    /// The currently selected products from the dialog.
+    /// </summary>
+    [Parameter]
+    public List<Product> SelectedProducts { get; set; } = new();
+    
+    /// <summary>
+    /// An event callback used to send the associated products and entered work instruction title up to the menu bar.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(string Title, List<Product> Products)> OnConfirmed { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the callback that is triggered whenever the selection of products changes.
+    /// This allows the parent component to receive and react to updates to the selected products list,
+    /// such as when products are added or removed from the selection.
+    /// </summary>
+    /// <remarks>
+    /// The callback is invoked with a new list of <see cref="Product"/> instances representing the current selection.
+    /// </remarks>
+    [Parameter]
+    public EventCallback<List<Product>> SelectedProductsChanged { get; set; }
+
+    /// <summary>
+    /// The name of the work instruction, bound to the name text area.
+    /// </summary>
+    private string WorkInstructionTitle { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Shows the dialog with the specified header text.
+    /// </summary>
+    /// <param name="buttonText">The body content (unused).</param>
+    /// <param name="headerText">The header text to display.</param>
+    public void Show(string buttonText, string headerText = "")
+    {
+        HeaderText = headerText;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Closes the dialog and notifies the parent of visibility change.
+    /// </summary>
+    private async Task Close()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
+    }
+
+    private async Task Confirm()
+    {
+        await OnConfirmed.InvokeAsync((WorkInstructionTitle, SelectedProducts));
+        IsVisible = false;
+    }
+    
+    private Task OnSelectedProductsChanged(List<Product> products)
+    {
+        // Instead of assigning locally, notify the parent to update
+        return SelectedProductsChanged.InvokeAsync(products);
+    }
+}

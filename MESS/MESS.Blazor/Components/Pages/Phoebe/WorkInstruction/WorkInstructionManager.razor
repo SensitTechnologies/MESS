@@ -20,9 +20,10 @@
     OnProductSelected="OnProductSelected"
     OnWorkInstructionSelected="OnWorkInstructionSelected"
     OnSidebarToggle="ToggleSidebar"
-    OnNew="StartNewInstruction"
+    OnNewConfirmed="HandleNewInstruction"
     OnDelete="DeleteInstruction"
     OnSave="SaveEditorChanges"
+    OnSaveAsConfirmed="HandleSaveAs"
     OnRevertChanges="RevertEditorChanges"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     OnImportComplete="HandleImportComplete"
@@ -33,16 +34,11 @@
 
 <div class="container justify-content-center" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
     <WorkInstructionNodeManagerList
-        @ref="NodeManagerRef"
         WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
         OnChanged="MarkEditorDirty" />
 </div>
 
-<PopUpMenu @ref="popupRef"/>
-
 @code {
-    private WorkInstructionNodeManagerList? NodeManagerRef;
-
     private bool isSidebarOpen = false;
 
     private List<Product> Products { get; set; } = new();
@@ -57,8 +53,6 @@
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
-
-    private PopUpMenu? popupRef;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -114,13 +108,24 @@
             }
             else
             {
-                // Create new version, then save
-                await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
-                success = await WorkInstructionEditorService.SaveAsync();
-                if (success)
-                    ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+                if (WorkInstructionEditorService.Mode == EditorMode.CreateNew)
+                {
+                    success = await WorkInstructionEditorService.SaveAsync();
+                    if (success)
+                        ToastService.ShowSuccess("New Work Instruction saved successfully.");
+                    else
+                        ToastService.ShowError("Error saving new work instruction.");
+                }
                 else
-                    ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
+                {
+                    // Create new version, then save
+                    await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
+                    success = await WorkInstructionEditorService.SaveAsync();
+                    if (success)
+                        ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+                    else
+                        ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
+                }
             }
 
             if (success)
@@ -194,14 +199,23 @@
         StateHasChanged();
     }
     
-    private void StartNewInstruction()
+    private async Task HandleNewInstruction((string Title, List<Product> Products) workInstructionData)
     {
-        WorkInstructionEditorService.StartNew();
+        WorkInstructionEditorService.StartNew(workInstructionData.Title, workInstructionData.Products);
         SelectedWorkInstructionId = null;
-        ToastService.ShowInfo("Started new Work Instruction.");
-        
-        // Trigger popup if popupRef exists
-        popupRef?.Show("A new Work Instruction has been started.", "New");
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
+        ToastService.ShowInfo($"Started New Work Instruction \"{workInstructionData.Title}\"");
+        StateHasChanged();
+    }
+    
+    private async Task HandleSaveAs((string Title, List<Product> Products) workInstructionData)
+    {
+        WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
+        SelectedWorkInstructionId = null;
+        await WorkInstructionEditorService.SaveAsync();
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
+        ToastService.ShowInfo($"Saved new work instruction \"{workInstructionData.Title}\"");
+        StateHasChanged();
     }
 
     private void RevertEditorChanges()
@@ -240,7 +254,9 @@
         }
         else
         {
-            WorkInstructionEditorService.RevertChanges();
+            // Reverting Changes here may or may not be necessary
+            // For the moment, it is being bypassed
+            //WorkInstructionEditorService.RevertChanges();
         }
     }
     

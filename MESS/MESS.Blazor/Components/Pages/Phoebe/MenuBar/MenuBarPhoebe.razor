@@ -18,11 +18,11 @@
     <div class="menu-left-buttons">
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
-            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNew))">New</FluentMenuItem>
+            <FluentMenuItem OnClick="@ShowNewInstructionDialog">New</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => LogAndClose("Save As"))">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@ShowSaveAsDialog">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
             <AuthorizeView Roles="Administrator">
                 <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))">Delete</FluentMenuItem>
@@ -114,6 +114,15 @@
     Visible="@showExportDialog"
     VisibleChanged="@(val => showExportDialog = val)" />
 
+<ProductAssociationDialog 
+    AllProducts="@Products"
+    SelectedProducts="@DialogSelectedProducts"
+    SelectedProductsChanged="OnDialogSelectedProductsChanged"
+    IsVisible="@isAnyDialogVisible"
+    IsVisibleChanged="@(val => isAnyDialogVisible = val)"
+    HeaderText="@dialogHeaderText"
+    OnConfirmed="@OnDialogConfirmed" />
+
 @code {
     private string? ActiveLineOperator { get; set; }
 
@@ -125,9 +134,10 @@
     public EventCallback OnSidebarToggle { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the user selects "New" to create a new work instruction.
+    /// Event callback triggered when the user selects "New" to create a new work instruction. This passes up a work
+    /// instruction title and list of associated products.
     /// </summary>
-    [Parameter] public EventCallback OnNew { get; set; }
+    [Parameter] public EventCallback<(string Title, List<Product> Products)> OnNewConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Save" to persist current edits to the work instruction either
@@ -135,6 +145,12 @@
     /// </summary>
     [Parameter]
     public EventCallback OnSave { get; set; }
+    
+    /// <summary>
+    /// Callback invoked when the user confirms the "Save As" action from the dialog.
+    /// The associated products and work instruction title are passed up.
+    /// </summary>
+    [Parameter] public EventCallback<(string Title, List<Product> Products)> OnSaveAsConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Delete" to completely remove a work instruction.
@@ -205,8 +221,13 @@
     private bool _isLoadingVersions = false;
     
     private bool showImportDialog;
-    
     private bool showExportDialog = false;
+    
+    private bool isAnyDialogVisible;
+    private string dialogHeaderText = "";
+    private EventCallback<(string Title, List<Product> Products)> OnDialogConfirmed;
+    
+    private List<Product> DialogSelectedProducts { get; set; } = new List<Product>();
 
     /// <summary>
     /// The list of products to show in the dropdown.
@@ -426,5 +447,42 @@
     private void HandleImportDialogClosed(bool isOpen)
     {
         showImportDialog = isOpen;
+    }
+    
+    private void ShowNewInstructionDialog()
+    {
+        isAnyDialogVisible = true;
+        dialogHeaderText = "Create New Work Instruction";
+        OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleNewDialogConfirmed);
+    }
+
+    private void ShowSaveAsDialog()
+    {
+        isAnyDialogVisible = true;
+        DialogSelectedProducts = CurrentInstruction?.Products?.ToList() ?? new();
+        dialogHeaderText = "Save Work Instruction As";
+        OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleSaveAsDialogConfirmed);
+    }
+    
+    private async Task HandleNewDialogConfirmed((string Title, List<Product> Products) data)
+    {
+        Log.Information("[MenuBarPhoebe] HandleNewDialogConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
+        isAnyDialogVisible = false;
+        if (OnNewConfirmed.HasDelegate)
+            await OnNewConfirmed.InvokeAsync(data);
+    }
+
+    private async Task HandleSaveAsDialogConfirmed((string Title, List<Product> Products) data)
+    {
+        Log.Information("[MenuBarPhoebe] HandleSaveAsDialogConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
+        isAnyDialogVisible = false;
+        if (OnSaveAsConfirmed.HasDelegate)
+            await OnSaveAsConfirmed.InvokeAsync(data);
+    }
+    
+    private Task OnDialogSelectedProductsChanged(List<Product> products)
+    {
+        DialogSelectedProducts = products;
+        return Task.CompletedTask;
     }
 }
