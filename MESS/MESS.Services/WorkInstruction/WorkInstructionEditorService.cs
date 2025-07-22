@@ -250,7 +250,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public void RevertChanges()
+    public void Reset()
     {
         Current = null;
         IsDirty = false;

@@ -222,7 +222,7 @@
         SelectedProductId = (productId == -1) ? null : productId;
         SelectedWorkInstructionId = null;
 
-        WorkInstructionEditorService.RevertChanges(); // clear the loaded WI
+        WorkInstructionEditorService.Reset(); // clear the loaded WI
         
         StateHasChanged();
 
@@ -247,9 +247,9 @@
         }
         else
         {
-            // Reverting Changes here may or may not be necessary
+            // Resetting Changes here may or may not be necessary
             // For the moment, it is being bypassed
-            //WorkInstructionEditorService.RevertChanges();
+            //WorkInstructionEditorService.Reset();
         }
     }
     

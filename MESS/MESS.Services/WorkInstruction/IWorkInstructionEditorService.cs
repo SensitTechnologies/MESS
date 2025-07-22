@@ -126,11 +126,10 @@ public interface IWorkInstructionEditorService
     void MarkDirty();
 
     /// <summary>
-    /// Reverts the current editing session, clearing any in-memory
+    /// Resets the current editing session, clearing any in-memory
     /// WorkInstruction and resetting the dirty flag and editing mode.
-    /// Typically used when the user cancels editing.
     /// </summary>
-    void RevertChanges();
+    void Reset();
 
     /// <summary>
     /// Persists the current WorkInstruction to the database based on its editing mode.
