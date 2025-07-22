@@ -19,10 +19,16 @@ else
                           >
 
                 <SortableItemTemplate>
-                    <div class="d-flex align-items-center border rounded my-2 ">
-                        <i class="bi bi-grip-vertical h3"/>
-                        <div class="vr me-2"/>
-                        <img class="py-1" src="@image" style="@ImageStyle"/>
+                    <div class="d-flex align-items-start justify-content-between border rounded my-2 ">
+                        <div class="d-flex flex-grow-1 align-items-center ">
+                            <i class="bi bi-grip-vertical h3" />
+                            <div class="vr me-1" />
+                            <img class="m-1" src="@image" style="@ImageStyle" />
+                        </div>
+
+                        <button class="btn btn-sm btn-primary m-1" @onclick="() => HandleRemove(image)">
+                            <i class="bi bi-trash" />
+                        </button>
                     </div>
                 </SortableItemTemplate>
             </SortableList>
@@ -92,6 +98,38 @@ else
         else
         {
             ActiveImages.Add(itemToMove);
+        }
+
+        await NotifyChange();
+    }
+
+    private async Task HandleRemove(string image)
+    {
+
+        List<string> updatedList;
+
+        if (ShowBody)
+        {
+            updatedList = new List<string>(SecondaryMedia);
+        }
+        else
+        {
+            updatedList = new List<string>(PrimaryMedia);
+        }
+
+        var index = updatedList.IndexOf(image);
+        if (index == -1) return;
+
+
+        updatedList.Remove(image);
+
+        if (ShowBody)
+        {
+            SecondaryMedia = updatedList;
+        }
+        else
+        {
+            PrimaryMedia = updatedList;
         }
 
         await NotifyChange();

@@ -35,36 +35,36 @@
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
     @<div class="mb-3 pe-3 border rounded disable-highlight">
+        <div class="d-flex">
+            <div class="d-flex align-items-center drag-handle me-2">
+                <i class="bi bi-grip-vertical h3" />
+                <div class="vr me-2" />
+            </div>
+            <div class="content flex-grow-1 py-2">
+                @switch (node)
+                {
+                    case PartNode partNode:
+                        <PartNodeView PartNode="partNode"
+                                      OnNodeAction="HandleNodeAction"
+                                      OnChanged="OnChanged" />
+                    break;
 
+                    case Step stepNode:
+                        <StepNodeView Step="stepNode"
+                                      EditorRefs="EditorRefs"
+                                      ActiveFields="ActiveFields"
+                                      OnAction="HandleNodeAction"
+                                      OnChanged="OnChanged" />
+                    break;
 
-    <div class="d-flex">
-        <div class="d-flex align-items-center drag-handle me-2">
-            <i class="bi bi-grip-vertical h3" />
-            <div class="vr me-2" />
+                    default:
+                        <div>Unknown node type: @node.NodeType</div>
+                    break;
+                }
+            </div>
         </div>
-        <div class="content flex-grow-1 py-2">
-            @switch (node)
-                        {
-                        case PartNode partNode:
-            <PartNodeView PartNode="partNode" OnChanged="OnChanged" />
-                        break;
+    </div>;
 
-                        case Step stepNode:
-            <StepNodeView Step="stepNode"
-                          EditorRefs="EditorRefs"
-                          ActiveFields="ActiveFields"
-                          OnAction="HandleStepNodeAction"
-                          OnChanged="OnChanged" />
-                        break;
-
-                        default:
-            <div>Unknown node type: @node.NodeType</div>
-                        break;
-                        }
-        </div>
-    </div>
-</div>;
-    
     private async Task OnItemsChanged((int oldIndex, int newIndex) indices)
     {
         var (oldIndex, newIndex) = indices;
@@ -85,13 +85,13 @@
         }
 
         RecalculatePositions();
-        
+
         if (OnChanged.HasDelegate)
         {
             await OnChanged.InvokeAsync();
         }
     }
-    
+
     private void RecalculatePositions()
     {
         for (var i = 0; i < WorkInstructionNodes.Count; i++)
@@ -99,11 +99,11 @@
             WorkInstructionNodes[i].Position = i;
         }
     }
-    
-    private async Task HandleStepNodeAction((Step step, string action) actionTuple)
+
+    private async Task HandleNodeAction((WorkInstructionNode node, string action) actionTuple)
     {
-        var (step, action) = actionTuple;
-        var index = WorkInstructionNodes.IndexOf(step);
+        var (node, action) = actionTuple;
+        var index = WorkInstructionNodes.IndexOf(node);
         if (index == -1) return;
 
         // Only save if moving or removing
@@ -112,28 +112,28 @@
             await SaveAllEditorsContentAsync();
         }
 
-        WorkInstructionNodes.Remove(step);
+        WorkInstructionNodes.Remove(node);
 
         switch (action)
         {
             case "up":
-                WorkInstructionNodes.Insert(Math.Max(0, index - 1), step);
+                WorkInstructionNodes.Insert(Math.Max(0, index - 1), node);
                 break;
             case "down":
-                WorkInstructionNodes.Insert(Math.Min(WorkInstructionNodes.Count, index + 1), step);
+                WorkInstructionNodes.Insert(Math.Min(WorkInstructionNodes.Count, index + 1), node);
                 break;
             case "top":
-                WorkInstructionNodes.Insert(0, step);
+                WorkInstructionNodes.Insert(0, node);
                 break;
             case "bottom":
-                WorkInstructionNodes.Add(step);
+                WorkInstructionNodes.Add(node);
                 break;
             case "insertBefore":
                 WorkInstructionNodes.Insert(index, new Step { Name = "", Body = "", DetailedBody = "" }); // new step at index
-                WorkInstructionNodes.Insert(index + 1, step);                        // original step after
+                WorkInstructionNodes.Insert(index + 1, node);                        // original step after
                 break;
             case "insertAfter":
-                WorkInstructionNodes.Insert(index, step);                            // original step at index
+                WorkInstructionNodes.Insert(index, node);                            // original step at index
                 WorkInstructionNodes.Insert(index + 1, new Step { Name = "", Body = "", DetailedBody = "" }); // new step after
                 break;
             case "remove":
