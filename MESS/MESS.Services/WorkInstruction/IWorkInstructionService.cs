@@ -5,8 +5,9 @@ namespace MESS.Services.WorkInstruction;
 using Data.Models;
 
 /// <summary>
-/// Interface for managing work instructions, including operations such as export, import, duplication, 
-/// retrieval, creation, deletion, and updates.
+/// Interface for managing work instructions, including operations such as export, import, 
+/// retrieval, creation, deletion, and updates. See the WorkInstructionEditor service for more Phoebe
+/// specific work instruction editing functions.
 /// </summary>
 public interface IWorkInstructionService
 {
@@ -27,19 +28,7 @@ public interface IWorkInstructionService
     /// The file will be saved with a filename based on the work instruction title and a timestamp.
     /// </remarks>
     public string? ExportToXlsx(WorkInstruction workInstructionToExport);
-    /// <summary>
-    /// Creates a duplicate of an existing work instruction with a unique title.
-    /// </summary>
-    /// <param name="workInstructionToDuplicate">The work instruction to duplicate.</param>
-    /// <returns>
-    /// The task result contains the newly created work instruction if successful; otherwise, null.
-    /// </returns>
-    /// <remarks>
-    /// The duplicate will have the same version, products, and nodes (steps and parts) as the original.
-    /// Its title will be the original title with a "-copy-[timestamp]" suffix.
-    /// The duplicate will be created with IsActive set to false.
-    /// </remarks>
-    public Task<WorkInstruction?> DuplicateAsync(WorkInstruction workInstructionToDuplicate);
+    
     /// <summary>
     /// Determines whether the specified work instruction is editable.
     /// A work instruction is considered non-editable if it has associated production logs.
