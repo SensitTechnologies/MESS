@@ -22,7 +22,7 @@
             <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
-            <FluentMenuItem OnClick="@ShowSaveAsDialog">Save As</FluentMenuItem>
+            <FluentMenuItem OnClick="@ShowSaveAsDialog" Disabled="@(!HasInstruction)">Save As</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnRevertChanges))" Disabled="@(!IsDirty)">Revert Changes</FluentMenuItem>
             <AuthorizeView Roles="Administrator">
                 <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))">Delete</FluentMenuItem>
