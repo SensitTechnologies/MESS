@@ -25,33 +25,6 @@
                 @(ShowBody ? "Hide Details" : "Show Details")
             </button>
         </div>
-    <button class="btn btn-sm btn-primary" @onclick="SwapField">
-        @(ShowBody ? "Hide Details" : "Show Details")
-    </button>
-
-    <NodeActionMenu OnAction="HandleMoveAction" />
-</div>
-
-<div class="d-flex">
-    <div class="w-50" style="min-width: 0;">
-        <div class="mb-2">
-            <label class="form-label" for="stepNameInput">Step Name</label>
-            <input
-                type="text"
-                class="form-control"
-                id="stepNameInput"
-                value="@Step.Name"
-                @oninput="OnNameChanged"
-                placeholder="Enter step name" />
-        </div>
-        <div id="step-editor-@Step.Id" class="editor-wrapper" style="width: 100%; max-width: 100%; overflow: auto;">
-            <BlazoredTextEditor @ref="_editorRef">
-                <ToolbarContent>
-                    @((MarkupString)DefaultToolbarHtml)
-                </ToolbarContent>
-            </BlazoredTextEditor>
-        </div>
-    </div>
 
         <div class="w-50 p-2">
             
