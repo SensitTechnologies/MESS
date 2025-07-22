@@ -206,4 +206,29 @@ public class ProductionLogService : IProductionLogService
             await context.SaveChangesAsync();
         }
     }
+    
+    /// <summary>
+    /// Deletes a <see cref="ProductionLog"/> and all associated log steps and step attempts from the database by its ID.
+    /// </summary>
+    /// <param name="id">The unique identifier of the production log to delete.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. 
+    /// Returns <c>true</c> if the log was found and deleted; otherwise, <c>false</c>.
+    /// </returns>
+    public async Task<bool> DeleteProductionLogAsync(int id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var log = await context.ProductionLogs
+            .Include(l => l.LogSteps)
+            .ThenInclude(s => s.Attempts)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (log == null)
+            return false;
+
+        context.ProductionLogs.Remove(log);
+        await context.SaveChangesAsync();
+        return true;
+    }
 }

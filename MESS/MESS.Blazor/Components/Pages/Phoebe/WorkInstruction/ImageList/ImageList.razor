@@ -8,10 +8,10 @@
 }
 else
 {
-    
+
     <div class="panel panel-primary">
-        <h4>Images for this step:</h4>
-        <div class="mb-3 p-3 border rounded">
+        <label class="form-label">Images:</label>
+        <div class="border rounded px-2">
             <SortableList T="string"
                           Items="@(ActiveImages)"
                           OnUpdate="@SortList"
@@ -19,49 +19,24 @@ else
                           >
 
                 <SortableItemTemplate>
-                    <div class="is-flex is-align-items-center">
-                        <div class="row">
-                            <div class="has-cursor-grab col-auto">
-                                <div class="mr-4">
-                                    <i class="bi bi-grip-vertical h3"></i>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <img src="@image" style="@ImageStyle" />
-                            </div>
+                    <div class="d-flex align-items-start justify-content-between border rounded my-2 ">
+                        <div class="d-flex flex-grow-1 align-items-center ">
+                            <i class="bi bi-grip-vertical h3" />
+                            <div class="vr me-1" />
+                            <img class="m-1" src="@image" style="@ImageStyle" />
                         </div>
-                    </div>
 
-                    <!--
-                    <div class="is-flex is-align-items-center">
- 
-                        <div class="is-flex-grow-1">
-                            <div class=" card has-border has-background-blazor has-text-white">
-                                <p class="is-size-4 p-2 ml-4">@(ActiveImages.IndexOf(image)): @(Path.GetFileName(image))</p>
-                                
-                                
-                                <div class="row">
-                                    <div class="col-12 col-md-2 col-lg-4 mb-3">
-                                        <label>@(ActiveImages.IndexOf(image)): @(Path.GetFileName(image))</label>
-                                    </div>
-                                    <div class="col-12 col-md-10 col-lg-4 mb-3">
-                                        <img src="@image" style="@ImageStyle" />
-                                    </div>
-                                </div>
-                                
-                            </div>
-                        </div>
+                        <button class="btn btn-sm btn-primary m-1" @onclick="() => HandleRemove(image)">
+                            <i class="bi bi-trash" />
+                        </button>
                     </div>
-                    -->
-
-                    
                 </SortableItemTemplate>
-            </SortableList>            
+            </SortableList>
         </div>
     </div>
 }
 
-<div class="upload-area">
+<div class="upload-area my-1">
     <label class="form-label">Upload New @ActiveLabel Image(s)</label>
     <InputFile OnChange="HandleUpload" multiple accept="image/*" />
 </div>
@@ -123,6 +98,38 @@ else
         else
         {
             ActiveImages.Add(itemToMove);
+        }
+
+        await NotifyChange();
+    }
+
+    private async Task HandleRemove(string image)
+    {
+
+        List<string> updatedList;
+
+        if (ShowBody)
+        {
+            updatedList = new List<string>(SecondaryMedia);
+        }
+        else
+        {
+            updatedList = new List<string>(PrimaryMedia);
+        }
+
+        var index = updatedList.IndexOf(image);
+        if (index == -1) return;
+
+        await WorkInstructionService.DeleteImageFile(image);
+        updatedList.Remove(image);
+
+        if (ShowBody)
+        {
+            SecondaryMedia = updatedList;
+        }
+        else
+        {
+            PrimaryMedia = updatedList;
         }
 
         await NotifyChange();

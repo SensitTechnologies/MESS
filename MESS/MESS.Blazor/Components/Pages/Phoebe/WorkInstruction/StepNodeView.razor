@@ -1,7 +1,30 @@
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.ImageList
 @inject IJSRuntime JS
 
-<div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="d-flex align-items-start">
+        <div class="w-50 p-2">
+            <div class="mb-2">
+                <label class="form-label" for="stepNameInput">Step Name</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="stepNameInput"
+                    value="@Step.Name"
+                    @oninput="OnNameChanged"
+                    placeholder="Enter step name" />
+            </div>
+            <div id="step-editor-@Step.Id" class="editor-wrapper" style="width: 100%; max-width: 100%; overflow: auto;">
+                <BlazoredTextEditor @ref="_editorRef">
+                    <ToolbarContent>
+                        @((MarkupString)DefaultToolbarHtml)
+                    </ToolbarContent>
+                </BlazoredTextEditor>
+            </div>
+
+            <button class="btn btn-sm btn-primary my-1" @onclick="SwapField">
+                @(ShowBody ? "Hide Details" : "Show Details")
+            </button>
+        </div>
     <button class="btn btn-sm btn-primary" @onclick="SwapField">
         @(ShowBody ? "Hide Details" : "Show Details")
     </button>
@@ -30,21 +53,21 @@
         </div>
     </div>
 
-    <div class="w-50" style="min-width: 0;">
+        <div class="w-50 p-2">
             
-        <!--
             <ImageList
                 PrimaryMedia="@Step.PrimaryMedia"
                 SecondaryMedia="@Step.SecondaryMedia"
                 ShowBody="@ShowBody"
                 OnMediaChanged="HandleImageMediaChanged" />
-            
+
+            <!--
+                <WorkInstructionImageManager
+                PrimaryMedia="@Step.PrimaryMedia"
+                SecondaryMedia="@Step.SecondaryMedia"
+                ShowBody="@ShowBody"
+                OnMediaChanged="HandleImageMediaChanged" />
             -->
-        <WorkInstructionImageManager
-            PrimaryMedia="@Step.PrimaryMedia"
-            SecondaryMedia="@Step.SecondaryMedia"
-            ShowBody="@ShowBody"
-            OnMediaChanged="HandleImageMediaChanged" />
-            
+        </div>
+        <NodeActionMenu OnAction="HandleMoveAction" />
     </div>
-</div>

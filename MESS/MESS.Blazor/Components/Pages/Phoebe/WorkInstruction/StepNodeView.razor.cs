@@ -63,7 +63,7 @@ public partial class StepNodeView : IDisposable
     /// The parent handles this action by modifying the list of nodes appropriately.
     /// </remarks>
     [Parameter]
-    public EventCallback<(Step step, string action)> OnAction { get; set; }
+    public EventCallback<(WorkInstructionNode step, string action)> OnAction { get; set; }
     
     /// <summary>
     /// Event callback that is triggered when the step data has been modified by the user.
