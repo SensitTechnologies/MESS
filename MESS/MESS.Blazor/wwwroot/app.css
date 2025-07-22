@@ -7,13 +7,11 @@ html, body {
     margin: 0;
     background-color: white;
     color: black;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body.dark-mode {
     background-color: #121212;
     color: white;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .page,
@@ -211,7 +209,6 @@ a, .btn-link {
     color: #7a6b00;
     padding: 0.375rem 0.75rem;
     box-sizing: border-box;
-    transition: all 0.2s ease-in-out;
 }
 
 .btn-check:checked + .btn-checkbox {
@@ -291,7 +288,6 @@ body.light-mode .table td {
     background-color: #ffffff;
     color: #000000;
     border: 1px solid #dee2e6;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body.light-mode .table.table-striped tbody tr {
@@ -304,7 +300,6 @@ body.dark-mode .table td {
     background-color: transparent;
     color: #ffffff;
     border: 1px solid #a8a8a8;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
