@@ -158,6 +158,26 @@ public interface IWorkInstructionService
     /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
     /// </returns>
     Task<string> SaveImageFileAsync(IBrowserFile file);
+
+    /// <summary>
+    /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
+    /// </summary>
+    /// <param name="file">The uploaded file string</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is the relative path
+    /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
+    /// </returns>
+    Task<string> SaveImageFileAsync(string file);
+
+    /// <summary>
+    /// Removes an Image File from the server
+    /// </summary>
+    /// <param name="FileName">The File to be deleted</param>
+    /// <returns>
+    /// A task representing the synchronous operation.
+    /// </returns>
+    Task DeleteImageFile(string FileName);
+
     /// <summary>
     /// Sets IsActive = false for all other versions in this version chain.
     /// </summary>

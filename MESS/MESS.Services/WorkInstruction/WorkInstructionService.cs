@@ -1868,7 +1868,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             // Save file contents
             await using (var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024))
             await using (var fileStream = new FileStream(fullPath, FileMode.Create))
-            {
+            {                
                 await stream.CopyToAsync(fileStream);
             }
 
@@ -1883,6 +1883,77 @@ public partial class WorkInstructionService : IWorkInstructionService
             Log.Error(ex, "Error saving uploaded image file: {FileName}", file?.Name ?? "unknown");
             throw;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> SaveImageFileAsync(string file)
+    {
+        try
+        {
+            // Decide where on disk to save
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+            if (!Directory.Exists(imageDir))
+            {
+                Directory.CreateDirectory(imageDir);
+            }
+
+            var extension = Path.GetExtension(file);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";  // Default to png if browser doesn't send extension
+            }
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var fullPath = Path.Combine(imageDir, fileName);
+
+            // Save file contents
+            await using (var stream = new FileStream(Path.GetFullPath(file), FileMode.Open, FileAccess.Read))
+            await using (var fileStream = new FileStream(fullPath, FileMode.Create))
+            {
+                await stream.CopyToAsync(fileStream);
+            }
+
+            // Return the relative path for storing in the DB
+            var relativePath = Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
+            Log.Information("Saved image file: {RelativePath}", relativePath);
+
+            return relativePath;
+        }
+        catch(Exception ex)
+        {
+            Log.Error(ex, "Error saving uploaded image file: {FileName}", file ?? "unknown");
+            throw;
+        }
+    }
+
+
+    /// <inheritdoc/>
+    public Task DeleteImageFile(string FileName)
+    {
+        try
+        {
+            // find where on disk is saved
+            var imageDir = Path.Combine(_webHostEnvironment.WebRootPath, WORK_INSTRUCTION_IMAGES_DIRECTORY);
+
+            if (Directory.Exists(imageDir))
+            {
+                var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, FileName);
+
+                if (File.Exists(fullPath))
+                {
+                    File.Delete(fullPath);
+                    Log.Information("Deleted image file: {FileName}", FileName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error Deleting stored image file: {FileName}", FileName);
+            throw;
+        }
+
+        return Task.CompletedTask;
     }
 
 

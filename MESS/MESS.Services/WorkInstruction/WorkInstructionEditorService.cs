@@ -1,5 +1,7 @@
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
+using Microsoft.AspNetCore.Components.Forms;
+using System.Threading.Tasks;
 
 /// <inheritdoc />
 public class WorkInstructionEditorService : IWorkInstructionEditorService
@@ -54,7 +56,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
     
     /// <inheritdoc />
-    public void StartNewFromCurrent(string? title = null, List<Product>? products = null)
+    public async Task StartNewFromCurrent(string? title = null, List<Product>? products = null)
     {
         if (Current == null)
             throw new InvalidOperationException("Cannot start a new work instruction from current because it is null.");
@@ -69,7 +71,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
             CollectsProductSerialNumber = Current.CollectsProductSerialNumber,
             Products = products ?? Current.Products?.ToList() ?? new List<Product>(),
-            Nodes = Current.Nodes.Select(CloneNode).ToList()
+            Nodes = await CloneNodesAsync(Current.Nodes)
         };
 
         Current = newInstruction;
@@ -106,7 +108,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         if (template == null)
             throw new Exception($"No latest version found for OriginalId {originalId}.");
 
-        Current = CloneForNewVersion(template);
+        Current = await CloneForNewVersion(template);
         Mode = EditorMode.CreateNewVersion;
         IsDirty = true;
         NotifyChanged();
@@ -121,7 +123,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             throw new Exception($"Version with ID {versionId} not found.");
 
         // Clone it
-        var newVersion = CloneForNewVersion(oldVersion);
+        var newVersion = await CloneForNewVersion(oldVersion);
         
         newVersion.Version = oldVersion.Version;
 
@@ -136,7 +138,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         NotifyChanged();
     }
     
-    private WorkInstruction CloneForNewVersion(WorkInstruction template)
+    private async Task<WorkInstruction> CloneForNewVersion(WorkInstruction template)
     {
         return new WorkInstruction
         {
@@ -148,13 +150,27 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             CollectsProductSerialNumber = template.CollectsProductSerialNumber,
             Products = template.Products?.ToList() ?? new List<Product>(),
-            Nodes = template.Nodes
-                .Select(CloneNode)
-                .ToList()
+            Nodes = await CloneNodesAsync(template.Nodes)
         };
     }
 
-    private WorkInstructionNode CloneNode(WorkInstructionNode node)
+    private async Task<List<WorkInstructionNode>> CloneNodesAsync(List<WorkInstructionNode> nodes)
+    {
+        if (nodes.Count == 0)
+        {
+            return nodes;
+        }
+
+        var clone = new List<WorkInstructionNode>();
+        foreach (var node in nodes)
+        {
+            clone.Add(await CloneNodeAsync(node));
+        }
+
+        return clone?.ToList() ?? new List<WorkInstructionNode>();
+    }
+
+    private async Task<WorkInstructionNode> CloneNodeAsync(WorkInstructionNode node)
     {
         if (node is PartNode partNode)
         {
@@ -176,12 +192,30 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Name = stepNode.Name,
                 Body = stepNode.Body,
                 DetailedBody = stepNode.DetailedBody,
-                PrimaryMedia = stepNode.PrimaryMedia?.ToList() ?? new List<string>(),
-                SecondaryMedia = stepNode.SecondaryMedia?.ToList() ?? new List<string>()
+                PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? new List<string>(),
+                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? new List<string>()
             };
         }
 
         throw new NotSupportedException("Unknown WorkInstructionNode type");
+    }
+
+    private async Task<List<string>> CloneImages(List<string> Images)
+    {
+
+        if (Images.Count == 0)
+        {
+            return Images;
+        }
+
+        var clone = new List<string>();
+        foreach (var image in Images) 
+        {
+            clone.Add( await _workInstructionService.SaveImageFileAsync(image));
+        }
+
+
+        return clone?.ToList() ?? new List<string>();
     }
 
     private string IncrementVersion(string? version)
