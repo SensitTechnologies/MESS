@@ -52,4 +52,14 @@ public interface IProductionLogService
     /// <param name="id">The unique identifier of the attempt to delete.</param>
     /// <returns>A task that represents the asynchronous delete operation.</returns>
     Task DeleteAttemptAsync(int id);
+    
+    /// <summary>
+    /// Deletes the specified production log and all associated log steps and step attempts from the database.
+    /// </summary>
+    /// <param name="id">The unique identifier of the production log to delete.</param>
+    /// <returns>
+    /// A task that represents the asynchronous delete operation.
+    /// The task result contains <c>true</c> if the log was found and successfully deleted; otherwise, <c>false</c>.
+    /// </returns>
+    Task<bool> DeleteProductionLogAsync(int id);
 }
