@@ -1,16 +1,8 @@
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.ImageList
 @inject IJSRuntime JS
 
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <button class="btn btn-sm btn-primary" @onclick="SwapField">
-            @(ShowBody ? "Hide Details" : "Show Details")
-        </button>
-
-        <NodeActionMenu OnAction="HandleMoveAction" />
-    </div>
-
-    <div class="d-flex">
-        <div class="w-50" style="min-width: 0;">
+    <div class="d-flex align-items-start">
+        <div class="w-50 p-2">
             <div class="mb-2">
                 <label class="form-label" for="stepNameInput">Step Name</label>
                 <input
@@ -28,23 +20,27 @@
                     </ToolbarContent>
                 </BlazoredTextEditor>
             </div>
+
+            <button class="btn btn-sm btn-primary my-1" @onclick="SwapField">
+                @(ShowBody ? "Hide Details" : "Show Details")
+            </button>
         </div>
 
-        <div class="w-50" style="min-width: 0;">
+        <div class="w-50 p-2">
             
-            <!--
             <ImageList
                 PrimaryMedia="@Step.PrimaryMedia"
                 SecondaryMedia="@Step.SecondaryMedia"
                 ShowBody="@ShowBody"
                 OnMediaChanged="HandleImageMediaChanged" />
-            
-            -->
-            <WorkInstructionImageManager
+
+            <!--
+                <WorkInstructionImageManager
                 PrimaryMedia="@Step.PrimaryMedia"
                 SecondaryMedia="@Step.SecondaryMedia"
                 ShowBody="@ShowBody"
                 OnMediaChanged="HandleImageMediaChanged" />
-            
+            -->
         </div>
+        <NodeActionMenu OnAction="HandleMoveAction" />
     </div>

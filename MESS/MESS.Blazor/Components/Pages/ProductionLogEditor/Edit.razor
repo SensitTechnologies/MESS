@@ -91,6 +91,12 @@ else
 
         // Explicitly Delete the Attempt
         await ProductionLogService.DeleteAttemptAsync(attempt.Id);
+        
+        // User feedback if no attempts remain
+        if (!_allAttempts.Any())
+        {
+            ToastService.ShowWarning("All attempts removed. Saving will now delete this log.");
+        }
     }
 
     private async Task Save()
@@ -98,10 +104,32 @@ else
         if (_productionLog == null) return;
 
         // Update log steps with current attempts
+        var updatedSteps = _attemptToStep.Values.Distinct().ToList();
         _productionLog.LogSteps.Clear();
-        foreach (var step in _attemptToStep.Values.Distinct())
+
+        foreach (var step in updatedSteps)
         {
-            _productionLog.LogSteps.Add(step);
+            // Only add steps that still have attempts
+            if (step.Attempts.Any())
+            {
+                _productionLog.LogSteps.Add(step);
+            }
+        }
+        
+        // If there are no attempts left, delete the whole log
+        if (!_productionLog.LogSteps.SelectMany(s => s.Attempts).Any())
+        {
+            var deleted = await ProductionLogService.DeleteProductionLogAsync(_productionLog.Id);
+            if (deleted)
+            {
+                ToastService.ShowSuccess("Production log deleted as no step attempts remain");
+                NavManager.NavigateTo("/production-logs");
+            }
+            else
+            {
+                ToastService.ShowError("Failed to delete empty production log.");
+            }
+            return;
         }
 
         var success = await ProductionLogService.UpdateAsync(_productionLog);
