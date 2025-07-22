@@ -1778,7 +1778,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var fullPath = Path.Combine(imageDir, fileName);
 
             // Save file contents
-            await using (var stream = new FileStream(Path.GetFullPath(file), FileMode.Open, FileAccess.Read))
+            await using (var stream = new FileStream(Path.Combine(_webHostEnvironment.WebRootPath, file), FileMode.Open, FileAccess.Read))
             await using (var fileStream = new FileStream(fullPath, FileMode.Create))
             {
                 await stream.CopyToAsync(fileStream);
