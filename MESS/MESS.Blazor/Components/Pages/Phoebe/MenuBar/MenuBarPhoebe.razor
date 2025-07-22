@@ -121,6 +121,7 @@
     IsVisible="@isAnyDialogVisible"
     IsVisibleChanged="@(val => isAnyDialogVisible = val)"
     HeaderText="@dialogHeaderText"
+    ConfirmButtonText="@confirmButtonText"
     OnConfirmed="@OnDialogConfirmed" />
 
 @code {
@@ -225,6 +226,7 @@
     
     private bool isAnyDialogVisible;
     private string dialogHeaderText = "";
+    private string confirmButtonText = "";
     private EventCallback<(string Title, List<Product> Products)> OnDialogConfirmed;
     
     private List<Product> DialogSelectedProducts { get; set; } = new List<Product>();
@@ -453,6 +455,7 @@
     {
         isAnyDialogVisible = true;
         dialogHeaderText = "Create New Work Instruction";
+        confirmButtonText = "Open New";
         OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleNewDialogConfirmed);
     }
 
@@ -461,6 +464,7 @@
         isAnyDialogVisible = true;
         DialogSelectedProducts = CurrentInstruction?.Products?.ToList() ?? new();
         dialogHeaderText = "Save Work Instruction As";
+        confirmButtonText = "Save New";
         OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleSaveAsDialogConfirmed);
     }
     

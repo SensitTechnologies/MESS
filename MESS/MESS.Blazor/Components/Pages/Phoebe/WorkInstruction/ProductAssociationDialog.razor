@@ -27,7 +27,7 @@
 
         <FluentDialogFooter>
             <FluentButton Appearance="@Appearance.Outline" OnClick="Confirm">
-                New
+                @ConfirmButtonText
             </FluentButton>
             <FluentButton Appearance="@Appearance.Outline" OnClick="Close">
                 Cancel
@@ -52,6 +52,11 @@
     /// The header text displayed at the top of the dialog.
     /// </summary>
     [Parameter] public string? HeaderText { get; set; }
+    
+    /// <summary>
+    /// The button text displayed at the bottom of the dialog.
+    /// </summary>
+    [Parameter] public string? ConfirmButtonText { get; set; }
 
     /// <summary>
     /// A list of all available products to display in the selector.
@@ -85,18 +90,6 @@
     /// The name of the work instruction, bound to the name text area.
     /// </summary>
     private string WorkInstructionTitle { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Shows the dialog with the specified header text.
-    /// </summary>
-    /// <param name="buttonText">The body content (unused).</param>
-    /// <param name="headerText">The header text to display.</param>
-    public void Show(string buttonText, string headerText = "")
-    {
-        HeaderText = headerText;
-        IsVisible = true;
-        StateHasChanged();
-    }
 
     /// <summary>
     /// Closes the dialog and notifies the parent of visibility change.
