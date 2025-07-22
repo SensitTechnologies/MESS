@@ -1,3 +1,6 @@
+/* ==========================================================================
+   Base Layout & Typography
+========================================================================= */
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100%;
@@ -7,13 +10,84 @@ html, body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode{
+body.dark-mode {
     background-color: #121212;
     color: white;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Light Mode Defaults */
+.page,
+.dark-mode .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.dark-mode .page {
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+.main {
+    flex: 1;
+}
+
+.content {
+    padding-top: 1.1rem;
+}
+
+/* ==========================================================================
+   Forms & Inputs
+========================================================================== */
+
+/* Light mode form inputs */
+.form-control {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ccc;
+}
+
+.form-control::placeholder {
+    color: #6c757d;
+}
+
+/* Dark mode form inputs */
+body.dark-mode .form-control {
+    background-color: #2b2b2b !important;
+    color: #ffffff !important;
+    border-color: #555 !important;
+}
+
+body.dark-mode .form-control::placeholder {
+    color: #aaaaaa !important;
+}
+
+/* Floating labels */
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
+    color: var(--bs-secondary-color);
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}
+
+.form-floating > label,
+.form-floating > label::after {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+.form-floating.serial-number > label,
+.form-floating.serial-number > label::after {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Login dropdown (light and dark) */
 .login-dropdown {
     background-color: #ffffff !important;
     color: #000000 !important;
@@ -33,18 +107,6 @@ body.dark-mode{
     color: #6c757d !important;
 }
 
-.form-control {
-    background-color: #ffffff;
-    color: #000000;
-    border-color: #ccc;
-}
-
-.form-control::placeholder {
-    color: #6c757d;
-}
-
-
-/* Dark Mode Overrides */
 body.dark-mode .login-dropdown {
     background-color: #1e1e1e !important;
     color: #ffffff !important;
@@ -63,202 +125,7 @@ body.dark-mode .login-dropdown .dropdown-item small.text-muted {
     color: #bbbbbb !important;
 }
 
-body.dark-mode .form-control {
-    background-color: #2b2b2b !important;
-    color: #ffffff !important;
-    border-color: #555 !important;
-}
-
-body.dark-mode .form-control::placeholder {
-    color: #aaaaaa !important;
-}
-
-body.light-mode .table,
-body.light-mode .table th,
-body.light-mode .table td {
-    background-color: #ffffff; 
-    color: #000000;
-    border: 1px solid #dee2e6;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body.light-mode .table.table-striped tbody tr {
-    background-color: #6e6e6e; 
-}
-
-body.dark-mode .table,
-body.dark-mode .table th,
-body.dark-mode .table td {
-    background-color: transparent; 
-    color: #ffffff; 
-    border: 1px solid #a8a8a8;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
-    background-color: #151515; 
-}
-
-body.dark-mode .list-group.container {
-    color: #ffffff;
-    background-color: #1e1e1e;
-    border: 1px solid rgba(255, 213, 2, 0);
-}
-
-.step {
-    background-color: rgba(255, 255, 255, 0);
-    color: #000000;
-    border: 1px solid rgba(255, 213, 2, 0);
-    padding: 10px;
-    list-style-type: none;
-}
-
-body.dark-mode .step {
-    background-color: rgba(54, 54, 54, 0);
-    color: #ffffff;
-    border: 1px solid rgba(255, 213, 2, 0);
-    padding: 10px;
-}
-
-.page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; 
-    width: 100%;
-}
-
-.dark-mode .page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    width: 100%;
-    background-color: #1e1e1e;
-    color: #ffffff;
-}
-
-.dark-mode .card {
-    background-color: #404040;
-    color: #ffffff;
-    border: 1px solid rgb(19, 19, 19);
-}
-
-.dark-mode .form-floating .form-control { 
-    background-color: #2c2c2c;
-    color: #ffffff;
-    border: 1px solid rgb(19, 19, 19);
-}
-
-.main {
-    flex: 1;
-}
-
-a, .btn-link {
-    color: #d6a100;
-}
-
-.btn-primary {
-    color: #020000;
-    background-color: #ffd502;
-    border-color: #c37f00;
-}
-
-.btn {
-    background-color: #ffd502;
-    color: #020000;
-    border: 3px solid #ffd502;
-    margin: 5px;
-}
-.btn:hover {
-    background-color: rgba(255, 213, 2, 0);
-    color: #000000;
-}
-
-.dark-mode .btn:hover {
-    background-color: rgba(54, 54, 54, 0);
-    color: #ffffff;
-}
-
-.btn-checkbox {
-    color: #ffd502;
-    background-color: #020000;
-}
-
-.btn-warning {
-    color: red;
-    background-color: #020000;
-    border: 3px solid red;
-}
-
-
-.btn-success{
-    color: #4aff00;
-    background-color: #020000;
-    border: 3px solid #4aff00;
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-.content {
-    padding-top: 1.1rem;
-}
-
-h1:focus {
-    outline: none;
-}
-
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
-}
-
-.invalid {
-    outline: 1px solid #e50000;
-}
-
-.validation-message {
-    color: #e50000;
-}
-
-.blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,...) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: white;
-}
-
-.blazor-error-boundary::after {
-    content: "An error has occurred."
-}
-
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
-}
-
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
-    text-align: end;
-}
-
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-    text-align: start;
-}
-
-.header-container {
-    margin-bottom: 4px;
-}
-
-
-@media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-    }
-    .info-card {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-}
-
-/* Dark mode dropdown selects */
+/* Dark mode selects */
 body.dark-mode select,
 body.dark-mode .form-select {
     background-color: #2c2c2c !important;
@@ -286,7 +153,292 @@ body.dark-mode .form-select::-ms-expand {
     color: #ffffff;
 }
 
+/* ==========================================================================
+   Buttons
+========================================================================== */
+a, .btn-link {
+    color: #d6a100;
+}
 
+.btn {
+    background-color: #ffd502;
+    color: #020000;
+    border: 3px solid #ffd502;
+    margin: 5px;
+}
+
+.btn:hover {
+    background-color: rgba(255, 213, 2, 0);
+    color: #000000;
+}
+
+.dark-mode .btn:hover {
+    background-color: rgba(54, 54, 54, 0);
+    color: #ffffff;
+}
+
+.btn-primary {
+    color: #020000;
+    background-color: #ffd502;
+    border-color: #c37f00;
+}
+
+.btn-warning {
+    color: red;
+    background-color: #020000;
+    border: 3px solid red;
+}
+
+.btn-success {
+    color: #4aff00;
+    background-color: #020000;
+    border: 3px solid #4aff00;
+}
+
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+/* Custom checkboxes */
+.btn-checkbox {
+    font-weight: normal;
+    border: 2px solid #7a6b00;
+    background-color: #ffffff;
+    color: #7a6b00;
+    padding: 0.375rem 0.75rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-check:checked + .btn-checkbox {
+    font-weight: bold;
+    border-color: #ffd502;
+    background-color: #fffbea;
+    color: #856300;
+    box-shadow: 0 0 5px rgba(255, 213, 2, 0.4);
+}
+
+[data-theme="dark"] .btn-checkbox,
+.dark-mode .btn-checkbox {
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    border: 2px solid #4d4400;
+}
+
+[data-theme="dark"] .btn-check:checked + .btn-checkbox,
+.dark-mode .btn-check:checked + .btn-checkbox {
+    background-color: #4d4400;
+    border-color: #ffd502;
+    color: #fff6cc;
+    box-shadow: 0 0 6px rgba(255, 213, 2, 0.6);
+}
+
+.btn-outline-success-custom {
+    background-color: transparent;
+    color: #198754;
+    border: 2px solid #198754;
+}
+
+.btn-outline-success-custom:hover {
+    background-color: #198754;
+    color: #fff;
+}
+
+.success-status-button {
+    border: 2px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+button.confirmed {
+    background-color: #198754;
+    color: white;
+    border-color: #198754;
+}
+
+button.confirmed:focus,
+button.confirmed:active {
+    background-color: #157347;
+    border-color: #157347;
+    outline: none;
+}
+
+.failed {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+    transition: background-color 0.2s ease;
+}
+
+.failed:focus,
+.failed:active {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+    outline: none;
+}
+
+/* ==========================================================================
+   Tables & Lists
+========================================================================== */
+body.light-mode .table,
+body.light-mode .table th,
+body.light-mode .table td {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #dee2e6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.light-mode .table.table-striped tbody tr {
+    background-color: #6e6e6e;
+}
+
+body.dark-mode .table,
+body.dark-mode .table th,
+body.dark-mode .table td {
+    background-color: transparent;
+    color: #ffffff;
+    border: 1px solid #a8a8a8;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
+    background-color: #151515;
+}
+
+body.dark-mode .list-group.container {
+    color: #ffffff;
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 213, 2, 0);
+}
+
+/* ==========================================================================
+   Steps, Cards, Toasts
+========================================================================== */
+.step {
+    background-color: rgba(255, 255, 255, 0);
+    color: #000000;
+    border: 1px solid rgba(255, 213, 2, 0);
+    padding: 10px;
+    list-style-type: none;
+}
+
+body.dark-mode .step {
+    background-color: rgba(54, 54, 54, 0);
+    color: #ffffff;
+    border: 1px solid rgba(255, 213, 2, 0);
+    padding: 10px;
+}
+
+.dark-mode .card {
+    background-color: #404040;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19);
+}
+
+.dark-mode .form-floating .form-control {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid rgb(19, 19, 19);
+}
+
+/* Toasts */
+:root {
+    --toast-bg-light: #fff;
+    --toast-bg-dark: #1e1e1e;
+    --toast-header-bg-light: #f8f9fa;
+    --toast-header-bg-dark: #2c2c2c;
+    --toast-text-light: #212529;
+    --toast-text-dark: #e5e5e5;
+    --btn-close-filter-light: invert(0%);
+    --btn-close-filter-dark: invert(100%);
+}
+
+body.dark-mode .toast {
+    background-color: var(--toast-bg-dark);
+    color: var(--toast-text-dark);
+    border: 1px solid #444;
+}
+
+body.dark-mode .toast-header {
+    background-color: var(--toast-header-bg-dark);
+    color: var(--toast-text-dark);
+    border-bottom: 1px solid #555;
+}
+
+body.dark-mode .btn-close {
+    filter: var(--btn-close-filter-dark);
+}
+
+body.dark-mode .alert-success {
+    background-color: #2a4c2a;
+    border-color: #417a41;
+    color: #c8ecc8;
+}
+
+/* ==========================================================================
+   Error & Validation States
+========================================================================== */
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid #e50000;
+}
+
+.validation-message {
+    color: #e50000;
+}
+
+.blazor-error-boundary {
+    background: url(data:image/svg+xml;base64,...) no-repeat 1rem/1.8rem, #b32121;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
+
+/* ==========================================================================
+   Miscellaneous Components & Responsive
+========================================================================== */
+.darker-border-checkbox.form-check-input {
+    border-color: #929292;
+}
+
+.header-container {
+    margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+    }
+    .info-card {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    .top-right-corner {
+        top: 15px;
+        right: 15px;
+    }
+}
+
+.toggle-images {
+    top: 10px;
+    right: 5px;
+    display: flex;
+    align-items: center;
+}
+
+/* Dark mode toggle */
 .darkmode {
     background-color: transparent;
     outline: none;
@@ -314,28 +466,12 @@ body.dark-mode .form-select::-ms-expand {
     color: #ffffff;
 }
 
-.toggle-images {
-    top: 10px;
-    right: 5px;
-    display: flex;
-    align-items: center;
-}
-
-@media (max-width: 768px) {
-    .top-right-corner {
-        top: 15px; 
-        right: 15px;
-    }
-}
-
-.custom-label::after {
+.custom-label::after,
+.label::after {
     background-color: transparent !important;
 }
 
-.label::after {
-    background-color: inherit !important;
-}
-
+/* Table layout tweaks */
 table tbody tr {
     margin-bottom: 10px;
     padding-bottom: 10px;
@@ -345,10 +481,11 @@ td {
     white-space: nowrap;
 }
 
+/* Carousel */
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
-    background-color: rgba(0, 0, 0, 0.6); /* Darker background for contrast */
-    border-radius: 50%;                  /* Make them circular */
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
     width: 3rem;
     height: 3rem;
     background-size: 60% 60%;
@@ -358,15 +495,18 @@ td {
 
 .carousel-control-prev,
 .carousel-control-next {
-    opacity: 1;                /* Make them fully visible */
+    opacity: 1;
     transition: opacity 0.3s;
 }
 
 .carousel-control-prev:hover,
 .carousel-control-next:hover {
-    opacity: 0.8;              /* Slight dimming on hover for interactivity */
+    opacity: 0.8;
 }
 
+/* ==========================================================================
+   Animated Floating Labels
+========================================================================== */
 @keyframes floatAway {
     0% {
         opacity: 1;
@@ -383,10 +523,13 @@ td {
     font-weight: bold;
     pointer-events: none;
     animation: floatAway 0.8s ease-out forwards;
-    color: #28a745; /* success green or change for failure */
+    color: #28a745;
 }
 
-/* Failure textarea light mode */
+/* ==========================================================================
+   Custom Fluent Text Area (Failure State)
+========================================================================== */
+/* Light mode */
 fluent-text-area.failure-textarea {
     background-color: #f0f0f0;
     color: black;
@@ -405,12 +548,10 @@ fluent-text-area.failure-textarea::part(control) {
     background-color: #f0f0f0 !important;
     color: black !important;
     resize: vertical !important;
-    min-height: 100px !important;
-    max-height: 300px !important;
     padding: 0.5rem !important;
     border-radius: 4px !important;
-    border: none !important;
     font-size: 1rem !important;
+    border: none !important;
     caret-color: black !important;
 }
 
@@ -419,7 +560,7 @@ fluent-text-area.failure-textarea::part(control)::placeholder {
     background-color: transparent !important;
 }
 
-/* Failure textarea dark mode */
+/* Dark mode */
 body.dark-mode fluent-text-area.failure-textarea {
     background-color: #2c2c2c !important;
     color: black !important;
@@ -450,90 +591,9 @@ body.dark-mode fluent-text-area.failure-textarea::part(control)::placeholder {
     background-color: transparent !important;
 }
 
-:root {
-    --toast-bg-light: #fff;
-    --toast-bg-dark: #1e1e1e;
-    --toast-header-bg-light: #f8f9fa;
-    --toast-header-bg-dark: #2c2c2c;
-    --toast-text-light: #212529;
-    --toast-text-dark: #e5e5e5;
-    --btn-close-filter-light: invert(0%);
-    --btn-close-filter-dark: invert(100%);
-}
-
-/* Apply styling when body is in dark mode */
-body.dark-mode .toast {
-    background-color: var(--toast-bg-dark);
-    color: var(--toast-text-dark);
-    border: 1px solid #444;
-}
-
-body.dark-mode .toast-header {
-    background-color: var(--toast-header-bg-dark);
-    color: var(--toast-text-dark);
-    border-bottom: 1px solid #555;
-}
-
-body.dark-mode .btn-close {
-    filter: var(--btn-close-filter-dark);
-}
-
-/* Success alert override in dark mode */
-body.dark-mode .alert-success {
-    background-color: #2a4c2a;
-    border-color: #417a41;
-    color: #c8ecc8;
-}
-
-.btn-outline-success-custom {
-    background-color: transparent;
-    color: #198754; /* Bootstrap success green text */
-    border: 2px solid #198754;
-}
-
-.btn-outline-success-custom:hover {
-    background-color: #198754;
-    color: #fff;
-}
-
-/* Base style for success status button */
-.success-status-button {
-    border: 2px solid transparent;
-    padding: 0.375rem 0.75rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-button.confirmed {
-    background-color: #198754; /* Bootstrap success green */
-    color: white;
-    border-color: #198754;
-}
-
-button.confirmed:focus,
-button.confirmed:active {
-    background-color: #157347; /* Slightly darker green for feedback */
-    border-color: #157347;
-    outline: none;
-}
-
-.failed {
-    background-color: #dc3545; /* Strong red tone */
-    color: white;
-    border-color: #dc3545;
-    transition: background-color 0.2s ease;
-}
-
-.failed:focus,
-.failed:active {
-    background-color: #bb2d3b;
-    border-color: #bb2d3b;
-    outline: none;
-}
-
-
-
-/* transparent container and all children in light mode */
+/* ==========================================================================
+   Transparent Containers
+========================================================================== */
 .part-grid-container .part-input,
 .part-grid-container .part-input *,
 .production-log-grid .part-card,
@@ -544,7 +604,6 @@ button.confirmed:active {
     box-shadow: none !important;
 }
 
-/* same in dark mode */
 body.dark-mode .part-grid-container .part-input,
 body.dark-mode .part-grid-container .part-input *,
 body.dark-mode .production-log-grid .part-card,
@@ -555,17 +614,8 @@ body.dark-mode .production-log-grid .part-card * {
     box-shadow: none !important;
 }
 
-.form-floating > label,
-.form-floating > label::after {
-    background-color: transparent !important;
-    color: inherit !important;
-}
-
-/* Remove background and pseudo-element backgrounds from serial number labels in .form-floating */
-.form-floating.serial-number > label,
-.form-floating.serial-number > label::after {
-    background-color: transparent !important;
-    color: inherit !important;
+body.dark-mode span[style*="color: #000000"] {
+    color: #ffffff !important;
 }
 
 .disable-highlight {
@@ -575,51 +625,3 @@ body.dark-mode .production-log-grid .part-card * {
     -moz-user-select: none;
     -ms-user-select: none;
 }
-
-body.dark-mode span[style*="color: #000000"] {
-    color: #ffffff !important;
-}
-
-.btn-checkbox {
-    font-weight: normal;
-    border: 2px solid #7a6b00;
-    background-color: #ffffff;
-    color: #7a6b00;
-    padding: 0.375rem 0.75rem;
-    box-sizing: border-box;
-    transition: all 0.2s ease-in-out;
-}
-
-/* Checked/selected state */
-.btn-check:checked + .btn-checkbox {
-    font-weight: bold;
-    border-color: #ffd502;      /* thick yellow border color */
-    background-color: #fffbea;
-    color: #856300;
-    box-shadow: 0 0 5px rgba(255, 213, 2, 0.4);
-}
-
-[data-theme="dark"] .btn-checkbox,
-.dark-mode .btn-checkbox {
-    background-color: #2b2b2b;
-    color: #e0e0e0;
-    border: 2px solid #4d4400;
-}
-
-[data-theme="dark"] .btn-check:checked + .btn-checkbox,
-.dark-mode .btn-check:checked + .btn-checkbox {
-    background-color: #4d4400;
-    border-color: #ffd502;
-    color: #fff6cc;
-    box-shadow: 0 0 6px rgba(255, 213, 2, 0.6);
-}
-
-
-
-
-
-
-
-
-
-
