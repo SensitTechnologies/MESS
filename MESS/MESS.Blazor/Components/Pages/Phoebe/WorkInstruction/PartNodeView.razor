@@ -7,7 +7,7 @@
         <div class="row">
         @foreach (var part in PartNode.Parts)
         {
-            <div class="col-12 col-md-6 col-lg-4 mb-3">
+                <div class="@(PartNode.Parts.Count > 2 ? "col-12 col-md-6 col-lg-4 mb-3" : "col" )">
                 <div class="part-node border rounded p-3 h-100">
                     <div class="row g-2 align-items-end">
                         <div class="col-12 col-md-4">

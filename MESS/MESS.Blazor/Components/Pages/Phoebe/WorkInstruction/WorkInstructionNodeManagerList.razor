@@ -114,6 +114,8 @@
 
         WorkInstructionNodes.Remove(node);
 
+        WorkInstructionNode newNode;
+
         switch (action)
         {
             case "up":
@@ -129,12 +131,32 @@
                 WorkInstructionNodes.Add(node);
                 break;
             case "insertBefore":
-                WorkInstructionNodes.Insert(index, new Step { Name = "", Body = "", DetailedBody = "" }); // new step at index
-                WorkInstructionNodes.Insert(index + 1, node);                        // original step after
+                switch (node)
+                {
+                    case PartNode partNode:
+                        newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }]};
+                        break;
+
+                    default:
+                        newNode = new Step { Name = "", Body = "", DetailedBody = "" };
+                        break;
+                }
+                WorkInstructionNodes.Insert(index, newNode);    // new step at index
+                WorkInstructionNodes.Insert(index + 1, node);   // original step after
                 break;
             case "insertAfter":
-                WorkInstructionNodes.Insert(index, node);                            // original step at index
-                WorkInstructionNodes.Insert(index + 1, new Step { Name = "", Body = "", DetailedBody = "" }); // new step after
+                switch (node)
+                {
+                    case PartNode partNode:
+                        newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }] };
+                        break;
+
+                    default:
+                        newNode = new Step { Name = "", Body = "", DetailedBody = "" };
+                        break;
+                }
+                WorkInstructionNodes.Insert(index, node);           // original step at index
+                WorkInstructionNodes.Insert(index + 1, newNode);    // new step after
                 break;
             case "remove":
                 // already removed above
