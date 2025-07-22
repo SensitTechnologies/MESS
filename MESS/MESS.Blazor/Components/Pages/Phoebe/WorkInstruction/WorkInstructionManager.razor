@@ -201,19 +201,30 @@
     private async Task HandleNewInstruction((string Title, List<Product> Products) workInstructionData)
     {
         WorkInstructionEditorService.StartNew(workInstructionData.Title, workInstructionData.Products);
-        SelectedWorkInstructionId = null;
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
         ToastService.ShowInfo($"Started New Work Instruction \"{workInstructionData.Title}\"");
+        
+        //Setting the Dropdown to the New Unsaved Instruction
+        if (WorkInstructionEditorService.Current != null)
+        {
+            AllWorkInstructions.Add(WorkInstructionEditorService.Current);
+            SelectedWorkInstructionId = WorkInstructionEditorService.Current.Id;
+        }
+        
         StateHasChanged();
     }
     
     private async Task HandleSaveAs((string Title, List<Product> Products) workInstructionData)
     {
-        WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
-        SelectedWorkInstructionId = null;
+        await WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
         await WorkInstructionEditorService.SaveAsync();
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
         ToastService.ShowInfo($"Saved new work instruction \"{workInstructionData.Title}\"");
+        if (WorkInstructionEditorService.Current != null)
+        {
+            SelectedWorkInstructionId = WorkInstructionEditorService.Current.Id;
+        }
+        
         StateHasChanged();
     }
 
@@ -233,11 +244,12 @@
     {
         SelectedWorkInstructionId = instructionId;
 
-        if (instructionId != -1)
+        if (instructionId > 0)
         {
             try
             {
                 await WorkInstructionEditorService.LoadForEditAsync(instructionId);
+                AllWorkInstructions.RemoveAll(wi => wi.Id <= 0);
             }
             catch (Exception ex)
             {
