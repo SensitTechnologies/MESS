@@ -580,6 +580,46 @@ body.dark-mode span[style*="color: #000000"] {
     color: #ffffff !important;
 }
 
+.btn-checkbox {
+    font-weight: normal;
+    border: 2px solid #7a6b00;
+    background-color: #ffffff;
+    color: #7a6b00;
+    padding: 0.375rem 0.75rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Checked/selected state */
+.btn-check:checked + .btn-checkbox {
+    font-weight: bold;
+    border-color: #ffd502;      /* thick yellow border color */
+    background-color: #fffbea;
+    color: #856300;
+    box-shadow: 0 0 5px rgba(255, 213, 2, 0.4);
+}
+
+[data-theme="dark"] .btn-checkbox,
+.dark-mode .btn-checkbox {
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    border: 2px solid #4d4400;
+}
+
+[data-theme="dark"] .btn-check:checked + .btn-checkbox,
+.dark-mode .btn-check:checked + .btn-checkbox {
+    background-color: #4d4400;
+    border-color: #ffd502;
+    color: #fff6cc;
+    box-shadow: 0 0 6px rgba(255, 213, 2, 0.6);
+}
+
+
+
+
+
+
+
 
 
 
