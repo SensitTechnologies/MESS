@@ -40,7 +40,7 @@
         </FluentMenu>
     </div>
 
-    <div class="inputs-container">
+    <div class="inputs-container title-version-container">
         <input
             type="text"
             class="menu-input"
@@ -72,24 +72,33 @@
     </div>
     
     <div class="menu-right-content">
-        <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">⏲</button>
+        <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">
+            <i class="bi bi-clock-history"></i>
+        </button>
         <div class="save-button-container">
             <button class="btn-small" title="Save" @onclick="HandleSave" disabled="@(!IsDirty)">
-                🖫
+                <i class="bi bi-floppy"></i>
                 @if (IsDirty)
                 {
                     <span class="red-dot"></span>
                 }
             </button>
         </div>
-        <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">@darkModeIcon</button>
+
+        <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">
+            @((darkModeIcon == "bi bi-moon-stars") ? 
+                (MarkupString)"<i class=\"bi bi-moon-stars\"></i>" : 
+                (MarkupString)"<i class=\"bi bi-sun\"></i>")
+        </button>
 
         @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
         {
             <div class="logout-container">
                 <span>@ActiveLineOperator</span>
                 <form method="post" action="/api/auth/logout" class="logout-form">
-                    <button type="submit" class="btn-small" title="Logout">Logout</button>
+                    <button type="submit" class="btn-small" title="Logout">
+                        Logout <i class="bi bi-box-arrow-right ms-1"></i>
+                    </button>
                 </form>
             </div>
         }
@@ -211,7 +220,7 @@
 
     private bool open = false;
     private bool openOptions = false;
-    private string darkModeIcon = "🌙";
+    private string darkModeIcon = "bi bi-moon-stars";
     private bool HasInstruction => CurrentInstruction != null;
     
     private List<WorkInstruction> _versionHistoryList = new();
@@ -301,7 +310,7 @@
     {
         await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
         var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
-        darkModeIcon = isDark ? "☀️" : "🌙";
+        darkModeIcon = isDark ? "bi bi-sun" : "bi bi-moon-stars";
     }
 
     private async Task ToggleSidebar()
