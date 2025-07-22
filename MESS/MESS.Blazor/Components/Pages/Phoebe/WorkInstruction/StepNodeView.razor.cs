@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using Blazored.TextEditor;
 using MESS.Data.Models;
 using Serilog;
+
 namespace MESS.Blazor.Components.Pages.Phoebe.WorkInstruction;
 
 /// <summary>
@@ -121,16 +122,26 @@ public partial class StepNodeView : IDisposable
         }
         set => ActiveFields[Step.Id] = value ? "Body" : "Name";
     }
-
     
+    private BlazoredTextEditor? _editorRef;
+
     private BlazoredTextEditor? EditorRef
     {
-        get => EditorRefs.TryGetValue(Step.Id, out var editor) ? editor : null;
+        get
+        {
+            if (EditorRefs.TryGetValue(Step.Id, out var editor))
+            {
+                return editor;
+            }
+
+            return _editorRef;
+        }
         set
         {
             if (value != null)
             {
                 EditorRefs[Step.Id] = value;
+                _editorRef = value;
             }
         }
     }
@@ -183,17 +194,36 @@ public partial class StepNodeView : IDisposable
             {
                 var contentToLoad = ShowBody ? (Step.DetailedBody ?? "") : (Step.Body ?? "");
 
-                await EditorRef.LoadHTMLContent(contentToLoad);
+                int retries = 0;
+                bool success = false;
+                while (!success && retries++ < 10)
+                {
+                    try
+                    {
+                        await EditorRef.LoadHTMLContent(contentToLoad);
+                        success = true;
+                    }
+                    catch
+                    {
+                        await Task.Delay(200);
+                    }
+                }
 
-                NeedsLoadAfterRender = false;
+                if (success)
+                {
+                    NeedsLoadAfterRender = false;
 
-                // Attach JS change event handler after editor loads content
-                if (objRef == null)
-                    objRef = DotNetObjectReference.Create(this);
+                    if (objRef == null)
+                        objRef = DotNetObjectReference.Create(this);
 
-                string containerId = $"step-editor-{Step.Id}";
+                    string containerId = $"step-editor-{Step.Id}";
 
-                await JS.InvokeVoidAsync("quillInterop.attachChangeHandler", containerId, objRef);
+                    await JS.InvokeVoidAsync("quillInterop.attachChangeHandler", containerId, objRef);
+                }
+                else
+                {
+                    Log.Warning("Failed to load editor content after multiple attempts for Step {StepId}", Step.Id);
+                }
             }
         }
         catch (Exception ex)
