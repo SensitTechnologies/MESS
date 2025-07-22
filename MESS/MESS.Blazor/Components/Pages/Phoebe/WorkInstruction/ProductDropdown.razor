@@ -1,10 +1,10 @@
 @using MESS.Data.Models
 
-@if (Products?.Any() == true)
+@if (Products?.Any(p => p.IsActive) == true)
 {
     <select class="form-select" @bind="_selectedProductId">
         <option value="-1">All Products</option>
-        @foreach (var product in Products.OrderBy(p => p.Name ?? string.Empty))
+        @foreach (var product in Products.Where(p => p.IsActive).OrderBy(p => p.Name ?? string.Empty))
         {
             <option value="@product.Id">@product.Name</option>
         }
@@ -12,7 +12,7 @@
 }
 else
 {
-    <p>No products available.</p>
+    <p>No active products available.</p>
 }
 
 @code {
