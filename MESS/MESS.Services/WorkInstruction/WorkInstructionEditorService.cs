@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace MESS.Services.WorkInstruction;
 using MESS.Data.Models;
 
@@ -63,7 +65,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         {
             Title = title ?? Current.Title,
             Version = "1.0",
-            OriginalId = Current.OriginalId ?? Current.Id,
             IsActive = false,
             IsLatest = true,
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
@@ -212,6 +213,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Current.OriginalId = null;
                 Current.IsLatest = true;
                 success = await _workInstructionService.Create(Current);
+                Mode = EditorMode.EditExisting;
                 break;
 
             case EditorMode.EditExisting:
@@ -227,11 +229,17 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 success = await _workInstructionService.Create(Current);
                 break;
         }
-        if (success && Current.IsActive)
+        if (Current != null)
         {
-            await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
+            if (success && Current.IsActive)
+            {
+                await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
+            }
         }
-        
+        else
+        {
+            Log.Warning("Current Work Instruction in editor is null.");
+        }
         if (success)
         {
             IsDirty = false;
