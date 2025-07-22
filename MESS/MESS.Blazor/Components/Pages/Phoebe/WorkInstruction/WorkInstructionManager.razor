@@ -24,7 +24,6 @@
     OnDelete="DeleteInstruction"
     OnSave="SaveEditorChanges"
     OnSaveAsConfirmed="HandleSaveAs"
-    OnRevertChanges="RevertEditorChanges"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     OnImportComplete="HandleImportComplete"
     IsDirty="WorkInstructionEditorService.IsDirty"
@@ -216,12 +215,6 @@
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
         ToastService.ShowInfo($"Saved new work instruction \"{workInstructionData.Title}\"");
         StateHasChanged();
-    }
-
-    private void RevertEditorChanges()
-    {
-        WorkInstructionEditorService.RevertChanges();
-        ToastService.ShowWarning("Unsaved changes reverted.");
     }
 
     private Task OnProductSelected(int productId)
