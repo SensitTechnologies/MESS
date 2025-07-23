@@ -19,14 +19,14 @@
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem OnClick="@ShowNewInstructionDialog">New</FluentMenuItem>
-            <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
+            <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
-            <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
+            <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
             <FluentMenuItem OnClick="@ShowSaveAsDialog" Disabled="@(!HasInstruction)">Save As</FluentMenuItem>
             <AuthorizeView Roles="Administrator">
-                <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
+                <FluentDivider></FluentDivider>
                 <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))" Disabled="@(!HasInstruction)">Delete</FluentMenuItem>
             </AuthorizeView>
         </FluentMenu>
@@ -39,7 +39,7 @@
                             OnClick="ToggleSerial" Disabled="@(!HasInstruction)">Collects Product Serial Number</FluentMenuItem>
             <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" 
                             OnClick="ToggleActive" Disabled="@(!HasInstruction)">Active</FluentMenuItem>
-            <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
+            <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@ShowEditAssociationsDialog" Disabled="@(!HasInstruction)">Edit Product Associations</FluentMenuItem>
         </FluentMenu>
     </div>
