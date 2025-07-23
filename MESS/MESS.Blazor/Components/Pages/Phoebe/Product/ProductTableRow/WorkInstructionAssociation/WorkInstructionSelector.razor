@@ -27,7 +27,7 @@
         }
     </div>
     <div class="dropdown float-end">
-        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
+        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" @onclick="OnActionsClicked">
             Actions
         </button>
         <ul class="dropdown-menu">
@@ -70,6 +70,12 @@
     /// </summary>
     [Parameter]
     public EventCallback<List<int>> OnRemoveSelected { get; set; }
+    
+    private void OnActionsClicked()
+    {
+        // Your custom logic when Actions button is clicked
+        Console.WriteLine("Actions button clicked");
+    }
 
     private async Task ToggleSelection(int instructionId, bool isChecked)
     {
