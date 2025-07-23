@@ -151,7 +151,7 @@ body.dark-mode .menu-bar-card {
 /* Enabled inputs: almost white, with hover/focus transition */
 .menu-input:enabled,
 .menu-input-secondary:enabled {
-    background-color: #e8e8e8; /* light gray */
+    background-color: #f6f6f6; /* lighter shade of gray */
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
     color: black;
 }

@@ -25,6 +25,7 @@
     OnDelete="DeleteInstruction"
     OnSave="SaveEditorChanges"
     OnSaveAsConfirmed="HandleSaveAs"
+    OnEditAssociationsConfirmed="HandleEditAssociations"
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     OnImportComplete="HandleImportComplete"
     IsDirty="WorkInstructionEditorService.IsDirty"
@@ -60,10 +61,11 @@
         WorkInstructionEditorService.OnChanged += HandleEditorChanged;
 
         // Load initial data
-        Products = (await ProductService.GetAllAsync())?.ToList() ?? new List<Product>();
+        Products = (await ProductService.GetAllAsync())?
+            .Where(p => p.IsActive)
+            .ToList() ?? new List<Product>();
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
-
-
+        
         await base.OnInitializedAsync();
     }
 
@@ -132,6 +134,10 @@
             {
                 // Refresh all latest work instructions list after save
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                
+                Products = (await ProductService.GetAllAsync())?
+                    .Where(p => p.IsActive)
+                    .ToList() ?? new List<Product>();
             }
         }
         catch (Exception ex)
@@ -228,6 +234,24 @@
         
         StateHasChanged();
     }
+    
+    private async Task HandleEditAssociations((string Title, List<Product> Products) workInstructionData)
+    {
+        if (WorkInstructionEditorService.Current != null)
+        {
+            if (!string.IsNullOrWhiteSpace(workInstructionData.Title))
+            {
+                WorkInstructionEditorService.Current.Title = workInstructionData.Title;
+            }
+
+            WorkInstructionEditorService.Current.Products = workInstructionData.Products;
+        }
+
+        SelectedWorkInstructionId = null;
+            
+        StateHasChanged();
+        await MarkEditorDirty();
+    }
 
     private Task OnProductSelected(int productId)
     {
@@ -257,12 +281,6 @@
                 Log.Error(ex, "Failed to load Work Instruction");
                 ToastService.ShowError("Failed to load Work Instruction for editing.");
             }
-        }
-        else
-        {
-            // Resetting Changes here may or may not be necessary
-            // For the moment, it is being bypassed
-            //WorkInstructionEditorService.Reset();
         }
     }
     

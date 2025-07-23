@@ -13,25 +13,28 @@
                 SelectedProducts="SelectedProducts" 
                 SelectedProductsChanged="OnSelectedProductsChanged" />
             
-            <hr />
+            @if (AllowsRenaming)
+            {
+                <hr />
 
-            <div class="resizable-textarea-container mt-3">
-                <label for="nameInput" class="form-label">Name:</label>
-                <textarea id="nameInput"
+                <div class="resizable-textarea-container mt-3">
+                    <label for="nameInput" class="form-label">Name:</label>
+                    <textarea id="nameInput"
                           class="form-control transparent-textarea"
                           placeholder="Enter name here..."
                           rows="1"
                           @bind="WorkInstructionTitle"></textarea>
-            </div>
+                </div>
+            }
         </FluentDialogBody>
 
         <FluentDialogFooter>
-            <FluentButton Appearance="@Appearance.Outline" OnClick="Confirm">
+            <button type="button" class="btn btn-sm btn-success" disabled="@ConfirmDisabled" @onclick="Confirm">
                 @ConfirmButtonText
-            </FluentButton>
-            <FluentButton Appearance="@Appearance.Outline" OnClick="Close">
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Close">
                 Cancel
-            </FluentButton>
+            </button>
         </FluentDialogFooter>
     </FluentDialog>
 }
@@ -41,6 +44,11 @@
     /// Indicates whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
+    
+    /// <summary>
+    /// Indicates whether the dialog should display a text box for renaming the work instruction
+    /// </summary>
+    [Parameter] public bool AllowsRenaming { get; set; }
 
     /// <summary>
     /// Event callback triggered when the dialog's visibility changes.
@@ -90,6 +98,8 @@
     /// The name of the work instruction, bound to the name text area.
     /// </summary>
     private string WorkInstructionTitle { get; set; } = string.Empty;
+    
+    private bool ConfirmDisabled => AllowsRenaming && string.IsNullOrWhiteSpace(WorkInstructionTitle);
 
     /// <summary>
     /// Closes the dialog and notifies the parent of visibility change.
