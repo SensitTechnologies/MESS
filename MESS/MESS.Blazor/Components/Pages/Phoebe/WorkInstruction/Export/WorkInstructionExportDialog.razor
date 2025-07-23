@@ -10,8 +10,12 @@
             <p><strong>@WorkInstruction?.Title</strong> - Version @WorkInstruction?.Version</p>
             <WorkInstructionExportButton 
                 WorkInstruction="WorkInstruction"
-                OnDownloadComplete="Close" />
+                OnDownloadComplete="Close"
+                OnDownloadStateChanged="HandleDownloadStateChanged" />
         </FluentDialogBody>
+        <FluentDialogFooter>
+            <FluentButton OnClick="Close" Appearance="Appearance.Neutral" Disabled="@_isDownloadInProgress">Cancel</FluentButton>
+        </FluentDialogFooter>
     </FluentDialog>
 }
 
@@ -39,6 +43,15 @@
     /// </summary>
     [Parameter]
     public EventCallback<bool> VisibleChanged { get; set; }
+    
+    private bool _isDownloadInProgress;
+    
+    private async Task HandleDownloadStateChanged(bool downloading)
+    {
+        _isDownloadInProgress = downloading;
+        await InvokeAsync(StateHasChanged);
+    }
+
 
     private async Task Close()
     {

@@ -4,16 +4,16 @@
 @inject IToastService ToastService
 @inject IJSRuntime JsRuntime
 
-<button class="btn btn-outline-secondary" type="button" @onclick="DownloadWorkInstruction" disabled="@isLoading">
+<button class="btn btn-outline-secondary" type="button" @onclick="DownloadWorkInstruction" disabled="@_isLoading">
     Download
-    @if (isLoading)
+    @if (_isLoading)
     {
         <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
     }
 </button>
 
 @code {
-    private bool isLoading = false;
+    private bool _isLoading;
     
     /// <summary>
     /// The WorkInstruction object that contains the details of the work instruction to be downloaded.
@@ -29,9 +29,18 @@
     [Parameter]
     public EventCallback OnDownloadComplete { get; set; }
     
+    /// <summary>
+    /// An event callback triggered when the download state changes.
+    /// Invoked with <c>true</c> when the download starts, and <c>false</c> when it completes or fails.
+    /// This allows parent components to react to changes in the download lifecycle, such as disabling UI elements.
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> OnDownloadStateChanged { get; set; }
+    
     private async Task DownloadWorkInstruction()
     {
-        isLoading = true;
+        _isLoading = true;
+        await OnDownloadStateChanged.InvokeAsync(true); // Notify: started
         StateHasChanged(); // force UI refresh to show spinner immediately
         await Task.Yield(); // yield control to let UI update
         
@@ -45,7 +54,7 @@
                 return;
             }
 
-            using var fileStream = File.OpenRead(workInstructionPath);
+            await using var fileStream = File.OpenRead(workInstructionPath);
             using var streamRef = new DotNetStreamReference(stream: fileStream);
             
             // Sanitize filename - remove invalid characters
@@ -66,7 +75,8 @@
         }
         finally
         {
-            isLoading = false;
+            _isLoading = false;
+            await OnDownloadStateChanged.InvokeAsync(false); // Notify: done
         }
     }
 
