@@ -4,7 +4,7 @@ using Blazored.TextEditor;
 using MESS.Data.Models;
 using Serilog;
 
-namespace MESS.Blazor.Components.Pages.Phoebe.WorkInstruction;
+namespace MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes;
 
 /// <summary>
 /// Represents a Blazor component responsible for displaying and editing a single <see cref="Step"/> node
