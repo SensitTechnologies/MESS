@@ -25,12 +25,12 @@ else
 {
     <table class="table table-striped">
         <thead>
-        <tr>
-            <th>Name</th>
-            <th>Active</th>
-            <th>Work Instructions</th>
-            <th>Actions</th>
-        </tr>
+            <tr>
+                <th>Name</th>
+                <th>Active</th>
+                <th>Work Instructions</th>
+                <th>Actions</th>
+            </tr>
         </thead>
         <tbody>
         @foreach (var product in Products)
@@ -39,47 +39,47 @@ else
                 Product="product" 
                 Instructions="GetAssociatedInstructions(product)"
                 SelectedInstructionIds="GetSelectedIds(product.Id)"
-                SelectedInstructionIdsChanged="@CreateSelectedIdsChangedHandler(product.Id)"
-                OnAddInstructions="() => ShowAddDialog(product)"
-                OnRemoveInstructions="ids => RemoveInstructionsFromProduct(product.Id, ids)"
-                OnSubmit="HandleSubmitProduct" />
+                SelectedInstructionIdsChanged="@GetSelectedIdsChangedCallback(product.Id)"
+                OnAddInstructions="@GetAddInstructionsCallback(product.Id)"
+                OnRemoveInstructions="@GetRemoveInstructionsCallback(product.Id)"
+                OnSubmit="@SubmitProductCallback" />
         }
 
-    <ProductTableRow 
-        Product="_newProduct" 
-        Instructions="[]" 
-        SelectedInstructionIds="[]" 
-        SelectedInstructionIdsChanged="@EventCallback.Factory.Create<List<int>>(this, (List<int> _) => Task.CompletedTask)"
-        OnAddInstructions="null"
-        OnRemoveInstructions="null"
-        OnSubmit="HandleSubmitProduct" />
-    
+        <ProductTableRow 
+            Product="_newProduct" 
+            Instructions="[]" 
+            SelectedInstructionIds="[]" 
+            SelectedInstructionIdsChanged="@NoOpSelectedIdsChangedCallback"
+            OnAddInstructions="@EventCallback.Empty"
+            OnRemoveInstructions="@NoOpRemoveInstructionsCallback"
+            OnSubmit="@SubmitProductCallback" />
         </tbody>
     </table>
-    
+
     <AddWorkInstructionDialog 
         Visible="@_addDialogVisible"
-        VisibleChanged="v => _addDialogVisible = v"
+        VisibleChanged="@OnVisibleChanged"
         Instructions="@_nonAssociatedInstructions"
-        OnAdd="ids => AssociateInstructionsToProduct(CurrentProductId, ids)" />
+        OnAdd="@AddInstructionsCallback" />
 }
 
 @code {
-    private List<Product> Products { get; set; } = new List<Product>();
-    private Product _newProduct = new Product { Name = "", IsActive = true };
+    private List<Product> Products { get; set; } = new();
+    private Product _newProduct = new() { Name = "", IsActive = true };
     private List<WorkInstruction>? _allInstructions;
     private Dictionary<int, List<int>> SelectedInstructionMap { get; set; } = new();
-    private int CurrentProductId { get; set; }
-    
+    private Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
+
     private bool _addDialogVisible = false;
     private List<WorkInstruction> _nonAssociatedInstructions = [];
-    
-    private EventCallback<List<int>> NoOpSelectedInstructionIdsChangedCallback;
+    private int CurrentProductId { get; set; }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Called by the Blazor framework when the component is initialized.
+    /// Loads products and associated instructions.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        NoOpSelectedInstructionIdsChangedCallback = EventCallback.Factory.Create<List<int>>(this, NoOpSelectedInstructionIdsChanged);
         await LoadProducts();
         _allInstructions = await WorkInstructionService.GetAllAsync();
     }
@@ -95,24 +95,19 @@ else
         {
             Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
 
-            if (product.Id == 0) 
+            if (product.Id == 0)
             {
-                await ProductService.CreateAsync(product);  // Create new product
+                await ProductService.CreateAsync(product);
                 ToastService.ShowSuccess($"Product '{product.Name}' created successfully!");
             }
             else
             {
-                await ProductService.UpdateProductAsync(product);  // Update existing product
+                await ProductService.UpdateProductAsync(product);
                 ToastService.ShowSuccess($"Product '{product.Name}' updated successfully!");
             }
 
             await LoadProducts();
-
-            _newProduct = new Product
-            {
-                Name = "",
-                IsActive = true
-            };
+            _newProduct = new() { Name = "", IsActive = true };
 
             Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
         }
@@ -122,14 +117,14 @@ else
             ToastService.ShowError($"Error submitting product '{product.Name}'. Please try again.");
         }
     }
-    
+
     private List<WorkInstruction> GetAssociatedInstructions(Product product)
     {
         return _allInstructions?
             .Where(wi => wi.Products.Any(p => p.Id == product.Id))
             .ToList() ?? [];
     }
-    
+
     private List<int> GetSelectedIds(int productId)
     {
         if (!SelectedInstructionMap.TryGetValue(productId, out var selected))
@@ -138,15 +133,48 @@ else
         return selected;
     }
 
-    private async Task OnInstructionSelectionChanged(int productId, List<int> selectedIds)
+    private Task HandleSelectedInstructionIdsChanged(int productId, List<int> selectedIds)
     {
         SelectedInstructionMap[productId] = selectedIds;
-        StateHasChanged(); // not necessary to await, so no change needed here
-
-        await Task.CompletedTask;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
-    
-    private void ShowAddDialog(Product product)
+
+    private EventCallback<List<int>> GetSelectedIdsChangedCallback(int productId)
+    {
+        if (!_selectedIdsChangedCallbacks.TryGetValue(productId, out var callback))
+        {
+            callback = EventCallback.Factory.Create<List<int>>(this,
+                (List<int> selectedIds) => HandleSelectedInstructionIdsChanged(productId, selectedIds));
+            _selectedIdsChangedCallbacks[productId] = callback;
+        }
+        return callback;
+    }
+
+    private EventCallback GetAddInstructionsCallback(int productId)
+    {
+        return EventCallback.Factory.Create(this, () => ShowAddDialog(productId));
+    }
+
+    private EventCallback<List<int>> GetRemoveInstructionsCallback(int productId)
+    {
+        return EventCallback.Factory.Create<List<int>>(this,
+            (List<int> ids) => RemoveInstructionsFromProduct(productId, ids));
+    }
+
+    private EventCallback<Product> SubmitProductCallback =>
+        EventCallback.Factory.Create<Product>(this, HandleSubmitProduct);
+
+    private EventCallback<List<int>> NoOpSelectedIdsChangedCallback =>
+        EventCallback.Factory.Create<List<int>>(this, _ => Task.CompletedTask);
+
+    private EventCallback<List<int>> NoOpRemoveInstructionsCallback =>
+        EventCallback.Factory.Create<List<int>>(this, _ => Task.CompletedTask);
+
+    private EventCallback<List<int>> AddInstructionsCallback =>
+        EventCallback.Factory.Create<List<int>>(this, OnAddInstructions);
+
+    private void ShowAddDialog(int productId)
     {
         if (_allInstructions is null)
         {
@@ -156,11 +184,22 @@ else
 
         _addDialogVisible = true;
         _nonAssociatedInstructions = _allInstructions
-            .Where(wi => wi.Products.All(p => p.Id != product.Id))
+            .Where(wi => wi.Products.All(p => p.Id != productId))
             .ToList();
-        CurrentProductId = product.Id;
+
+        CurrentProductId = productId;
     }
-    
+
+    private void OnVisibleChanged(bool visible)
+    {
+        _addDialogVisible = visible;
+    }
+
+    private Task OnAddInstructions(List<int> instructionIds)
+    {
+        return AssociateInstructionsToProduct(CurrentProductId, instructionIds);
+    }
+
     private async Task AssociateInstructionsToProduct(int productId, List<int> instructionIds)
     {
         await ProductService.AddWorkInstructionsAsync(productId, instructionIds);
@@ -168,7 +207,7 @@ else
         await LoadProducts();
         ToastService.ShowSuccess("Work instructions added.");
     }
-    
+
     private async Task RemoveInstructionsFromProduct(int productId, List<int> instructionIds)
     {
         await ProductService.RemoveWorkInstructionsAsync(productId, instructionIds);
@@ -176,38 +215,4 @@ else
         await LoadProducts();
         ToastService.ShowSuccess("Selected work instructions removed.");
     }
-    
-    private async Task OnSelectedInstructionIdsChanged(int productId, List<int> selectedIds)
-    {
-        SelectedInstructionMap[productId] = selectedIds;
-        StateHasChanged();
-        await Task.CompletedTask;
-    }
-
-    private Task NoOpSelectedInstructionIdsChanged(List<int> ids)
-    {
-        // no operation
-        return Task.CompletedTask;
-    }
-    
-    private EventCallback<List<int>> CreateSelectedIdsChangedHandler(int productId)
-    {
-        return EventCallback.Factory.Create<List<int>>(this, (List<int> selectedIds) => OnSelectedInstructionIdsChanged(productId, selectedIds));
-    }
-    
-    // Cache of EventCallbacks for each product ID
-    private Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
-
-    private EventCallback<List<int>> GetSelectedIdsChangedCallback(int productId)
-    {
-        if (!_selectedIdsChangedCallbacks.TryGetValue(productId, out var callback))
-        {
-            callback = EventCallback.Factory.Create<List<int>>(this, (List<int> ids) => OnSelectedInstructionIdsChanged(productId, ids));
-            _selectedIdsChangedCallbacks[productId] = callback;
-        }
-        return callback;
-    }
-
-    // For new product no-op callback
-    private EventCallback<List<int>> NoOpSelectedIdsChangedCallback => EventCallback.Factory.Create<List<int>>(this, (List<int> _) => Task.CompletedTask);
 }
