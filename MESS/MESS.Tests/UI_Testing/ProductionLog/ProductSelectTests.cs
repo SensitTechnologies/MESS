@@ -92,8 +92,8 @@ public class ProductSelectTests : TestContext
         // Arrange
         var products = new List<Product>
         {
-            new Product { Id = 1, Name = "Product 1", WorkInstructions = new List<WorkInstruction>() },
-            new Product { Id = 2, Name = "Product 2", WorkInstructions = new List<WorkInstruction>() }
+            new Product { Id = 1, Name = "Product 1", WorkInstructions = new List<WorkInstruction>(), IsActive = true},
+            new Product { Id = 2, Name = "Product 2", WorkInstructions = new List<WorkInstruction>(), IsActive = true}
         };
 
         // Act
@@ -113,7 +113,7 @@ public class ProductSelectTests : TestContext
         // Arrange
         var products = new List<Product>
         {
-            new Product { Id = 1, Name = "", WorkInstructions = new List<WorkInstruction>() }
+            new Product { Id = 1, Name = "", WorkInstructions = new List<WorkInstruction>(), IsActive = true}
         };
 
         // Act
@@ -133,7 +133,7 @@ public class ProductSelectTests : TestContext
         var longName = new string('A', 1000);
         var products = new List<Product>
         {
-            new Product { Id = 1, Name = longName, WorkInstructions = new List<WorkInstruction>() }
+            new Product { Id = 1, Name = longName, WorkInstructions = new List<WorkInstruction>(), IsActive = true}
         };
 
         // Act
@@ -152,8 +152,8 @@ public class ProductSelectTests : TestContext
         // Arrange
         var products = new List<Product>
         {
-            new Product { Id = 1, Name = "Product 1", WorkInstructions = new List<WorkInstruction>() },
-            new Product { Id = 1, Name = "Product 2", WorkInstructions = new List<WorkInstruction>() }
+            new Product { Id = 1, Name = "Product 1", WorkInstructions = new List<WorkInstruction>(), IsActive = true },
+            new Product { Id = 1, Name = "Product 2", WorkInstructions = new List<WorkInstruction>(), IsActive = true }
         };
 
         // Act
@@ -175,7 +175,8 @@ public class ProductSelectTests : TestContext
         {
             Id = i,
             Name = $"Product {i}",
-            WorkInstructions = new List<WorkInstruction>()
+            WorkInstructions = new List<WorkInstruction>(),
+            IsActive = true
         }).ToList();
 
         // Act
