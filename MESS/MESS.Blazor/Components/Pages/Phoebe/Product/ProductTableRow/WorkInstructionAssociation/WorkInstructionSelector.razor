@@ -26,19 +26,20 @@
             }
         }
     </div>
-    <div class="dropdown float-end">
-        <button type="button" class="btn btn-sm btn-light dropdown-toggle @(IsDropdownOpen ? "show" : "")" aria-expanded="@IsDropdownOpen" @onclick="ToggleDropdown">
+
+    <div class="dropdown-container" style="position: relative; display: inline-block;">
+        <button class="btn btn-sm btn-light" @onclick="ToggleDropdown" aria-expanded="@IsDropdownOpen" aria-haspopup="true">
             Actions
         </button>
-        <ul class="dropdown-menu @(IsDropdownOpen ? "show" : "")">
-            <li>
-                <a class="dropdown-item" @onclick="() => OnAddClicked.InvokeAsync()">Add Instructions</a>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li>
-                <a class="dropdown-item text-danger" @onclick="RemoveSelected">Remove Selected</a>
-            </li>
-        </ul>
+
+        @if (IsDropdownOpen)
+        {
+            <div class="dropdown-menu-custom">
+                <button class="dropdown-item" @onclick="() => InvokeAction_Add()">Add Instructions</button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-danger" @onclick="() => InvokeAction_Remove()">Remove Selected</button>
+            </div>
+        }
     </div>
 </div>
 
@@ -47,13 +48,13 @@
     /// The work instructions currently associated with this product.
     /// </summary>
     [Parameter, EditorRequired]
-    public List<WorkInstruction> Instructions { get; set; } = [];
+    public List<WorkInstruction> Instructions { get; set; } = new();
 
     /// <summary>
     /// The instruction IDs that are selected for bulk actions.
     /// </summary>
     [Parameter]
-    public List<int> SelectedInstructionIds { get; set; } = [];
+    public List<int> SelectedInstructionIds { get; set; } = new();
 
     /// <summary>
     /// Notifies the parent when the selection changes.
@@ -62,20 +63,22 @@
     public EventCallback<List<int>> SelectedInstructionIdsChanged { get; set; }
     
     /// <summary>
-    /// An event callback triggered when the user pushes the "Add Instructions" button.
+    /// Called when the user clicks "Add Instructions".
     /// </summary>
-    [Parameter] public EventCallback OnAddClicked { get; set; }
+    [Parameter]
+    public EventCallback OnAddClicked { get; set; }
     
     /// <summary>
-    /// An event callback triggered when the user chooses to remove selected instructions.
+    /// Called when the user clicks "Remove Selected".
     /// </summary>
     [Parameter]
     public EventCallback<List<int>> OnRemoveSelected { get; set; }
-    
-    private void OnActionsClicked()
+
+    private bool IsDropdownOpen = false;
+
+    private void ToggleDropdown()
     {
-        // Your custom logic when Actions button is clicked
-        Console.WriteLine("Actions button clicked");
+        IsDropdownOpen = !IsDropdownOpen;
     }
 
     private async Task ToggleSelection(int instructionId, bool isChecked)
@@ -92,22 +95,25 @@
 
         await SelectedInstructionIdsChanged.InvokeAsync(SelectedInstructionIds);
     }
-    
-    private async Task RemoveSelected()
+
+    private async Task InvokeAction_Add()
     {
-        if (SelectedInstructionIds.Any())
+        IsDropdownOpen = false;
+        if (OnAddClicked.HasDelegate)
         {
-            await OnRemoveSelected.InvokeAsync(SelectedInstructionIds);
-            IsDropdownOpen = false; // close dropdown after removal
+            await OnAddClicked.InvokeAsync();
         }
     }
-    
-    private bool IsDropdownOpen;
-    
-    private void ToggleDropdown()
+
+    private async Task InvokeAction_Remove()
     {
-        IsDropdownOpen = !IsDropdownOpen;
+        if (!SelectedInstructionIds.Any())
+            return;
+
+        IsDropdownOpen = false;
+        if (OnRemoveSelected.HasDelegate)
+        {
+            await OnRemoveSelected.InvokeAsync(SelectedInstructionIds);
+        }
     }
-
-
 }
