@@ -3,18 +3,22 @@
 @if (Visible)
 {
     <FluentDialog Open="@Visible" OnDismiss="Close">
+        
         <FluentDialogHeader>
-            Export Work Instruction
+            <h5 class="fw-semibold text-dark mb-1">Export Work Instruction</h5>
+            <FluentDivider></FluentDivider>
         </FluentDialogHeader>
         <FluentDialogBody>
-            <p><strong>@WorkInstruction?.Title</strong> - Version @WorkInstruction?.Version</p>
+            <p>@WorkInstruction?.Title - Version @WorkInstruction?.Version</p>
+        </FluentDialogBody>
+        <FluentDialogFooter>
             <WorkInstructionExportButton 
                 WorkInstruction="WorkInstruction"
                 OnDownloadComplete="Close"
                 OnDownloadStateChanged="HandleDownloadStateChanged" />
-        </FluentDialogBody>
-        <FluentDialogFooter>
-            <FluentButton OnClick="Close" Appearance="Appearance.Neutral" Disabled="@_isDownloadInProgress">Cancel</FluentButton>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Close">
+                Cancel
+            </button>
         </FluentDialogFooter>
     </FluentDialog>
 }

@@ -4,7 +4,7 @@
 @inject IToastService ToastService
 @inject IJSRuntime JsRuntime
 
-<button class="btn btn-outline-secondary" type="button" @onclick="DownloadWorkInstruction" disabled="@_isLoading">
+<button class="btn btn-sm btn-outline-secondary" type="button" @onclick="DownloadWorkInstruction" disabled="@_isLoading">
     Download
     @if (_isLoading)
     {
