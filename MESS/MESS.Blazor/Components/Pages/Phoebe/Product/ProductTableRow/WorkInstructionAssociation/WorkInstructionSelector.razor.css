@@ -9,3 +9,67 @@
 .list-group-item:hover {
     background-color: #f8f9fa;
 }
+
+/* === Dropdown Styles === */
+.dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu-custom {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 160px; /* Constrained width */
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 0.25rem 0.4rem; /* Compact padding */
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    color: #212529; /* default text color */
+    font-size: 0.875rem; /* Smaller font */
+    line-height: 1.25;
+}
+
+.dropdown-menu-custom .dropdown-divider {
+    height: 1px;
+    margin: 0.4rem 0; /* Slightly reduced spacing */
+    overflow: hidden;
+    background-color: #e9ecef;
+}
+
+.dropdown-item {
+    display: block;
+    padding: 0.2rem 0.5rem; /* Reduced vertical padding */
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    color: #212529; /* default text color */
+    font-size: 0.875rem;
+}
+
+.dropdown-item:hover {
+    background-color: #f1f1f1;
+}
+
+/* === Dark Mode Styles === */
+body.dark-mode .dropdown-menu-custom {
+    background-color: #1a1a1a;
+    border: 1px solid #4a4300;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+body.dark-mode .dropdown-menu-custom .dropdown-divider {
+    background-color: #333300;
+}
+
+body.dark-mode .dropdown-item {
+    color: #fff;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: #333300;
+}

@@ -27,13 +27,14 @@
         }
     </div>
     <div class="dropdown float-end">
-        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" @onclick="OnActionsClicked">
+        <button type="button" class="btn btn-sm btn-light dropdown-toggle @(IsDropdownOpen ? "show" : "")" aria-expanded="@IsDropdownOpen" @onclick="ToggleDropdown">
             Actions
         </button>
-        <ul class="dropdown-menu">
+        <ul class="dropdown-menu @(IsDropdownOpen ? "show" : "")">
             <li>
                 <a class="dropdown-item" @onclick="() => OnAddClicked.InvokeAsync()">Add Instructions</a>
             </li>
+            <li><hr class="dropdown-divider" /></li>
             <li>
                 <a class="dropdown-item text-danger" @onclick="RemoveSelected">Remove Selected</a>
             </li>
@@ -97,6 +98,16 @@
         if (SelectedInstructionIds.Any())
         {
             await OnRemoveSelected.InvokeAsync(SelectedInstructionIds);
+            IsDropdownOpen = false; // close dropdown after removal
         }
     }
+    
+    private bool IsDropdownOpen;
+    
+    private void ToggleDropdown()
+    {
+        IsDropdownOpen = !IsDropdownOpen;
+    }
+
+
 }
