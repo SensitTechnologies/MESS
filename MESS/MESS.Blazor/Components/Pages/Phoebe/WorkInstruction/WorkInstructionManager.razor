@@ -134,6 +134,10 @@
             {
                 // Refresh all latest work instructions list after save
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                
+                Products = (await ProductService.GetAllAsync())?
+                    .Where(p => p.IsActive)
+                    .ToList() ?? new List<Product>();
             }
         }
         catch (Exception ex)
@@ -235,13 +239,16 @@
     {
         if (WorkInstructionEditorService.Current != null)
         {
-            WorkInstructionEditorService.Current.Title = workInstructionData.Title;
+            if (!string.IsNullOrWhiteSpace(workInstructionData.Title))
+            {
+                WorkInstructionEditorService.Current.Title = workInstructionData.Title;
+            }
+
             WorkInstructionEditorService.Current.Products = workInstructionData.Products;
         }
-        
+
         SelectedWorkInstructionId = null;
-        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
-        ToastService.ShowInfo($"Product associations edited for \"{workInstructionData.Title}\"");
+            
         StateHasChanged();
         await MarkEditorDirty();
     }
