@@ -279,13 +279,6 @@
         openOptions = !openOptions;
         open = false;
     }
-
-    private void LogAndClose(string item)
-    {
-        open = false;
-        openOptions = false;
-        DemoLogger.LogInformation($"Clicked: {item}");
-    }
     
     private void ToggleQrCode()
     {
