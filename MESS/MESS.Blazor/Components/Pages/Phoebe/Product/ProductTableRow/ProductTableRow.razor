@@ -1,0 +1,79 @@
+@using MESS.Data.Models
+@using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
+
+<tr>
+    <td>
+        <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" />
+    </td>
+    <td>
+        <InputCheckbox id="isActive" @bind-Value="Product.IsActive" class="form-check-input" />
+    </td>
+    <td>
+        <WorkInstructionSelector 
+            Instructions="Instructions"
+            SelectedInstructionIds="SelectedInstructionIds"
+            SelectedInstructionIdsChanged="SelectedInstructionIdsChanged"
+            OnAddClicked="OnAddInstructions"
+            OnRemoveSelected="OnRemoveInstructions" />
+    </td>
+    <td>
+        <button class="btn btn-sm @(IsNewProduct ? "btn-primary" : "btn-success")"
+                @onclick="HandleSubmit" disabled="@isSaving">
+            @(IsNewProduct ? "Create" : "Save")
+        </button>
+    </td>
+</tr>
+
+@code {
+    /// <summary>
+    /// The product associated with this row.
+    /// </summary>
+    [Parameter]
+    public required Product Product { get; set; }
+
+    /// <summary>
+    /// Work instructions already associated with this product (filtered).
+    /// </summary>
+    [Parameter]
+    public List<WorkInstruction> Instructions { get; set; } = [];
+
+    /// <summary>
+    /// Currently selected instruction IDs for bulk action.
+    /// </summary>
+    [Parameter]
+    public List<int> SelectedInstructionIds { get; set; } = [];
+
+    /// <summary>
+    /// Callback for when selection changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<int>> SelectedInstructionIdsChanged { get; set; }
+
+    /// <summary>
+    /// Callback when the "Add Instructions" action is triggered.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnAddInstructions { get; set; }
+
+    /// <summary>
+    /// Callback when "Remove Selected" is triggered.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<int>> OnRemoveInstructions { get; set; }
+
+    /// <summary>
+    /// An event callback triggered upon pushing the create/save button.
+    /// </summary>
+    [Parameter]
+    public EventCallback<Product> OnSubmit { get; set; }
+
+    private bool IsNewProduct => Product.Id == 0;
+    private bool isSaving = false;
+
+    private async Task HandleSubmit()
+    {
+        isSaving = true;
+        await OnSubmit.InvokeAsync(Product);
+        isSaving = false;
+    }
+}

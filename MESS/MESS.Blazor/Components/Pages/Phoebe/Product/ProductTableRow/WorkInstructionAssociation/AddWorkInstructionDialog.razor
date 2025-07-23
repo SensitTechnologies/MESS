@@ -1,0 +1,108 @@
+@using MESS.Data.Models
+@inject IJSRuntime JS
+
+@if (Visible)
+{
+    <FluentDialog Open="true" OnDismiss="Close">
+        <FluentDialogHeader>
+            Add Work Instructions
+        </FluentDialogHeader>
+        <FluentDialogBody>
+            <div class="mb-3">
+                <input type="text" class="form-control" placeholder="Search..."
+                       @bind="SearchTerm" @bind:event="oninput" />
+            </div>
+
+            <div class="list-group scrollable-checkbox-container">
+                @if (FilteredInstructions.Count == 0)
+                {
+                    <div class="text-muted">No matching instructions.</div>
+                }
+                else
+                {
+                    @foreach (var instruction in FilteredInstructions)
+                    {
+                        <label class="list-group-item">
+                            <input type="checkbox"
+                                   class="form-check-input me-1"
+                                   @onchange="e => ToggleSelection(instruction.Id, (bool)e.Value!)"
+                                   checked="@SelectedIds.Contains(instruction.Id)" />
+                            @($"{instruction.Title} v{instruction.Version}")
+                        </label>
+                    }
+                }
+            </div>
+        </FluentDialogBody>
+
+        <FluentDialogFooter>
+            <button class="btn btn-secondary me-2" @onclick="Close">Cancel</button>
+            <button class="btn btn-primary" @onclick="ConfirmSelection" disabled="@(!SelectedIds.Any())">
+                Add Selected
+            </button>
+        </FluentDialogFooter>
+    </FluentDialog>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets a value indicating whether the dialog is visible.
+    /// Setting this to <c>true</c> will display the dialog; setting it to <c>false</c> will hide it.
+    /// This parameter supports two-way binding with <see cref="VisibleChanged"/>.
+    /// </summary>
+    [Parameter] public bool Visible { get; set; }
+    
+    /// <summary>
+    /// Event callback triggered when the <see cref="Visible"/> value changes.
+    /// This is used for two-way binding to notify the parent component of visibility state changes.
+    /// </summary>
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of work instructions that are available to be associated with the product.
+    /// These should be the instructions not already associated with the current product.
+    /// </summary>
+    [Parameter] public List<WorkInstruction> Instructions { get; set; } = [];
+
+    /// <summary>
+    /// Event callback invoked when the user confirms their selection and chooses to add the selected instructions.
+    /// The callback parameter is a list of the selected work instruction IDs.
+    /// </summary>
+    [Parameter] public EventCallback<List<int>> OnAdd { get; set; }
+
+    private string SearchTerm { get; set; } = "";
+    private List<int> SelectedIds { get; set; } = [];
+
+    private List<WorkInstruction> FilteredInstructions =>
+        string.IsNullOrWhiteSpace(SearchTerm)
+            ? Instructions
+            : Instructions
+                .Where(i => i.Title.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+    private void ToggleSelection(int id, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!SelectedIds.Contains(id))
+                SelectedIds.Add(id);
+        }
+        else
+        {
+            SelectedIds.Remove(id);
+        }
+    }
+
+    private async Task ConfirmSelection()
+    {
+        await OnAdd.InvokeAsync(SelectedIds);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+        SelectedIds.Clear();
+        SearchTerm = "";
+    }
+}
