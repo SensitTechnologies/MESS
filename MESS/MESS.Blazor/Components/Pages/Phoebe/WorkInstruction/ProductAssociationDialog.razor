@@ -13,16 +13,19 @@
                 SelectedProducts="SelectedProducts" 
                 SelectedProductsChanged="OnSelectedProductsChanged" />
             
-            <hr />
+            @if (AllowsRenaming)
+            {
+                <hr />
 
-            <div class="resizable-textarea-container mt-3">
-                <label for="nameInput" class="form-label">Name:</label>
-                <textarea id="nameInput"
+                <div class="resizable-textarea-container mt-3">
+                    <label for="nameInput" class="form-label">Name:</label>
+                    <textarea id="nameInput"
                           class="form-control transparent-textarea"
                           placeholder="Enter name here..."
                           rows="1"
                           @bind="WorkInstructionTitle"></textarea>
-            </div>
+                </div>
+            }
         </FluentDialogBody>
 
         <FluentDialogFooter>
@@ -41,6 +44,11 @@
     /// Indicates whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
+    
+    /// <summary>
+    /// Indicates whether the dialog should display a text box for renaming the work instruction
+    /// </summary>
+    [Parameter] public bool AllowsRenaming { get; set; }
 
     /// <summary>
     /// Event callback triggered when the dialog's visibility changes.
