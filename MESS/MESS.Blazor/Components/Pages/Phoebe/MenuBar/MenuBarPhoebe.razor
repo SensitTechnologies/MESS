@@ -1,4 +1,5 @@
 ﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
+@using System.ComponentModel
 @using Microsoft.AspNetCore.Components.Authorization
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
@@ -272,7 +273,15 @@
     {
         var state = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = state.User.Identity?.Name;
-        DarkModeInstance.OnChange += StateHasChanged;
+        DarkModeInstance.PropertyChanged += OnDarkModeChanged;
+    }
+    
+    private void OnDarkModeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DarkModeInstance.IsDarkMode))
+        {
+            InvokeAsync(StateHasChanged);
+        }
     }
     
     /// <inheritdoc />
@@ -518,6 +527,6 @@
 
     private void Dispose()
     {
-        DarkModeInstance.OnChange -= StateHasChanged;
+        DarkModeInstance.PropertyChanged -= OnDarkModeChanged;
     }
 }

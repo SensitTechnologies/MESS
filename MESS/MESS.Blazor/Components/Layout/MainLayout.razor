@@ -1,6 +1,7 @@
 ﻿@inject IJSRuntime JS
 @inherits LayoutComponentBase
 @implements IDisposable
+@using System.ComponentModel
 @using MESS.Blazor.Components.Navigator
 @using MESS.Services.DarkMode
 @using Microsoft.AspNetCore.Components.Authorization
@@ -93,6 +94,23 @@
         // Also hide dark mode toggle on WorkInstructionManager page
         ShowDarkModeToggle = ShowSidebarToggle;
     }
+    
+    /// <summary>
+    /// Called when the component is initialized. Registers this component with the DarkModeInstance
+    /// to receive updates when the dark mode state changes.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        DarkModeInstance.PropertyChanged += OnDarkModeChanged;
+    }
+    
+    private void OnDarkModeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DarkModeInstance.IsDarkMode))
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
 
     /// <summary>
     /// Toggles the sidebar open/closed state.
@@ -123,7 +141,7 @@
     /// </summary>
     public void Dispose()
     {
-        // Cleanup if needed
+        DarkModeInstance.PropertyChanged -= OnDarkModeChanged;
     }
 
     /// <summary>
