@@ -1,5 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
+@using MESS.Blazor.Components.ConfirmationDialog
 
 <tr>
     <td>
@@ -21,6 +22,21 @@
                 @onclick="HandleSubmit" disabled="@isSaving">
             @(IsNewProduct ? "Create" : "Save")
         </button>
+        
+        @if (!IsNewProduct)
+        {
+            <button class="btn btn-sm btn-danger ms-2" @onclick="ShowDeleteConfirmation">
+                Delete
+            </button>
+
+            <ConfirmationDialog
+                Title="Delete Product"
+                Message="@($"Are you sure you want to delete '{Product.Name}'?")"
+                ConfirmButtonText="Delete"
+                Visible="@showDeleteDialog"
+                VisibleChanged="@DeleteDialogVisibilityChanged"
+                OnConfirmed="RaiseDeleteEvent" />
+        }
     </td>
 </tr>
 
@@ -60,20 +76,47 @@
     /// </summary>
     [Parameter]
     public EventCallback<List<int>> OnRemoveInstructions { get; set; }
+    
+    /// <summary>
+    /// Callback to notify the parent that this product should be deleted.
+    /// </summary>
+    [Parameter]
+    public EventCallback<Product> OnDeleteRequested { get; set; }
+
 
     /// <summary>
     /// An event callback triggered upon pushing the create/save button.
     /// </summary>
     [Parameter]
     public EventCallback<Product> OnSubmit { get; set; }
+    
+    private EventCallback<bool> DeleteDialogVisibilityChanged =>
+        EventCallback.Factory.Create<bool>(this, SetDeleteDialogVisibility);
 
     private bool IsNewProduct => Product.Id == 0;
     private bool isSaving = false;
+    
+    private bool showDeleteDialog;
 
     private async Task HandleSubmit()
     {
         isSaving = true;
         await OnSubmit.InvokeAsync(Product);
         isSaving = false;
+    }
+    
+    private void ShowDeleteConfirmation()
+    {
+        showDeleteDialog = true;
+    }
+
+    private async Task RaiseDeleteEvent()
+    {
+        await OnDeleteRequested.InvokeAsync(Product);
+    }
+    
+    private void SetDeleteDialogVisibility(bool visible)
+    {
+        showDeleteDialog = visible;
     }
 }

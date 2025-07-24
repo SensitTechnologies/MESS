@@ -38,13 +38,14 @@ else
             <ProductTableRow 
                 Product="product" 
                 Instructions="_associatedInstructionsMap.ContainsKey(product.Id) 
-                ? _associatedInstructionsMap[product.Id] 
-                : new List<WorkInstruction>()"
+                    ? _associatedInstructionsMap[product.Id] 
+                    : new List<WorkInstruction>()"
                 SelectedInstructionIds="GetSelectedIds(product.Id)"
                 SelectedInstructionIdsChanged="@GetSelectedIdsChangedCallback(product.Id)"
                 OnAddInstructions="@GetAddInstructionsCallback(product.Id)"
                 OnRemoveInstructions="@GetRemoveInstructionsCallback(product.Id)"
-                OnSubmit="@SubmitProductCallback" />
+                OnSubmit="@SubmitProductCallback"
+                OnDeleteRequested="@HandleDeleteProductAsync" />
         }
 
         <ProductTableRow 
@@ -227,5 +228,24 @@ else
         _allInstructions = await WorkInstructionService.GetAllLatestAsync();
         RebuildInstructionMap();
         ToastService.ShowSuccess("Selected work instructions removed.");
+    }
+    
+    private async Task HandleDeleteProductAsync(Product product)
+    {
+        try
+        {
+            await ProductService.DeleteByIdAsync(product.Id);
+            Products.Remove(product);
+            _associatedInstructionsMap.Remove(product.Id);
+            SelectedInstructionMap.Remove(product.Id);
+            _selectedIdsChangedCallbacks.Remove(product.Id);
+
+            ToastService.ShowSuccess($"Product '{product.Name}' was deleted.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error deleting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+            ToastService.ShowError($"Failed to delete '{product.Name}'.");
+        }
     }
 }
