@@ -38,7 +38,7 @@
                     @onclick="ToggleDarkMode"
                     title="Toggle Dark Mode"
                     style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-                @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
+                <i class="@((isDarkMode ? "bi bi-sun" : "bi bi-moon-stars"))"></i>
             </button>
         }
     </div>
