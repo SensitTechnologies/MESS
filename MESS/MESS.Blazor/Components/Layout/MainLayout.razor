@@ -2,9 +2,11 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using MESS.Blazor.Components.Navigator
+@using MESS.Services.DarkMode
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthProvider
+@inject DarkModeInstance DarkModeInstance
 
 <HeadContent>
     <script src="darkmode.js"></script>
@@ -36,9 +38,8 @@
         {
             <button class="btn btn-outline-secondary"
                     @onclick="ToggleDarkMode"
-                    title="Toggle Dark Mode"
-                    style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-                <i class="@((isDarkMode ? "bi bi-sun" : "bi bi-moon-stars"))"></i>
+                    style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                <i class="bi @(DarkModeInstance.IsDarkMode ? "bi-moon-stars" : "bi-sun")"></i>
             </button>
         }
     </div>
@@ -112,6 +113,7 @@
     /// </summary>
     private async Task ToggleDarkMode()
     {
+        DarkModeInstance.Toggle();
         isDarkMode = !isDarkMode;
         await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
     }

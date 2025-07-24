@@ -5,6 +5,7 @@ using MESS.Data.Seed;
 using MESS.Services.Product;
 using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
+using MESS.Services.DarkMode;
 using MESS.Services.LocalCacheManager;
 using MESS.Services.ProductionLog;
 using MESS.Services.Serialization;
@@ -107,6 +108,8 @@ builder.Services.AddAntiforgery();
 
 // Setup FluentUI
 builder.Services.AddFluentUIComponents();
+
+builder.Services.AddSingleton<DarkModeInstance>();
 
 
 
