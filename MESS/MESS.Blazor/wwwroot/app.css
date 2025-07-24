@@ -685,11 +685,6 @@ body.dark-mode .confirmation-toast {
     background-color: #444 !important;
 }
 
-/* Checkbox in dialog */
-.dark-mode fluent-dialog input[type="checkbox"] {
-    filter: invert(1);
-}
-
 /* List items */
 .dark-mode fluent-dialog .list-group-item {
     background-color: #2a2a2a !important;
