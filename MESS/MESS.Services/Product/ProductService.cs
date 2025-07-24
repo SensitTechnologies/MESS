@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 
 namespace MESS.Services.Product;
@@ -9,13 +10,20 @@ using Data.Models;
 public class ProductService : IProductService
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
+    private readonly IMemoryCache _cache;
+    private const string WORK_INSTRUCTION_LATEST_CACHE_KEY = "AllWorkInstructions_Latest";
+
     /// <summary>
-    /// Instantiates a new instance of the <see cref="ProductService"/> class.
+    /// Initializes a new instance of the <see cref="ProductService"/> class.
+    /// Provides access to the database context factory and in-memory cache
+    /// for managing product data and invalidating cached work instruction associations.
     /// </summary>
-    /// <param name="contextFactory">The application database context used for data operations.</param>
-    public ProductService(IDbContextFactory<ApplicationContext> contextFactory)
+    /// <param name="contextFactory">Factory for creating instances of the application database context.</param>
+    /// <param name="cache">In-memory cache used to store and invalidate cached data.</param>
+    public ProductService(IDbContextFactory<ApplicationContext> contextFactory, IMemoryCache cache)
     {
         _contextFactory = contextFactory;
+        _cache = cache;
     }
     
     /// <inheritdoc />
@@ -242,6 +250,8 @@ public class ProductService : IProductService
             }
 
             await context.SaveChangesAsync();
+            _cache.Remove(WORK_INSTRUCTION_LATEST_CACHE_KEY);
+            
             Log.Information("Associated {Count} work instructions with product ID {ProductId}.", workInstructionIds.Count, productId);
         }
         catch (Exception e)
@@ -278,6 +288,8 @@ public class ProductService : IProductService
             product.WorkInstructions.RemoveAll(wi => workInstructionIds.Contains(wi.Id));
 
             await context.SaveChangesAsync();
+            _cache.Remove(WORK_INSTRUCTION_LATEST_CACHE_KEY);
+            
             Log.Information("Removed {Count} work instructions from product ID {ProductId}.", workInstructionIds.Count, productId);
         }
         catch (Exception e)
