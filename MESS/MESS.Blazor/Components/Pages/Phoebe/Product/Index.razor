@@ -71,7 +71,7 @@ else
     private Product _newProduct = new() { Name = "", IsActive = true };
     private List<WorkInstruction>? _allInstructions;
     private Dictionary<int, List<int>> SelectedInstructionMap { get; set; } = new();
-    private Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
+    private readonly Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
     private Dictionary<int, List<WorkInstruction>> _associatedInstructionsMap = new();
 
     private bool _addDialogVisible = false;
