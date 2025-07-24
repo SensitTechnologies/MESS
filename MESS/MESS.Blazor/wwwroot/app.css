@@ -193,8 +193,8 @@ a, .btn-link {
 
 .btn-success:hover {
     background-color: rgba(255, 213, 2, 0);
-    color: #2b2b2b;
-    border: 3px solid #4aff00;
+    color: #198754;
+    border: 3px solid #198754;
 }
 
 .btn-user {
