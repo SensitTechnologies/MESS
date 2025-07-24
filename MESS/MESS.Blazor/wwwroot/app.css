@@ -187,8 +187,19 @@ a, .btn-link {
 }
 
 .btn-success {
+    color: black;
+    background-color: #ffd502;
+}
+
+.btn-success:hover {
+    background-color: rgba(255, 213, 2, 0);
+    color: #198754;
+    border: 3px solid #198754;
+}
+
+.btn-user {
     color: #4aff00;
-    background-color: #020000;
+    background-color: #000000;
     border: 3px solid #4aff00;
 }
 
@@ -619,3 +630,122 @@ body.dark-mode span[style*="color: #000000"] {
     -moz-user-select: none;
     -ms-user-select: none;
 }
+
+/* ==========================================================================
+   Confirmation Modal Window Styling
+========================================================================== */
+
+/* Light mode */
+.confirmation-toast {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border: 2px solid rgba(0, 0, 0, 0.25) !important;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.25) !important;
+}
+
+/* Dark mode */
+body.dark-mode .confirmation-toast {
+    background-color: #1f1f1f !important;              /* Dark background */
+    color: #f8f9fa !important;                         /* Light text */
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.5) !important;
+}
+
+/* ==========================================================================
+   Fluent UI Dark Mode Overrides
+========================================================================== */
+
+.dark-mode fluent-dialog,
+.dark-mode fluent-dialog::part(control) {
+    background-color: #1e1e1e !important;
+    color: #f1f1f1 !important;
+    border: 1px solid #444 !important;
+}
+
+/* Dialog Header */
+.dark-mode fluent-dialog::part(title),
+.dark-mode fluent-dialog-header,
+.dark-mode fluent-dialog-header h5 {
+    background-color: #2a2a2a !important;
+    color: #f1f1f1 !important;
+}
+
+/* Dialog Body & Footer */
+.dark-mode fluent-dialog::part(content),
+.dark-mode fluent-dialog-body,
+.dark-mode fluent-dialog-footer {
+    background-color: #1e1e1e !important;
+    color: #eeeeee !important;
+}
+
+/* Divider */
+.dark-mode fluent-divider,
+.dark-mode fluent-divider::part(divider) {
+    border-color: #444 !important;
+    background-color: #444 !important;
+}
+
+/* List items */
+.dark-mode fluent-dialog .list-group-item {
+    background-color: #2a2a2a !important;
+    color: #eeeeee !important;
+    border-color: #444 !important;
+}
+
+/* Textarea */
+.dark-mode fluent-dialog .transparent-textarea,
+.dark-mode fluent-dialog textarea {
+    background-color: #2a2a2a !important;
+    color: #f1f1f1 !important;
+    border: 1px solid #555 !important;
+    caret-color: #fff !important;
+}
+
+
+
+/* Scrollbars */
+.dark-mode ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.dark-mode ::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 4px;
+}
+.dark-mode ::-webkit-scrollbar-track {
+    background: #2e2e2e;
+}
+
+/* General dark mode background */
+.dark-mode .scrollable-checkbox-container {
+    background-color: #1e1e1e;
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+
+/* Dark mode for list group items */
+.dark-mode .scrollable-checkbox-container .list-group-item {
+    background-color: #2a2a2a;
+    color: #f0f0f0;
+    border-color: #444;
+}
+
+/* Hover and checked styling */
+.dark-mode .scrollable-checkbox-container .list-group-item:hover {
+    background-color: #3a3a3a;
+}
+
+/* Checkboxes */
+.dark-mode .form-check-input {
+    background-color: #333;
+    border-color: #666;
+}
+
+/* Optional: checked checkbox styling */
+.dark-mode .form-check-input:checked {
+    background-color: #0078d4; /* Fluent blue */
+    border-color: #0078d4;
+}
+
+
+
