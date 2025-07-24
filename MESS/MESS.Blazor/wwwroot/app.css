@@ -701,11 +701,7 @@ body.dark-mode .confirmation-toast {
     caret-color: #fff !important;
 }
 
-/* Labels */
-.dark-mode .form-label,
-.dark-mode label {
-    color: #ccc !important;
-}
+
 
 /* Scrollbars */
 .dark-mode ::-webkit-scrollbar {
