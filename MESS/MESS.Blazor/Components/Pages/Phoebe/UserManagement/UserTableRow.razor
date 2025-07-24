@@ -2,6 +2,7 @@
 @using MESS.Data.Models
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
+@inject IToastService ToastService
 
 @if (User != null)
 {
@@ -75,12 +76,6 @@
     public required UserRoleDto UserRoleDto { get; set; }
 
     /// <summary>
-    /// Event callback to display an alert message.
-    /// </summary>
-    [Parameter]
-    public EventCallback<string> DisplayAlert { get; set; }
-
-    /// <summary>
     /// Event callback to save changes made to the user.
     /// </summary>
     [Parameter]
@@ -142,13 +137,15 @@
             {
                 case "Operator":
                     IsOperator = isChecked;
-                    await DisplayAlert.InvokeAsync("Operator Updated");
+                    ToastService.ShowSuccess("Operator Updated");
                     break;
                 case "Technician":
                     IsTechnician = isChecked;
+                    ToastService.ShowSuccess("Technician Updated");
                     break;
                 case "Administrator":
                     IsAdmin = isChecked;
+                    ToastService.ShowSuccess("Administrator Updated");
                     break;
             }
         }
@@ -167,16 +164,18 @@
         
         try
         {
-            await DisplayAlert.InvokeAsync("Message");
+            ToastService.ShowSuccess("Message");
             if (IsLockedOut)
             {
                 await UserManager.SetLockoutEndDateAsync(User, null);
                 IsLockedOut = false;
+                ToastService.ShowSuccess("User unlocked.");
             }
             else
             {
                 await UserManager.SetLockoutEndDateAsync(User, DateTimeOffset.UtcNow.AddYears(100));
                 IsLockedOut = true;
+                ToastService.ShowWarning("User locked.");
             }
         }
         catch (Exception e)
@@ -209,18 +208,18 @@
             var result = await UserManager.DeleteAsync(User);
             if (result.Succeeded)
             {
-                await DisplayAlert.InvokeAsync($"User {User.Email} has been deleted");
+                ToastService.ShowSuccess($"User {User.Email} has been deleted");
                 StateHasChanged();
             }
             else
             {
-                await DisplayAlert.InvokeAsync($"Failed to delete user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                ToastService.ShowError($"Failed to delete user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            await DisplayAlert.InvokeAsync($"Error deleting user: {e.Message}");
+            ToastService.ShowError($"Error deleting user: {e.Message}");
         }
         finally
         {
