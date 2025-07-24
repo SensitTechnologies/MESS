@@ -7,6 +7,8 @@
 @using MESS.Services.WorkInstruction
 @using Microsoft.AspNetCore.Authorization
 @using Serilog
+@using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
+@using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow
 @inject IProductService ProductService
 @inject IWorkInstructionService WorkInstructionService
 @inject IToastService ToastService
@@ -23,32 +25,67 @@ else
 {
     <table class="table table-striped">
         <thead>
-        <tr>
-            <th>Name</th>
-            <th>Active</th>
-            <th>Work Instructions</th>
-            <th>Actions</th>
-        </tr>
+            <tr>
+                <th>Name</th>
+                <th>Active</th>
+                <th>Work Instructions</th>
+                <th>Actions</th>
+            </tr>
         </thead>
         <tbody>
         @foreach (var product in Products)
         {
-            <ProductTableRow Product="product" OnSubmit="HandleSubmitProduct" AllInstructions="_allInstructions"/>
+            <ProductTableRow 
+                Product="product" 
+                Instructions="_associatedInstructionsMap.ContainsKey(product.Id) 
+                ? _associatedInstructionsMap[product.Id] 
+                : new List<WorkInstruction>()"
+                SelectedInstructionIds="GetSelectedIds(product.Id)"
+                SelectedInstructionIdsChanged="@GetSelectedIdsChangedCallback(product.Id)"
+                OnAddInstructions="@GetAddInstructionsCallback(product.Id)"
+                OnRemoveInstructions="@GetRemoveInstructionsCallback(product.Id)"
+                OnSubmit="@SubmitProductCallback" />
         }
-        <ProductTableRow Product="_newProduct" OnSubmit="HandleSubmitProduct" AllInstructions="_allInstructions" />
+
+        <ProductTableRow 
+            Product="_newProduct" 
+            Instructions="[]" 
+            SelectedInstructionIds="[]" 
+            SelectedInstructionIdsChanged="@NoOpSelectedIdsChangedCallback"
+            OnAddInstructions="@EventCallback.Empty"
+            OnRemoveInstructions="@NoOpRemoveInstructionsCallback"
+            OnSubmit="@SubmitProductCallback" />
         </tbody>
     </table>
+
+    <AddWorkInstructionDialog 
+        Visible="@_addDialogVisible"
+        VisibleChanged="@OnVisibleChanged"
+        Instructions="@_nonAssociatedInstructions"
+        OnAdd="@AddInstructionsCallback" />
 }
 
 @code {
-    private List<Product> Products { get; set; } = new List<Product>();
-    private Product _newProduct = new Product { Name = "", IsActive = true };
+    private List<Product> Products { get; set; } = new();
+    private Product _newProduct = new() { Name = "", IsActive = true };
     private List<WorkInstruction>? _allInstructions;
-    /// <inheritdoc />
+    private Dictionary<int, List<int>> SelectedInstructionMap { get; set; } = new();
+    private Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
+    private Dictionary<int, List<WorkInstruction>> _associatedInstructionsMap = new();
+
+    private bool _addDialogVisible = false;
+    private List<WorkInstruction> _nonAssociatedInstructions = [];
+    private int CurrentProductId { get; set; }
+
+    /// <summary>
+    /// Called by the Blazor framework when the component is initialized.
+    /// Loads products and associated instructions.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         await LoadProducts();
-        _allInstructions = await WorkInstructionService.GetAllAsync();
+        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
+        RebuildInstructionMap();
     }
 
     private async Task LoadProducts()
@@ -62,24 +99,19 @@ else
         {
             Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
 
-            if (product.Id == 0) 
+            if (product.Id == 0)
             {
-                await ProductService.CreateAsync(product);  // Create new product
+                await ProductService.CreateAsync(product);
                 ToastService.ShowSuccess($"Product '{product.Name}' created successfully!");
             }
             else
             {
-                await ProductService.UpdateProductAsync(product);  // Update existing product
+                await ProductService.UpdateProductAsync(product);
                 ToastService.ShowSuccess($"Product '{product.Name}' updated successfully!");
             }
 
             await LoadProducts();
-
-            _newProduct = new Product
-            {
-                Name = "",
-                IsActive = true
-            };
+            _newProduct = new() { Name = "", IsActive = true };
 
             Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
         }
@@ -89,5 +121,111 @@ else
             ToastService.ShowError($"Error submitting product '{product.Name}'. Please try again.");
         }
     }
+    
+    private void RebuildInstructionMap()
+    {
+        if (_allInstructions is null || Products is null) return;
 
+        _associatedInstructionsMap = Products.ToDictionary(
+            p => p.Id,
+            p => _allInstructions
+                .Where(wi => wi.Products.Any(prod => prod.Id == p.Id))
+                .ToList()
+        );
+    }
+
+    private List<int> GetSelectedIds(int productId)
+    {
+        if (!SelectedInstructionMap.TryGetValue(productId, out var selected))
+            selected = [];
+
+        return selected;
+    }
+
+    private Task HandleSelectedInstructionIdsChanged(int productId, List<int> selectedIds)
+    {
+        SelectedInstructionMap[productId] = selectedIds;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private EventCallback<List<int>> GetSelectedIdsChangedCallback(int productId)
+    {
+        if (!_selectedIdsChangedCallbacks.TryGetValue(productId, out var callback))
+        {
+            callback = EventCallback.Factory.Create<List<int>>(this,
+                (List<int> selectedIds) => HandleSelectedInstructionIdsChanged(productId, selectedIds));
+            _selectedIdsChangedCallbacks[productId] = callback;
+        }
+        return callback;
+    }
+
+    private EventCallback GetAddInstructionsCallback(int productId)
+    {
+        return EventCallback.Factory.Create(this, () => ShowAddDialog(productId));
+    }
+
+    private EventCallback<List<int>> GetRemoveInstructionsCallback(int productId)
+    {
+        return EventCallback.Factory.Create<List<int>>(this,
+            (List<int> ids) => RemoveInstructionsFromProduct(productId, ids));
+    }
+
+    private EventCallback<Product> SubmitProductCallback =>
+        EventCallback.Factory.Create<Product>(this, HandleSubmitProduct);
+
+    private EventCallback<List<int>> NoOpSelectedIdsChangedCallback =>
+        EventCallback.Factory.Create<List<int>>(this, _ => Task.CompletedTask);
+
+    private EventCallback<List<int>> NoOpRemoveInstructionsCallback =>
+        EventCallback.Factory.Create<List<int>>(this, _ => Task.CompletedTask);
+
+    private EventCallback<List<int>> AddInstructionsCallback =>
+        EventCallback.Factory.Create<List<int>>(this, OnAddInstructions);
+
+    private void ShowAddDialog(int productId)
+    {
+        if (_allInstructions is null)
+        {
+            ToastService.ShowError("Instructions not loaded yet.");
+            return;
+        }
+
+        _addDialogVisible = true;
+        _nonAssociatedInstructions = _allInstructions
+            .Where(wi => wi.Products.All(p => p.Id != productId))
+            .ToList();
+
+        CurrentProductId = productId;
+    }
+
+    private void OnVisibleChanged(bool visible)
+    {
+        _addDialogVisible = visible;
+    }
+
+    private Task OnAddInstructions(List<int> instructionIds)
+    {
+        return AssociateInstructionsToProduct(CurrentProductId, instructionIds);
+    }
+
+    private async Task AssociateInstructionsToProduct(int productId, List<int> instructionIds)
+    {
+        await ProductService.AddWorkInstructionsAsync(productId, instructionIds);
+        SelectedInstructionMap[productId] = [];
+        await LoadProducts();
+        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
+        RebuildInstructionMap();
+        ToastService.ShowSuccess("Work instructions added.");
+    }
+
+    private async Task RemoveInstructionsFromProduct(int productId, List<int> instructionIds)
+    {
+        await ProductService.RemoveWorkInstructionsAsync(productId, instructionIds);
+        SelectedInstructionMap[productId] = [];
+        await LoadProducts();
+        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
+        RebuildInstructionMap();
+        ToastService.ShowSuccess("Selected work instructions removed.");
+    }
 }
