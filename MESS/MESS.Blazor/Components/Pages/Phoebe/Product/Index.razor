@@ -37,7 +37,9 @@ else
         {
             <ProductTableRow 
                 Product="product" 
-                Instructions="GetAssociatedInstructions(product)"
+                Instructions="_associatedInstructionsMap.ContainsKey(product.Id) 
+                ? _associatedInstructionsMap[product.Id] 
+                : new List<WorkInstruction>()"
                 SelectedInstructionIds="GetSelectedIds(product.Id)"
                 SelectedInstructionIdsChanged="@GetSelectedIdsChangedCallback(product.Id)"
                 OnAddInstructions="@GetAddInstructionsCallback(product.Id)"
@@ -69,6 +71,7 @@ else
     private List<WorkInstruction>? _allInstructions;
     private Dictionary<int, List<int>> SelectedInstructionMap { get; set; } = new();
     private Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
+    private Dictionary<int, List<WorkInstruction>> _associatedInstructionsMap = new();
 
     private bool _addDialogVisible = false;
     private List<WorkInstruction> _nonAssociatedInstructions = [];
@@ -81,7 +84,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         await LoadProducts();
-        _allInstructions = await WorkInstructionService.GetAllAsync();
+        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
+        RebuildInstructionMap();
     }
 
     private async Task LoadProducts()
@@ -117,12 +121,23 @@ else
             ToastService.ShowError($"Error submitting product '{product.Name}'. Please try again.");
         }
     }
-
-    private List<WorkInstruction> GetAssociatedInstructions(Product product)
+    
+    private void RebuildInstructionMap()
     {
-        return _allInstructions?
-            .Where(wi => wi.Products.Any(p => p.Id == product.Id))
-            .ToList() ?? [];
+        if (_allInstructions is null || Products is null) return;
+
+        _associatedInstructionsMap = Products.ToDictionary(
+            p => p.Id,
+            p => _allInstructions
+                .Where(wi => wi.Products.Any(prod => prod.Id == p.Id))
+                .ToList()
+        );
+        
+        Console.WriteLine("Map after rebuild:");
+        foreach (var kvp in _associatedInstructionsMap)
+        {
+            Console.WriteLine($"Product {kvp.Key}: {string.Join(", ", kvp.Value.Select(i => i.Id))}");
+        }
     }
 
     private List<int> GetSelectedIds(int productId)
@@ -205,6 +220,8 @@ else
         await ProductService.AddWorkInstructionsAsync(productId, instructionIds);
         SelectedInstructionMap[productId] = [];
         await LoadProducts();
+        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
+        RebuildInstructionMap();
         ToastService.ShowSuccess("Work instructions added.");
     }
 
@@ -213,6 +230,8 @@ else
         await ProductService.RemoveWorkInstructionsAsync(productId, instructionIds);
         SelectedInstructionMap[productId] = [];
         await LoadProducts();
+        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
+        RebuildInstructionMap();
         ToastService.ShowSuccess("Selected work instructions removed.");
     }
 }
