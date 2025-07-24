@@ -701,8 +701,6 @@ body.dark-mode .confirmation-toast {
     caret-color: #fff !important;
 }
 
-
-
 /* Scrollbars */
 .dark-mode ::-webkit-scrollbar {
     width: 8px;
@@ -747,12 +745,35 @@ body.dark-mode .confirmation-toast {
     border-color: #0078d4;
 }
 
+/* ==========================================================================
+   Phoebe Product Page/Index Dark Mode Overrides
+========================================================================== */
 .dark-mode .list-group-item.text-muted.text-center {
     background-color: #2a2a2a !important;
     color: #eeeeee !important;
     border-color: #444 !important; /* if it has a border */
 }
 
+.dark-mode .dropdown-menu-custom {
+    border-color: transparent !important;
+    background-color: #2a2a2a !important; /* match dark background */
+}
+
+.dark-mode .dropdown-menu-custom .dropdown-item {
+    color: #eeeeee !important; /* light text */
+    background-color: transparent !important;
+    border: none !important;
+}
+
+.dark-mode .dropdown-menu-custom .dropdown-item:hover {
+    background-color: #3a3a3a !important; /* subtle dark hover */
+    border-color: transparent !important; /* no yellow border */
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-menu-custom .dropdown-item.text-danger {
+    color: #dc3545 !important; /* keep red for danger */
+}
 
 
 
