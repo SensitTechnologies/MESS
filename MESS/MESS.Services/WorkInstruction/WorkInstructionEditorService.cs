@@ -11,6 +11,43 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     private readonly IWorkInstructionService _workInstructionService;
     /// <inheritdoc />
     public WorkInstruction? Current { get; private set; }
+
+    /// <inheritdoc />
+    public bool CurrentHasParts()
+    {
+        if (Current == null) return false;
+
+        if (Current.Nodes.Count == 0) return false;
+        
+        foreach (var node in Current.Nodes)
+        {
+            if (node is PartNode)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+    /// <inheritdoc />
+    public bool CurrentHasSteps()
+    {
+        if (Current == null) return false;
+
+        if (Current.Nodes.Count == 0) return false;
+        
+        foreach (var node in Current.Nodes)
+        {
+            if (node is Step)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
     /// <inheritdoc />
     public bool IsDirty { get; private set; }
     /// <inheritdoc />

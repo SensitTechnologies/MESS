@@ -3,20 +3,20 @@
 
 @if (PartNode?.Parts is not null)
 {
-    <div class="d-flex align-items-start">    
+    <div class="d-flex align-items-start justify-content-between">    
         <div class="row">
         @foreach (var part in PartNode.Parts)
         {
-                <div class="@(PartNode.Parts.Count > 2 ? "col-12 col-md-6 col-lg-4 mb-3" : "col" )">
-                <div class="part-node border rounded p-3 h-100">
-                    <div class="row g-2 align-items-end">
+            <div class="align-items-baseline @(PartNode.Parts.Count < 3 ? (PartNode.Parts.Count < 2 ? "col-sm-12" : "col-md-6") : "col-sm-4")">
+                <div class="part-node border rounded ps-2 py-2 h-100">
+                    <div class="row g-2 align-items-center">
                         <div class="col-12 col-md-4">
                             <label class="form-label"><strong>Part Number</strong></label>
                             <input type="text" class="form-control" value="@part.PartNumber" @oninput="e => OnPartChanged(e, part, nameof(Part.PartNumber))" />
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label"><strong>Part Name</strong></label>
-                            <input type="text" class="form-control" value="@part.PartName" @oninput="e => OnPartChanged(e, part, nameof(Part.PartName))" />
+                            <input type="text" class="form-control flex-shrink-1" value="@part.PartName" @oninput="e => OnPartChanged(e, part, nameof(Part.PartName))" />
                         </div>
                         <div class="col-12 col-md-2 d-grid">
                             <NodeActionMenu OnAction="(action) => HandlePartAction(part, action)" />
@@ -35,6 +35,7 @@ else
 }
 
 @code {
+
     /// <summary>
     /// An event callback that is triggered when an action is performed on the entire <see cref="PartNode"/>.
     /// </summary>
@@ -45,7 +46,7 @@ else
     /// </remarks>
     [Parameter]
     public EventCallback<(WorkInstructionNode node, string action)> OnNodeAction { get; set; }
-    
+
     /// <summary>
     /// Event callback that is invoked whenever any data within the <see cref="PartNode"/> or its parts
     /// has been modified by the user.
@@ -64,7 +65,7 @@ else
     /// </summary>
     [Parameter, EditorRequired]
     public PartNode? PartNode { get; set; }
-    
+
     private async Task HandleNodeAction(string action)
     {
         if (PartNode is null) return;
@@ -73,10 +74,10 @@ else
         {
             await OnNodeAction.InvokeAsync((PartNode, action));
         }
-        
+
         await NotifyChangedAsync();
     }
-    
+
     private async Task HandlePartAction(Part part, string action)
     {
         if (PartNode?.Parts == null) return;
@@ -113,9 +114,10 @@ else
                 break;
 
         }
+
         await NotifyChangedAsync();
     }
-    
+
     private async Task OnPartChanged(ChangeEventArgs e, Part part, string propertyName)
     {
         var newValue = e.Value?.ToString() ?? "";
@@ -135,6 +137,4 @@ else
             await OnChanged.InvokeAsync();
         }
     }
-
-
 }

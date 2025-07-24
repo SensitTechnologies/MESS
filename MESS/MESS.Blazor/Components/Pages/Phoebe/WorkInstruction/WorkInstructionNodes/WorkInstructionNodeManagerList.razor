@@ -11,6 +11,7 @@
     </SortableItemTemplate>
 </SortableList>
 
+
 @code {
     /// <summary>
     /// Gets or sets the list of work instruction nodes to render and manage in the sortable list.
@@ -29,18 +30,35 @@
     /// </summary>
     [Parameter]
     public EventCallback OnChanged { get; set; }
+    
+    /// <summary>
+    /// Details if there is a current work instruction
+    /// </summary>
+    [Parameter]
+    public bool HasInstruction { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    [Parameter]
+    public bool HasParts { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    [Parameter]
+    public bool HasSteps { get; set; }
 
     private Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; } = new();
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-    @<div class="mb-3 pe-3 border rounded disable-highlight">
-        <div class="d-flex">
+    @<div class="d-flex mb-3 border rounded disable-highlight">
             <div class="d-flex align-items-center drag-handle me-2">
                 <i class="bi bi-grip-vertical h3" />
                 <div class="vr me-2" />
             </div>
-            <div class="content flex-grow-1 py-2">
+            <div class="content flex-grow-1 py-2" style="max-width: 1220px">
                 @switch (node)
                 {
                     case PartNode partNode:
@@ -62,7 +80,6 @@
                     break;
                 }
             </div>
-        </div>
     </div>;
 
     private async Task OnItemsChanged((int oldIndex, int newIndex) indices)
@@ -168,6 +185,30 @@
         if (OnChanged.HasDelegate)
         {
             await OnChanged.InvokeAsync();
+        }
+    }
+
+    private const string step = "step";
+    private const string part = "part";
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnAddNode { get; set; }
+    
+    private async Task AddNode(string action)
+    {
+        if (OnAddNode.HasDelegate)
+        {
+            await OnAddNode.InvokeAsync(action);
+            
+            RecalculatePositions();
+            
+            if (OnChanged.HasDelegate)
+            {
+                await OnChanged.InvokeAsync();
+            }            
         }
     }
     
