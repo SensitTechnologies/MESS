@@ -187,8 +187,19 @@ a, .btn-link {
 }
 
 .btn-success {
+    color: black;
+    background-color: #ffd502;
+}
+
+.btn-success:hover {
+    background-color: rgba(255, 213, 2, 0);
+    color: #2b2b2b;
+    border: 3px solid #4aff00;
+}
+
+.btn-user {
     color: #4aff00;
-    background-color: #020000;
+    background-color: #000000;
     border: 3px solid #4aff00;
 }
 

@@ -33,7 +33,7 @@
         </td>
         <td>
             <button type="button"
-                    class="btn @(IsLockedOut ? "btn-success" : "btn-warning")"
+                    class="btn @(IsLockedOut ? "btn-user" : "btn-warning")"
                     @onclick="ToggleLockoutAsync">
                 @(IsLockedOut ? "Unlock" : "Lock") User
             </button>
@@ -53,7 +53,7 @@
                 Delete
             </button>
             }
-            <button type="button" class="btn btn-success" @onclick="async () => await SaveChanges.InvokeAsync(User)">
+            <button type="button" class="btn btn-user" @onclick="async () => await SaveChanges.InvokeAsync(User)">
                 Save Changes
             </button>
 
