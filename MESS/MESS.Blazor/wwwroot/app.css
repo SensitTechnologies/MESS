@@ -747,5 +747,14 @@ body.dark-mode .confirmation-toast {
     border-color: #0078d4;
 }
 
+.dark-mode .list-group-item.text-muted.text-center {
+    background-color: #2a2a2a !important;
+    color: #eeeeee !important;
+    border-color: #444 !important; /* if it has a border */
+}
+
+
+
+
 
 
