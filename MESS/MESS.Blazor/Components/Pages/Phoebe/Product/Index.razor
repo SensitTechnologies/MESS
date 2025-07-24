@@ -132,12 +132,6 @@ else
                 .Where(wi => wi.Products.Any(prod => prod.Id == p.Id))
                 .ToList()
         );
-        
-        Console.WriteLine("Map after rebuild:");
-        foreach (var kvp in _associatedInstructionsMap)
-        {
-            Console.WriteLine($"Product {kvp.Key}: {string.Join(", ", kvp.Value.Select(i => i.Id))}");
-        }
     }
 
     private List<int> GetSelectedIds(int productId)
