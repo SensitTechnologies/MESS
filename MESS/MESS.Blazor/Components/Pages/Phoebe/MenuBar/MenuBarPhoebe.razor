@@ -44,6 +44,9 @@
                             OnClick="ToggleActive" Disabled="@(!HasInstruction)">Active</FluentMenuItem>
             <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@ShowEditAssociationsDialog" Disabled="@(!HasInstruction)">Edit Product Associations</FluentMenuItem>
+            <FluentDivider/>
+            <FluentMenuItem  OnClick="@(() => TriggerAndClose(OnNewPart))">New Part</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNewStep))">New Step</FluentMenuItem>
         </FluentMenu>
     </div>
 
