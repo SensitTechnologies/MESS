@@ -1,0 +1,119 @@
+@using MESS.Data.Models
+
+<div class="mb-3">
+    <h5>Associated Work Instructions</h5>
+
+    <div class="list-group scrollable-checkbox-container">
+        @if (Instructions == null)
+        {
+            <div class="list-group-item text-muted text-center">Loading work instructions...</div>
+        }
+        else if (!Instructions.Any())
+        {
+            <div class="list-group-item text-muted text-center">No associated work instructions.</div>
+        }
+        else
+        {
+            @foreach (var instruction in Instructions)
+            {
+                <label class="list-group-item">
+                    <input type="checkbox"
+                           class="form-check-input me-1"
+                           checked="@SelectedInstructionIds.Contains(instruction.Id)"
+                           @onchange="(e => ToggleSelection(instruction.Id, (bool)(e.Value ?? false)))" />
+                    @($"{instruction.Title} v{instruction.Version}")
+                </label>
+            }
+        }
+    </div>
+
+    <div class="dropdown-container" style="position: relative; display: inline-block;">
+        <button class="btn btn-sm btn-light" @onclick="ToggleDropdown" aria-expanded="@IsDropdownOpen" aria-haspopup="true">
+            Actions
+        </button>
+
+        @if (IsDropdownOpen)
+        {
+            <div class="dropdown-menu-custom">
+                <button class="dropdown-item" @onclick="() => InvokeAction_Add()">Add Instructions</button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-danger" @onclick="() => InvokeAction_Remove()">Remove Selected</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// The work instructions currently associated with this product.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public List<WorkInstruction> Instructions { get; set; } = new();
+
+    /// <summary>
+    /// The instruction IDs that are selected for bulk actions.
+    /// </summary>
+    [Parameter]
+    public List<int> SelectedInstructionIds { get; set; } = new();
+
+    /// <summary>
+    /// Notifies the parent when the selection changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<int>> SelectedInstructionIdsChanged { get; set; }
+    
+    /// <summary>
+    /// Called when the user clicks "Add Instructions".
+    /// </summary>
+    [Parameter]
+    public EventCallback OnAddClicked { get; set; }
+    
+    /// <summary>
+    /// Called when the user clicks "Remove Selected".
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<int>> OnRemoveSelected { get; set; }
+
+    private bool IsDropdownOpen = false;
+
+    private void ToggleDropdown()
+    {
+        IsDropdownOpen = !IsDropdownOpen;
+    }
+
+    private async Task ToggleSelection(int instructionId, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!SelectedInstructionIds.Contains(instructionId))
+                SelectedInstructionIds.Add(instructionId);
+        }
+        else
+        {
+            SelectedInstructionIds.Remove(instructionId);
+        }
+
+        await SelectedInstructionIdsChanged.InvokeAsync(SelectedInstructionIds);
+    }
+
+    private async Task InvokeAction_Add()
+    {
+        IsDropdownOpen = false;
+        if (OnAddClicked.HasDelegate)
+        {
+            await OnAddClicked.InvokeAsync();
+        }
+    }
+
+    private async Task InvokeAction_Remove()
+    {
+        if (!SelectedInstructionIds.Any())
+            return;
+
+        IsDropdownOpen = false;
+        if (OnRemoveSelected.HasDelegate)
+        {
+            await OnRemoveSelected.InvokeAsync(SelectedInstructionIds);
+        }
+    }
+}

@@ -4,13 +4,16 @@
 {
     <FluentDialog>
         <FluentDialogHeader>
-            Import Work Instruction
+            <h5 class="fw-semibold text-dark mb-1">Import Work Instruction</h5>
+            <FluentDivider></FluentDivider>
         </FluentDialogHeader>
         <FluentDialogBody>
             <WorkInstructionImport OnImportComplete="HandleImportComplete" />
         </FluentDialogBody>
         <FluentDialogFooter>
-            <FluentButton Appearance="@Appearance.Outline" @onclick="Close">Cancel</FluentButton>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Close">
+                Cancel
+            </button>
         </FluentDialogFooter>
     </FluentDialog>
 }

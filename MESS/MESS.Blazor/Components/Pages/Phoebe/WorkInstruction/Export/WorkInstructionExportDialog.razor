@@ -3,15 +3,23 @@
 @if (Visible)
 {
     <FluentDialog Open="@Visible" OnDismiss="Close">
+        
         <FluentDialogHeader>
-            Export Work Instruction
+            <h5 class="fw-semibold text-dark mb-1">Export Work Instruction</h5>
+            <FluentDivider></FluentDivider>
         </FluentDialogHeader>
         <FluentDialogBody>
-            <p><strong>@WorkInstruction?.Title</strong> - Version @WorkInstruction?.Version</p>
+            <p>@WorkInstruction?.Title - Version @WorkInstruction?.Version</p>
+        </FluentDialogBody>
+        <FluentDialogFooter>
             <WorkInstructionExportButton 
                 WorkInstruction="WorkInstruction"
-                OnDownloadComplete="Close" />
-        </FluentDialogBody>
+                OnDownloadComplete="Close"
+                OnDownloadStateChanged="HandleDownloadStateChanged" />
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Close">
+                Cancel
+            </button>
+        </FluentDialogFooter>
     </FluentDialog>
 }
 
@@ -39,6 +47,15 @@
     /// </summary>
     [Parameter]
     public EventCallback<bool> VisibleChanged { get; set; }
+    
+    private bool _isDownloadInProgress;
+    
+    private async Task HandleDownloadStateChanged(bool downloading)
+    {
+        _isDownloadInProgress = downloading;
+        await InvokeAsync(StateHasChanged);
+    }
+
 
     private async Task Close()
     {

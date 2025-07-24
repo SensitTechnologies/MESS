@@ -57,4 +57,19 @@ public interface IProductService
     /// <param name="id">The ID of the product to remove.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task DeleteByIdAsync(int id);
+
+    /// <summary>
+    /// Associates additional work instructions with the specified product,
+    /// without removing existing associations.
+    /// </summary>
+    /// <param name="productId">The ID of the product to update.</param>
+    /// <param name="workInstructionIds">A list of work instruction IDs to associate.</param>
+    Task AddWorkInstructionsAsync(int productId, List<int> workInstructionIds);
+
+    /// <summary>
+    /// Removes specific work instruction associations from a product.
+    /// </summary>
+    /// <param name="productId">The ID of the product to update.</param>
+    /// <param name="workInstructionIds">A list of work instruction IDs to remove.</param>
+    Task RemoveWorkInstructionsAsync(int productId, List<int> workInstructionIds);
 }

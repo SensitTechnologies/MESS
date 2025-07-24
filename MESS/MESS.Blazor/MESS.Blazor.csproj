@@ -100,12 +100,15 @@
 
     <ItemGroup>
       <AdditionalFiles Include="Components\Pages\Phoebe\Product\Index.razor" />
-      <AdditionalFiles Include="Components\Pages\Phoebe\Product\WorkInstructionSelector.razor" />
       <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
     </ItemGroup>
 
     <ItemGroup>
       <UpToDateCheckInput Remove="Components\Pages\Product\Create.razor" />
       <UpToDateCheckInput Remove="Components\Pages\Product\Index.razor" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Remove="Components\Pages\Phoebe\Product\ProductTableRow.razor" />
     </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 ﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
+@using System.ComponentModel
 @using Microsoft.AspNetCore.Components.Authorization
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
@@ -6,11 +7,13 @@
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
+@using MESS.Services.DarkMode
 @inject AuthenticationStateProvider AuthProvider
 @inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
 @inject IWorkInstructionEditorService EditorService
 @inject IWorkInstructionService WorkInstructionService
+@inject DarkModeInstance DarkModeInstance
 
 <div class="menu-bar-card">
     <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
@@ -19,24 +22,28 @@
         <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
         <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem OnClick="@ShowNewInstructionDialog">New</FluentMenuItem>
-            <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
+            <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
             <FluentMenuItem OnClick="@(() => TriggerExport())" Disabled="@(!HasInstruction)">Export</FluentMenuItem>
-            <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
+            <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@(() => TriggerAndClose(OnSave))" Disabled="@(!IsDirty)">Save</FluentMenuItem>
             <FluentMenuItem OnClick="@ShowSaveAsDialog" Disabled="@(!HasInstruction)">Save As</FluentMenuItem>
             <AuthorizeView Roles="Administrator">
-                <FluentDivider Style="width: 100%;" Orientation=Orientation.Horizontal></FluentDivider>
-                <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))">Delete</FluentMenuItem>
+                <FluentDivider></FluentDivider>
+                <FluentMenuItem OnClick="@(() => TriggerAndClose(OnDelete))" Disabled="@(!HasInstruction)">Delete</FluentMenuItem>
             </AuthorizeView>
         </FluentMenu>
 
         <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
         <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem Checked="@(CurrentInstruction?.ShouldGenerateQrCode ?? false)"
-                            OnClick="ToggleQrCode">Generates QR Code</FluentMenuItem>
-            <FluentMenuItem Checked="@(CurrentInstruction?.CollectsProductSerialNumber ?? false)" OnClick="ToggleSerial">Collects Product Serial Number</FluentMenuItem>
-            <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" OnClick="ToggleActive">Active</FluentMenuItem>
+                            OnClick="ToggleQrCode" Disabled="@(!HasInstruction)">Generates QR Code</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.CollectsProductSerialNumber ?? false)" 
+                            OnClick="ToggleSerial" Disabled="@(!HasInstruction)">Collects Product Serial Number</FluentMenuItem>
+            <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" 
+                            OnClick="ToggleActive" Disabled="@(!HasInstruction)">Active</FluentMenuItem>
+            <FluentDivider></FluentDivider>
+            <FluentMenuItem OnClick="@ShowEditAssociationsDialog" Disabled="@(!HasInstruction)">Edit Product Associations</FluentMenuItem>
         </FluentMenu>
     </div>
 
@@ -86,9 +93,7 @@
         </div>
 
         <button class="btn-small dark-toggle-btn" title="Dark Mode" @onclick="ToggleDarkMode">
-            @((darkModeIcon == "bi bi-moon-stars") ? 
-                (MarkupString)"<i class=\"bi bi-moon-stars\"></i>" : 
-                (MarkupString)"<i class=\"bi bi-sun\"></i>")
+            <i class="bi @(DarkModeInstance.IsDarkMode ? "bi-moon-stars" : "bi-sun")"></i>
         </button>
 
         @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
@@ -131,6 +136,7 @@
     SelectedProductsChanged="OnDialogSelectedProductsChanged"
     IsVisible="@isAnyDialogVisible"
     IsVisibleChanged="@(val => isAnyDialogVisible = val)"
+    AllowsRenaming="@associationDialogAllowsRenaming"
     HeaderText="@dialogHeaderText"
     ConfirmButtonText="@confirmButtonText"
     OnConfirmed="@OnDialogConfirmed" />
@@ -163,6 +169,12 @@
     /// The associated products and work instruction title are passed up.
     /// </summary>
     [Parameter] public EventCallback<(string Title, List<Product> Products)> OnSaveAsConfirmed { get; set; }
+    
+    /// <summary>
+    /// Callback invoked when the user confirms the "Edit Product Associations" action from the dialog.
+    /// The associated products and work instruction title are passed up.
+    /// </summary>
+    [Parameter] public EventCallback<(string Title, List<Product> Products)> OnEditAssociationsConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Delete" to completely remove a work instruction.
@@ -241,6 +253,8 @@
     private bool showImportDialog;
     private bool showExportDialog = false;
     
+    private bool associationDialogAllowsRenaming;
+    
     private bool isAnyDialogVisible;
     private string dialogHeaderText = "";
     private string confirmButtonText = "";
@@ -271,6 +285,15 @@
     {
         var state = await AuthProvider.GetAuthenticationStateAsync();
         ActiveLineOperator = state.User.Identity?.Name;
+        DarkModeInstance.PropertyChanged += OnDarkModeChanged;
+    }
+    
+    private void OnDarkModeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DarkModeInstance.IsDarkMode))
+        {
+            InvokeAsync(StateHasChanged);
+        }
     }
     
     /// <inheritdoc />
@@ -290,13 +313,6 @@
     {
         openOptions = !openOptions;
         open = false;
-    }
-
-    private void LogAndClose(string item)
-    {
-        open = false;
-        openOptions = false;
-        DemoLogger.LogInformation($"Clicked: {item}");
     }
     
     private void ToggleQrCode()
@@ -323,6 +339,7 @@
         await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
         var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
         darkModeIcon = isDark ? "bi bi-sun" : "bi bi-moon-stars";
+        DarkModeInstance.Toggle();
     }
 
     private async Task ToggleSidebar()
@@ -360,13 +377,6 @@
         {
             _isLoadingVersions = false;
         }
-    }
-
-    // ** Restore action from Version History Sidebar **
-    private void OnVersionHistoryRestore()
-    {
-        DemoLogger.LogInformation("Version history restore clicked.");
-        // Add your restore logic here
     }
     
     private async Task TriggerAndClose(EventCallback callback)
@@ -473,6 +483,7 @@
         isAnyDialogVisible = true;
         dialogHeaderText = "Create New Work Instruction";
         confirmButtonText = "Open New";
+        associationDialogAllowsRenaming = true;
         OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleNewDialogConfirmed);
     }
 
@@ -482,7 +493,18 @@
         DialogSelectedProducts = CurrentInstruction?.Products?.ToList() ?? new();
         dialogHeaderText = "Save Work Instruction As";
         confirmButtonText = "Save New";
+        associationDialogAllowsRenaming = true;
         OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleSaveAsDialogConfirmed);
+    }
+
+    private void ShowEditAssociationsDialog()
+    {
+        isAnyDialogVisible = true;
+        DialogSelectedProducts = CurrentInstruction?.Products?.ToList() ?? new();
+        dialogHeaderText = "Edit Instruction Associations";
+        confirmButtonText = "Confirm Edits";
+        associationDialogAllowsRenaming = false;
+        OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleEditAssociationsConfirmed);
     }
     
     private async Task HandleNewDialogConfirmed((string Title, List<Product> Products) data)
@@ -501,9 +523,22 @@
             await OnSaveAsConfirmed.InvokeAsync(data);
     }
     
+    private async Task HandleEditAssociationsConfirmed((string Title, List<Product> Products) data)
+    {
+        Log.Information("[MenuBarPhoebe] HandleEditAssociationsConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
+        isAnyDialogVisible = false;
+        if (OnEditAssociationsConfirmed.HasDelegate)
+            await OnEditAssociationsConfirmed.InvokeAsync(data);
+    }
+    
     private Task OnDialogSelectedProductsChanged(List<Product> products)
     {
         DialogSelectedProducts = products;
         return Task.CompletedTask;
+    }
+
+    private void Dispose()
+    {
+        DarkModeInstance.PropertyChanged -= OnDarkModeChanged;
     }
 }

@@ -1464,6 +1464,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
             
             Log.Information("Successfully deleted WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
@@ -1524,6 +1525,7 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             // Invalidate cache so that on next request users retrieve the latest data
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
 
             Log.Information("Successfully deleted all versions associated with WorkInstruction ID: {workInstructionID}", originalWorkInstruction.Id);
 
@@ -1582,6 +1584,7 @@ public partial class WorkInstructionService : IWorkInstructionService
 
             await context.SaveChangesAsync();
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
 
             Log.Information("Successfully updated WorkInstruction with ID: {Id}", workInstruction.Id);
             return true;
@@ -1589,6 +1592,7 @@ public partial class WorkInstructionService : IWorkInstructionService
         catch (Exception e)
         {
             _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
             Log.Warning("Error updating WorkInstruction {Id}: {Exception}", workInstruction.Id, e);
             return false;
         }
