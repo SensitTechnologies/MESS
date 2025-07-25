@@ -6,9 +6,9 @@ using Data.Models;
 public interface IProductionLogEventService
 {
     /// <summary>
-    /// Gets or sets the current production log.
+    /// Gets or sets the current production logs.
     /// </summary>
-    public ProductionLog? CurrentProductionLog { get; set; }
+    public List<ProductionLog> CurrentProductionLogs { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the current product.
@@ -63,7 +63,7 @@ public interface IProductionLogEventService
     /// <summary>
     /// Event triggered to handle auto-save functionality.
     /// </summary>
-    public event Func<ProductionLog, Task>? AutoSaveTriggered;
+    public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
 
     /// <summary>
     /// Disables the auto-save functionality.
@@ -106,15 +106,16 @@ public interface IProductionLogEventService
     public void SetCurrentLineOperatorName(string lineOperatorName);
 
     /// <summary>
-    /// Gets the current production log.
+    /// Gets the current list of production logs in memory.
     /// </summary>
-    /// <returns>The current production log, or null if none is set.</returns>
-    public ProductionLog? GetCurrentProductionLog();
+    /// <returns>A list of current production logs. Returns an empty list if none are set.</returns>
+    List<ProductionLog> GetCurrentProductionLogs();
 
     /// <summary>
-    /// Sets the current production log.
+    /// Sets the current list of production logs in memory.
+    /// Replaces any previously stored logs.
     /// </summary>
-    /// <param name="productionLog">The production log to set.</param>
+    /// <param name="productionLogs">The list of production logs to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task SetCurrentProductionLog(ProductionLog productionLog);
+    Task SetCurrentProductionLogs(List<ProductionLog> productionLogs);
 }

@@ -25,10 +25,11 @@ public class ProductionLogEventService : IProductionLogEventService
     public event Action? LineOperatorDetailsChanged;
     
     /// <inheritdoc />
-    public event Func<ProductionLog, Task>? AutoSaveTriggered;
+    public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
 
     /// <inheritdoc />
-    public ProductionLog? CurrentProductionLog { get; set; }
+    public List<ProductionLog> CurrentProductionLogs { get; set; } = [];
+
     /// <inheritdoc />
     public string CurrentProductName { get; set; } = "";
     /// <inheritdoc />
@@ -61,9 +62,9 @@ public class ProductionLogEventService : IProductionLogEventService
 
     private async Task TriggerAutoSaveAsync()
     {
-        if (CurrentProductionLog == null || !_shouldTriggerAutoSave)
+        if (CurrentProductionLogs == null || !CurrentProductionLogs.Any() || !_shouldTriggerAutoSave)
         {
-            Debug.WriteLine("Cannot trigger autosave. Production log or timer is null.");
+            Debug.WriteLine("Cannot trigger autosave. No production logs available or autosave is disabled.");
             return;
         }
 
@@ -75,11 +76,26 @@ public class ProductionLogEventService : IProductionLogEventService
         IsSaved = false;
         _autoSaveTimer = new Timer(_ =>
         {
-            AutoSaveTriggered?.Invoke(CurrentProductionLog);
-            IsSaved = true;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (AutoSaveTriggered != null)
+                    {
+                        await AutoSaveTriggered.Invoke(CurrentProductionLogs);
+                    }
+
+                    IsSaved = true;
+                }
+                catch (Exception e)
+                {
+                    Log.Warning("AutoSave failed: {Message}", e.Message);
+                    Debug.WriteLine($"AutoSave exception: {e}");
+                }
+            });
         }, null, DEFAULT_AUTOSAVE_DELAY, Timeout.Infinite);
     }
-
+    
     /// <inheritdoc />
     public void SetCurrentProductName(string productName)
     {
@@ -109,22 +125,23 @@ public class ProductionLogEventService : IProductionLogEventService
     }
 
     /// <inheritdoc />
-    public ProductionLog? GetCurrentProductionLog()
+    public List<ProductionLog> GetCurrentProductionLogs()
     {
-        return CurrentProductionLog;
+        return CurrentProductionLogs;
     }
 
     /// <inheritdoc />
-    public async Task SetCurrentProductionLog(ProductionLog productionLog)
+    public async Task SetCurrentProductionLogs(List<ProductionLog> productionLogs)
     {
         try
         {
-            CurrentProductionLog = productionLog;
+            CurrentProductionLogs = productionLogs;
             await ChangeMadeToProductionLog();
         }
         catch (Exception ex)
         {
-            Log.Warning("Exception thrown when attempting to SetCurrentProductionLog to ID: {ProductionLogId} Exception: {Exception}", productionLog.Id, ex.ToString());
+            var ids = string.Join(", ", productionLogs.Select(p => p.Id));
+            Log.Warning("Exception thrown when attempting to SetCurrentProductionLogs to IDs: {ProductionLogIds}. Exception: {Exception}", ids, ex.ToString());
         }
     }
 }
