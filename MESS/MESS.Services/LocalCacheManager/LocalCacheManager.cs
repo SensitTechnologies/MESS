@@ -85,7 +85,7 @@ public class LocalCacheManager : ILocalCacheManager
     }
     
     /// <inheritdoc />
-    public async Task SetProductionLogBatchAsync(List<ProductionLogFormDTO> logs)
+    public async Task SetProductionLogBatchAsync(List<ProductionLog> logs)
     {
         try
         {
@@ -95,8 +95,10 @@ public class LocalCacheManager : ILocalCacheManager
                 return;
             }
 
-            Log.Information("Setting ProductionLogBatch with {Count} logs", logs.Count);
-            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_BATCH_KEY, logs);
+            var dtoList = logs.Select(MapProductionLogToDto).ToList();
+
+            Log.Information("Setting ProductionLogBatch with {Count} logs", dtoList.Count);
+            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_BATCH_KEY, dtoList);
         }
         catch (Exception ex)
         {

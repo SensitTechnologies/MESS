@@ -23,11 +23,12 @@ public interface ILocalCacheManager
     public Task<ProductionLogFormDTO> GetProductionLogFormAsync();
     
     /// <summary>
-    /// Caches a list of production log form DTOs representing a batch of logs.
+    /// Stores a batch of production logs in local cache storage. 
+    /// If the provided list is null or empty, the cached logs will be removed.
     /// </summary>
-    /// <param name="logs">The list of <see cref="ProductionLogFormDTO"/> instances to cache. If null or empty, the cache will be cleared.</param>
+    /// <param name="logs">The list of production logs to cache.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task SetProductionLogBatchAsync(List<ProductionLogFormDTO> logs);
+    Task SetProductionLogBatchAsync(List<ProductionLog> logs);
 
     /// <summary>
     /// Retrieves the cached batch of production log form DTOs.
