@@ -1,45 +1,48 @@
 @using MESS.Data.Models
 
 <div class="mb-3">
-    <h5>Associated Work Instructions</h5>
+    <h5>Work Instructions</h5>
 
-    <div class="list-group scrollable-checkbox-container">
-        @if (Instructions == null)
-        {
-            <div class="list-group-item text-muted text-center">Loading work instructions...</div>
-        }
-        else if (!Instructions.Any())
-        {
-            <div class="list-group-item text-muted text-center">No associated work instructions.</div>
-        }
-        else
-        {
-            @foreach (var instruction in Instructions)
+    <div class="d-flex align-items-start">
+        <div class="list-group flex-grow-1 scrollable-checkbox-container me-2">
+            @if (Instructions == null)
             {
-                <label class="list-group-item">
-                    <input type="checkbox"
-                           class="form-check-input me-1"
-                           checked="@SelectedInstructionIds.Contains(instruction.Id)"
-                           @onchange="(e => ToggleSelection(instruction.Id, (bool)(e.Value ?? false)))" />
-                    @($"{instruction.Title} v{instruction.Version}")
-                </label>
+                <div class="list-group-item text-muted text-center">Loading work instructions...</div>
             }
-        }
-    </div>
+            else if (!Instructions.Any())
+            {
+                <div class="list-group-item text-muted text-center">No associated work instructions.</div>
+            }
+            else
+            {
+                @foreach (var instruction in Instructions)
+                {
+                    <label class="list-group-item">
+                        <input type="checkbox"
+                               class="form-check-input me-1"
+                               checked="@SelectedInstructionIds.Contains(instruction.Id)"
+                               @onchange="(e => ToggleSelection(instruction.Id, (bool)(e.Value ?? false)))" />
+                        @($"{instruction.Title} v{instruction.Version}")
+                    </label>
+                }
+            }
+        </div>
 
-    <div class="dropdown-container" style="position: relative; display: inline-block;">
-        <button class="btn btn-sm btn-light" @onclick="ToggleDropdown" aria-expanded="@IsDropdownOpen" aria-haspopup="true">
-            Actions
-        </button>
+        <div class="dropdown-container position-relative">
+            <button class="btn btn-sm btn-light bi bi-three-dots-vertical" @onclick="ToggleDropdown" 
+                    aria-expanded="@IsDropdownOpen" aria-haspopup="true"></button>
 
-        @if (IsDropdownOpen)
-        {
-            <div class="dropdown-menu-custom">
-                <button class="dropdown-item" @onclick="() => InvokeAction_Add()">Add Instructions</button>
-                <div class="dropdown-divider"></div>
-                <button class="dropdown-item text-danger" @onclick="() => InvokeAction_Remove()">Remove Selected</button>
-            </div>
-        }
+            @if (IsDropdownOpen)
+            {
+                <div class="dropdown-menu-custom">
+                    <button class="dropdown-item" @onclick="() => InvokeAction_Add()">Add Instructions</button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item text-danger" @onclick="() => InvokeAction_Remove()">
+                        Remove Selected
+                    </button>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
