@@ -48,6 +48,18 @@ public interface IWorkInstructionEditorService
     WorkInstruction? Current { get; }
 
     /// <summary>
+    /// Determines if the current work instruction has parts
+    /// </summary>
+    /// <returns></returns>
+    public bool CurrentHasParts();
+
+    /// <summary>
+    /// Determines if the current work instruction has steps
+    /// </summary>
+    /// <returns></returns>
+    public bool CurrentHasSteps();
+
+    /// <summary>
     /// Gets a value indicating whether the current WorkInstruction has unsaved changes.
     /// This flag is used to enable or disable Save buttons and warn users about unsaved work.
     /// </summary>

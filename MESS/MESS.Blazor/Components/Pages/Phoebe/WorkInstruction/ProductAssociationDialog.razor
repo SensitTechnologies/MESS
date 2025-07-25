@@ -4,7 +4,7 @@
 {
     <FluentDialog Open="IsVisible" OnDismiss="Close">
         <FluentDialogHeader>
-            <h5 class="fw-semibold text-dark mb-1">@HeaderText</h5>
+            <h5 class="fw-semibold mb-1">@HeaderText</h5>  <!-- removed text-dark -->
             <FluentDivider></FluentDivider>
         </FluentDialogHeader>
 
@@ -13,7 +13,7 @@
                 AllProducts="AllProducts" 
                 SelectedProducts="SelectedProducts" 
                 SelectedProductsChanged="OnSelectedProductsChanged" />
-            
+        
             @if (AllowsRenaming)
             {
                 <hr />
@@ -21,10 +21,10 @@
                 <div class="resizable-textarea-container mt-3">
                     <label for="nameInput" class="form-label">Name:</label>
                     <textarea id="nameInput"
-                          class="form-control transparent-textarea"
-                          placeholder="Enter name here..."
-                          rows="1"
-                          @bind="WorkInstructionTitle"></textarea>
+                      class="form-control transparent-textarea"
+                      placeholder="Enter name here..."
+                      rows="1"
+                      @bind="WorkInstructionTitle"></textarea>
                 </div>
             }
         </FluentDialogBody>

@@ -29,19 +29,79 @@
     OnRestoredFromVersionHistory="HandleRestoredFromVersionHistory"
     OnImportComplete="HandleImportComplete"
     IsDirty="WorkInstructionEditorService.IsDirty"
-    CurrentInstruction="WorkInstructionEditorService.Current" />
+    CurrentInstruction="WorkInstructionEditorService.Current" 
+    OnNewPart="@(() => AddNode(part))"
+    OnNewStep="@(() => AddNode(step))"/>
 
 <NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
-<div class="container justify-content-center" style="margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
-    <WorkInstructionNodeManagerList
-        WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
-        OnChanged="MarkEditorDirty" />
+<div class="d-flex w-100" style="flex-direction: row; margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+    <div class="flex-grow-1">
+        <WorkInstructionNodeManagerList
+            WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
+            OnChanged="MarkEditorDirty" 
+            HasInstruction="@HasInstruction"
+            HasParts="@InstructionHasPart"
+            HasSteps="@InstructionHasSteps"
+            OnAddNode="@AddNode"/>
+    </div>
+    @if (HasInstruction)
+    {
+        <div class="ms-2 disable-highlight">
+            <div class="d-flex p-1 align" style="flex-direction: column">
+                @if ( !InstructionHasSteps)
+                {
+                    <div class="alert alert-info" role="alert">
+                        <div>
+                            @(!(InstructionHasPart || InstructionHasSteps) ? "This Instruction is empty..." : "")
+                            @((InstructionHasPart && !InstructionHasSteps) ? "There are no steps to this Instruction...": "")
+                            <br/>
+                            Add a Step or Part!    
+                        </div>
+                    </div>
+                }
+                
+                <div class="d-flex justify-content-around border rounded py-1" style="flex-direction: row; max-width: 190px; min-width: 190px;">
+                    <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(part)">
+                        Add Part
+                    </button>
+                    <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(step)">
+                        Add Step
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--
+    <div class="ms-2 disable-highlight ">
+        <div class="d-flex p-1" style="flex-direction: column">
+            <div class="alert alert-info" role="alert">
+                @((!(InstructionHasPart || InstructionHasSteps)) ? "This Instruction is empty...\n" : 
+                    ((!InstructionHasSteps) ? "This Instruction has no steps...\n" : ""))<br/> 
+                Add a new Part or Step!
+            </div>
+
+            <div class="border rounded" style="flex-direction: row; max-width: 190px; min-width: 190px;">
+                <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(part)">
+                    Add Part
+                </button>
+                <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(step)">
+                    Add Step
+                </button>
+            </div>
+        </div>
+    </div>
+    -->
 </div>
 
 @code {
     private bool isSidebarOpen = false;
+    
+    private bool HasInstruction => WorkInstructionEditorService.Current != null;
 
+    private bool InstructionHasPart => WorkInstructionEditorService.CurrentHasParts();
+    private bool InstructionHasSteps => WorkInstructionEditorService.CurrentHasSteps();
+    
     private List<Product> Products { get; set; } = new();
     private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
 
@@ -265,6 +325,26 @@
         return Task.CompletedTask;
     }
 
+    private const string step = "step";
+    private const string part = "part";
+    private void AddNode(string action)
+    {
+        WorkInstructionNode newNode;
+
+        switch (action)
+        {
+            case "part":
+                newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }] };
+                break;
+
+            default:
+                newNode = new Step { Name = "", Body = "", DetailedBody = "" };
+                break;
+        }
+        
+        WorkInstructionEditorService?.Current?.Nodes.Insert(0, newNode);    // new node at start
+    }
+    
     private async Task OnWorkInstructionSelected(int instructionId)
     {
         SelectedWorkInstructionId = instructionId;

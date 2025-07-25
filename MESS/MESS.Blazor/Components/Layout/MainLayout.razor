@@ -1,10 +1,13 @@
 ﻿@inject IJSRuntime JS
 @inherits LayoutComponentBase
 @implements IDisposable
+@using System.ComponentModel
 @using MESS.Blazor.Components.Navigator
+@using MESS.Services.DarkMode
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthProvider
+@inject DarkModeInstance DarkModeInstance
 
 <HeadContent>
     <script src="darkmode.js"></script>
@@ -36,9 +39,8 @@
         {
             <button class="btn btn-outline-secondary"
                     @onclick="ToggleDarkMode"
-                    title="Toggle Dark Mode"
-                    style="width: 36px; height: 32px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
-                @(isDarkMode ? "\u2600\ufe0f" : "\ud83c\udf19")
+                    style="width: 32px; height: 32px; padding: 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                <i class="bi @(DarkModeInstance.IsDarkMode ? "bi-moon-stars" : "bi-sun")"></i>
             </button>
         }
     </div>
@@ -92,6 +94,23 @@
         // Also hide dark mode toggle on WorkInstructionManager page
         ShowDarkModeToggle = ShowSidebarToggle;
     }
+    
+    /// <summary>
+    /// Called when the component is initialized. Registers this component with the DarkModeInstance
+    /// to receive updates when the dark mode state changes.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        DarkModeInstance.PropertyChanged += OnDarkModeChanged;
+    }
+    
+    private void OnDarkModeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DarkModeInstance.IsDarkMode))
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
 
     /// <summary>
     /// Toggles the sidebar open/closed state.
@@ -112,6 +131,7 @@
     /// </summary>
     private async Task ToggleDarkMode()
     {
+        DarkModeInstance.Toggle();
         isDarkMode = !isDarkMode;
         await JS.InvokeVoidAsync("toggleDarkMode", isDarkMode);
     }
@@ -121,7 +141,7 @@
     /// </summary>
     public void Dispose()
     {
-        // Cleanup if needed
+        DarkModeInstance.PropertyChanged -= OnDarkModeChanged;
     }
 
     /// <summary>
