@@ -42,5 +42,11 @@ public class ProductionLogStep
     public ProductionLogStepAttempt LatestAttempt => 
         Attempts.OrderByDescending(a => a.SubmitTime).FirstOrDefault() 
         ?? new ProductionLogStepAttempt { Success = null };
+    
+    /// <summary>
+    /// Indicates whether this production log step was marked with a red tag,
+    /// meaning it was neither passed nor failed but flagged for review or exception handling.
+    /// </summary>
+    public bool IsRedTagged { get; set; } = false;
 
 }

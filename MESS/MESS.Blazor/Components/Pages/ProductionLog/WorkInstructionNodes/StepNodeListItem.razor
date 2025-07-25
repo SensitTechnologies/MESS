@@ -2,6 +2,7 @@
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @using MESS.Blazor.Components.Carousel
+@using MESS.Blazor.Components.Pages.ProductionLog
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JsRuntime
 
@@ -12,8 +13,6 @@
                 <div class="card">
                     <div class="card-body">
                         <p class="card-text d-block mb-1" style="white-space: pre-wrap;">
-                            
-                            @* Replace text with extra details i.e. body text *@
                             @switch (ShowDetails)
                             {
                                 case false:
@@ -28,14 +27,46 @@
                 </div>
                 
                 <div class="mt-auto">
-                    <FluentTextArea 
-                        @ref="_failureNoteTextArea" 
-                        data-testid="optional-notes" 
-                        class=@($"w-100 mt-3 {(ShowOptionalNotesField ? "" : "d-none")}")
-                        placeholder="Optional: Add a failure note (if needed)"
-                        @bind-Value="_currentAttemptNotes"
-                        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
+
+                    <!-- INLINE RED TAG FORM -->
+                    @if (ShowRedTag)
+                    {
+                        <RedTagDialog 
+                            ProductName="@ProductName"
+                            WorkInstructionName="@WorkInstructionName"
+                            StepDescription="@StepDescription"
+                            StepAttemptId="@StepAttemptId"
+                            FailureNoteText="@FailureNoteText"
+                            OnCancel="CancelRedTag"
+                            OnSubmit="ConfirmRedTag" />
+                    }
                     
+                        <div class="mt-3 d-flex justify-content-end gap-2">
+                            <button class="btn btn-sm btn-secondary" type="button" @onclick="CancelRedTag">Cancel</button>
+                            <button class="btn btn-sm btn-warning" type="button" @onclick="ConfirmRedTag">Submit</button>
+                        </div>
+                    }
+
+                    <!-- Optional notes field -->
+                    <div class="position-relative w-100 mt-3 @(ShowOptionalNotesField ? "" : "d-none")" style="display: flex; align-items: flex-start; gap: 8px;">
+                        <FluentTextArea 
+                            @ref="_failureNoteTextArea" 
+                            data-testid="optional-notes" 
+                            class="flex-grow-1"
+                            placeholder="Optional: Add a failure note (if needed)"
+                            @bind-Value="_currentAttemptNotes"
+                            @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
+                        
+                        <button type="button"
+                                class="btn btn-outline-warning btn-sm"
+                                style="height: fit-content; align-self: flex-start;"
+                                title="Show Red Tag Form"
+                                @onclick="ShowRedTagForm">
+                            Red Tag
+                        </button>
+                    </div>
+                    
+                    <!-- Success / Failure buttons -->
                     <div class="row mt-2">
                         <div class="col text-start">
                             <div class="position-relative d-inline-block">
@@ -90,7 +121,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="col col-md-6 secondary-content">
                 @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0) 
                 {
@@ -144,6 +175,77 @@
     /// </summary>
     [Parameter]
     public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+
+    private bool ShowRedTag = false;
+
+    private void ShowRedTagForm()
+    {
+        ShowRedTag = true;
+    }
+
+    // Inline Red Tag form fields
+    private string WorkInstructionTitle { get; set; } = "";
+    private DateTime Date { get; set; } = DateTime.Today;
+    private string Description { get; set; } = "";
+    private string Location { get; set; } = "";
+    private int Quantity { get; set; }
+    private List<CategoryOption> Categories { get; set; } = new()
+    {
+        new("Equipment or Tools"),
+        new("Files"),
+        new("Finished Goods"),
+        new("Maintenance Supplies"),
+        new("Office Equipment or Supplies"),
+        new("Raw Materials"),
+        new("Work-In-Process"),
+        new("Unknown"),
+        new("Other")
+    };
+
+    private bool IsConfirmDisabled => string.IsNullOrWhiteSpace(WorkInstructionTitle);
+
+    private void CancelRedTag()
+    {
+        ShowRedTag = false;
+        ClearRedTagForm();
+    }
+
+    private void ClearRedTagForm()
+    {
+        WorkInstructionTitle = "";
+        Description = "";
+        Location = "";
+        Date = DateTime.Today;
+        Quantity = 0;
+        Categories.ForEach(c => c.Selected = false);
+    }
+    
+    /// <summary>
+    /// Indicates that the step was red-tagged instead of passed or failed.
+    /// </summary>
+    public bool IsRedTagged { get; set; } = false;
+
+    private async Task ConfirmRedTag()
+    {
+        var selected = Categories.Where(c => c.Selected).Select(c => c.Name).ToList();
+        await HandleRedTagConfirmed((WorkInstructionTitle, Description, Location, Date, Quantity, selected));
+
+        // Mark red tag state
+        LogStep.IsRedTagged = true;
+
+        ShowRedTag = false;
+        ClearRedTagForm();
+
+        // Let parent know that this step is "handled" even though it's not pass/fail
+        await OnStepCompleted.InvokeAsync((LogStep, null));
+    }
+
+
+    private Task HandleRedTagConfirmed((string Title, string Description, string Location, DateTime Date, int Qty, List<string> SelectedCategories) data)
+    {
+        // Your existing logic on red tag confirmation, e.g. save or process data
+        return Task.CompletedTask;
+    }
 
     private FluentTextArea? _failureNoteTextArea;
     
@@ -327,5 +429,12 @@
             _showFailureFloat = false;
         }
         StateHasChanged();
+    }
+
+    private class CategoryOption
+    {
+        public string Name { get; set; }
+        public bool Selected { get; set; }
+        public CategoryOption(string name) => Name = name;
     }
 }
