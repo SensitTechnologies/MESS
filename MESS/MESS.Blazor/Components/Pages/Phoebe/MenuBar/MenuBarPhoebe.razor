@@ -45,8 +45,8 @@
             <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@ShowEditAssociationsDialog" Disabled="@(!HasInstruction)">Edit Product Associations</FluentMenuItem>
             <FluentDivider/>
-            <FluentMenuItem  OnClick="@(() => TriggerAndClose(OnNewPart))">New Part</FluentMenuItem>
-            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNewStep))">New Step</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNewPart))" Disabled="@(!HasInstruction)">New Part</FluentMenuItem>
+            <FluentMenuItem OnClick="@(() => TriggerAndClose(OnNewStep))" Disabled="@(!HasInstruction)">New Step</FluentMenuItem>
         </FluentMenu>
     </div>
 
@@ -82,7 +82,7 @@
     </div>
     
     <div class="menu-right-content">
-        <button class="btn-small" title="Version History" @onclick="ToggleVersionHistorySidebar">
+        <button class="btn-small" title="Version History" disabled="@(!HasInstruction)" @onclick="ToggleVersionHistorySidebar">
             <i class="bi bi-clock-history"></i>
         </button>
         <div class="save-button-container">
