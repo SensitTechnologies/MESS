@@ -1,0 +1,17 @@
+.red-dot {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;    
+    height: 6px;
+    width: 6px;
+    background-color: red;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.save-button-container {
+    position: relative;
+    display: inline-block;
+}
