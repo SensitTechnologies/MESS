@@ -14,6 +14,7 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ACTIVE_PRODUCT_KEY = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string PRODUCTION_LOG_FORM_KEY = "PRODUCTION_LOG_FORM_PROGRESS";
     private const string ACTIVE_WORK_STATION_KEY = "LAST_KNOWN_WORK_STATION";
+    private const string PRODUCTION_LOG_BATCH_KEY = "PRODUCTION_LOG_BATCH";
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
     /// <summary>
@@ -58,6 +59,62 @@ public class LocalCacheManager : ILocalCacheManager
         catch (Exception e)
         {
             Log.Warning("Exception caught when attempting to SetNewProductionLogFormAsync: {Exception}", e.ToString());
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<List<ProductionLogFormDTO>> GetProductionLogBatchAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<List<ProductionLogFormDTO>>(PRODUCTION_LOG_BATCH_KEY);
+
+            if (result.Success && result.Value != null)
+            {
+                Log.Information("Retrieved {Count} logs from ProductionLogBatch cache", result.Value.Count);
+                return result.Value;
+            }
+
+            return new List<ProductionLogFormDTO>();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error while retrieving ProductionLogBatchAsync: {Exception}", ex);
+            return new List<ProductionLogFormDTO>();
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task SetProductionLogBatchAsync(List<ProductionLogFormDTO> logs)
+    {
+        try
+        {
+            if (logs == null || logs.Count == 0)
+            {
+                await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_BATCH_KEY);
+                return;
+            }
+
+            Log.Information("Setting ProductionLogBatch with {Count} logs", logs.Count);
+            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_BATCH_KEY, logs);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Error while setting ProductionLogBatchAsync: {Exception}", ex);
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task ClearProductionLogBatchAsync()
+    {
+        try
+        {
+            await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_BATCH_KEY);
+            Log.Information("Cleared ProductionLogBatch from local cache");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error while clearing ProductionLogBatchAsync: {Exception}", ex);
         }
     }
     
