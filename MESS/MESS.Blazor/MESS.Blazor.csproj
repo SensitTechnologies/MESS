@@ -43,6 +43,7 @@
         </PackageReference>
         <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.11.8" />
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
+        <PackageReference Include="MudBlazor" Version="8.10.0" />
         <PackageReference Include="QRCoder" Version="1.6.0" />
 
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />

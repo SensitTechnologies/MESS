@@ -14,10 +14,16 @@
 
         <!-- Styled Navigation Buttons -->
         <div class="d-grid gap-2">
+            <!-- Available to every user -->
             <NavLink class="btn btn-sm btn-outline-secondary text-start"
                      href="/production-log" @onclick="OnToggleClicked">
-                Production
+                My Production
             </NavLink>
+            <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                     href="/production-logs" @onclick="OnToggleClicked">
+                My Production Logs
+            </NavLink>
+            <!-- Available to Technicians & Admins -->
             <NavLink class="btn btn-sm btn-outline-secondary text-start"
                      href="/WorkInstructionManager" @onclick="OnToggleClicked">
                 Instructions
@@ -29,6 +35,12 @@
             <NavLink class="btn btn-sm btn-outline-secondary text-start"
                      href="/products" @onclick="OnToggleClicked">
                 Products
+            </NavLink>
+            
+            <!-- Available to Admins -->
+            <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                     href="/LogArchive" @onclick="OnToggleClicked">
+                Log Archive
             </NavLink>
         </div>
     </div>
