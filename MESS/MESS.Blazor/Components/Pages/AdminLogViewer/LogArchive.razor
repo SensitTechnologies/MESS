@@ -1,0 +1,172 @@
+﻿@page "/LogArchive"
+@using MESS.Data.Models
+@using MESS.Blazor.Components.Layout
+@using MESS.Services.ProductionLog
+@using Microsoft.AspNetCore.Components.Authorization
+@using SortDirection = MudBlazor.SortDirection
+@layout PhoebeLayout
+@inject NavigationManager NavManager
+@inject IProductionLogService ProductionLogService
+
+<ErrorBoundary>
+    <ChildContent>
+        <AuthorizeView Roles="Administrator">
+            <Authorizing>
+                <p>Authorizing...</p>
+            </Authorizing>
+            <NotAuthorized>
+                <div class="col">
+                    <div class="alert alert-danger">
+                        You are not authorized to view this Page.
+                        <button class="btn btn-sm btn-outline-secondary text-start" @onclick="@(() => NavManager.NavigateTo("/"))">
+                            <i class="bi bi-arrow-left"/>To Login
+                        </button>
+                    </div>                    
+                </div>
+            </NotAuthorized>
+            <Authorized>
+                @if (!IsLoading)
+                {
+                    <div class="d-flex justify-content-between my-2" style="flex-direction: row">
+                        <h3>Log Archive</h3>
+                        <div class="flex-grow-1"/>
+                        <input type="text" class="form-control w-auto" placeholder="Search..."
+                               @bind="searchString" @bind:event="oninput"/>
+                        
+                    </div>
+                    <div class="border rounded">
+                        <MudTable Items="ProductionLogs" SortLabel="Sort By" Striped="true" Filter="new Func<ProductionLog,bool>(FilterWrap)">
+                            <HeaderContent>
+                                <MudTh><MudTableSortLabel SortBy="new Func<ProductionLog, object>(x => x.Product?.Name ?? string.Empty)">Product</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel SortBy="new Func<ProductionLog, object>(x => x.WorkInstruction?.Title ?? string.Empty)">Work Instruction</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel SortBy="new Func<ProductionLog, object>(x => x.ProductSerialNumber ?? string.Empty)">Product Serial Number</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel SortBy="new Func<ProductionLog, object>(x => x.CreatedBy)">Created By</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLog, object>(x => x.CreatedOn)">Created On</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel SortBy="new Func<ProductionLog, object>(x => x.LastModifiedOn)">Last Modified On</MudTableSortLabel></MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="productionLog">
+                                <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
+                                <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstruction?.Title ?? NoWorkInstruction)</MudTd>
+                                <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
+                                <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
+                                <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                                <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                                <MudTd DataLabel="Actions">
+                                    <button class="btn btn-sm btn-primary">
+                                        Options
+                                    </button>
+                                </MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager/>
+                            </PagerContent>
+                        </MudTable>
+                    </div>
+                           
+                }
+                else
+                {
+                    <div class="container">
+                        Loading...
+                    </div>
+                }
+            
+            </Authorized>
+        </AuthorizeView>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div class="alert alert-danger" role="alert">
+            An error occurred: @ex.Message
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+
+@code {
+    private List<ProductionLog> ProductionLogs { get; set; } = new();
+    
+    private bool IsLoading { get; set; } = true;
+
+    private const string NoProduct = "(No Product)";
+    private const string NoWorkInstruction = "(No Work Instruction)";
+
+    private string searchString { get; set; } = "";
+    
+    
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+        
+        ProductionLogs = await ProductionLogService.GetAllAsync() ?? [];
+
+        IsLoading = false;
+    }
+
+    private bool FilterWrap(ProductionLog log)
+    {
+        return (GetMaxSatisfied() == ConditionsSatisfied(log, searchString));
+    }
+    
+    private int GetMaxSatisfied()
+    {
+        int max = 0;
+        foreach (var log in  ProductionLogs)
+        {
+            int satisfiedConditions = ConditionsSatisfied(log, searchString);
+            if (satisfiedConditions > max)
+            {
+                max = satisfiedConditions;
+            }
+        }
+        return max;
+    }
+    
+    private int ConditionsSatisfied(ProductionLog log, string search)
+    {
+        int numSatisfied = 0;
+        
+        if (string.IsNullOrWhiteSpace(search))
+            return numSatisfied;
+        
+        if (SatisfiesFilter(log.Product?.Name, searchString))
+            numSatisfied++;
+
+        if (SatisfiesFilter(log.WorkInstruction?.Title, searchString))
+            numSatisfied++;
+        
+        if (SatisfiesFilter(log.ProductSerialNumber, searchString))
+            numSatisfied++;
+        
+        if (SatisfiesFilter(log.CreatedBy, searchString))
+            numSatisfied++;
+
+        if (SatisfiesFilter(log.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"), searchString))
+            numSatisfied++;
+        
+        if (SatisfiesFilter(log.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"), searchString))
+            numSatisfied++;
+        
+        return numSatisfied;
+    }
+
+    private bool SatisfiesFilter(string? columnPhrase, string searchPhrase)
+    {
+        if (!string.IsNullOrEmpty(columnPhrase))
+        {
+            foreach (var columnPhraseWord in columnPhrase.Split(" "))
+            {
+                foreach (var searchPhraseWord in searchPhrase.Split(" "))
+                {
+                    if (searchPhrase.Contains(columnPhraseWord, StringComparison.OrdinalIgnoreCase)
+                        || columnPhrase.Contains(searchPhraseWord, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+    
+}
