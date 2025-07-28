@@ -1,12 +1,31 @@
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
+@using MESS.Blazor.Components.ConfirmationDialog
 
 <tr>
     <td>
-        <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" />
+        <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" @oninput="OnInputChanged"/>
     </td>
     <td>
-        <InputCheckbox id="isActive" @bind-Value="Product.IsActive" class="form-check-input" />
+        <InputCheckbox id="isActive"
+                       Value="Product.IsActive"
+                       ValueChanged="HandleCheckboxChanged"
+                       ValueExpression="() => Product.IsActive"
+                       class="form-check-input" />
+    </td>
+    <td>
+        @if (!IsNewProduct)
+        {
+            <div class="save-button-container">
+                <button class="btn btn-sm btn-success" @onclick="HandleSubmit" disabled="@isSaving" title="Save">
+                    <i class="bi bi-floppy"></i>
+                    @if (IsDirty)
+                    {
+                        <span class="red-dot"></span>
+                    }
+                </button>
+            </div>
+        }
     </td>
     <td>
         <WorkInstructionSelector 
@@ -17,10 +36,26 @@
             OnRemoveSelected="OnRemoveInstructions" />
     </td>
     <td>
-        <button class="btn btn-sm @(IsNewProduct ? "btn-primary" : "btn-success")"
-                @onclick="HandleSubmit" disabled="@isSaving">
-            @(IsNewProduct ? "Create" : "Save")
-        </button>
+        @if (!IsNewProduct)
+        {
+            <button class="btn btn-sm btn-danger ms-2" @onclick="ShowDeleteConfirmation">
+                <i class="bi bi-trash" />
+            </button>
+
+            <ConfirmationDialog
+                Title="Delete Product"
+                Message="@($"Are you sure you want to delete '{Product.Name}'?")"
+                ConfirmButtonText="Delete"
+                Visible="@showDeleteDialog"
+                VisibleChanged="@DeleteDialogVisibilityChanged"
+                OnConfirmed="RaiseDeleteEvent" />
+        }
+        else
+        {
+            <button class="btn btn-sm btn-primary" @onclick="HandleSubmit" disabled="@isSaving">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+        }
     </td>
 </tr>
 
@@ -60,20 +95,63 @@
     /// </summary>
     [Parameter]
     public EventCallback<List<int>> OnRemoveInstructions { get; set; }
+    
+    /// <summary>
+    /// Callback to notify the parent that this product should be deleted.
+    /// </summary>
+    [Parameter]
+    public EventCallback<Product> OnDeleteRequested { get; set; }
+
 
     /// <summary>
     /// An event callback triggered upon pushing the create/save button.
     /// </summary>
     [Parameter]
     public EventCallback<Product> OnSubmit { get; set; }
+    
+    private EventCallback<bool> DeleteDialogVisibilityChanged =>
+        EventCallback.Factory.Create<bool>(this, SetDeleteDialogVisibility);
 
     private bool IsNewProduct => Product.Id == 0;
     private bool isSaving = false;
+    private bool IsDirty { get; set; } = false;
+    
+    private bool showDeleteDialog;
+    
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        IsDirty = true;
+    }
 
     private async Task HandleSubmit()
     {
+        if (!IsDirty)
+            return;
+
         isSaving = true;
         await OnSubmit.InvokeAsync(Product);
         isSaving = false;
+        IsDirty = false;
+    }
+    
+    private void ShowDeleteConfirmation()
+    {
+        showDeleteDialog = true;
+    }
+
+    private async Task RaiseDeleteEvent()
+    {
+        await OnDeleteRequested.InvokeAsync(Product);
+    }
+    
+    private void SetDeleteDialogVisibility(bool visible)
+    {
+        showDeleteDialog = visible;
+    }
+    
+    private void HandleCheckboxChanged(bool newValue)
+    {
+        Product.IsActive = newValue;
+        IsDirty = true;
     }
 }

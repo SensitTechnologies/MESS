@@ -2,6 +2,8 @@
     max-height: 300px;
     overflow-y: auto;
     border: 1px solid rgba(0,0,0,.125);
+    width: max-content; 
+    flex: 0 0 auto;
 }
 
 /* Adding hover effect */
