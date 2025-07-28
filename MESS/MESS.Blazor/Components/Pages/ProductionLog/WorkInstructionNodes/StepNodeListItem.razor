@@ -133,11 +133,17 @@
     /// </summary>
     [Parameter]
     public required Step Step { get; set;}
+    
     /// <summary>
-    /// Represents the production log step associated with the current step.
+    /// Represents the production log steps associated with the current step.
     /// </summary>
+    /// <remarks>
+    /// With one piece flow, this list will have just one log step. In batch mode, there will be many log steps, associated
+    /// with one WI step.
+    /// </remarks>
     [Parameter]
-    public required ProductionLogStep LogStep { get; set;}
+    public required List<ProductionLogStep> LogSteps { get; set; }
+    
     /// <summary>
     /// Event callback triggered when the step is completed.
     /// The tuple contains the production log step and a nullable boolean indicating success or failure.
@@ -177,17 +183,15 @@
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        if (LogStep.LatestAttempt.Success == null)
+        var states = LogSteps.Select(ls => ls.LatestAttempt?.Success).Distinct().ToList();
+
+        if (states.Count == 1)
         {
-            SetSelectedButton("");
-        }
-        else if (IsStepSuccessful(LogStep))
-        {
-            SetSelectedButton("Success");
+            SelectedButton = states.Single() == true ? "Success" : "Failure";
         }
         else
         {
-            SetSelectedButton("Failure");
+            SelectedButton = "";
         }
 
         SetOptionalNotes();
@@ -196,13 +200,16 @@
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        var latestSuccess = GetStepSuccessState(LogStep);
-        if (latestSuccess == true)
-            SelectedButton = "Success";
-        else if (latestSuccess == false)
-            SelectedButton = "Failure";
+        var states = LogSteps.Select(ls => ls.LatestAttempt?.Success).Distinct().ToList();
+
+        if (states.Count == 1)
+        {
+            SelectedButton = states.Single() == true ? "Success" : "Failure";
+        }
         else
-            SelectedButton = ""; // or null
+        {
+            SelectedButton = "";
+        }
     }
 
 
@@ -225,11 +232,13 @@
     
     private void SetOptionalNotes()
     {
-        var attempt = LogStep.LatestAttempt;
-        if (!string.IsNullOrWhiteSpace(attempt.Notes) || 
-            (attempt.Success.HasValue && !attempt.Success.Value))
+        var attempt = LogSteps
+            .Select(ls => ls.LatestAttempt)
+            .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a?.Notes) || (a?.Success.HasValue == true && !a.Success.Value));
+
+        if (attempt != null)
         {
-            _currentAttemptNotes = LogStep.LatestAttempt.Notes;
+            _currentAttemptNotes = attempt.Notes;
             ShowOptionalNotesField = true;
         }
     }
@@ -247,48 +256,45 @@
 
         if (result.Value) // SUCCESS
         {
-            var attempt = new ProductionLogStepAttempt
+            foreach (var step in LogSteps)
             {
-                Success = true,
-                SubmitTime = DateTimeOffset.UtcNow,
-                Notes = ""
-            };
+                step.Attempts.Add(new ProductionLogStepAttempt
+                {
+                    Success = true,
+                    SubmitTime = DateTimeOffset.UtcNow,
+                    Notes = ""
+                });
 
-            LogStep.Attempts.Add(attempt);
+                await OnStepCompleted.InvokeAsync((step, true));
+            }
+
             _pendingFailureAttempt = null;
             _currentAttemptNotes = string.Empty;
             ShowOptionalNotesField = false;
-
-            await OnStepCompleted.InvokeAsync((LogStep, true));
             SetSelectedButton("Success");
-            
+
             await ShowFloatMessage(true);
         }
         else // FAILURE
         {
-            // If there's already a pending failure, finalize it by setting its notes
-            if (_pendingFailureAttempt != null)
+            foreach (var step in LogSteps)
             {
-                _pendingFailureAttempt.Notes = _currentAttemptNotes;
-                _pendingFailureAttempt = null;
+                var attempt = new ProductionLogStepAttempt
+                {
+                    Success = false,
+                    SubmitTime = DateTimeOffset.UtcNow,
+                    Notes = _currentAttemptNotes
+                };
+
+                step.Attempts.Add(attempt);
+                await OnStepCompleted.InvokeAsync((step, false));
             }
-
-            // Clear input for the next note
-            _currentAttemptNotes = string.Empty;
-
-            // Create new pending attempt
-            _pendingFailureAttempt = new ProductionLogStepAttempt
-            {
-                Success = false,
-                SubmitTime = DateTimeOffset.UtcNow,
-                Notes = ""
-            };
-            LogStep.Attempts.Add(_pendingFailureAttempt);
 
             ShowOptionalNotesField = true;
             SetSelectedButton("Failure");
 
-            await OnStepCompleted.InvokeAsync((LogStep, false));
+            _currentAttemptNotes = string.Empty;
+
             StateHasChanged();
             await Task.Yield();
 
@@ -296,7 +302,7 @@
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
             }
-            
+
             await ShowFloatMessage(false);
         }
     }
