@@ -62,9 +62,9 @@ public class ProductionLogEventService : IProductionLogEventService
 
     private async Task TriggerAutoSaveAsync()
     {
-        if (CurrentProductionLogs == null || !CurrentProductionLogs.Any() || !_shouldTriggerAutoSave)
+        if (CurrentProductionLogs == null || !_shouldTriggerAutoSave)
         {
-            Debug.WriteLine("Cannot trigger autosave. No production logs available or autosave is disabled.");
+            Debug.WriteLine("Cannot trigger autosave. Production log or timer is null.");
             return;
         }
 
@@ -76,23 +76,8 @@ public class ProductionLogEventService : IProductionLogEventService
         IsSaved = false;
         _autoSaveTimer = new Timer(_ =>
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    if (AutoSaveTriggered != null)
-                    {
-                        await AutoSaveTriggered.Invoke(CurrentProductionLogs);
-                    }
-
-                    IsSaved = true;
-                }
-                catch (Exception e)
-                {
-                    Log.Warning("AutoSave failed: {Message}", e.Message);
-                    Debug.WriteLine($"AutoSave exception: {e}");
-                }
-            });
+            AutoSaveTriggered?.Invoke(CurrentProductionLogs);
+            IsSaved = true;
         }, null, DEFAULT_AUTOSAVE_DELAY, Timeout.Infinite);
     }
     
