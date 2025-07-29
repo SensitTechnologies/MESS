@@ -2,11 +2,11 @@
 @using MESS.Services.ProductionLog
 @using MESS.Services.WorkInstruction
 @using Microsoft.AspNetCore.Components.Authorization
-@inject IJSRuntime JsRuntime
+@inject IJSRuntime JSRuntime
 @inject IProductionLogEventService ProductionLogEventService
 @implements IDisposable
 
-<div class="red-tag-horizontal-wrapper" style="width: 456px; height: 228px;">
+<div id="red-tag-printable" class="red-tag-horizontal-wrapper print-only" style="width: 456px; height: 228px;">
     <div class="red-tag-horizontal">
         <div class="red-tag-hole"></div>
         <div class="red-tag-content">
@@ -14,13 +14,21 @@
 
             <div class="tag-info-grid">
                 <div><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
-                <div><span class="label">Step Attempt ID:</span> <span>@StepAttemptId</span></div>
 
-                <div><span class="label">Product:</span> <span>@ProductName</span></div>
-                <div><span class="label">Part Name:</span> <span></span></div>
+                @if (_internalAttempts != null && _internalAttempts.Count > 0)
+                {
+                    <div><span class="label">ID:</span> <span>@AttemptNumber</span></div>
+                }
+                else
+                {
+                    <div><span class="label">ID:</span> <span>None</span></div>
+                }
 
-                <div><span class="label">Part #:</span> <span></span></div>
-                <div><span class="label">Work Instruction:</span> <span>@WorkInstructionName</span></div>
+                <div><span class="label">Product:</span> <span>@_productName</span></div>
+                <div><span class="label">Part Name:</span> <span>@_partName</span></div>
+
+                <div><span class="label">Part #:</span> <span>@_partNumber</span></div>
+                <div><span class="label">Work Instruction:</span> <span>@_workInstructionName</span></div>
 
                 <div><span class="label">Operator:</span> <span>@OperatorName</span></div>
             </div>
@@ -37,11 +45,6 @@
     </div>
 </div>
 
-
-
-
-
-
 <div class="mt-3 d-flex justify-content-end gap-2">
     <button class="btn btn-sm btn-secondary" type="button" @onclick="OnCancelClicked">Cancel</button>
     <button class="btn btn-sm btn-secondary" type="button" @onclick="OnSubmitClicked">Print</button>
@@ -49,33 +52,66 @@
 
 @code {
     /// <summary>
-    /// Gets or sets the name of the product associated with this rejection tag.
+    /// A backing list to store step attempts for display and tracking.
     /// </summary>
-    [Parameter] public string ProductName { get; set; } = "";
+    private List<ProductionLogStepAttempt> _internalAttempts = new();
 
     /// <summary>
-    /// Gets or sets the name of the work instruction associated with this rejection tag.
+    /// The current product name being displayed.
     /// </summary>
-    [Parameter] public string WorkInstructionName { get; set; } = "";
+    private string _productName = string.Empty;
 
     /// <summary>
-    /// Gets or sets the description of the step where the failure occurred.
+    /// Indicates whether the product name has been explicitly set by a parent component.
+    /// </summary>
+    private bool _productNameExplicitlySet = false;
+
+    /// <summary>
+    /// The current work instruction name being displayed.
+    /// </summary>
+    private string _workInstructionName = string.Empty;
+
+    /// <summary>
+    /// Indicates whether the work instruction name has been explicitly set by a parent component.
+    /// </summary>
+    private bool _workInstructionNameExplicitlySet = false;
+
+    /// <summary>
+    /// The current part name being displayed.
+    /// </summary>
+    private string _partName = string.Empty;
+
+    /// <summary>
+    /// The current part number being displayed.
+    /// </summary>
+    private string _partNumber = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the product.
+    /// If set externally, this value will not be overridden by service updates.
+    /// </summary>
+    [Parameter]
+    public string? ProductName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the work instruction.
+    /// If set externally, this value will not be overridden by service updates.
+    /// </summary>
+    [Parameter]
+    public string WorkInstructionName { get; set; } = "Unavailable";
+
+    /// <summary>
+    /// Gets or sets the description of the step associated with the failure.
     /// </summary>
     [Parameter] public string StepDescription { get; set; } = "";
 
     /// <summary>
-    /// The unique identifier for the current step attempt in the production log.
+    /// Gets or sets the collection of step attempts for the current operation.
     /// </summary>
-    [Parameter] public string StepAttemptId { get; set; } = string.Empty;
-    
-    /// <summary>
-    /// Represents the automatically generated timestamp for when the component is initialized.
-    /// This value is system-assigned and not intended for user input.
-    /// </summary>
-    [Parameter] public DateTime Timestamp { get; set; } = DateTime.Now;
+    [Parameter] public List<ProductionLogStepAttempt> Attempts { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the failure note text explaining the rejection.
+    /// Gets or sets the failure note content explaining why the step was rejected.
     /// </summary>
     [Parameter] public string FailureNoteText { get; set; } = "";
 
@@ -85,32 +121,106 @@
     [Parameter] public int SelectedProductId { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the selected product ID changes.
+    /// Callback invoked when the selected product ID is changed.
     /// </summary>
     [Parameter] public EventCallback<int> SelectedProductIdChanged { get; set; }
-    
+
     /// <summary>
-    /// The name of the operator who is currently logged in and submitting the tag.
+    /// Gets or sets the name of the currently logged-in operator.
     /// </summary>
     [Parameter] public string OperatorName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the callback triggered when the Cancel button is clicked.
+    /// Callback invoked when the Cancel button is clicked.
     /// </summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
     /// <summary>
-    /// Gets or sets the callback triggered when the Print button is clicked.
+    /// Callback invoked when the Print button is clicked.
     /// </summary>
     [Parameter] public EventCallback OnSubmit { get; set; }
 
     /// <summary>
-    /// Gets or sets the work instruction containing nodes such as <see cref="PartNode"/>.
+    /// Gets or sets the associated work instruction object.
     /// </summary>
     [Parameter] public WorkInstruction? WorkInstruction { get; set; }
 
     /// <summary>
-    /// Called when the component is initialized. Subscribes to event callbacks from <see cref="IProductionLogEventService"/>.
+    /// Gets or sets the part name for display.
+    /// </summary>
+    [Parameter] public string PartName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the part number for display.
+    /// </summary>
+    [Parameter] public string PartNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Called when component parameters are set. Handles synchronization of attempts, product name,
+    /// work instruction name, and part info from parameters, backing services, or related models.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        // Sync attempts to internal list
+        if (Attempts != null)
+        {
+            _internalAttempts = new List<ProductionLogStepAttempt>(Attempts);
+        }
+
+        // Product name sync
+        if (!_productNameExplicitlySet && !string.IsNullOrWhiteSpace(ProductName))
+        {
+            _productName = ProductName!;
+            _productNameExplicitlySet = true;
+        }
+
+        // Work instruction name sync
+        if (!_workInstructionNameExplicitlySet && !string.IsNullOrWhiteSpace(WorkInstructionName) && WorkInstructionName != "Unavailable")
+        {
+            _workInstructionName = WorkInstructionName;
+            _workInstructionNameExplicitlySet = true;
+        }
+
+        // Fallback to service product name if not explicitly set
+        if (!_productNameExplicitlySet)
+        {
+            var svcProdName = ProductionLogEventService.CurrentProductName;
+            if (!string.IsNullOrWhiteSpace(svcProdName) && _productName != svcProdName)
+            {
+                _productName = svcProdName;
+            }
+        }
+
+        // Fallback to WorkInstruction object title or service name
+        if (!_workInstructionNameExplicitlySet)
+        {
+            if (WorkInstruction != null && !string.IsNullOrWhiteSpace(WorkInstruction.Title))
+            {
+                _workInstructionName = WorkInstruction.Title;
+                _workInstructionNameExplicitlySet = true;
+                ProductionLogEventService.SetCurrentWorkInstructionName(_workInstructionName);
+            }
+            else
+            {
+                var svcWIName = ProductionLogEventService.CurrentWorkInstructionName;
+                if (!string.IsNullOrWhiteSpace(svcWIName) && _workInstructionName != svcWIName)
+                {
+                    _workInstructionName = svcWIName;
+                }
+                else if (string.IsNullOrWhiteSpace(_workInstructionName))
+                {
+                    Console.WriteLine("Warning: WorkInstructionName is empty from both parameter and service.");
+                }
+            }
+        }
+
+        // Part name and number sync
+        _partName = PartName;
+        _partNumber = PartNumber;
+    }
+
+    /// <summary>
+    /// Initializes component state and subscribes to service events.
     /// </summary>
     protected override void OnInitialized()
     {
@@ -118,57 +228,122 @@
         ProductionLogEventService.WorkInstructionDetailsChanged += OnWorkInstructionDetailsChanged;
         ProductionLogEventService.ProductionLogEventChanged += OnProductionLogChanged;
 
-        ProductName = ProductionLogEventService.CurrentProductName;
-        WorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
-        StepAttemptId = ProductionLogEventService.CurrentProductionLog?.StepAttemptId ?? "";
-        
-        StateHasChanged();
+        if (!_productNameExplicitlySet)
+        {
+            _productName = ProductionLogEventService.CurrentProductName ?? string.Empty;
+        }
+
+        if (!_workInstructionNameExplicitlySet)
+        {
+            var svcWIName = ProductionLogEventService.CurrentWorkInstructionName ?? string.Empty;
+            _workInstructionName = svcWIName;
+
+            if (string.IsNullOrWhiteSpace(svcWIName))
+            {
+                Console.WriteLine("⚠ Warning: WorkInstructionName is empty during initialization.");
+            }
+        }
     }
-    
+
     /// <summary>
-    /// Handles updates to the product name when the corresponding service event is triggered.
+    /// Gets the number of step attempts associated with the current log entry.
+    /// </summary>
+    private int AttemptNumber => _internalAttempts?.Count ?? 0;
+
+    /// <summary>
+    /// Handles updates to the product name from the production log service.
     /// </summary>
     private void OnProductDetailsChanged()
     {
-        ProductName = ProductionLogEventService.CurrentProductName;
-        InvokeAsync(StateHasChanged);
+        if (!_productNameExplicitlySet)
+        {
+            var svcName = ProductionLogEventService.CurrentProductName;
+            if (!string.IsNullOrWhiteSpace(svcName) && _productName != svcName)
+            {
+                _productName = svcName;
+                InvokeAsync(StateHasChanged);
+            }
+        }
     }
 
     /// <summary>
-    /// Handles updates to the work instruction name when the corresponding service event is triggered.
+    /// Handles updates to the work instruction name from the production log service.
     /// </summary>
     private void OnWorkInstructionDetailsChanged()
     {
-        WorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
-        InvokeAsync(StateHasChanged);
+        if (!_workInstructionNameExplicitlySet)
+        {
+            var svcName = ProductionLogEventService.CurrentWorkInstructionName;
+            if (!string.IsNullOrWhiteSpace(svcName) && _workInstructionName != svcName)
+            {
+                _workInstructionName = svcName;
+                InvokeAsync(StateHasChanged);
+            }
+        }
     }
 
     /// <summary>
-    /// Handles updates to the production log when the corresponding service event is triggered.
+    /// Triggers a UI refresh when the production log changes.
     /// </summary>
-    private void OnProductionLogChanged()
-    {
-        StepAttemptId = ProductionLogEventService.CurrentProductionLog?.StepAttemptId ?? "";
-        InvokeAsync(StateHasChanged);
-    }
-    
+    private void OnProductionLogChanged() => InvokeAsync(StateHasChanged);
+
     /// <summary>
-    /// Invokes the <see cref="OnCancel"/> callback when the Cancel button is clicked.
+    /// Called when the Cancel button is clicked.
+    /// Triggers the <see cref="OnCancel"/> callback.
     /// </summary>
     private async Task OnCancelClicked() => await OnCancel.InvokeAsync();
 
     /// <summary>
-    /// Invokes the <see cref="OnSubmit"/> callback when the Print button is clicked.
+    /// Called when the Print button is clicked.
+    /// Triggers JavaScript print logic and the <see cref="OnSubmit"/> callback.
     /// </summary>
-    private async Task OnSubmitClicked() => await OnSubmit.InvokeAsync();
+    private async Task OnSubmitClicked()
+    {
+        if (module != null)
+        {
+            await module.InvokeVoidAsync("printRedTagById", "red-tag-printable");
+        }
+        await OnSubmit.InvokeAsync();
+    }
 
     /// <summary>
-    /// Unsubscribes from event handlers to prevent memory leaks.
+    /// Reference to the JavaScript module used for printing.
+    /// </summary>
+    private IJSObjectReference? module;
+
+    /// <summary>
+    /// Loads the JavaScript print module after the first render.
+    /// </summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                new object[] { "./Components/Pages/ProductionLog/Create.razor.js" }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Disposes event subscriptions to prevent memory leaks.
     /// </summary>
     public void Dispose()
     {
         ProductionLogEventService.ProductDetailsChanged -= OnProductDetailsChanged;
         ProductionLogEventService.WorkInstructionDetailsChanged -= OnWorkInstructionDetailsChanged;
         ProductionLogEventService.ProductionLogEventChanged -= OnProductionLogChanged;
+    }
+
+    /// <summary>
+    /// Disposes the JavaScript module reference asynchronously.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            await module.DisposeAsync();
+        }
     }
 }

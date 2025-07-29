@@ -33,3 +33,42 @@ export function scrollToStep(elementId) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
+
+export function printRedTagById(id) {
+    const tagElement = document.getElementById(id);
+    if (!tagElement) return;
+
+    const printWindow = window.open('', '_blank', 'width=500,height=300');
+
+    // Get styles
+    const styleSheets = [...document.styleSheets]
+        .map(sheet => {
+            try {
+                return [...sheet.cssRules].map(rule => rule.cssText).join('\n');
+            } catch (e) {
+                return ''; // cross-origin styles
+            }
+        })
+        .join('\n');
+
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Print Red Tag</title>
+            <style>${styleSheets}</style>
+        </head>
+        <body style="margin: 0; padding: 0;">
+            ${tagElement.outerHTML}
+            <script>
+                window.onload = function() {
+                    window.focus();
+                    window.print();
+                    window.onafterprint = () => window.close();
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+

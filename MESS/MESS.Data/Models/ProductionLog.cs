@@ -40,10 +40,5 @@ public class ProductionLog : AuditableEntity
     /// Gets or sets the product serial number.
     /// </summary>
     public string? ProductSerialNumber { get; set; }
-    
-    /// <summary>
-    /// Gets or sets the unique ID of the step attempt.
-    /// </summary>
-    public string StepAttemptId { get; set; } = string.Empty;
 
 }

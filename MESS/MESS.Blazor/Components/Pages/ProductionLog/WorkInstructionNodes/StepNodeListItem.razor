@@ -1,4 +1,4 @@
-@using System.Text.RegularExpressions
+@using System.Text.RegularExpressions 
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
 @using MESS.Blazor.Components.Carousel
@@ -33,11 +33,11 @@
                     {
                         <RedTagDialog
                             OperatorName="@OperatorName"
-                            ProductName="@SelectedProduct?.PartName"
+                            ProductName="@_productName"
                             WorkInstruction="@StepWorkInstruction"
-                            WorkInstructionName="@WorkInstructionName"
+                            WorkInstructionName="@_workInstructionName"
                             StepDescription="@StepDescription"
-                            StepAttemptId="@StepAttemptId"
+                            Attempts="LogStep.Attempts"
                             FailureNoteText="@FailureNoteText"
                             SelectedProductId="@SelectedProductIdForDialog"
                             OnCancel="@CancelRedTag"
@@ -139,50 +139,48 @@
 
 @code {
     /// <summary>
-    /// The current <see cref="Step"/> being displayed.
+    /// The <see cref="Step"/> object representing the current step to display.
     /// </summary>
     [Parameter]
     public required Step Step { get; set; }
 
     /// <summary>
-    /// The corresponding <see cref="ProductionLogStep"/> for this step.
+    /// The <see cref="ProductionLogStep"/> representing the log data for this step.
     /// </summary>
     [Parameter]
     public required ProductionLogStep LogStep { get; set; }
 
     /// <summary>
-    /// List of all available <see cref="Part"/> items to select and display.
+    /// List of all available <see cref="Part"/>s.
     /// </summary>
     [Parameter]
     public List<Part> AllParts { get; set; } = new();
 
     /// <summary>
-    /// Optional list of all <see cref="WorkInstruction"/> items.
+    /// Optional list of all available <see cref="WorkInstruction"/>s.
     /// </summary>
     [Parameter]
     public List<WorkInstruction>? AllWorkInstructions { get; set; }
 
     /// <summary>
-    /// Currently selected part ID used in the RedTag dialog.
+    /// The currently selected part ID, if any.
     /// </summary>
     [Parameter]
     public int? SelectedPartId { get; set; }
-    
+
     /// <summary>
-    /// Callback invoked when the step is completed with a success/failure result or red tag submission.
+    /// Event callback invoked when the step completes or red tag submission occurs.
     /// </summary>
     [Parameter]
     public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
-    
+
     /// <summary>
-    /// Gets or sets the operator's display name used within the component.
-    /// This can be set externally to personalize or identify the current operator context.
+    /// The operator's display name extracted from authentication.
     /// </summary>
     private string OperatorName { get; set; } = "";
-    
+
     /// <summary>
-    /// Called by the framework when the component is initialized asynchronously.
-    /// Loads the current operator name from the authentication state and sets up initial values.
+    /// Initializes the component asynchronously by loading the operator name from authentication claims.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task OnInitializedAsync()
@@ -203,81 +201,94 @@
             OperatorName = $"{firstName} {lastName}".Trim();
         }
 
-        Console.WriteLine($"[Debug] OperatorName set to: '{OperatorName}'");
         await InvokeAsync(StateHasChanged);
     }
 
-
     /// <summary>
-    /// Gets the part ID from the <see cref="LogStep"/>.
+    /// Gets the part ID associated with this step, if any. Replace with actual logic as needed.
     /// </summary>
-    private int? StepPartId => null; // or replace null with the actual property if known
+    private int? StepPartId => null;
 
     /// <summary>
-    /// Gets the WorkInstruction ID from the current <see cref="Step"/>.
-    /// Currently returns null since your model does not have this property.
+    /// Gets the WorkInstruction ID associated with this step, if any. Replace with actual logic as needed.
     /// </summary>
     private int? StepWorkInstructionId => null;
 
     /// <summary>
-    /// The currently selected <see cref="Part"/> for the RedTag dialog.
+    /// Currently selected product based on the StepPartId or SelectedPartId.
     /// </summary>
     private Part? SelectedProduct => AllParts.FirstOrDefault(p => p.Id == (StepPartId ?? SelectedPartId));
 
     /// <summary>
-    /// The ID of the selected product passed to the RedTag dialog.
+    /// Selected product ID passed to the RedTagDialog component.
     /// </summary>
     private int SelectedProductIdForDialog => SelectedProduct?.Id ?? -1;
-    
+
+    private string _workInstructionName = "Unavailable";
+    private string? _productName;
+
     /// <summary>
-    /// Updates the selected part ID when the user selects a different part.
+    /// Updates the work instruction name and product name whenever parameters are set or updated.
     /// </summary>
-    /// <param name="id">The ID of the newly selected part.</param>
-    private void OnSelectedPartIdChanged(int? id)
+    protected override void OnParametersSet()
     {
-        SelectedPartId = id;
+        if (StepWorkInstructionId.HasValue)
+        {
+            _workInstructionName = AllWorkInstructions?.FirstOrDefault(w => w.Id == StepWorkInstructionId.Value)?.Title
+                                   ?? $"Work Instruction {StepWorkInstructionId.Value}";
+        }
+        else
+        {
+            _workInstructionName = "Unavailable";
+        }
+
+        var partId = StepPartId ?? SelectedPartId;
+        if (partId.HasValue)
+        {
+            _productName = AllParts?.FirstOrDefault(p => p.Id == partId.Value)?.PartName;
+        }
+        else
+        {
+            _productName = null;
+        }
     }
 
     /// <summary>
-    /// The name of the work instruction for display in the RedTag dialog.
+    /// Gets the <see cref="WorkInstruction"/> instance associated with the current step, if any.
     /// </summary>
-    private string WorkInstructionName => StepWorkInstructionId.HasValue
-        ? AllWorkInstructions?.FirstOrDefault(w => w.Id == StepWorkInstructionId.Value)?.Title
-          ?? $"Work Instruction {StepWorkInstructionId.Value}"
-        : "Unavailable";
+    private WorkInstruction? StepWorkInstruction =>
+        StepWorkInstructionId.HasValue
+            ? AllWorkInstructions?.FirstOrDefault(w => w.Id == StepWorkInstructionId.Value)
+            : null;
 
     /// <summary>
-    /// The plain-text description of the step, stripped from any HTML.
+    /// Provides a plain text step description with HTML tags removed.
     /// </summary>
     private string StepDescription => Regex.Replace(Step.Body ?? "", "<.*?>", "").Trim();
 
     /// <summary>
-    /// The ID string of the latest step attempt.
-    /// </summary>
-    private string StepAttemptId => LogStep.LatestAttempt?.Id.ToString() ?? "N/A";
-
-    /// <summary>
-    /// The failure note text from the latest attempt, if any.
+    /// Gets the failure note text from the latest attempt, if available.
     /// </summary>
     private string FailureNoteText => LogStep.LatestAttempt?.Notes ?? "";
 
     /// <summary>
-    /// Flag indicating whether the RedTag dialog is currently shown.
+    /// Indicates whether the RedTag dialog is currently shown.
     /// </summary>
     private bool ShowRedTag = false;
 
     /// <summary>
-    /// Shows the RedTag dialog.
+    /// Displays the RedTag dialog.
     /// </summary>
     private void ShowRedTagForm() => ShowRedTag = true;
 
     /// <summary>
-    /// Cancels/hides the RedTag dialog.
+    /// Cancels and hides the RedTag dialog.
     /// </summary>
     private void CancelRedTag() => ShowRedTag = false;
 
     /// <summary>
-    /// Confirms the RedTag submission and updates the log step accordingly.
+    /// Handles the confirmation of the RedTag form submission.
+    /// Marks the step as red tagged and notifies parent via callback.
     /// </summary>
     private async Task ConfirmRedTag()
     {
@@ -287,22 +298,22 @@
     }
 
     /// <summary>
-    /// Reference to the failure note <see cref="FluentTextArea"/> control.
+    /// Reference to the failure note text area control.
     /// </summary>
     private FluentTextArea? _failureNoteTextArea;
 
     /// <summary>
-    /// Current failure note text being edited.
+    /// Current text of the failure note being edited.
     /// </summary>
     private string _currentAttemptNotes = "";
 
     /// <summary>
-    /// The pending failure attempt being edited.
+    /// The failure attempt currently being edited.
     /// </summary>
     private ProductionLogStepAttempt? _pendingFailureAttempt;
 
     /// <summary>
-    /// Whether to show detailed step content.
+    /// Indicates whether detailed step content is shown.
     /// </summary>
     private bool ShowDetails = false;
 
@@ -312,7 +323,7 @@
     private void toggleDetails() => ShowDetails = !ShowDetails;
 
     /// <summary>
-    /// Whether the optional failure notes field is shown.
+    /// Indicates whether the optional failure notes field is shown.
     /// </summary>
     private bool ShowOptionalNotesField { get; set; } = false;
 
@@ -328,27 +339,10 @@
     private void SetSelectedButton(string buttonName) => SelectedButton = buttonName;
 
     /// <summary>
-    /// Sets up the optional notes field if there is existing failure note or failure state.
+    /// Handles clicks on the Success or Failure radio buttons.
+    /// Creates and saves an attempt accordingly.
     /// </summary>
-    private void SetOptionalNotes()
-    {
-        var attempt = LogStep.LatestAttempt;
-        if (!string.IsNullOrWhiteSpace(attempt.Notes) || (attempt.Success.HasValue && !attempt.Success.Value))
-        {
-            _currentAttemptNotes = attempt.Notes;
-            ShowOptionalNotesField = true;
-        }
-    }
-    
-    private WorkInstruction? StepWorkInstruction =>
-        StepWorkInstructionId.HasValue
-            ? AllWorkInstructions?.FirstOrDefault(w => w.Id == StepWorkInstructionId.Value)
-            : null;
-
-    /// <summary>
-    /// Handles pressing the Success or Failure radio buttons, creating and saving an attempt accordingly.
-    /// </summary>
-    /// <param name="result">True for success, false for failure, null to clear selection.</param>
+    /// <param name="result">True for success, false for failure, null to clear.</param>
     private async Task HandleButtonPress(bool? result)
     {
         if (!result.HasValue)
@@ -414,7 +408,8 @@
     }
 
     /// <summary>
-    /// Handles updates when the failure note text changes.
+    /// Handles changes to the failure note text area.
+    /// Updates the pending failure attempt notes and notifies service of changes.
     /// </summary>
     private async Task HandleNoteChangedAsync()
     {
@@ -426,9 +421,9 @@
     }
 
     /// <summary>
-    /// Shows a floating success or failure message briefly.
+    /// Shows a floating message briefly for success or failure indication.
     /// </summary>
-    /// <param name="isSuccess">True for success message, false for failure message.</param>
+    /// <param name="isSuccess">True for success message, false for failure.</param>
     private async Task ShowFloatMessage(bool isSuccess)
     {
         if (isSuccess)
@@ -449,26 +444,12 @@
     }
 
     /// <summary>
-    /// Checks whether the latest attempt for the given step was successful.
-    /// </summary>
-    /// <param name="step">The <see cref="ProductionLogStep"/> to check.</param>
-    /// <returns>True if successful; otherwise, false.</returns>
-    private bool IsStepSuccessful(ProductionLogStep step) => step.LatestAttempt?.Success == true;
-
-    /// <summary>
-    /// Gets the success state of the latest attempt for the given step.
-    /// </summary>
-    /// <param name="step">The <see cref="ProductionLogStep"/> to check.</param>
-    /// <returns>True for success, false for failure, or null if no attempt exists.</returns>
-    private bool? GetStepSuccessState(ProductionLogStep step) => step.LatestAttempt?.Success;
-
-    /// <summary>
-    /// Determines whether the step has additional details or media to show.
+    /// Indicates whether the step has additional details or media content.
     /// </summary>
     private bool HasDetails => !IsHtmlEmpty(Step.DetailedBody) || (Step.SecondaryMedia?.Count ?? 0) > 0;
 
     /// <summary>
-    /// Checks if an HTML string is empty or contains only whitespace.
+    /// Checks if the provided HTML string is empty or contains only whitespace.
     /// </summary>
     /// <param name="html">The HTML string to check.</param>
     /// <returns>True if empty or whitespace; otherwise, false.</returns>
