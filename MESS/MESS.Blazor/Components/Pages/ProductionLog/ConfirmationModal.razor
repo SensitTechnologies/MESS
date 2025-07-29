@@ -62,7 +62,14 @@
         StateHasChanged();
     }
 
-    private void Close()
+    /// <summary>
+    /// Closes the confirmation modal by hiding it and clearing its header and body text.
+    /// </summary>
+    /// <remarks>
+    /// This method can be called from parent components via <c>@ref</c> to programmatically dismiss the modal.
+    /// It resets the visibility state and forces a UI re-render.
+    /// </remarks>
+    public void Close()
     {
         HeaderText = string.Empty;
         BodyText = string.Empty;

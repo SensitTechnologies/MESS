@@ -32,7 +32,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     /// Represents the current production logs being created or modified.
     /// The object in this collection hold all the details of the production log.
     /// </summary>
-    protected ProductionLogBatch ProductionLogBatch = new();
+    protected readonly ProductionLogBatch ProductionLogBatch = new();
     
     private List<Product>? Products { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
@@ -375,6 +375,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
             await CompleteSubmit();
         }
+        
+        popupRef?.Close();
     }
 
     private async Task CompleteSubmit()
