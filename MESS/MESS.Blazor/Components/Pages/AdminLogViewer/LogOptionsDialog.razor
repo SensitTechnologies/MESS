@@ -1,0 +1,50 @@
+﻿@using MESS.Data.Models
+
+@if (IsVisible)
+{
+    <FluentDialog>
+        <FluentDialogHeader>
+            <h5 class="fw-semibold text-dark mb-1">Options</h5>
+            <FluentDivider></FluentDivider>
+        </FluentDialogHeader>
+        <FluentDialogBody>
+            <p>
+                Title: @(shownLog.WorkInstruction?.Title ?? "No Instruction")
+            </p>
+        </FluentDialogBody>
+        <FluentDialogFooter>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Close">
+                Cancel
+            </button>
+        </FluentDialogFooter>
+    </FluentDialog>
+}
+
+@code {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [Parameter]
+    public ProductionLog shownLog { get; set; } = new();
+    
+    /// <summary>
+    /// Event callback that is invoked when the <see cref="IsVisible"/> parameter changes.
+    /// This is used to notify the parent component of visibility changes, enabling two-way binding.
+    /// The boolean parameter indicates the new visibility state.
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+    
+    private async Task Close()
+    {
+        IsVisible = false;
+        await VisibleChanged.InvokeAsync(IsVisible);
+    }
+}

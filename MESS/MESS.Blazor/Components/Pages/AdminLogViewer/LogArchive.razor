@@ -36,7 +36,12 @@
                         
                     </div>
                     <div class="border rounded">
-                        <MudTable ServerData="ServerReload" Striped="true" @ref="table" Loading="IsLoading">
+                        <MudTable T="ProductionLog"
+                                  ServerData="ServerReload" 
+                                  Loading="IsLoading" 
+                                  Hover="true" 
+                                  OnRowMouseEnter="@RowMouseEnterEvent" 
+                                  @ref="table">
                             <HeaderContent>
                                 <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLog, object>(x => x.Product?.Name ?? string.Empty)">Product</MudTableSortLabel></MudTh>
                                 <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLog, object>(x => x.WorkInstruction?.Title ?? string.Empty)">Work Instruction</MudTableSortLabel></MudTh>
@@ -54,7 +59,7 @@
                                 <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                                 <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                                 <MudTd DataLabel="Actions">
-                                    <button class="btn btn-sm btn-primary">
+                                    <button class="btn btn-sm btn-primary" @onclick="ShowOptions">
                                         Options
                                     </button>
                                 </MudTd>
@@ -63,6 +68,11 @@
                                 <MudTablePager/>
                             </PagerContent>
                         </MudTable>
+                        
+                        <LogOptionsDialog
+                            IsVisible="@showOptionsDialog"
+                            VisibleChanged="HandleOptionsDialogToggled"
+                            shownLog="@currentlyHoveredElement"/>
                         
                     </div>
                 }
@@ -94,6 +104,9 @@
     private Dictionary<ProductionLog, int> SearchHits { get; } = [];
     private int MaxHits => SearchHits.Values.Max();
 
+    private const string NoProduct = "(No Product)";
+    private const string NoWorkInstruction = "(No Work Instruction)";
+    
     private string _searchString = "";
     private string SearchString
     {
@@ -104,9 +117,8 @@
             table.ReloadServerData(); 
         }
     }
+
     
-    private const string NoProduct = "(No Product)";
-    private const string NoWorkInstruction = "(No Work Instruction)";
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -212,5 +224,18 @@
 
         return false;
     }
+
     
+    private ProductionLog currentlyHoveredElement = new ();
+    private void RowMouseEnterEvent(TableRowHoverEventArgs<ProductionLog> eventArgs)
+    {
+        currentlyHoveredElement = eventArgs.Item ?? currentlyHoveredElement;
+    }
+
+
+    private bool showOptionsDialog;
+    private void ShowOptions() => HandleOptionsDialogToggled(true);
+    private void HandleOptionsDialogToggled(bool isOpen) => showOptionsDialog = isOpen;
+    
+
 }
