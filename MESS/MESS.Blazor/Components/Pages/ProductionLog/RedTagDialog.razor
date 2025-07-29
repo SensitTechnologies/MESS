@@ -1,73 +1,223 @@
 ﻿@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@using MESS.Services.WorkInstruction
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IJSRuntime JsRuntime
+@inject IProductionLogEventService ProductionLogEventService
+@implements IDisposable
 
-<div class="red-tag-horizontal-wrapper">
+<div class="red-tag-horizontal-wrapper" style="width: 456px; height: 228px;">
     <div class="red-tag-horizontal">
         <div class="red-tag-hole"></div>
         <div class="red-tag-content">
-            <h5>REJECTED</h5>
+            <h5 class="red-tag-header">REJECTED</h5>
 
-            <div class="inline-info-row">
-                <div>
-                    <label>Product:</label>
-                    <p title="{{ ProductName }}">{{ ProductName }}</p>
-                </div>
-                <div>
-                    <label>Work Instruction:</label>
-                    <p title="{{ WorkInstructionName }}">{{ WorkInstructionName }}</p>
-                </div>
-                <div>
-                    <label>Step:</label>
-                    <p title="{{ StepDescription }}">{{ StepDescription }}</p>
-                </div>
+            <div class="tag-info-grid">
+                <div><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
+                <div><span class="label">Step Attempt ID:</span> <span>@StepAttemptId</span></div>
+
+                <div><span class="label">Product:</span> <span>@ProductName</span></div>
+                <div><span class="label">Part Name:</span> <span></span></div>
+
+                <div><span class="label">Part #:</span> <span></span></div>
+                <div><span class="label">Work Instruction:</span> <span>@WorkInstructionName</span></div>
+
+                <div><span class="label">Operator:</span> <span>@OperatorName</span></div>
+            </div>
+            <div>
+                <span class="label">Step:</span>
+                <span class="step-truncate">@StepDescription</span>
             </div>
 
-            <div class="inline-info-row" style="align-items: flex-end; gap: 1.5rem;">
-                <div>
-                    <label>Step Attempt ID:</label>
-                    <p>{{ StepAttemptId }}</p>
-                </div>
-
-                <div style="display: flex; flex-direction: column; min-width: 160px;">
-                    <label>Date &amp; Time</label>
-                    <input type="datetime-local" />
-                </div>
-
-                <div style="display: flex; flex-direction: column; min-width: 120px;">
-                    <label>Part</label>
-                    <select>
-                        <option>Part A</option>
-                        <option>Part B</option>
-                        <option>Part C</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="inline-info-row" style="margin-top: 0;">
-                <div style="flex: 1 1 100%;">
-                    <label>Failure Note:</label>
-                    <p class="failure-note-display" style="white-space: normal;">{{ FailureNoteText }}</p>
-                </div>
+            <div class="failure-note-row">
+                <span class="label">Failure Note:</span>
+                <textarea @bind="FailureNoteText" rows="2" class="failure-note"></textarea>
             </div>
         </div>
     </div>
 </div>
 
+
+
+
+
+
 <div class="mt-3 d-flex justify-content-end gap-2">
     <button class="btn btn-sm btn-secondary" type="button" @onclick="OnCancelClicked">Cancel</button>
-    <button class="btn btn-sm btn-warning" type="button" @onclick="OnSubmitClicked">Submit</button>
+    <button class="btn btn-sm btn-secondary" type="button" @onclick="OnSubmitClicked">Print</button>
 </div>
 
 @code {
+    /// <summary>
+    /// Gets or sets the name of the product associated with this rejection tag.
+    /// </summary>
     [Parameter] public string ProductName { get; set; } = "";
+
+    /// <summary>
+    /// Gets or sets the name of the work instruction associated with this rejection tag.
+    /// </summary>
     [Parameter] public string WorkInstructionName { get; set; } = "";
+
+    /// <summary>
+    /// Gets or sets the description of the step where the failure occurred.
+    /// </summary>
     [Parameter] public string StepDescription { get; set; } = "";
-    [Parameter] public string StepAttemptId { get; set; } = "";
+
+    /// <summary>
+    /// The unique identifier for the current step attempt in the production log.
+    /// </summary>
+    [Parameter] public string StepAttemptId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Represents the automatically generated timestamp for when the component is initialized.
+    /// This value is system-assigned and not intended for user input.
+    /// </summary>
+    [Parameter] public DateTime Timestamp { get; set; } = DateTime.Now;
+
+    /// <summary>
+    /// Gets or sets the failure note text explaining the rejection.
+    /// </summary>
     [Parameter] public string FailureNoteText { get; set; } = "";
 
+    /// <summary>
+    /// Gets or sets the list of all available parts to display in the dropdown.
+    /// </summary>
+    [Parameter] public List<Part> AllParts { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the selected part ID from the dropdown list.
+    /// Nullable to support "no selection" state.
+    /// </summary>
+    [Parameter] public int? SelectedPartId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback triggered when the selected part ID changes.
+    /// </summary>
+    [Parameter] public EventCallback<int?> SelectedPartIdChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currently selected product ID.
+    /// </summary>
+    [Parameter] public int SelectedProductId { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the selected product ID changes.
+    /// </summary>
+    [Parameter] public EventCallback<int> SelectedProductIdChanged { get; set; }
+    
+    /// <summary>
+    /// The name of the operator who is currently logged in and submitting the tag.
+    /// </summary>
+    [Parameter] public string OperatorName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the callback triggered when the Cancel button is clicked.
+    /// </summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback triggered when the Print button is clicked.
+    /// </summary>
     [Parameter] public EventCallback OnSubmit { get; set; }
 
+    /// <summary>
+    /// Gets or sets the work instruction containing nodes such as <see cref="PartNode"/>.
+    /// </summary>
+    [Parameter] public WorkInstruction? WorkInstruction { get; set; }
+
+    /// <summary>
+    /// Gets a filtered and distinct list of parts used in the work instruction's part nodes.
+    /// Falls back to <see cref="AllParts"/> if no work instruction is available.
+    /// </summary>
+    private IEnumerable<Part> FilteredParts => WorkInstruction?.Nodes
+        .OfType<PartNode>()
+        .SelectMany(pn => pn.Parts)
+        .DistinctBy(p => p.Id)
+        ?? Enumerable.Empty<Part>();
+
+    /// <summary>
+    /// Called when the component is initialized. Subscribes to event callbacks from <see cref="IProductionLogEventService"/>.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        ProductionLogEventService.ProductDetailsChanged += OnProductDetailsChanged;
+        ProductionLogEventService.WorkInstructionDetailsChanged += OnWorkInstructionDetailsChanged;
+        ProductionLogEventService.ProductionLogEventChanged += OnProductionLogChanged;
+
+        ProductName = ProductionLogEventService.CurrentProductName;
+        WorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
+        StepAttemptId = ProductionLogEventService.CurrentProductionLog?.StepAttemptId ?? "";
+    }
+    
+    /// <summary>
+    /// Handles updates to the product name when the corresponding service event is triggered.
+    /// </summary>
+    private void OnProductDetailsChanged()
+    {
+        ProductName = ProductionLogEventService.CurrentProductName;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Handles updates to the work instruction name when the corresponding service event is triggered.
+    /// </summary>
+    private void OnWorkInstructionDetailsChanged()
+    {
+        WorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Handles updates to the production log when the corresponding service event is triggered.
+    /// </summary>
+    private void OnProductionLogChanged()
+    {
+        StepAttemptId = ProductionLogEventService.CurrentProductionLog?.StepAttemptId ?? "";
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Handles changes to the selected part in the dropdown and notifies parent via callback.
+    /// </summary>
+    /// <param name="e">The change event arguments.</param>
+    private async Task OnPartSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            SelectedPartId = id;
+        }
+        else
+        {
+            SelectedPartId = null;
+        }
+
+        await SelectedPartIdChanged.InvokeAsync(SelectedPartId);
+    }
+    
+    private void HandleChange(ChangeEventArgs e)
+    {
+        SelectedPartId = int.TryParse(e?.Value?.ToString(), out var id) ? id : null;
+        SelectedPartIdChanged.InvokeAsync(SelectedPartId);
+    }
+
+
+    /// <summary>
+    /// Invokes the <see cref="OnCancel"/> callback when the Cancel button is clicked.
+    /// </summary>
     private async Task OnCancelClicked() => await OnCancel.InvokeAsync();
+
+    /// <summary>
+    /// Invokes the <see cref="OnSubmit"/> callback when the Print button is clicked.
+    /// </summary>
     private async Task OnSubmitClicked() => await OnSubmit.InvokeAsync();
+
+    /// <summary>
+    /// Unsubscribes from event handlers to prevent memory leaks.
+    /// </summary>
+    public void Dispose()
+    {
+        ProductionLogEventService.ProductDetailsChanged -= OnProductDetailsChanged;
+        ProductionLogEventService.WorkInstructionDetailsChanged -= OnWorkInstructionDetailsChanged;
+        ProductionLogEventService.ProductionLogEventChanged -= OnProductionLogChanged;
+    }
 }
