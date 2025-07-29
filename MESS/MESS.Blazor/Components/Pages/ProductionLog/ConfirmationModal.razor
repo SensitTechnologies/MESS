@@ -18,13 +18,6 @@
     </div>
 </div>
 
-@if (saveAlert)
-{
-    <div class="alert alert-success" role="alert">
-        Production log saved successfully.
-    </div>
-}
-
 @code {
     /// <summary>
     /// Determines whether the confirmation modal is visible.
@@ -55,18 +48,7 @@
     /// </summary>
     [Parameter]
     public EventCallback<bool> OnSubmit { get; set; }
-
-    private bool saveAlert = false;
-
-    private async Task showSaveAlert()
-    {
-        saveAlert = true;
-        await Task.Delay(3000);
-        saveAlert = false;
-        StateHasChanged();
-    }
-
-
+    
     /// <summary>
     /// Shows the confirmation modal with the specified body and header text.
     /// </summary>
@@ -93,6 +75,5 @@
         Close();
         await OnSubmit.InvokeAsync(true);
         await JsRuntime.InvokeVoidAsync("ScrollToTop");
-        await showSaveAlert();
     }
 }
