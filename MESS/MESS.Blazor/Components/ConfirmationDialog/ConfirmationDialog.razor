@@ -1,0 +1,81 @@
+@if (Visible)
+{
+    <FluentDialog Open="@Visible" OnDismiss="OnCancelClicked">
+        <FluentDialogHeader>
+            <h5 class="fw-semibold text-dark mb-1">@Title</h5>
+            <FluentDivider></FluentDivider>
+        </FluentDialogHeader>
+        <FluentDialogBody>
+            <p>@Message</p>
+        </FluentDialogBody>
+        <FluentDialogFooter>
+            <button type="button" class="btn btn-sm btn-primary" @onclick="OnConfirmClicked" disabled="@IsProcessing">
+                @if (IsProcessing)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span> Processing...</span>
+                }
+                else
+                {
+                    <span>@ConfirmButtonText</span>
+                }
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnCancelClicked" disabled="@IsProcessing">
+                Cancel
+            </button>
+        </FluentDialogFooter>
+    </FluentDialog>
+}
+
+@code {
+    /// <summary>
+    /// Title of the dialog.
+    /// </summary>
+    [Parameter] public string Title { get; set; } = "Please Confirm";
+
+    /// <summary>
+    /// Confirmation message.
+    /// </summary>
+    [Parameter, EditorRequired] public string Message { get; set; } = "Are you sure?";
+
+    /// <summary>
+    /// Text of the confirm button.
+    /// </summary>
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirm";
+
+    /// <summary>
+    /// Controls whether the dialog is visible.
+    /// </summary>
+    [Parameter] public bool Visible { get; set; }
+
+    /// <summary>
+    /// Event callback invoked when Visible changes (two-way binding).
+    /// </summary>
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    /// <summary>
+    /// Event callback invoked when the user confirms the action.
+    /// </summary>
+    [Parameter] public EventCallback OnConfirmed { get; set; }
+
+    private bool IsProcessing { get; set; }
+
+    private async Task OnConfirmClicked()
+    {
+        IsProcessing = true;
+        await OnConfirmed.InvokeAsync();
+        IsProcessing = false;
+        await CloseAsync();
+    }
+
+    private async Task OnCancelClicked()
+    {
+        await CloseAsync();
+    }
+
+    private async Task CloseAsync()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}
