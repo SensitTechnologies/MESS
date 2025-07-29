@@ -149,7 +149,7 @@
     /// The tuple contains the production log step and a nullable boolean indicating success or failure.
     /// </summary>
     [Parameter]
-    public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+    public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
 
     private FluentTextArea? _failureNoteTextArea;
     
@@ -183,15 +183,25 @@
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        var states = LogSteps.Select(ls => ls.LatestAttempt?.Success).Distinct().ToList();
+        var states = LogSteps
+            .Select(ls => ls.LatestAttempt?.Success)
+            .Distinct()
+            .ToList();
 
         if (states.Count == 1)
         {
-            SelectedButton = states.Single() == true ? "Success" : "Failure";
+            var state = states.Single();
+
+            SelectedButton = state switch
+            {
+                true => "Success",
+                false => "Failure",
+                null => "" // No attempts yet: show nothing selected
+            };
         }
         else
         {
-            SelectedButton = "";
+            SelectedButton = ""; // Mixed states: nothing selected
         }
 
         SetOptionalNotes();
@@ -200,15 +210,25 @@
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        var states = LogSteps.Select(ls => ls.LatestAttempt?.Success).Distinct().ToList();
+        var states = LogSteps
+            .Select(ls => ls.LatestAttempt?.Success)
+            .Distinct()
+            .ToList();
 
         if (states.Count == 1)
         {
-            SelectedButton = states.Single() == true ? "Success" : "Failure";
+            var state = states.Single();
+
+            SelectedButton = state switch
+            {
+                true => "Success",
+                false => "Failure",
+                null => "" // All steps unattempted: show nothing selected
+            };
         }
         else
         {
-            SelectedButton = "";
+            SelectedButton = ""; // Mixed states: show nothing selected
         }
     }
 
@@ -264,9 +284,9 @@
                     SubmitTime = DateTimeOffset.UtcNow,
                     Notes = ""
                 });
-
-                await OnStepCompleted.InvokeAsync((step, true));
             }
+            
+            await OnStepCompleted.InvokeAsync((LogSteps, true));
 
             _pendingFailureAttempt = null;
             _currentAttemptNotes = string.Empty;
@@ -277,24 +297,33 @@
         }
         else // FAILURE
         {
-            foreach (var step in LogSteps)
+            // If there's already a pending failure, finalize it by setting its notes
+            if (_pendingFailureAttempt != null)
             {
-                var attempt = new ProductionLogStepAttempt
-                {
-                    Success = false,
-                    SubmitTime = DateTimeOffset.UtcNow,
-                    Notes = _currentAttemptNotes
-                };
+                _pendingFailureAttempt.Notes = _currentAttemptNotes;
+                _pendingFailureAttempt = null;
+            }
 
-                step.Attempts.Add(attempt);
-                await OnStepCompleted.InvokeAsync((step, false));
+            // Clear input for the next note
+            _currentAttemptNotes = string.Empty;
+
+            // Create new pending attempt
+            _pendingFailureAttempt = new ProductionLogStepAttempt
+            {
+                Success = false,
+                SubmitTime = DateTimeOffset.UtcNow,
+                Notes = ""
+            };
+
+            foreach (var logStep in LogSteps)
+            {
+                logStep.Attempts.Add(_pendingFailureAttempt);
             }
 
             ShowOptionalNotesField = true;
             SetSelectedButton("Failure");
 
-            _currentAttemptNotes = string.Empty;
-
+            await OnStepCompleted.InvokeAsync((LogSteps, false));
             StateHasChanged();
             await Task.Yield();
 
@@ -302,7 +331,7 @@
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
             }
-
+            
             await ShowFloatMessage(false);
         }
     }

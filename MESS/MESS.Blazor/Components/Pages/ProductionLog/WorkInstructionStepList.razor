@@ -5,29 +5,36 @@
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
 @inject ISerializationService SerializationService
 
-@if (ActiveWorkInstruction != null && ProductionLog != null)
+@if (ActiveWorkInstruction != null && ProductionLogs?.Any() == true)
 {
-
     <ul class="step">
         @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
         {
-            var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == workInstructionNode.Id);
-            // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
             if (workInstructionNode is Step workInstructionStep && workInstructionNode.NodeType == WorkInstructionNodeType.Step)
             {
-                if (logStep == null && ProductionLog.LogSteps != null)
+                // Ensure every log contains the step
+                foreach (var log in ProductionLogs)
                 {
-                    logStep = new ProductionLogStep
+                    if (log.LogSteps.All(ls => ls.WorkInstructionStepId != workInstructionStep.Id))
                     {
-                        WorkInstructionStepId = workInstructionNode.Id,
-                        WorkInstructionStep = workInstructionStep,
-                        ProductionLogId = ProductionLog.Id,
-                    };
-                    ProductionLog.LogSteps.Add(logStep);
+                        log.LogSteps.Add(new ProductionLogStep
+                        {
+                            WorkInstructionStepId = workInstructionStep.Id,
+                            WorkInstructionStep = workInstructionStep,
+                            ProductionLogId = log.Id,
+                        });
+                    }
                 }
+
+                // Gather all steps across logs for this node
+                var logSteps = ProductionLogs
+                    .SelectMany(p => p.LogSteps)
+                    .Where(ls => ls.WorkInstructionStepId == workInstructionStep.Id)
+                    .ToList();
+
                 <li class="mb-3">
                     <div id="step-@workInstructionStep.Position">
-                        <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep" />
+                        <StepNodeListItem OnStepCompleted="OnStepCompleted" LogSteps="logSteps" Step="workInstructionStep" />
                     </div>
                 </li>
             }
@@ -56,15 +63,15 @@
     [Parameter] public required WorkInstruction ActiveWorkInstruction { get; set; }
 
     /// <summary>
-    /// The production log associated with the current work instruction.
+    /// The production logs associated with the current work instruction.
     /// </summary>
-    [Parameter] public required ProductionLog ProductionLog { get; set; }
+    [Parameter] public required List<ProductionLog> ProductionLogs { get; set; }
 
     /// <summary>
     /// Event callback triggered when a step is completed.
     /// The tuple contains the production log step and an optional boolean indicating completion status.
     /// </summary>
-    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
+    [Parameter] public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
 
     private string? ProductSerialNumber { get; set; }
 
@@ -101,7 +108,7 @@
 
     private void SetProductionLogSerialNumber()
     {
-        ProductionLog.ProductSerialNumber = ProductSerialNumber;
+        ProductionLogs[0].ProductSerialNumber = ProductSerialNumber;
     }
 
 }

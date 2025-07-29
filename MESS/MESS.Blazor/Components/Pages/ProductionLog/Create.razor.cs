@@ -29,10 +29,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private WorkInstruction? ActiveWorkInstruction { get; set; }
 
     /// <summary>
-    /// Represents the current production log being created or modified.
-    /// This object holds all the details of the production log.
+    /// Represents the current production logs being created or modified.
+    /// The object in this collection hold all the details of the production log.
     /// </summary>
-    protected ProductionLog ProductionLog = new();
+    protected ProductionLogBatch ProductionLogBatch = new();
     
     private List<Product>? Products { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
@@ -44,7 +44,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private IJSObjectReference? module;
     private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
     
-    private Func<ProductionLog, Task>? _autoSaveHandler;
+    private Func<List<ProductionLog>, Task>? _autoSaveHandler;
+    
+    private int BatchSize { get; set; } = 1;
+    
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
@@ -53,25 +56,38 @@ public partial class Create : ComponentBase, IAsyncDisposable
         await LoadProducts();
         await GetInProgressAsync();
 
-        var cachedForm = await LoadCachedForm();
+         // Load cached forms as a list of ProductionLog
+        ProductionLogBatch.Logs = await LoadCachedFormsAsync();
 
-        if (cachedForm)
+        bool cachedFormsLoaded = ProductionLogBatch.Logs != null && ProductionLogBatch.Logs.Count > 0;
+
+        if (cachedFormsLoaded)
         {
             ProductionLogEventService.EnableAutoSave();
             await InvokeAsync(StateHasChanged);
         }
-        
-        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+
+        if (ProductionLogBatch.Logs != null)
+        {
+            await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+        }
         
         // AutoSave Trigger
-        _autoSaveHandler = async log =>
+        _autoSaveHandler = async logs =>
         {
-            await LocalCacheManager.SetNewProductionLogFormAsync(log);
-            await InvokeAsync((() =>
+            if (logs == null || logs.Count == 0)
+            {
+                Log.Warning("Attempted to autosave an empty or null production log list.");
+                return;
+            }
+
+            await LocalCacheManager.SetProductionLogBatchAsync(logs);
+
+            await InvokeAsync(() =>
             {
                 IsSaved = true;
                 StateHasChanged();
-            }));
+            });
         };
         
         var result = await AuthProvider.GetAuthenticationStateAsync();
@@ -100,41 +116,46 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
     }
     
-    private async Task<bool> LoadCachedForm()
+    private async Task<List<ProductionLog>> LoadCachedFormsAsync()
     {
-        var cachedFormData = await LocalCacheManager.GetProductionLogFormAsync();
-        if (cachedFormData != null && cachedFormData.LogSteps.Count != 0)
-        {
-            WorkInstructionStatus = Status.InProgress;
+        var cachedFormsData = await LocalCacheManager.GetProductionLogBatchAsync();
 
-            ProductionLog = new ProductionLog
+        if (cachedFormsData == null || cachedFormsData.Count == 0)
+        {
+            AddProductionLogs(BatchSize);
+            return ProductionLogBatch.Logs;
+        }
+
+        var productionLogs = cachedFormsData.Select(cachedForm => new ProductionLog
+        {
+            Id = cachedForm.ProductionLogId,
+            LogSteps = cachedForm.LogSteps.Select(step => new ProductionLogStep
             {
-                Id = cachedFormData.ProductionLogId,
-                LogSteps = cachedFormData.LogSteps.Select(step => new ProductionLogStep
+                WorkInstructionStepId = step.WorkInstructionStepId,
+                ProductionLogId = step.ProductionLogId,
+                Attempts = step.Attempts.Select(a => new ProductionLogStepAttempt
                 {
-                    WorkInstructionStepId = step.WorkInstructionStepId,
-                    ProductionLogId = step.ProductionLogId,
-                    Attempts = step.Attempts.Select(a => new ProductionLogStepAttempt
-                    {
-                        Success = a.Success,
-                        Notes = a.Notes ?? "",
-                        SubmitTime = a.SubmitTime
-                    }).ToList()
+                    Success = a.Success,
+                    Notes = a.Notes ?? "",
+                    SubmitTime = a.SubmitTime
                 }).ToList()
-            };
-        }
-        else
+            }).ToList()
+        }).ToList();
+
+        // Setting status for each log or the whole batch
+        foreach (var log in productionLogs)
         {
-            return false;
+            if (log.LogSteps.All(step => step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)))
+            {
+                WorkInstructionStatus = Status.Completed;
+            }
+            else
+            {
+                WorkInstructionStatus = Status.InProgress;
+            }
         }
 
-        if (ProductionLog.LogSteps.All(step =>
-                step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)))
-        {
-            WorkInstructionStatus = Status.Completed;
-        }
-
-        return true;
+        return productionLogs;
     }
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
@@ -154,9 +175,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 return;
 
             // Reset the cached log and internal state
-            await LocalCacheManager.SetNewProductionLogFormAsync(null);
-            ProductionLog = new ProductionLog(); // clear current log
-            await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+            await LocalCacheManager.ClearProductionLogBatchAsync();
+            ProductionLogBatch.Logs.Clear();
+            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+            AddProductionLogs(BatchSize);
 
             // Proceed with setting new state
             await SetSelectedWorkInstructionId(workInstructionId);
@@ -166,7 +188,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
     }
 
-private async Task SetActiveProduct(int productId)
+    private async Task SetActiveProduct(int productId)
     {
         if (Products == null)
             return;
@@ -185,9 +207,9 @@ private async Task SetActiveProduct(int productId)
             return;
 
         // Reset the cached log and internal state
-        await LocalCacheManager.SetNewProductionLogFormAsync(null);
-        ProductionLog = new ProductionLog(); // clear current log
-        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        await LocalCacheManager.ClearProductionLogBatchAsync();
+        ProductionLogBatch.Logs.Clear();
+        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
 
         // Proceed with setting new state
         ActiveProduct = product;
@@ -213,6 +235,31 @@ private async Task SetActiveProduct(int productId)
             .ToList() ?? new List<WorkInstruction>();
         
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
+    }
+    
+    private Task OnBatchSizeChanged(int newSize)
+    {
+        if (newSize < 1)
+            newSize = 1;
+
+        BatchSize = newSize;
+
+        int currentCount = ProductionLogBatch.Logs.Count;
+
+        if (newSize > currentCount)
+        {
+            // Add new logs
+            int logsToAdd = newSize - currentCount;
+            AddProductionLogs(logsToAdd);
+        }
+        else if (newSize < currentCount)
+        {
+            // Remove excess logs
+            ProductionLogBatch.Logs.RemoveRange(newSize, currentCount - newSize);
+            ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// Sets the local storage variable
@@ -336,40 +383,45 @@ private async Task SetActiveProduct(int productId)
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        // Update log
-        ProductionLog.CreatedOn = currentTime;
-        ProductionLog.LastModifiedOn = currentTime;
-        ProductionLog.WorkInstruction = ActiveWorkInstruction;
-        ProductionLog.Product = ActiveProduct;
-        ProductionLog.OperatorId = userId;
-        
-        // If no log is created, it gets created now to utilize the id for the QR code
-        if (ProductionLog.Id <= 0)
+        foreach (var productionLog in ProductionLogEventService.CurrentProductionLogs)
         {
-            var id = await ProductionLogService.CreateAsync(ProductionLog);
-            ProductionLog.Id = id;
-        }
-        else
-        {
-            await ProductionLogService.UpdateAsync(ProductionLog);
+
+            // Update log
+            productionLog.CreatedOn = currentTime;
+            productionLog.LastModifiedOn = currentTime;
+            productionLog.WorkInstruction = ActiveWorkInstruction;
+            productionLog.Product = ActiveProduct;
+            productionLog.OperatorId = userId;
+            productionLog.FromBatchOf = BatchSize;
+
+            // If no log is created, it gets created now to utilize the id for the QR code
+            if (productionLog.Id <= 0)
+            {
+                var id = await ProductionLogService.CreateAsync(productionLog);
+                productionLog.Id = id;
+            }
+            else
+            {
+                await ProductionLogService.UpdateAsync(productionLog);
+            }
+
+            if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
+            {
+                await PrintQRCode(productionLog.Id);
+            }
+
+            ToastService.ShowSuccess("Successfully Created Production Log", 3000);
+
+            // Create any associated SerialNumberLogs
+            await SerializationService.SaveCurrentProductionLogPartsAsync(productionLog.Id);
+            
+            // Add the new log to the session
+            await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
 
-        if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
-        {
-            await PrintQRCode();
-        }
-        
-        ToastService.ShowSuccess("Successfully Created Production Log", 3000);
-        
-        // Create any associated SerialNumberLogs
-        await SerializationService.SaveCurrentProductionLogPartsAsync(ProductionLog.Id);
-        
         // Reset the local storage values
-        await LocalCacheManager.SetNewProductionLogFormAsync(null);
-
+        await LocalCacheManager.ClearProductionLogBatchAsync();
         
-        // Add the new log to the session
-        await SessionManager.AddProductionLogAsync(ProductionLog.Id);
         await ResetFormState();
     }
     
@@ -387,9 +439,8 @@ private async Task SetActiveProduct(int productId)
         InvokeAsync(StateHasChanged);
     }
     
-    private void GenerateQRCode()
+    private void GenerateQRCode(int productionLogId)
     {
-        var productionLogId = ProductionLogEventService.GetCurrentProductionLog()?.Id;
         var productionLogIdString = productionLogId + ",";
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(productionLogIdString, QRCodeGenerator.ECCLevel.Q);
@@ -399,9 +450,9 @@ private async Task SetActiveProduct(int productId)
         QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
     }
     
-    private async Task PrintQRCode()
+    private async Task PrintQRCode(int productionLogId)
     {
-        GenerateQRCode();
+        GenerateQRCode(productionLogId);
         if (string.IsNullOrEmpty(QRCodeDataUrl))
             return;
         
@@ -414,20 +465,33 @@ private async Task SetActiveProduct(int productId)
 
     private async Task ResetFormState()
     {
-        ProductionLog = new ProductionLog();
-        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        // Reset the list to a new empty list
+        ProductionLogBatch.Logs = new List<ProductionLog>();
+
+        // Notify the event service with the empty list
+        await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+
+        // Reinitialize the form with the current batch size
+        AddProductionLogs(BatchSize);
+        
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
     }
     
-    private async Task OnStepCompleted(ProductionLogStep step, bool? success)
+    private async Task OnStepCompleted(List<ProductionLogStep> productionLogSteps, bool? success)
     {
         if (ActiveWorkInstruction == null)
             return;
-    
-        await ProductionLogEventService.SetCurrentProductionLog(ProductionLog);
+        
+        await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+            
         var currentStatus = await GetWorkInstructionStatus();
         WorkInstructionStatus = currentStatus ? Status.Completed : Status.InProgress;
+        
+        var step = productionLogSteps.FirstOrDefault();
+        
+        if (step == null)
+            return;
         
         // Find the current node that corresponds to this step
         var currentNode = ActiveWorkInstruction.Nodes.FirstOrDefault(n => n.Id == step.WorkInstructionStepId);
@@ -470,21 +534,20 @@ private async Task SetActiveProduct(int productId)
     }
     
     /// <summary>
-    /// Determines if the operator has completed all steps in the work instruction
+    /// Determines if the operator has completed all steps in all production logs.
     /// </summary>
-    /// <returns>Returns True if each step in the work instruction has been completed. False otherwise.</returns>
+    /// <returns>Returns true if each step in every production log has been completed; false otherwise.</returns>
     private async Task<bool> GetWorkInstructionStatus()
     {
         try
         {
-            var result = false;
-            await Task.Run(() =>
+            return await Task.Run(() =>
             {
-                result = ProductionLog.LogSteps.All(step =>
-                    step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue));
+                // Check if every log's steps have attempts with valid submit times
+                return ProductionLogBatch.Logs != null && ProductionLogBatch.Logs.All(log =>
+                    log.LogSteps != null && log.LogSteps.All(step =>
+                        step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)));
             });
-
-            return result;
         }
         catch (Exception e)
         {
@@ -515,5 +578,28 @@ private async Task SetActiveProduct(int productId)
         {
             Log.Warning("JS Interop Exception thrown, {Message}", jsException.Message);
         }
+    }
+    
+    private void AddProductionLogs(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            var emptyLog = new ProductionLog
+            {
+                LogSteps = ActiveWorkInstruction?.Nodes
+                    .Where(n => n.NodeType == WorkInstructionNodeType.Step)
+                    .Select(n => new ProductionLogStep
+                    {
+                        WorkInstructionStepId = n.Id,
+                        Attempts = new List<ProductionLogStepAttempt>() // empty initially
+                    })
+                    .ToList() ?? new List<ProductionLogStep>()
+            };
+
+            ProductionLogBatch.Logs.Add(emptyLog);
+        }
+
+        // Notify downstream services
+        ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
     }
 }

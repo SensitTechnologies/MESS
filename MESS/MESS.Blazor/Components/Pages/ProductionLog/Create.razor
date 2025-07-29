@@ -34,7 +34,7 @@
                 <p>Not Authorized</p>
             </NotAuthorized>
             <ChildContent Context="auth_context">
-                <EditForm class="container" FormName="EditProductionLog" Model="ProductionLog" OnValidSubmit="HandleSubmit">
+                <EditForm class="container" FormName="EditProductionLogs" Model="@ProductionLogBatch" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator/>
                     <ValidationSummary/>
                     <ConfirmationModal @ref="popupRef" OnSubmit="HandleConfirmation"/>
@@ -44,9 +44,14 @@
                         <div class="mb-3">
                             <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                                 <CreateHeader
-                                    WorkInstructions="@ActiveProductWorkInstructionList" OnWorkInstructionSelected="@SetActiveWorkInstruction"
+                                    WorkInstructions="@ActiveProductWorkInstructionList"
+                                    OnWorkInstructionSelected="@SetActiveWorkInstruction"
                                     ActiveLineOperator="@ActiveLineOperator"
-                                    Products="@Products" OnProductSelected="@SetActiveProduct"/>
+                                    Products="@Products"
+                                    OnProductSelected="@SetActiveProduct"
+                                    BatchSize="@BatchSize"
+                                    OnBatchSizeChanged="OnBatchSizeChanged" />
+                                
                                 <div class="d-inline-flex gap-4 align-items-center flex-sm-wrap">
                                     <div class="">
                                         <p class="mb-0">
@@ -65,7 +70,7 @@
 
                             @if (ActiveWorkInstruction != null && ActiveProduct != null)
                             {
-                                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLog="ProductionLog" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
+                                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLogs="ProductionLogBatch.Logs" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
                             }
 
                         </div>
