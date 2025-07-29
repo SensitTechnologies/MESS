@@ -31,7 +31,7 @@
 
             <div class="failure-note-row">
                 <span class="label">Failure Note:</span>
-                <textarea @bind="FailureNoteText" rows="2" class="failure-note"></textarea>
+                <div class="failure-note">@FailureNoteText</div>
             </div>
         </div>
     </div>
@@ -80,22 +80,6 @@
     [Parameter] public string FailureNoteText { get; set; } = "";
 
     /// <summary>
-    /// Gets or sets the list of all available parts to display in the dropdown.
-    /// </summary>
-    [Parameter] public List<Part> AllParts { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets the selected part ID from the dropdown list.
-    /// Nullable to support "no selection" state.
-    /// </summary>
-    [Parameter] public int? SelectedPartId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the callback triggered when the selected part ID changes.
-    /// </summary>
-    [Parameter] public EventCallback<int?> SelectedPartIdChanged { get; set; }
-
-    /// <summary>
     /// Gets or sets the currently selected product ID.
     /// </summary>
     [Parameter] public int SelectedProductId { get; set; }
@@ -126,16 +110,6 @@
     [Parameter] public WorkInstruction? WorkInstruction { get; set; }
 
     /// <summary>
-    /// Gets a filtered and distinct list of parts used in the work instruction's part nodes.
-    /// Falls back to <see cref="AllParts"/> if no work instruction is available.
-    /// </summary>
-    private IEnumerable<Part> FilteredParts => WorkInstruction?.Nodes
-        .OfType<PartNode>()
-        .SelectMany(pn => pn.Parts)
-        .DistinctBy(p => p.Id)
-        ?? Enumerable.Empty<Part>();
-
-    /// <summary>
     /// Called when the component is initialized. Subscribes to event callbacks from <see cref="IProductionLogEventService"/>.
     /// </summary>
     protected override void OnInitialized()
@@ -147,6 +121,8 @@
         ProductName = ProductionLogEventService.CurrentProductName;
         WorkInstructionName = ProductionLogEventService.CurrentWorkInstructionName;
         StepAttemptId = ProductionLogEventService.CurrentProductionLog?.StepAttemptId ?? "";
+        
+        StateHasChanged();
     }
     
     /// <summary>
@@ -175,32 +151,7 @@
         StepAttemptId = ProductionLogEventService.CurrentProductionLog?.StepAttemptId ?? "";
         InvokeAsync(StateHasChanged);
     }
-
-    /// <summary>
-    /// Handles changes to the selected part in the dropdown and notifies parent via callback.
-    /// </summary>
-    /// <param name="e">The change event arguments.</param>
-    private async Task OnPartSelected(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var id))
-        {
-            SelectedPartId = id;
-        }
-        else
-        {
-            SelectedPartId = null;
-        }
-
-        await SelectedPartIdChanged.InvokeAsync(SelectedPartId);
-    }
     
-    private void HandleChange(ChangeEventArgs e)
-    {
-        SelectedPartId = int.TryParse(e?.Value?.ToString(), out var id) ? id : null;
-        SelectedPartIdChanged.InvokeAsync(SelectedPartId);
-    }
-
-
     /// <summary>
     /// Invokes the <see cref="OnCancel"/> callback when the Cancel button is clicked.
     /// </summary>

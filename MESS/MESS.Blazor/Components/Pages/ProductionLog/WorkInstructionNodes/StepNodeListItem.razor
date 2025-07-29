@@ -37,11 +37,8 @@
                             WorkInstruction="@StepWorkInstruction"
                             WorkInstructionName="@WorkInstructionName"
                             StepDescription="@StepDescription"
-                            SelectedPartId="@SelectedPartId"
-                            SelectedPartIdChanged="@OnSelectedPartIdChanged"
                             StepAttemptId="@StepAttemptId"
                             FailureNoteText="@FailureNoteText"
-                            AllParts="@AllParts"
                             SelectedProductId="@SelectedProductIdForDialog"
                             OnCancel="@CancelRedTag"
                             OnSubmit="@ConfirmRedTag" />
@@ -170,13 +167,7 @@
     /// </summary>
     [Parameter]
     public int? SelectedPartId { get; set; }
-
-    /// <summary>
-    /// Event callback fired when the selected part ID changes in the RedTag dialog.
-    /// </summary>
-    [Parameter]
-    public EventCallback<int?> SelectedPartIdChanged { get; set; }
-
+    
     /// <summary>
     /// Callback invoked when the step is completed with a success/failure result or red tag submission.
     /// </summary>
