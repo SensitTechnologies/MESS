@@ -27,40 +27,6 @@ public class LocalCacheManager : ILocalCacheManager
     {
         _protectedLocalStorage = protectedLocalStorage;
     }
-
-    /// <inheritdoc />
-    public async Task SetNewProductionLogFormAsync(ProductionLog? productionLog)
-    {
-        try
-        {
-            if (productionLog == null)
-            {
-                await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_FORM_KEY);
-                return;
-            }
-
-            Log.Information("Successfully Set New Production Log Form with ID: {PLogID}", productionLog.Id);
-            var productionLogForm = MapProductionLogToDto(productionLog);
-            
-            try
-            {
-                await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
-            }
-            catch (TaskCanceledException ex)
-            {
-                Log.Warning("SetNewProductionLogFormAsync was canceled. The app may have been navigating or busy. Exception: {Exception}", ex);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Unexpected error while setting ProductionLogForm in local storage: {Exception}", ex);
-            }
-            
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception caught when attempting to SetNewProductionLogFormAsync: {Exception}", e.ToString());
-        }
-    }
     
     /// <inheritdoc />
     public async Task<List<ProductionLogFormDTO>> GetProductionLogBatchAsync()

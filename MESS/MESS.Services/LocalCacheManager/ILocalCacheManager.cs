@@ -10,13 +10,6 @@ using Data.Models;
 public interface ILocalCacheManager
 {
     /// <summary>
-    /// If the ProductionLog is null, it will clear the cache.
-    /// Otherwise, it will set the ProductionLog to the client-side localstorage cache.
-    /// </summary>
-    /// <param name="productionLog">The current ProductionLog object</param>
-    /// <returns></returns>
-    public Task SetNewProductionLogFormAsync(ProductionLog? productionLog);
-    /// <summary>
     /// Retrieves the current ProductionLog form data.
     /// </summary>
     /// <returns>A <see cref="ProductionLogFormDTO"/> object containing the ProductionLog form data.</returns>
