@@ -12,8 +12,6 @@
                 <div class="card">
                     <div class="card-body">
                         <p class="card-text d-block mb-1" style="white-space: pre-wrap;">
-                            
-                            @* Replace text with extra details i.e. body text *@
                             @switch (ShowDetails)
                             {
                                 case false:
@@ -26,19 +24,45 @@
                         </p>
                     </div>
                 </div>
-                
+
                 <div class="mt-auto">
-                    <FluentTextArea 
-                        @ref="_failureNoteTextArea" 
-                        data-testid="optional-notes" 
-                        class=@($"w-100 mt-3 {(ShowOptionalNotesField ? "" : "d-none")}")
-                        placeholder="Optional: Add a failure note (if needed)"
-                        @bind-Value="_currentAttemptNotes"
-                        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
+                    @if (_showRedTagDialog)
+                    {
+                        <RedTagDialog
+                            AttemptCount="_attemptCount"
+                            LogSteps="LogSteps"
+                            FailureNotes="_currentAttemptNotes"
+                            OnCancel="OnCancelClicked"
+                            OnSubmit="ToggleRedTagDialog"/>
+                    }
+
+
                     
-                    <div class="row mt-2">
-                        <div class="col text-start">
-                            <div class="position-relative d-inline-block">
+                    @if (ShowOptionalNotesField)
+                    {
+                        <div class="d-flex align-items-start mt-3">
+                            <FluentTextArea
+                                @ref="_failureNoteTextArea"
+                                data-testid="optional-notes"
+                                class="flex-grow-1 me-2"
+                                placeholder="Optional: Add a failure note (if needed)"
+                                @bind-Value="_currentAttemptNotes"
+                                @bind-Value:after="@(async () => await HandleNoteChangedAsync())"/>
+        
+                            <!-- Red Tag Button next to failure note -->
+                            <button type="button"
+                                    class="btn btn-sm btn-danger px-2 py-1"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="ToggleRedTagDialog"
+                                    style="font-size: 0.75rem; white-space: nowrap;">
+                                Red Tag
+                            </button>
+                        </div>
+                    }
+
+                    <div class="row mt-2 align-items-center">
+                        <div class="col d-flex justify-content-start gap-3">
+                            <div class="position-relative">
                                 <!-- Success Button -->
                                 <input type="radio"
                                        class="btn-check"
@@ -58,7 +82,8 @@
                                     </div>
                                 }
                             </div>
-                            <div class="position-relative d-inline-block">
+
+                            <div class="position-relative">
                                 <!-- Failure Button -->
                                 <input type="radio"
                                        class="btn-check"
@@ -66,9 +91,9 @@
                                        id="radioFailureBtn{@Step.Body}-@Step.Id"
                                        checked="@(SelectedButton == "Failure")"
                                        @onclick="@(async (e) => await HandleButtonPress(false))"/>
-                                <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
+                                <label class="btn btn-outline-danger d-flex align-items-center justify-content-between gap-2 @(SelectedButton == "Failure" ? "active" : "")"
                                        for="radioFailureBtn{@Step.Body}-@Step.Id">
-                                    Failure
+                                    <span>Failure</span>
                                 </label>
 
                                 @if (_showFailureFloat)
@@ -79,6 +104,7 @@
                                 }
                             </div>
                         </div>
+
                         <div class="col text-end">
                             @if (HasDetails)
                             {
@@ -90,7 +116,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="col col-md-6 secondary-content">
                 @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0) 
                 {
@@ -133,54 +159,54 @@
     /// </summary>
     [Parameter]
     public required Step Step { get; set;}
-    
+
     /// <summary>
     /// Represents the production log steps associated with the current step.
     /// </summary>
-    /// <remarks>
-    /// With one piece flow, this list will have just one log step. In batch mode, there will be many log steps, associated
-    /// with one WI step.
-    /// </remarks>
     [Parameter]
     public required List<ProductionLogStep> LogSteps { get; set; }
-    
+
     /// <summary>
     /// Event callback triggered when the step is completed.
-    /// The tuple contains the production log step and a nullable boolean indicating success or failure.
     /// </summary>
     [Parameter]
     public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
 
     private FluentTextArea? _failureNoteTextArea;
-    
+
     private string _currentAttemptNotes = "";
-    
+
     private ProductionLogStepAttempt? _pendingFailureAttempt;
-    
+
     private bool IsStepSuccessful(ProductionLogStep step) =>
         step.LatestAttempt?.Success == true;
-    
+
     private bool? GetStepSuccessState(ProductionLogStep step) =>
         step.LatestAttempt?.Success;
-    
+
     private bool HasDetails =>
         !IsHtmlEmpty(Step.DetailedBody) || (Step.SecondaryMedia?.Count ?? 0) > 0;
-    
+
     private static bool IsHtmlEmpty(string? html)
     {
         if (string.IsNullOrWhiteSpace(html))
             return true;
 
-        // Strip tags and decode entities if needed
         var textOnly = Regex.Replace(html, "<.*?>", "").Trim();
 
         return string.IsNullOrWhiteSpace(textOnly);
     }
-    
+
     private bool _showSuccessFloat = false;
     private bool _showFailureFloat = false;
 
-    /// <inheritdoc />
+    // New backing fields for RedTagPrint props from your merge example
+    // Fields
+    private int _attemptCount = 1;
+
+    /// <summary>
+    /// Initializes component state, setting up part details and selected status.
+    /// </summary>
     protected override void OnInitialized()
     {
         var states = LogSteps
@@ -196,18 +222,23 @@
             {
                 true => "Success",
                 false => "Failure",
-                null => "" // No attempts yet: show nothing selected
+                null => ""
             };
         }
         else
         {
-            SelectedButton = ""; // Mixed states: nothing selected
+            SelectedButton = "";
         }
 
         SetOptionalNotes();
+
+        // Initialize part info for RedTagPrint from Step or elsewhere
+        _attemptCount = LogSteps?.Count ?? 0;
     }
-    
-    /// <inheritdoc />
+
+    /// <summary>
+    /// Updates part details and selected state whenever parameters change.
+    /// </summary>
     protected override void OnParametersSet()
     {
         var states = LogSteps
@@ -223,15 +254,17 @@
             {
                 true => "Success",
                 false => "Failure",
-                null => "" // All steps unattempted: show nothing selected
+                null => ""
             };
         }
         else
         {
-            SelectedButton = ""; // Mixed states: show nothing selected
+            SelectedButton = "";
         }
-    }
 
+        // Keep Part info synced (optional)
+        _attemptCount = LogSteps?.Count ?? _attemptCount;
+    }
 
     private bool ShowDetails = false;
 
@@ -240,16 +273,16 @@
         ShowDetails = !ShowDetails;
         StateHasChanged();
     }
-    
+
     private bool ShowOptionalNotesField { get; set; } = false;
-    
+
     private string? SelectedButton { get; set; } = "";
 
     private void SetSelectedButton(string buttonName)
     {
         SelectedButton = buttonName;
     }
-    
+
     private void SetOptionalNotes()
     {
         var attempt = LogSteps
@@ -285,7 +318,7 @@
                     Notes = ""
                 });
             }
-            
+
             await OnStepCompleted.InvokeAsync((LogSteps, true));
 
             _pendingFailureAttempt = null;
@@ -297,17 +330,14 @@
         }
         else // FAILURE
         {
-            // If there's already a pending failure, finalize it by setting its notes
             if (_pendingFailureAttempt != null)
             {
                 _pendingFailureAttempt.Notes = _currentAttemptNotes;
                 _pendingFailureAttempt = null;
             }
 
-            // Clear input for the next note
             _currentAttemptNotes = string.Empty;
 
-            // Create new pending attempt
             _pendingFailureAttempt = new ProductionLogStepAttempt
             {
                 Success = false,
@@ -331,11 +361,11 @@
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
             }
-            
+
             await ShowFloatMessage(false);
         }
     }
-    
+
     private async Task HandleNoteChangedAsync()
     {
         if (_pendingFailureAttempt != null)
@@ -344,7 +374,7 @@
             await ProductionLogEventService.ChangeMadeToProductionLog();
         }
     }
-    
+
     private async Task ShowFloatMessage(bool isSuccess)
     {
         if (isSuccess)
@@ -363,4 +393,18 @@
         }
         StateHasChanged();
     }
+    
+    private bool _showRedTagDialog = false;
+
+    private void ToggleRedTagDialog()
+    {
+        _showRedTagDialog = !_showRedTagDialog;
+    }
+    
+    private void OnCancelClicked()
+    {
+        _showRedTagDialog = false;
+        StateHasChanged();
+    }
+
 }
