@@ -15,6 +15,8 @@ public class LocalCacheManager : ILocalCacheManager
     private const string PRODUCTION_LOG_FORM_KEY = "PRODUCTION_LOG_FORM_PROGRESS";
     private const string ACTIVE_WORK_STATION_KEY = "LAST_KNOWN_WORK_STATION";
     private const string PRODUCTION_LOG_BATCH_KEY = "PRODUCTION_LOG_BATCH";
+    private const string BATCH_SIZE_KEY = "PRODUCTION_LOG_BATCH_SIZE";
+
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
     /// <summary>
@@ -62,8 +64,7 @@ public class LocalCacheManager : ILocalCacheManager
             }
 
             var dtoList = logs.Select(MapProductionLogToDto).ToList();
-
-            Log.Information("Setting ProductionLogBatch with {Count} logs", dtoList.Count);
+            
             await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_BATCH_KEY, dtoList);
         }
         catch (Exception ex)
@@ -254,6 +255,36 @@ public class LocalCacheManager : ILocalCacheManager
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<int> GetBatchSizeAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<int>(BATCH_SIZE_KEY);
+            if (result.Success) return result.Value;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error retrieving batch size: {Exception}", ex);
+        }
+
+        return 1; // default
+    }
+
+    /// <inheritdoc />
+    public async Task SetBatchSizeAsync(int size)
+    {
+        try
+        {
+            await _protectedLocalStorage.SetAsync(BATCH_SIZE_KEY, size);
+            Log.Information("Saved batch size: {Size}", size);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error setting batch size: {Exception}", ex);
+        }
+    }
 
     /// <inheritdoc />
     public async Task ResetCachedValuesAsync()
@@ -271,5 +302,5 @@ public class LocalCacheManager : ILocalCacheManager
             Log.Warning("Exception caught when attempting to ResetCachedValuesAsync: {Exception}", e.ToString());
         }
     }
-
+    
 }

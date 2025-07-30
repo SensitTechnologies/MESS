@@ -76,4 +76,24 @@ public interface ILocalCacheManager
     /// Resets all cached values to their default state.
     /// </summary>
     public Task ResetCachedValuesAsync();
+    
+    /// <summary>
+    /// Retrieves the last cached batch size from local storage.
+    /// </summary>
+    /// <returns>
+    /// An <see cref="int"/> representing the last known batch size. 
+    /// If no batch size is found or an error occurs, this returns a default value of <c>1</c>.
+    /// </returns>
+    public Task<int> GetBatchSizeAsync();
+
+    /// <summary>
+    /// Stores the specified batch size in local storage for future retrieval.
+    /// </summary>
+    /// <param name="size">
+    /// The <see cref="int"/> value representing the desired batch size to cache.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    public Task SetBatchSizeAsync(int size);
 }

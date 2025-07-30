@@ -46,7 +46,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private Func<List<ProductionLog>, Task>? _autoSaveHandler;
     
-    private int BatchSize { get; set; } = 1;
+    private int BatchSize { get; set; }
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -55,6 +55,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.DisableAutoSave();
         await LoadProducts();
         await GetInProgressAsync();
+        BatchSize = await LocalCacheManager.GetBatchSizeAsync();
 
          // Load cached forms as a list of ProductionLog
         ProductionLogBatch.Logs = await LoadCachedFormsAsync();
@@ -237,12 +238,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
     
-    private Task OnBatchSizeChanged(int newSize)
+    private async Task OnBatchSizeChanged(int newSize)
     {
         if (newSize < 1)
             newSize = 1;
 
         BatchSize = newSize;
+        await LocalCacheManager.SetBatchSizeAsync(BatchSize);
 
         int currentCount = ProductionLogBatch.Logs.Count;
 
@@ -256,10 +258,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
             // Remove excess logs
             ProductionLogBatch.Logs.RemoveRange(newSize, currentCount - newSize);
-            ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+            await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
         }
-
-        return Task.CompletedTask;
     }
 
     /// Sets the local storage variable
