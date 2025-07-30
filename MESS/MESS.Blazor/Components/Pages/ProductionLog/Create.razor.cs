@@ -385,8 +385,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        foreach (var productionLog in ProductionLogEventService.CurrentProductionLogs)
+        for (var i = 0; i < ProductionLogEventService.CurrentProductionLogs.Count; i++)
         {
+            var productionLog = ProductionLogEventService.CurrentProductionLogs[i];
 
             // Update log
             productionLog.CreatedOn = currentTime;
@@ -409,7 +410,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
             if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
             {
-                await PrintQRCode(productionLog.Id);
+                await PrintQrCode(productionLog.Id, i);
             }
 
             ToastService.ShowSuccess("Successfully Created Production Log", 3000);
@@ -452,17 +453,16 @@ public partial class Create : ComponentBase, IAsyncDisposable
         QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
     }
     
-    private async Task PrintQRCode(int productionLogId)
+    private async Task PrintQrCode(int productionLogId, int index)
     {
         GenerateQRCode(productionLogId);
         if (string.IsNullOrEmpty(QRCodeDataUrl))
             return;
-        
+
         if (module == null)
-        {
             return;
-        }
-        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl);
+
+        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl, index + 1);
     }
 
     private async Task ResetFormState()
