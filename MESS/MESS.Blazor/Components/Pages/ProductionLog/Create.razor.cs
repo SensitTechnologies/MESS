@@ -584,7 +584,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private void AddProductionLogs(int count)
     {
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             var emptyLog = new ProductionLog
             {
