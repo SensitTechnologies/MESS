@@ -110,17 +110,7 @@
     
     private Dictionary<ProductionLog, int> SearchHits { get; } = [];
     private int MaxHits => SearchHits.Values.Max();
-
-    private string _searchString = "";
-    private string SearchString
-    {
-        get => _searchString;
-        set
-        {
-            _searchString = value;
-            table.ReloadServerData(); 
-        }
-    }
+    
     
     private const string NoProduct = "(No Product)";
     private const string NoWorkInstruction = "(No Work Instruction)";
