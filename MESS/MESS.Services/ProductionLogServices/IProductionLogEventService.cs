@@ -1,4 +1,4 @@
-﻿namespace MESS.Services.ProductionLog;
+﻿namespace MESS.Services.ProductionLogServices;
 using Data.Models;
 /// <summary>
 /// Interface for managing production log events and related details.

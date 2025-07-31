@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Serilog;
 
-namespace MESS.Services.ProductionLog;
+namespace MESS.Services.ProductionLogServices;
 using Data.Models;
 /// <inheritdoc />
 public class ProductionLogEventService : IProductionLogEventService
