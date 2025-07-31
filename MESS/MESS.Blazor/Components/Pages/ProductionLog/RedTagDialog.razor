@@ -9,18 +9,22 @@
     <div class="red-tag-horizontal">
         <div class="red-tag-hole"></div>
         <div class="red-tag-content">
-            <h5 class="red-tag-header">REJECTED</h5>
-
             <div class="tag-info-grid">
-                <div><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
-                <div><span class="label">ID:</span> <span>@(AttemptCount > 0 ? AttemptCount.ToString() : "None")</span></div>
-                <div><span class="label">Product:</span> <span>@ProductionLogEventService.CurrentProductName</span></div>
-                <div><span class="label">Part Name:</span> </div>
-                <div><span class="label">Part #:</span> </div>
-                <div><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
-                <div><span class="label">Step:</span> <span>@(LogSteps?.FirstOrDefault()?.WorkInstructionStep?.Name ?? "(No Step)")</span></div>
-                <div><span class="label">Operator:</span> <span>@ProductionLogEventService.CurrentLineOperatorName</span></div>
+                <!-- Row 1 -->
+                <div class="tag-item"><span class="label">RED TAG</span></div>
+                <div class="tag-item"><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
+                <div class="tag-item"><span class="label">ID:</span> <span>@(AttemptCount > 0 ? AttemptCount.ToString() : "None")</span></div>
+                <div class="tag-item"><span class="label">Product:</span> <span>@ProductionLogEventService.CurrentProductName</span></div>
+                <div class="tag-item"><span class="label">Part Name:</span></div>
+                <div class="tag-item"><span class="label">Part #:</span></div>
+
+                <!-- Row 2 -->
+                <div class="tag-item"><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
+                <div class="tag-item"><span class="label">Step:</span> <span>@(LogSteps?.FirstOrDefault()?.WorkInstructionStep?.Name ?? "(No Step)")</span></div>
+                <div class="tag-item"><span class="label">Operator:</span> <span>@ProductionLogEventService.CurrentLineOperatorName</span></div>
             </div>
+
+            <div class="failure-note"><span class="label">Failure Note:</span> <span>@FailureNotes</span></div>
         </div>
     </div>
 </div>
@@ -32,79 +36,78 @@
 
 @code {
     /// <summary>
-    /// Gets or sets the count of attempts (e.g., the number of times a step was attempted).
+    /// The current attempt count for the failure event.
     /// </summary>
-    [Parameter]
-    public int AttemptCount { get; set; }
+    [Parameter] public int AttemptCount { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of production log steps related to this red tag step.
+    /// The list of log steps associated with this red tag entry.
     /// </summary>
-    [Parameter]
-    public List<ProductionLogStep>? LogSteps { get; set; }
+    [Parameter] public List<ProductionLogStep>? LogSteps { get; set; }
 
     /// <summary>
-    /// Gets or sets the current failure notes text bound to the input.
+    /// Notes provided for the failure.
     /// </summary>
-    [Parameter]
-    public string FailureNotes { get; set; } = "";
-    
-    /// <summary>
-    /// Creates the closing feature of the red tag dialog for the cancel button.
-    /// </summary>
-    [Parameter]
-    public EventCallback OnCancel { get; set; }
-    
-    /// <summary>
-    /// Creates the printing feature of the red tag dialog for the submit (print) button.
-    /// </summary>
-    [Parameter]
-    public EventCallback OnSubmit { get; set; }
-
+    [Parameter] public string FailureNotes { get; set; } = "";
 
     /// <summary>
-    /// Reference to the imported JavaScript module for print functionality.
+    /// Event callback triggered when the Cancel button is clicked.
     /// </summary>
-    private IJSObjectReference? module;
-    
+    [Parameter] public EventCallback OnCancel { get; set; }
+
     /// <summary>
-    /// Lifecycle method called after component render.
-    /// Imports the JavaScript module for printing on first render.
+    /// Event callback triggered when the Print button is clicked and processing is completed.
     /// </summary>
-    /// <param name="firstRender">Indicates if this is the first render.</param>
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    /// <summary>
+    /// The JavaScript module reference used for printing the red tag.
+    /// </summary>
+    private IJSObjectReference? _jsModule;
+
+    /// <summary>
+    /// Loads the JavaScript module after the component has rendered for the first time.
+    /// </summary>
+    /// <param name="firstRender">Indicates if this is the first time the component is rendering.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./Components/Pages/ProductionLog/Create.razor.js");
+            try
+            {
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import", "/Scripts/RedTagDialog.js");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to load JS module: {ex.Message}");
+            }
         }
     }
 
     /// <summary>
-    /// Handler for when the Cancel button is clicked.
-    /// Currently placeholder for potential service calls or parent notifications.
+    /// Handles the Cancel button click by invoking the OnCancel callback.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task OnCancelClicked()
     {
         await OnCancel.InvokeAsync();
-        StateHasChanged(); // optional, to force UI update if needed
     }
 
-
-
     /// <summary>
-    /// Handler for when the Print button is clicked.
-    /// Prints the red tag element and adds a failed attempt to all log steps.
-    /// Then notifies the service that a change was made.
+    /// Handles the Print button click, prints the red tag, logs the failure attempt, and invokes OnSubmit.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task OnSubmitClicked()
     {
-        if (module != null)
+        if (_jsModule != null)
         {
-            await module.InvokeVoidAsync("printRedTagById", "red-tag-printable");
+            try
+            {
+                await _jsModule.InvokeVoidAsync("printRedTagById", "red-tag-printable");
+            }
+            catch (JSException ex)
+            {
+                Console.Error.WriteLine($"JS call failed: {ex.Message}");
+            }
         }
 
         if (LogSteps != null)
@@ -123,28 +126,26 @@
 
             await ProductionLogEventService.ChangeMadeToProductionLog();
         }
+
         await OnSubmit.InvokeAsync();
     }
 
-
     /// <summary>
-    /// Asynchronously disposes the JavaScript module to free resources.
+    /// Disposes the JS module asynchronously.
     /// </summary>
-    /// <returns>A ValueTask representing the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
-        if (module is not null)
+        if (_jsModule is not null)
         {
-            await module.DisposeAsync();
+            await _jsModule.DisposeAsync();
         }
     }
 
     /// <summary>
-    /// Synchronously disposes resources if any.
-    /// Provided for compatibility with IDisposable interface.
+    /// Synchronous dispose method. Currently no synchronous resources to dispose.
     /// </summary>
     public void Dispose()
     {
-        
+        // No synchronous disposable resources
     }
 }

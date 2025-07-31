@@ -31,12 +31,10 @@
                         <RedTagDialog
                             AttemptCount="_attemptCount"
                             LogSteps="LogSteps"
-                            FailureNotes="_currentAttemptNotes"
+                            FailureNotes="@FailureNoteText"
                             OnCancel="OnCancelClicked"
-                            OnSubmit="ToggleRedTagDialog"/>
+                            OnSubmit="OnSubmitClicked"/>
                     }
-
-
                     
                     @if (ShowOptionalNotesField)
                     {
@@ -46,9 +44,8 @@
                                 data-testid="optional-notes"
                                 class="flex-grow-1 me-2"
                                 placeholder="Optional: Add a failure note (if needed)"
-                                @bind-Value="_currentAttemptNotes"
-                                @bind-Value:after="@(async () => await HandleNoteChangedAsync())"/>
-        
+                                @oninput="HandleNoteChangedAsync"/>
+                            
                             <!-- Red Tag Button next to failure note -->
                             <button type="button"
                                     class="btn btn-sm btn-danger px-2 py-1"
@@ -171,6 +168,11 @@
     /// </summary>
     [Parameter]
     public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the failure note content explaining why the step was rejected.
+    /// </summary>
+    [Parameter] public string FailureNoteText { get; set; } = "";
 
     private FluentTextArea? _failureNoteTextArea;
 
@@ -291,8 +293,14 @@
 
         if (attempt != null)
         {
-            _currentAttemptNotes = attempt.Notes;
+            // Do NOT set _currentAttemptNotes here so textarea starts blank
+            FailureNoteText = attempt.Notes;  // This shows in red tag dialog
             ShowOptionalNotesField = true;
+        }
+        else
+        {
+            FailureNoteText = "";
+            ShowOptionalNotesField = false;
         }
     }
 
@@ -366,8 +374,11 @@
         }
     }
 
-    private async Task HandleNoteChangedAsync()
+    private async Task HandleNoteChangedAsync(ChangeEventArgs e)
     {
+        _currentAttemptNotes = e.Value?.ToString() ?? "";
+        FailureNoteText = _currentAttemptNotes;  // update parameter for dialog
+
         if (_pendingFailureAttempt != null)
         {
             _pendingFailureAttempt.Notes = _currentAttemptNotes;
@@ -406,5 +417,12 @@
         _showRedTagDialog = false;
         StateHasChanged();
     }
+    
+    private void OnSubmitClicked()
+    {
+        _showRedTagDialog = false;
+        StateHasChanged();
+    }
+
 
 }

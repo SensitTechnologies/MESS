@@ -1,6 +1,6 @@
 ﻿.red-tag-horizontal-wrapper {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     margin-top: 1rem;
 }
 
@@ -15,7 +15,7 @@
 .red-tag-horizontal {
     background-color: #f44336;
     color: black;
-    width: 4.75in;
+    width: 6in;
     height: 2.375in;
     padding: 0.5rem 0.6rem 0.5rem 3.2rem;
     position: relative;
@@ -51,8 +51,8 @@
 .red-tag-content h5 {
     font-weight: 700;
     font-size: 1.4rem;
-    margin: 0 auto 0.4rem auto;
-    text-align: center;
+    margin: 0 0 0.4rem auto;
+    text-align: left;
     line-height: 1;
 }
 
@@ -85,7 +85,6 @@
     text-overflow: ellipsis;
 }
 
-
 .tight-select {
     font-size: 0.75rem;
     padding: 0.2rem 0.4rem;
@@ -101,7 +100,6 @@
     border-color: #e85a61;
     background-color: #8c3338;
 }
-
 
 .inline-field-row {
     display: flex;
@@ -145,7 +143,6 @@
     background-color: #8c3338;
 }
 
-
 .multiline-row {
     display: flex;
     flex-direction: column;
@@ -183,85 +180,28 @@
     word-break: break-word;
 }
 
-
+/* === NEWLY MERGED STYLES === */
 .tag-info-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns → 4 rows with 8 items */
     gap: 6px 20px;
     margin-bottom: 8px;
+    font-size: 12px;
 }
 
-.tag-info-grid > div {
-    display: flex;
-    gap: 4px;
-    align-items: center;
+.tag-item {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-
-.failure-note-row {
-    display: flex;
-    flex-direction: column;
+.failure-note {
+    font-size: 12px;
+    margin-top: 0.25rem;
+    white-space: pre-line;
 }
-
 
 .label {
     font-weight: bold;
-}
-
-/* PRINT STYLES */
-@page {
-    size: 4.75in 2.375in;
-    margin: 0;
-}
-
-@media print {
-    body, html {
-        margin: 0;
-        padding: 0;
-        width: 4.75in;
-        height: 2.375in;
-        overflow: hidden;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    .red-tag-horizontal-wrapper {
-        display: block !important;
-        width: 4.75in !important;
-        height: 2.375in !important;
-    }
-
-    .red-tag-horizontal {
-        width: 4.75in !important;
-        height: 2.375in !important;
-        page-break-inside: avoid;
-        box-shadow: none !important;
-        clip-path: polygon(35px 0%, 100% 0%, 100% 100%, 35px 100%, 0% calc(100% - 35px), 0% 35px) !important;
-        -webkit-clip-path: polygon(35px 0%, 100% 0%, 100% 100%, 35px 100%, 0% calc(100% - 35px), 0% 35px) !important;
-        background-color: #f44336 !important;
-        color: black !important;
-        padding: 0.5rem 0.6rem 0.5rem 3.2rem !important;
-        box-sizing: border-box !important;
-        font-family: 'Rajdhani', sans-serif !important;
-        font-size: 0.8rem !important;
-        line-height: 1.2 !important;
-        overflow: hidden !important;
-    }
-
-    .red-tag-hole {
-        width: 0.3in !important;
-        height: 0.3in !important;
-        background-color: white !important;
-        border-radius: 50% !important;
-        position: absolute !important;
-        top: 50% !important;
-        left: 0.2in !important;
-        transform: translateY(-50%) !important;
-        z-index: 1 !important;
-    }
-
-    .red-tag-scaler {
-        transform: none !important;
-    }
+    margin-right: 4px;
 }
