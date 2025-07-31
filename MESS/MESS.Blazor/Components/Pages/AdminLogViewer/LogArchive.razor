@@ -103,12 +103,25 @@
     private bool IsLoading { get; set; } = true;
     private List<ProductionLog> ProductionLogs { get; set; } = new();
     private IEnumerable<ProductionLog> pagedData = new List<ProductionLog>();
+
     private MudTable<ProductionLog> _table = new MudTable<ProductionLog>();
+
     private int totalItems;
     
     private Dictionary<ProductionLog, int> SearchHits { get; } = [];
     private int MaxHits => SearchHits.Values.Max();
 
+    private string _searchString = "";
+    private string SearchString
+    {
+        get => _searchString;
+        set
+        {
+            _searchString = value;
+            table.ReloadServerData(); 
+        }
+    }
+    
     private const string NoProduct = "(No Product)";
     private const string NoWorkInstruction = "(No Work Instruction)";
     
@@ -122,6 +135,7 @@
             _table.ReloadServerData(); 
         }
     }
+
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -141,6 +155,7 @@
         IsLoading = false;
     }
     
+
     private async Task<TableData<ProductionLog>> ServerReload(TableState state, CancellationToken token)
     {
         IEnumerable<ProductionLog> data = ProductionLogs;
