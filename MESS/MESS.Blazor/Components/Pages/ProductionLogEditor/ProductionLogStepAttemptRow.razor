@@ -2,8 +2,8 @@
 <tr>
     <td>@Attempt.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
 
-    <td>@ToMarkup(ParentStep.WorkInstructionStep?.Name ?? "(No Step Name)")</td>
-
+    <td>@ToMarkup(Attempt.ProductionLogStep?.WorkInstructionStep?.Name ?? "(No Step Name)")</td>
+    
     <td>
         <div class="d-flex gap-2">
             @{
@@ -43,12 +43,6 @@
     /// </summary>
     [Parameter, EditorRequired]
     public ProductionLogStepAttempt Attempt { get; set; } = null!;
-    
-    /// <summary>
-    /// The parent production log step to the current attempt.
-    /// </summary>
-    [Parameter, EditorRequired]
-    public ProductionLogStep ParentStep { get; set; } = null!;
     
     /// <summary>
     /// Callback triggered when the attempt is modified (e.g., success/failure status or notes).

@@ -29,7 +29,7 @@ else
         <tbody>
             @foreach (var attempt in _allAttempts)
             {
-                <ProductionLogStepAttemptRow Attempt="attempt" @key="attempt.Id" ParentStep="_attemptToStep[attempt]"
+                <ProductionLogStepAttemptRow Attempt="attempt" @key="attempt.Id"
                                              OnChanged="HandleAttemptChanged"
                                              OnDelete="HandleAttemptDeleted" />
             }

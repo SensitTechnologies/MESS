@@ -1,0 +1,134 @@
+﻿@using MESS.Data.Models
+@using MESS.Services.ProductionLog
+@using ModifiableLog = LogArchive.ModifiableLog
+@implements IDialogContentComponent<ModifiableLog>
+@inject IProductionLogService ProductionLogService
+
+@* Header *@
+    <FluentDialogHeader>
+        <div class="d-flex justify-content-between" style="flex-direction: row">
+            <h2>@Dialog.Instance.Parameters.Title</h2>
+        </div>
+    </FluentDialogHeader>
+
+    @* Body *@
+    <FluentDialogBody>
+        <div class="d-flex mx-1" style="flex-direction: row">
+            <div class="d-flex me-5" style="flex-direction: row">
+                <p class="me-1">
+                    Product:<br/>
+                    Instruction:<br/>
+                    Product SN:<br/>
+                </p>
+                <p class="ms-1">
+                    @ShownLog.Product?.Name<br/>
+                    @ShownLog.WorkInstruction?.Title<br/>
+                    @ShownLog.ProductSerialNumber<br/>
+                </p>
+            </div>
+
+            <div class="d-flex mx-5" style="flex-direction: row">
+                <p class="me-1">
+                    Created By:<br/>
+                    Created On:<br/>
+                    Last Modified On:<br/>
+                </p>
+                <p class="ms-1">
+                    @ShownLog.CreatedBy<br/>
+                    @ShownLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")<br/>
+                    @ShownLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")<br/>
+                </p>
+            </div>
+        </div>
+        
+        <MudTable @ref="table"
+                  ServerData="ServerReload"
+                  Height="250px"
+                  FixedHeader="true"
+                  Class="border rounded-3 pt-1"
+                  TableClass="fixed-header-cell table table-striped ">
+            <ColGroup>
+                <col style="width: 45%"/>
+                <col/>
+                <col/>
+                <col style="width: 20%"/>
+            </ColGroup>
+            <HeaderContent>
+                <MudTh Style="background: white;">
+                        Step Name
+                </MudTh>
+                <MudTh Style="background: white;">
+                    Submit Time
+                </MudTh>
+                <MudTh Style="background: white;">
+                    Status
+                </MudTh>
+                <MudTh Style="background: white;">
+                    Failure Notes
+                </MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd Style="text-wrap: balance;" DataLabel="Step Name">@context.ProductionLogStep?.WorkInstructionStep?.Name.Trim()</MudTd>
+                <MudTd Style="text-wrap: balance;" DataLabel="Submit Time">@context.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd Style="text-wrap: balance;" DataLabel="Status">@(context.Success != null ? (context.Success == true ? "Success" : "Failure") : "")</MudTd>
+                <MudTd Style="text-wrap: balance;" DataLabel="Failure Notes">@context.Notes</MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager/>
+            </PagerContent>
+        </MudTable>
+  
+    </FluentDialogBody>
+
+    @* Footer *@
+    <FluentDialogFooter>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="MarkForDeletion">
+            Delete Log
+        </button>
+    </FluentDialogFooter>
+
+
+
+
+@code {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [Parameter]
+    public ModifiableLog Content { get; set; } = default!;
+
+    private ProductionLog ShownLog => Content.CurrentLog ?? new();
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+    
+    private IEnumerable<ProductionLogStepAttempt> pagedData = new List<ProductionLogStepAttempt>();
+    private MudTable<ProductionLogStepAttempt> table = new MudTable<ProductionLogStepAttempt>();
+    private int totalItems;
+
+    private async Task<TableData<ProductionLogStepAttempt>> ServerReload(TableState state, CancellationToken token)
+    {
+        var log = await ProductionLogService.GetByIdAsync(ShownLog.Id);
+        IEnumerable<ProductionLogStepAttempt> data = log?.LogSteps.SelectMany(step => step.Attempts).ToList() ?? [];
+        await Task.Delay(20, token);
+        totalItems = data.Count();
+        pagedData = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
+        return new TableData<ProductionLogStepAttempt>() {TotalItems = totalItems, Items = pagedData};
+    }
+    
+    private async Task SaveAsync()
+    {
+        await Dialog.CloseAsync(Content);
+    }
+
+    private async Task MarkForDeletion()
+    {
+        Content.MarkedForDelete = true;
+        await SaveAsync();
+    }
+    
+}
