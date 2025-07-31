@@ -3,11 +3,17 @@
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Layout
 @using MESS.Services.ProductionLog
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using SortDirection = MudBlazor.SortDirection
+@using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
+@using HorizontalAlignment = MudBlazor.HorizontalAlignment
+@using DialogResult = Microsoft.FluentUI.AspNetCore.Components.DialogResult
 @layout PhoebeLayout
 @inject NavigationManager NavManager
 @inject IProductionLogService ProductionLogService
+@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+@attribute [Authorize(Roles = "Administrator")]
 
 <ErrorBoundary>
     <ChildContent>
@@ -35,46 +41,45 @@
                                @bind="SearchString" @bind:event="oninput"  />
                         
                     </div>
-                    <div class="border rounded">
-                        <MudTable T="ProductionLog"
-                                  ServerData="ServerReload" 
-                                  Loading="IsLoading" 
-                                  Hover="true" 
-                                  OnRowMouseEnter="@RowMouseEnterEvent" 
-                                  @ref="table">
-                            <HeaderContent>
-                                <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLog, object>(x => x.Product?.Name ?? string.Empty)">Product</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLog, object>(x => x.WorkInstruction?.Title ?? string.Empty)">Work Instruction</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortLabel="serno_field" SortBy="new Func<ProductionLog, object>(x => x.ProductSerialNumber ?? string.Empty)">Product Serial Number</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLog, object>(x => x.CreatedBy)">Created By</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLog, object>(x => x.CreatedOn)">Created On</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLog, object>(x => x.LastModifiedOn)">Last Modified On</MudTableSortLabel></MudTh>
-                                <MudTh>Actions</MudTh>
-                            </HeaderContent>
-                            <RowTemplate Context="productionLog">
-                                <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
-                                <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstruction?.Title ?? NoWorkInstruction)</MudTd>
-                                <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
-                                <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
-                                <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
-                                <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
-                                <MudTd DataLabel="Actions">
-                                    <button class="btn btn-sm btn-primary" @onclick="ShowOptions">
-                                        Options
-                                    </button>
-                                </MudTd>
-                            </RowTemplate>
-                            <PagerContent>
-                                <MudTablePager/>
-                            </PagerContent>
-                        </MudTable>
-                        
-                        <LogOptionsDialog
-                            IsVisible="@showOptionsDialog"
-                            VisibleChanged="HandleOptionsDialogToggled"
-                            shownLog="@currentlyHoveredElement"/>
-                        
-                    </div>
+                    
+                    <MudTable @ref="_table"
+                              T="ProductionLog"
+                              ServerData="ServerReload"
+                              Loading="IsLoading"
+                              Hover="true"
+                              FixedHeader="true"
+                              Class="border rounded-3 pt-1"
+                              Style="background: white"
+                              TableClass="table table-striped table-hover">
+                  
+                        <HeaderContent>
+                            <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLog, object>(x => x.Product?.Name ?? string.Empty)"><strong>Product</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLog, object>(x => x.WorkInstruction?.Title ?? string.Empty)"><strong>Work Instruction</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="serno_field" SortBy="new Func<ProductionLog, object>(x => x.ProductSerialNumber ?? string.Empty)"><strong>Product Serial Number</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLog, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLog, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLog, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="productionLog">
+                            <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
+                            <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstruction?.Title ?? NoWorkInstruction)</MudTd>
+                            <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
+                            <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
+                            <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                            <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                            <MudTd DataLabel="Actions">
+                                <button class="btn btn-sm btn-primary" @onclick="@(() => OpenDialogAsync(productionLog))">
+                                    Options
+                                </button>
+                            </MudTd>
+                        </RowTemplate>
+                        <PagerContent>
+                            <MudTablePager InfoFormat="@infoFormat()" 
+                                           HorizontalAlignment="HorizontalAlignment.Center" 
+                                           RowsPerPageString="Logs per Page"/>
+                        </PagerContent>
+                    </MudTable>
                 }
                 else
                 {
@@ -98,7 +103,7 @@
     private bool IsLoading { get; set; } = true;
     private List<ProductionLog> ProductionLogs { get; set; } = new();
     private IEnumerable<ProductionLog> pagedData = new List<ProductionLog>();
-    private MudTable<ProductionLog> table = new MudTable<ProductionLog>();
+    private MudTable<ProductionLog> _table = new MudTable<ProductionLog>();
     private int totalItems;
     
     private Dictionary<ProductionLog, int> SearchHits { get; } = [];
@@ -114,14 +119,17 @@
         set
         {
             _searchString = value;
-            table.ReloadServerData(); 
+            _table.ReloadServerData(); 
         }
     }
-
-    
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
+    {
+        await GrabServerData();
+    }
+
+    private async Task GrabServerData()
     {
         IsLoading = true;
         ProductionLogs = await ProductionLogService.GetAllAsync() ?? [];
@@ -132,7 +140,7 @@
         
         IsLoading = false;
     }
-
+    
     private async Task<TableData<ProductionLog>> ServerReload(TableState state, CancellationToken token)
     {
         IEnumerable<ProductionLog> data = ProductionLogs;
@@ -225,17 +233,56 @@
         return false;
     }
 
+    private string infoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
     
-    private ProductionLog currentlyHoveredElement = new ();
-    private void RowMouseEnterEvent(TableRowHoverEventArgs<ProductionLog> eventArgs)
+    /// <summary>
+    /// 
+    /// </summary>
+    public record ModifiableLog
     {
-        currentlyHoveredElement = eventArgs.Item ?? currentlyHoveredElement;
+        /// <summary>
+        /// 
+        /// </summary>
+        public ProductionLog? CurrentLog { get; set; }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool MarkedForDelete { get; set; }
     }
 
+    private async Task OpenDialogAsync(ProductionLog log)
+    {
+        // Create a new instance of Data
+        // to allow the user to cancel the update
 
-    private bool showOptionsDialog;
-    private void ShowOptions() => HandleOptionsDialogToggled(true);
-    private void HandleOptionsDialogToggled(bool isOpen) => showOptionsDialog = isOpen;
-    
+        var Data = new ModifiableLog() { CurrentLog = log, MarkedForDelete = false };
+        
+        await DialogService.ShowDialogAsync<LogOptionsDialog>(Data, new DialogParameters()
+            {
+                Title = $"Log #{log.Id}",
+                OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
+                Width = "80%",
+                PreventScroll = true,
+            });
+    }
 
+    private async Task HandleDialogAsync(DialogResult result)
+    {
+        if (!result.Cancelled && result.Data != null)
+        {
+            var resultData = (ModifiableLog)result.Data;
+            
+            // Safely delete the log
+            if (resultData.CurrentLog != null)
+            {
+                var deletionResult = await ProductionLogService.DeleteProductionLogAsync(resultData.CurrentLog.Id);
+                if (deletionResult)
+                {
+                    await GrabServerData();
+                    await _table.ReloadServerData();
+                }
+            }
+        }
+    }
 }
