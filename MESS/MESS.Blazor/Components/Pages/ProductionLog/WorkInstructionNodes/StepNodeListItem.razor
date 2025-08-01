@@ -33,6 +33,7 @@
                             LogSteps="LogSteps"
                             Attempts="@LogSteps.SelectMany(s => s.Attempts).ToList()"
                             FailureNotes="@FailureNoteText"
+                            StepDescription="@Step.Name"
                             OnCancel="OnCancelClicked"
                             OnSubmit="OnSubmitClicked" />
                     }

@@ -2,6 +2,7 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 @implements IAsyncDisposable
+@using System.Text.RegularExpressions
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
 
@@ -27,7 +28,7 @@
 
                 <!-- Row 2 -->
                 <div class="tag-item"><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
-                <div class="tag-item"><span class="label">Step:</span> <span>@(LogSteps?.FirstOrDefault()?.WorkInstructionStep?.Name ?? "(No Step)")</span></div>
+                <div><span class="label">Step:</span><span class="step-truncate">@StripHtmlTags(StepDescription)</span></div>
                 <div class="tag-item"><span class="label">Operator:</span> <span>@ProductionLogEventService.CurrentLineOperatorName</span></div>
             </div>
 
@@ -71,6 +72,12 @@
     /// The list of existing attempts passed into the component.
     /// </summary>
     [Parameter] public List<ProductionLogStepAttempt>? Attempts { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the description of the step associated with the failure.
+    /// </summary>
+    [Parameter] public string StepDescription { get; set; } = "";
+    
 
     /// <summary>
     /// Internal copy of attempts used for display logic.
@@ -124,6 +131,9 @@
     {
         await OnCancel.InvokeAsync();
     }
+    
+    private static string StripHtmlTags(string? input) =>
+        string.IsNullOrWhiteSpace(input) ? "" : Regex.Replace(input, "<.*?>", "").Trim();
 
     /// <summary>
     /// Handles the Print button click, prints the red tag, logs the failure attempt, and invokes OnSubmit.
