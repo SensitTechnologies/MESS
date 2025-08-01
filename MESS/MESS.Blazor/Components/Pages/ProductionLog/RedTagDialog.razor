@@ -81,10 +81,9 @@
 
     /// <summary>
     /// Gets or sets the name of the currently logged-in operator.
-    /// If not set externally, it will be auto-populated from the authentication claims.
+    /// It will be auto-populated from the authentication claims.
     /// </summary>
-    [Parameter]
-    public string OperatorName { get; set; } = string.Empty;
+    private string OperatorName { get; set; } = string.Empty;
 
     /// <summary>
     /// Internal copy of attempts used for display logic.

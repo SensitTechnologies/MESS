@@ -12,6 +12,8 @@
                 <div class="card">
                     <div class="card-body">
                         <p class="card-text d-block mb-1" style="white-space: pre-wrap;">
+                            
+                            @* Replace text with extra details i.e. body text *@
                             @switch (ShowDetails)
                             {
                                 case false:
@@ -34,7 +36,6 @@
                             Attempts="@LogSteps.SelectMany(s => s.Attempts).ToList()"
                             FailureNotes="@FailureNoteText"
                             StepDescription="@Step.Name"
-                            OperatorName="@OperatorName"
                             OnCancel="OnCancelClicked"
                             OnSubmit="OnSubmitClicked" />
                     }
@@ -60,9 +61,9 @@
                         </div>
                     }
 
-                    <div class="row mt-2 align-items-center">
-                        <div class="col d-flex justify-content-start gap-3">
-                            <div class="position-relative">
+                    <div class="row mt-2">
+                        <div class="col text-start">
+                            <div class="position-relative d-inline-block">
                                 <!-- Success Button -->
                                 <input type="radio"
                                        class="btn-check"
@@ -82,8 +83,8 @@
                                     </div>
                                 }
                             </div>
-
-                            <div class="position-relative">
+                            
+                            <div class="position-relative d-inline-block">
                                 <!-- Failure Button -->
                                 <input type="radio"
                                        class="btn-check"
@@ -91,9 +92,9 @@
                                        id="radioFailureBtn{@Step.Body}-@Step.Id"
                                        checked="@(SelectedButton == "Failure")"
                                        @onclick="@(async (e) => await HandleButtonPress(false))"/>
-                                <label class="btn btn-outline-danger d-flex align-items-center justify-content-between gap-2 @(SelectedButton == "Failure" ? "active" : "")"
+                                <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
                                        for="radioFailureBtn{@Step.Body}-@Step.Id">
-                                    <span>Failure</span>
+                                    Failure
                                 </label>
 
                                 @if (_showFailureFloat)
@@ -163,17 +164,22 @@
     /// <summary>
     /// Represents the production log steps associated with the current step.
     /// </summary>
+    /// <remarks>
+    /// With one piece flow, this list will have just one log step. In batch mode, there will be many log steps, associated
+    /// with one WI step.
+    /// </remarks>
     [Parameter]
     public required List<ProductionLogStep> LogSteps { get; set; }
 
     /// <summary>
     /// Event callback triggered when the step is completed.
+    /// The tuple contains the production log step and a nullable boolean indicating success or failure.
     /// </summary>
     [Parameter]
     public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
     
     /// <summary>
-    /// Gets or sets the failure note content explaining why the step was rejected.
+    /// Gets or sets the failure note content explaining what failed in the step attempt.
     /// </summary>
     [Parameter] public string FailureNoteText { get; set; } = "";
 
@@ -197,15 +203,11 @@
         if (string.IsNullOrWhiteSpace(html))
             return true;
 
+        // Strip tags and decode entities if needed
         var textOnly = Regex.Replace(html, "<.*?>", "").Trim();
 
         return string.IsNullOrWhiteSpace(textOnly);
     }
-    
-    /// <summary>
-    /// The operator's display name extracted from authentication.
-    /// </summary>
-    private string OperatorName { get; set; } = "";
 
     private bool _showSuccessFloat = false;
     private bool _showFailureFloat = false;
@@ -264,12 +266,12 @@
             {
                 true => "Success",
                 false => "Failure",
-                null => ""
+                null => "" // All steps unattempted: show nothing selected
             };
         }
         else
         {
-            SelectedButton = "";
+            SelectedButton = ""; // Mixed states: show nothing selected
         }
 
         // Keep Part info synced (optional)
