@@ -40,4 +40,10 @@ public class ProductionLog : AuditableEntity
     /// Gets or sets the product serial number.
     /// </summary>
     public string? ProductSerialNumber { get; set; }
+    
+    /// <summary>
+    /// Gets or sets an unsigned integer value specifying the size of the batch this production log was made from.
+    /// A value of 1 indicates that the log was made from a single piece flow.
+    /// </summary>
+    public int FromBatchOf { get; set; }
 }
