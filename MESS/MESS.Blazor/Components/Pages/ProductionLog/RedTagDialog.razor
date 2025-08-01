@@ -1,10 +1,12 @@
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthProvider
 @implements IDisposable
 @implements IAsyncDisposable
 @using System.Text.RegularExpressions
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
+@using Microsoft.AspNetCore.Components.Authorization
 
 <div id="red-tag-printable" class="red-tag-horizontal-wrapper print-only" style="width: 456px; height: 228px;">
     <div class="red-tag-horizontal">
@@ -29,10 +31,9 @@
                 <!-- Row 2 -->
                 <div class="tag-item"><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
                 <div class="tag-item"><span class="label">Step:</span><span class="step-truncate">@StripHtmlTags(StepDescription)</span></div>
-                <div class="tag-item"><span class="label">Operator:</span> <span>@ProductionLogEventService.CurrentLineOperatorName</span></div>
+                <div class="tag-item"><span class="label">Operator:</span> <span>@OperatorName</span></div>
+                <div class="failure-note"><span class="label">Failure Note:</span> <span>@FailureNotes</span></div>
             </div>
-
-            <div class="failure-note"><span class="label">Failure Note:</span> <span>@FailureNotes</span></div>
         </div>
     </div>
 </div>
@@ -72,12 +73,18 @@
     /// The list of existing attempts passed into the component.
     /// </summary>
     [Parameter] public List<ProductionLogStepAttempt>? Attempts { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the description of the step associated with the failure.
     /// </summary>
     [Parameter] public string StepDescription { get; set; } = "";
-    
+
+    /// <summary>
+    /// Gets or sets the name of the currently logged-in operator.
+    /// If not set externally, it will be auto-populated from the authentication claims.
+    /// </summary>
+    [Parameter]
+    public string OperatorName { get; set; } = string.Empty;
 
     /// <summary>
     /// Internal copy of attempts used for display logic.
@@ -95,8 +102,49 @@
     private IJSObjectReference? _jsModule;
 
     /// <summary>
+    /// Initializes the component asynchronously by loading the operator name from authentication claims if not provided.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(OperatorName))
+        {
+            var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
+
+            string firstName = user.Claims.FirstOrDefault(c => c.Type.Contains("givenname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+            string lastName = user.Claims.FirstOrDefault(c => c.Type.Contains("surname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+
+            if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
+            {
+                OperatorName = user.Claims.FirstOrDefault(c => c.Type == "name")?.Value
+                               ?? user.Identity?.Name
+                               ?? "Unknown Operator";
+            }
+            else
+            {
+                OperatorName = $"{firstName} {lastName}".Trim();
+            }
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    /// <summary>
+    /// Called when component parameters are set. Syncs internal state with external inputs.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (Attempts != null)
+        {
+            _internalAttempts = new List<ProductionLogStepAttempt>(Attempts);
+        }
+    }
+
+    /// <summary>
     /// Loads the JavaScript module after the component has rendered for the first time.
     /// </summary>
+    /// <param name="firstRender">True if this is the first render of the component.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -114,30 +162,26 @@
     }
 
     /// <summary>
-    /// Called when component parameters are set. Syncs internal state with external inputs.
+    /// Removes HTML tags from the given input string.
     /// </summary>
-    protected override void OnParametersSet()
-    {
-        if (Attempts != null)
-        {
-            _internalAttempts = new List<ProductionLogStepAttempt>(Attempts);
-        }
-    }
-
-    /// <summary>
-    /// Handles the Cancel button click by invoking the OnCancel callback.
-    /// </summary>
-    private async Task OnCancelClicked()
-    {
-        await OnCancel.InvokeAsync();
-    }
-    
+    /// <param name="input">The input string potentially containing HTML tags.</param>
+    /// <returns>The input string with HTML tags removed and trimmed.</returns>
     private static string StripHtmlTags(string? input) =>
         string.IsNullOrWhiteSpace(input) ? "" : Regex.Replace(input, "<.*?>", "").Trim();
 
     /// <summary>
+    /// Handles the Cancel button click by invoking the OnCancel callback.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task OnCancelClicked()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    /// <summary>
     /// Handles the Print button click, prints the red tag, logs the failure attempt, and invokes OnSubmit.
     /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task OnSubmitClicked()
     {
         if (_jsModule != null)
@@ -175,6 +219,7 @@
     /// <summary>
     /// Disposes the JS module asynchronously.
     /// </summary>
+    /// <returns>A ValueTask representing the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
         if (_jsModule is not null)

@@ -34,6 +34,7 @@
                             Attempts="@LogSteps.SelectMany(s => s.Attempts).ToList()"
                             FailureNotes="@FailureNoteText"
                             StepDescription="@Step.Name"
+                            OperatorName="@OperatorName"
                             OnCancel="OnCancelClicked"
                             OnSubmit="OnSubmitClicked" />
                     }
@@ -200,6 +201,11 @@
 
         return string.IsNullOrWhiteSpace(textOnly);
     }
+    
+    /// <summary>
+    /// The operator's display name extracted from authentication.
+    /// </summary>
+    private string OperatorName { get; set; } = "";
 
     private bool _showSuccessFloat = false;
     private bool _showFailureFloat = false;

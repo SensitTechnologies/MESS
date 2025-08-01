@@ -35,40 +35,48 @@
     html, body {
         margin: 0;
         padding: 0;
-        width: 7.64in;
-        height: 1.99in;
+        width: 7.64in; /* 7.8 - 2*0.08 */
+        height: 1.99in; /* 2.15 - 2*0.08 */
         font-family: Arial, sans-serif;
-        font-size: 12.8pt;
+        font-size: 17pt;
         color: black;
         background: white;
         box-sizing: border-box;
-        line-height: 1.25;
+        line-height: 1.10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .red-tag-wrapper {
-        padding: 0.1in 0.2in 0 0.2in;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
         box-sizing: border-box;
     }
     .row {
         display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 1.5em;
-        margin-bottom: 0.2em;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: 0.2in;
+        margin-bottom: 0.05in;
     }
     .field {
-        white-space: nowrap;
         flex-shrink: 0;
+        white-space: nowrap;
+        font-weight: bold;
     }
     .failure-note {
-        margin-top: 0.25in;
         display: flex;
-        flex-wrap: wrap;
+        margin-top: 0.1in;
     }
-    .failure-note .failure-text {
+    .failure-text {
         color: #b00000;
         word-break: break-word;
-        flex: 1 1 auto;
-        min-width: 0;
+        flex: 1;
+        font-weight: normal;
     }
     `;
 
@@ -107,6 +115,7 @@
         row1.innerHTML = `
             <span class="field">RED TAG</span>
             <span class="field">${map['Date'] || ''}</span>
+            <span class="field">${map['Operator'] || ''}</span>
             <span class="field">${map['ID'] || ''}</span>
         `;
 
@@ -118,17 +127,12 @@
             <span class="field">${map['Step'] || ''}</span>
         `;
 
-        const row3 = document.createElement('div');
-        row3.className = 'row';
-        row3.innerHTML = `<span class="field">${map['Operator'] || ''}</span>`;
-
         const failureDiv = document.createElement('div');
         failureDiv.className = 'failure-note';
         failureDiv.innerHTML = `<span class="failure-text">${failureText}</span>`;
 
         wrapper.appendChild(row1);
         wrapper.appendChild(row2);
-        wrapper.appendChild(row3);
         wrapper.appendChild(failureDiv);
 
         return wrapper.outerHTML;
