@@ -13,24 +13,15 @@
         <div class="red-tag-hole"></div>
         <div class="red-tag-content">
             <div class="tag-info-grid">
-                <!-- Row 1 -->
                 <div class="tag-item"><span class="label">RED TAG</span></div>
                 <div class="tag-item"><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
-                @if (_internalAttempts != null && _internalAttempts.Count > 0)
-                {
-                    <div class="tag-item"><span class="label">ID:</span> <span>@AttemptNumber</span></div>
-                }
-                else
-                {
-                    <div class="tag-item"><span class="label">ID:</span> <span>None</span></div>
-                }
+                <div class="tag-item"><span class="label">ID:</span> <span>None</span></div>
                 <div class="tag-item"><span class="label">Product:</span> <span>@ProductionLogEventService.CurrentProductName</span></div>
                 <div class="tag-item"><span class="label">Part Name:</span></div>
                 <div class="tag-item"><span class="label">Part #:</span></div>
 
-                <!-- Row 2 -->
                 <div class="tag-item"><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
-                <div class="tag-item"><span class="label">Step:</span><span class="step-truncate">@StripHtmlTags(StepDescription)</span></div>
+                <div class="tag-item"><span class="label">Step:</span> <span class="step-truncate">@StripHtmlTags(DerivedStep)</span></div>
                 <div class="tag-item"><span class="label">Operator:</span> <span>@OperatorName</span></div>
                 <div class="failure-note"><span class="label">Failure Note:</span> <span>@FailureNotes</span></div>
             </div>
@@ -45,105 +36,128 @@
 
 @code {
     /// <summary>
-    /// The current attempt count for the failure event.
+    /// Optional override for the current step description.
+    /// If set, this value is displayed instead of steps from LogSteps.
     /// </summary>
-    [Parameter] public int AttemptCount { get; set; }
+    [Parameter]
+    public string Step { get; set; } = string.Empty;
 
     /// <summary>
-    /// The list of log steps associated with this red tag entry.
+    /// Notes entered by the operator describing the failure condition.
+    /// Displayed in the red tag.
     /// </summary>
-    [Parameter] public List<ProductionLogStep>? LogSteps { get; set; }
+    [Parameter]
+    public string FailureNotes { get; set; } = "";
 
     /// <summary>
-    /// Notes provided for the failure.
+    /// Event callback invoked when the Cancel button is clicked.
     /// </summary>
-    [Parameter] public string FailureNotes { get; set; } = "";
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the Cancel button is clicked.
+    /// Event callback invoked when the Print button is clicked.
     /// </summary>
-    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter]
+    public EventCallback OnSubmit { get; set; }
 
     /// <summary>
-    /// Event callback triggered when the Print button is clicked and processing is completed.
+    /// List of production log steps passed from the parent component.
+    /// Used to determine the step description if <see cref="Step"/> is not set.
     /// </summary>
-    [Parameter] public EventCallback OnSubmit { get; set; }
+    [Parameter]
+    public List<ProductionLogStep>? LogSteps { get; set; }
 
     /// <summary>
-    /// The list of existing attempts passed into the component.
-    /// </summary>
-    [Parameter] public List<ProductionLogStepAttempt>? Attempts { get; set; }
-
-    /// <summary>
-    /// Gets or sets the description of the step associated with the failure.
-    /// </summary>
-    [Parameter] public string StepDescription { get; set; } = "";
-
-    /// <summary>
-    /// Gets or sets the name of the currently logged-in operator.
-    /// It will be auto-populated from the authentication claims.
+    /// The name of the current operator resolved from authentication claims.
     /// </summary>
     private string OperatorName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Internal copy of attempts used for display logic.
-    /// </summary>
-    private List<ProductionLogStepAttempt>? _internalAttempts;
-
-    /// <summary>
-    /// Gets the number of step attempts associated with the current log entry.
-    /// </summary>
-    private int AttemptNumber => _internalAttempts?.Count ?? 0;
-
-    /// <summary>
-    /// The JavaScript module reference used for printing the red tag.
+    /// JavaScript module reference used to invoke print functionality.
     /// </summary>
     private IJSObjectReference? _jsModule;
 
     /// <summary>
-    /// Initializes the component asynchronously by loading the operator name from authentication claims if not provided.
+    /// Determines the step description to display.
+    /// If <see cref="Step"/> is non-empty, it returns that.
+    /// Otherwise, it finds the latest step from <see cref="LogSteps"/> with attempts and returns its step name.
+    /// Returns fallback messages if no valid step is found.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    protected override async Task OnInitializedAsync()
+    private string DerivedStep
     {
-        if (string.IsNullOrWhiteSpace(OperatorName))
+        get
         {
-            var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
+            if (!string.IsNullOrWhiteSpace(Step))
+                return Step;
 
-            string firstName = user.Claims.FirstOrDefault(c => c.Type.Contains("givenname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
-            string lastName = user.Claims.FirstOrDefault(c => c.Type.Contains("surname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+            if (LogSteps == null || LogSteps.Count == 0)
+                return "No step description available.";
 
-            if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
-            {
-                OperatorName = user.Claims.FirstOrDefault(c => c.Type == "name")?.Value
-                               ?? user.Identity?.Name
-                               ?? "Unknown Operator";
-            }
-            else
-            {
-                OperatorName = $"{firstName} {lastName}".Trim();
-            }
+            var stepsWithAttempts = LogSteps
+                .Where(s => s.Attempts != null && s.Attempts.Any())
+                .Where(s => s.WorkInstructionStep != null && !string.IsNullOrWhiteSpace(s.WorkInstructionStep.Name))  // filter valid step info
+                .ToList();
+
+            if (stepsWithAttempts.Count == 0)
+                return "No attempts found in steps with valid step info.";
+
+            var latestStepWithAttempt = stepsWithAttempts
+                .OrderByDescending(s => s.Attempts.Max(a => a.SubmitTime))
+                .FirstOrDefault();
+
+            if (latestStepWithAttempt == null)
+                return "No step with attempts found.";
+
+            return StripHtmlTags(latestStepWithAttempt.WorkInstructionStep!.Name);
         }
-
-        await base.OnInitializedAsync();
     }
 
     /// <summary>
-    /// Called when component parameters are set. Syncs internal state with external inputs.
+    /// Called by the framework when parameters are set.
+    /// Logs debug information about each step and its attempts for diagnostics.
     /// </summary>
     protected override void OnParametersSet()
     {
-        if (Attempts != null)
+        if (LogSteps != null)
         {
-            _internalAttempts = new List<ProductionLogStepAttempt>(Attempts);
+            foreach (var step in LogSteps)
+            {
+                var stepName = step.WorkInstructionStep?.Name ?? "(null)";
+                var attemptsCount = step.Attempts?.Count ?? 0;
+                Console.WriteLine($"[Debug] Step name: '{stepName}', Attempts count: {attemptsCount}");
+            }
         }
     }
 
     /// <summary>
-    /// Loads the JavaScript module after the component has rendered for the first time.
+    /// Called when the component is initialized.
+    /// Retrieves the operator's name from authentication claims.
     /// </summary>
-    /// <param name="firstRender">True if this is the first render of the component.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
+
+        string firstName = user.Claims.FirstOrDefault(c => c.Type.Contains("givenname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+        string lastName = user.Claims.FirstOrDefault(c => c.Type.Contains("surname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+
+        if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
+        {
+            OperatorName = user.Claims.FirstOrDefault(c => c.Type == "name")?.Value
+                           ?? user.Identity?.Name
+                           ?? "Unknown Operator";
+        }
+        else
+        {
+            OperatorName = $"{firstName} {lastName}".Trim();
+        }
+    }
+
+    /// <summary>
+    /// Called after component render.
+    /// Loads the required JavaScript module on first render.
+    /// </summary>
+    /// <param name="firstRender">True if this is the first time the component rendered.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -161,29 +175,24 @@
     }
 
     /// <summary>
-    /// Removes HTML tags from the given input string.
+    /// Removes all HTML tags from the input string.
     /// </summary>
-    /// <param name="input">The input string potentially containing HTML tags.</param>
-    /// <returns>The input string with HTML tags removed and trimmed.</returns>
+    /// <param name="input">String potentially containing HTML tags.</param>
+    /// <returns>String with all HTML tags removed.</returns>
     private static string StripHtmlTags(string? input) =>
         string.IsNullOrWhiteSpace(input) ? "" : Regex.Replace(input, "<.*?>", "").Trim();
 
     /// <summary>
-    /// Handles the Cancel button click by invoking the OnCancel callback.
+    /// Invokes the cancel event callback when Cancel button is clicked.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task OnCancelClicked()
-    {
-        await OnCancel.InvokeAsync();
-    }
+    private async Task OnCancelClicked() => await OnCancel.InvokeAsync();
 
     /// <summary>
-    /// Handles the Print button click, prints the red tag, logs the failure attempt, and invokes OnSubmit.
+    /// Invokes the print JavaScript and the submit event callback when Print button is clicked.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task OnSubmitClicked()
     {
-        if (_jsModule != null)
+        if (_jsModule is not null)
         {
             try
             {
@@ -195,30 +204,12 @@
             }
         }
 
-        if (LogSteps != null)
-        {
-            var failureAttempt = new ProductionLogStepAttempt
-            {
-                Success = false,
-                SubmitTime = DateTimeOffset.UtcNow,
-                Notes = FailureNotes
-            };
-
-            foreach (var step in LogSteps)
-            {
-                step.Attempts.Add(failureAttempt);
-            }
-
-            await ProductionLogEventService.ChangeMadeToProductionLog();
-        }
-
         await OnSubmit.InvokeAsync();
     }
 
     /// <summary>
-    /// Disposes the JS module asynchronously.
+    /// Disposes the JavaScript module asynchronously when the component is destroyed.
     /// </summary>
-    /// <returns>A ValueTask representing the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
         if (_jsModule is not null)
@@ -228,7 +219,7 @@
     }
 
     /// <summary>
-    /// Synchronous dispose method. Currently no synchronous resources to dispose.
+    /// Performs synchronous cleanup. No synchronous disposable resources used.
     /// </summary>
     public void Dispose()
     {
