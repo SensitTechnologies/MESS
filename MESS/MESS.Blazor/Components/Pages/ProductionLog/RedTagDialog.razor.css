@@ -40,6 +40,10 @@
     z-index: 1;
 }
 
+.dark-mode .red-tag-hole {
+    background-color: #555555 !important;
+}
+
 .red-tag-content {
     display: flex;
     flex-direction: column;
