@@ -17,12 +17,19 @@ public class SerializationService : ISerializationService
     {
         _contextFactory = contextFactory;
     }
-
-    /// <inheritdoc />
-    public event Action? CurrentProductionLogPartChanged;
+    
     /// <inheritdoc />
     public event Action? CurrentProductNumberChanged;
     private string? _currentProductNumber;
+    
+    /// <inheritdoc />
+    public event Action? PartsReloadRequested;
+
+    /// <inheritdoc />
+    public void RequestPartsReload()
+    {
+        PartsReloadRequested?.Invoke();
+    }
 
     /// <inheritdoc />
     public string? CurrentProductNumber
@@ -35,46 +42,60 @@ public class SerializationService : ISerializationService
         }
     }
 
-    private List<ProductionLogPart> _currentProductionLogParts = [];
+    private readonly Dictionary<int, List<ProductionLogPart>> _partsByLogIndex = new();
+
+    
     /// <inheritdoc />
-    public List<ProductionLogPart> CurrentProductionLogParts
+    public async Task<bool> SaveAllLogPartsAsync(List<ProductionLog> savedLogs)
     {
-        get => _currentProductionLogParts;
-        set
+        bool allSaved = true;
+
+        foreach (var kvp in _partsByLogIndex)
         {
-            _currentProductionLogParts = value;
-            CurrentProductionLogPartChanged?.Invoke();
+            int logIndex = kvp.Key;
+            List<ProductionLogPart> parts = kvp.Value;
+
+            if (logIndex < 0 || logIndex >= savedLogs.Count)
+            {
+                Log.Error("Invalid log index {LogIndex} during SaveAllLogPartsAsync", logIndex);
+                allSaved = false;
+                continue;
+            }
+
+            int productionLogId = savedLogs[logIndex].Id;
+
+            // Filter out parts without a serial number
+            var partsWithSerials = parts
+                .Where(p => !string.IsNullOrWhiteSpace(p.PartSerialNumber))
+                .ToList();
+
+            if (partsWithSerials.Count == 0)
+            {
+                Log.Debug("No parts with serial numbers for log index {LogIndex}; skipping save.", logIndex);
+                continue;
+            }
+
+            foreach (var part in partsWithSerials)
+            {
+                part.ProductionLogId = productionLogId;
+            }
+
+            var success = await CreateRangeAsync(partsWithSerials);
+            if (!success)
+            {
+                Log.Warning("Failed to save parts for log at index {LogIndex}", logIndex);
+                allSaved = false;
+            }
+            else
+            {
+                Log.Information("Saved {Count} parts for log ID {LogId} (index {LogIndex})", partsWithSerials.Count, productionLogId, logIndex);
+            }
         }
+
+        _partsByLogIndex.Clear();
+        return allSaved;
     }
 
-    /// <inheritdoc />
-    public async Task<bool> SaveCurrentProductionLogPartsAsync(int productionLogId)
-    {
-        try
-        {
-            if (CurrentProductionLogParts.Count <= 0)
-            {
-                return false;
-            }
-
-            foreach (var log in CurrentProductionLogParts)
-            {
-                log.ProductionLogId = productionLogId;
-            }
-
-            var result = await CreateRangeAsync(CurrentProductionLogParts);
-            if (result)
-            {
-                CurrentProductionLogParts.Clear();
-            }
-            return result;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception caught when attempting to save Current Production Log Parts with ProductionLogID: {ID}. Exception Message {Message}", productionLogId, e.Message);
-            return false;
-        }
-    }
 
     /// <inheritdoc />
     public async Task<List<ProductionLogPart>?> GetAllAsync()
@@ -196,4 +217,46 @@ public class SerializationService : ISerializationService
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public List<ProductionLogPart> GetPartsForLogIndex(int logIndex)
+    {
+        if (_partsByLogIndex.TryGetValue(logIndex, out var parts))
+        {
+            Log.Debug("Retrieved {Count} parts for log index {Index}", parts.Count, logIndex);
+            return parts;
+        }
+
+        Log.Debug("No parts found for log index {Index}", logIndex);
+        return new();
+    }
+
+    /// <inheritdoc />
+    public void SetPartsForLogIndex(int logIndex, List<ProductionLogPart> parts)
+    {
+        _partsByLogIndex[logIndex] = parts;
+        Log.Debug("Set {Count} parts for log index {Index}", parts.Count, logIndex);
+    }
+    
+    /// <inheritdoc />
+    public void ClearPartsForLogIndex(int logIndex)
+    {
+        if (_partsByLogIndex.Remove(logIndex))
+        {
+            Log.Information("Cleared parts for production log at index {LogIndex}", logIndex);
+        }
+        else
+        {
+            Log.Debug("No parts found to clear for production log at index {LogIndex}", logIndex);
+        }
+    }
+    
+    /// <inheritdoc />
+    public void ClearAllLogParts()
+    {
+        _partsByLogIndex.Clear();
+        Log.Information("Cleared all log parts across all log indexes.");
+        RequestPartsReload();
+    }
+    
 }

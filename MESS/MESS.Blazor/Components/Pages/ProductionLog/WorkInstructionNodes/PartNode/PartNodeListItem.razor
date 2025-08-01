@@ -4,7 +4,21 @@
 
 @if (_initialized)
 {
+    <div class="mb-2">
+        <label for="logIndexInput" class="form-label me-2">Log #</label>
+        <input type="number"
+               id="logIndexInput"
+               class="form-control"
+               style="max-width: 80px"
+               min="1"
+               max="@ProductionLogs.Count"
+               @bind="SelectedLogNumber"
+               @bind:event="oninput"
+               @onchange="ReloadPartsForSelectedIndex" />
+    </div>
+    
     <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput" />
+    
 }
 
 @code {
@@ -16,8 +30,59 @@
     [Parameter]
     public required PartNode PartNode { get; set; }
     
+    /// <summary>
+    /// The list of all production logs. Required to access log IDs by index.
+    /// </summary>
+    [Parameter]
+    public required List<ProductionLog> ProductionLogs { get; set; }
+    
     private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
     private bool _initialized = false;
+    
+    private int SelectedLogIndex { get; set; } = 0;
+
+    // This property is 1-based for the UI binding:
+    private int SelectedLogNumber
+    {
+        get => SelectedLogIndex + 1;     // show 1-based to user
+        set
+        {
+            var newIndex = value - 1;     // convert back to 0-based
+            if (newIndex < 0)
+                newIndex = 0;
+            else if (newIndex >= ProductionLogs.Count)
+                newIndex = ProductionLogs.Count - 1;
+            if (newIndex != SelectedLogIndex)
+            {
+                SelectedLogIndex = newIndex;
+                ReloadPartsForSelectedIndex();
+                StateHasChanged();
+            }
+        }
+    }
+    
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        SerializationService.PartsReloadRequested += OnPartsReloadRequested;
+    }
+
+    private void OnPartsReloadRequested()
+    {
+        InitializeProductionLogParts();
+        ReloadPartsForSelectedIndex();
+        InvokeAsync(StateHasChanged);
+    }
+    
+    /// <summary>
+    /// Unsubscribes from the <see cref="SerializationService.PartsReloadRequested"/> event
+    /// to prevent memory leaks when the component is disposed.
+    /// </summary>
+    public void Dispose()
+    {
+        SerializationService.PartsReloadRequested -= OnPartsReloadRequested;
+    }
 
     /// <inheritdoc />
     protected override void OnAfterRender(bool firstRender)
@@ -27,6 +92,7 @@
         if (firstRender)
         {
             _initialized = true;
+            ReloadPartsForSelectedIndex(); // load initially
             StateHasChanged();
         }
     }
@@ -37,33 +103,79 @@
         base.OnParametersSet();
         InitializeProductionLogParts();
     }
-
-
-    /// Each part gets its own production log part
+    
     private void InitializeProductionLogParts()
     {
-        // No need to initialize production log parts if they are present in the UI
-        if (ProductionLogParts.Count > 0)
+        for (int i = 0; i < ProductionLogs.Count; i++)
         {
-            return;
-        }
-        
-        foreach (var part in PartNode.Parts)
-        {
-            ProductionLogParts.Add(new ProductionLogPart
+            var existing = SerializationService.GetPartsForLogIndex(i);
+
+            // Only add new parts that aren't already present
+            var newParts = PartNode.Parts
+                .Where(p => !existing.Any(ep => ep.Part?.Id == p.Id))
+                .Select(p => new ProductionLogPart { Part = p })
+                .ToList();
+
+            if (newParts.Any())
             {
-                Part = part
-            });
+                existing.AddRange(newParts);
+                SerializationService.SetPartsForLogIndex(i, existing);
+            }
+        }
+    }
+
+    
+    private void ReloadPartsForSelectedIndex()
+    {
+        if (SelectedLogIndex >= 0 && SelectedLogIndex < ProductionLogs.Count)
+        {
+            var loaded = SerializationService.GetPartsForLogIndex(SelectedLogIndex);
+
+            // Safety fallback in case it was missed in initialization
+            if (loaded.Count == 0)
+            {
+                loaded = PartNode.Parts
+                    .Select(p => new ProductionLogPart { Part = p })
+                    .ToList();
+
+                SerializationService.SetPartsForLogIndex(SelectedLogIndex, loaded);
+            }
+
+            ProductionLogParts = loaded;
+        }
+        else
+        {
+            ProductionLogParts = [];
         }
     }
     
-    private void AfterSerialNumberInput(ProductionLogPart productionLogPart)
+    private void AfterSerialNumberInput(ProductionLogPart updatedPart)
     {
-        productionLogPart.SubmitTimeQc = DateTimeOffset.UtcNow;
+        if (SelectedLogIndex < 0 || SelectedLogIndex >= ProductionLogs.Count)
+            return;
 
-        var updatedList = new List<ProductionLogPart>(SerializationService.CurrentProductionLogParts);
-        updatedList.Add(productionLogPart);
+        updatedPart.SubmitTimeQc = DateTimeOffset.UtcNow;
 
-        SerializationService.CurrentProductionLogParts = updatedList;
+        // Update the displayed list first (in-place modification)
+        var displayIndex = ProductionLogParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
+        if (displayIndex != -1)
+        {
+            ProductionLogParts[displayIndex] = updatedPart;
+        }
+
+        // Now sync to the serialization service
+        var storedParts = SerializationService.GetPartsForLogIndex(SelectedLogIndex);
+        var storedIndex = storedParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
+        if (storedIndex != -1)
+        {
+            storedParts[storedIndex] = updatedPart;
+        }
+        else
+        {
+            storedParts.Add(updatedPart);
+        }
+
+        SerializationService.SetPartsForLogIndex(SelectedLogIndex, storedParts);
     }
+
 }

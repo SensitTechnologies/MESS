@@ -42,7 +42,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
     private IJSObjectReference? module;
-    private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
+    
+    private Dictionary<int, List<ProductionLogPart>> PartsByLogIndex { get; set; } = new();
     
     private Func<List<ProductionLog>, Task>? _autoSaveHandler;
     
@@ -98,10 +99,19 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         ProductSerialNumber = SerializationService.CurrentProductNumber;
-
-        SerializationService.CurrentProductionLogPartChanged += HandleProductionLogPartsChanged;
+        
         SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
-        ProductionLogParts = SerializationService.CurrentProductionLogParts;
+        
+        PartsByLogIndex.Clear();
+
+        if (ProductionLogBatch.Logs != null)
+        {
+            for (int index = 0; index < ProductionLogBatch.Logs.Count; index++)
+            {
+                var partsForLog = SerializationService.GetPartsForLogIndex(index);  // pass index here
+                PartsByLogIndex[index] = partsForLog; 
+            }
+        }
 
         IsLoading = false;
     }
@@ -186,6 +196,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             ActiveWorkInstruction = workInstruction;
             ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
+            
+            SerializationService.ClearAllLogParts();
         }
     }
 
@@ -356,8 +368,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
             }
         }
         
-
-        bool allStepsHavePartsNeeded = ProductionLogParts.Count >= totalPartsNeeded;
+        // Calculate total parts logged (sum of parts in your dictionary keyed by log index)
+        var totalPartsLogged = PartsByLogIndex.Values.Sum(partsList => partsList.Count);
+        
+        var allStepsHavePartsNeeded = totalPartsLogged >= totalPartsNeeded;
 
         if (!allStepsHavePartsNeeded)
         {
@@ -414,13 +428,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
             }
 
             ToastService.ShowSuccess("Successfully Created Production Log", 3000);
-
-            // Create any associated SerialNumberLogs
-            await SerializationService.SaveCurrentProductionLogPartsAsync(productionLog.Id);
             
             // Add the new log to the session
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
+        
+        await SerializationService.SaveAllLogPartsAsync(ProductionLogBatch.Logs);
 
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();
@@ -430,11 +443,20 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private void HandleProductionLogPartsChanged()
     {
-        ProductionLogParts = SerializationService.CurrentProductionLogParts;
-    
+        PartsByLogIndex.Clear();
+
+        if (ProductionLogBatch.Logs != null)
+        {
+            for (int index = 0; index < ProductionLogBatch.Logs.Count; index++)
+            {
+                var partsForLog = SerializationService.GetPartsForLogIndex(index);
+                PartsByLogIndex[index] = partsForLog;
+            }
+        }
+
         InvokeAsync(StateHasChanged);
     }
-
+    
     private void HandleProductNumberChanged()
     {
         ProductSerialNumber = SerializationService.CurrentProductNumber;
@@ -561,7 +583,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        SerializationService.CurrentProductionLogPartChanged -= HandleProductionLogPartsChanged;
         SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
         try
