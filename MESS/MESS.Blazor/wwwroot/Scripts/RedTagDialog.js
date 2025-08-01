@@ -73,12 +73,10 @@
     `;
 
     function extractValue(item) {
-        const label = item.querySelector('.label');
-        const value = Array.from(item.childNodes)
-            .filter(n => n !== label)
-            .map(n => n.textContent.trim())
-            .join(' ');
-        return value;
+        const clone = item.cloneNode(true);
+        const label = clone.querySelector('.label');
+        if (label) label.remove();
+        return clone.textContent.trim();
     }
 
     function buildLayout(root) {
@@ -93,11 +91,13 @@
         });
 
         const failureNoteEl = root.querySelector('.failure-note');
-        const failureLabel = failureNoteEl?.querySelector('.label');
-        const failureText = Array.from(failureNoteEl?.childNodes || [])
-            .filter(n => n !== failureLabel)
-            .map(n => n.textContent.trim())
-            .join(' ') || '';
+        let failureText = '';
+        if (failureNoteEl) {
+            const failureClone = failureNoteEl.cloneNode(true);
+            const label = failureClone.querySelector('.label');
+            if (label) label.remove();
+            failureText = failureClone.textContent.trim();
+        }
 
         const wrapper = document.createElement('div');
         wrapper.className = 'red-tag-wrapper';
@@ -124,9 +124,7 @@
 
         const failureDiv = document.createElement('div');
         failureDiv.className = 'failure-note';
-        failureDiv.innerHTML = `
-            <span class="failure-text">${failureText}</span>
-        `;
+        failureDiv.innerHTML = `<span class="failure-text">${failureText}</span>`;
 
         wrapper.appendChild(row1);
         wrapper.appendChild(row2);

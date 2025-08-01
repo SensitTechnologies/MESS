@@ -31,9 +31,10 @@
                         <RedTagDialog
                             AttemptCount="_attemptCount"
                             LogSteps="LogSteps"
+                            Attempts="@LogSteps.SelectMany(s => s.Attempts).ToList()"
                             FailureNotes="@FailureNoteText"
                             OnCancel="OnCancelClicked"
-                            OnSubmit="OnSubmitClicked"/>
+                            OnSubmit="OnSubmitClicked" />
                     }
                     
                     @if (ShowOptionalNotesField)

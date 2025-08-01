@@ -1,9 +1,9 @@
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JSRuntime
 @implements IDisposable
+@implements IAsyncDisposable
 @using MESS.Data.Models
 @using MESS.Services.ProductionLog
-@implements IAsyncDisposable
 
 <div id="red-tag-printable" class="red-tag-horizontal-wrapper print-only" style="width: 456px; height: 228px;">
     <div class="red-tag-horizontal">
@@ -13,7 +13,14 @@
                 <!-- Row 1 -->
                 <div class="tag-item"><span class="label">RED TAG</span></div>
                 <div class="tag-item"><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
-                <div class="tag-item"><span class="label">ID:</span> <span>@(AttemptCount > 0 ? AttemptCount.ToString() : "None")</span></div>
+                @if (_internalAttempts != null && _internalAttempts.Count > 0)
+                {
+                    <div class="tag-item"><span class="label">ID:</span> <span>@AttemptNumber</span></div>
+                }
+                else
+                {
+                    <div class="tag-item"><span class="label">ID:</span> <span>None</span></div>
+                }
                 <div class="tag-item"><span class="label">Product:</span> <span>@ProductionLogEventService.CurrentProductName</span></div>
                 <div class="tag-item"><span class="label">Part Name:</span></div>
                 <div class="tag-item"><span class="label">Part #:</span></div>
@@ -61,6 +68,21 @@
     [Parameter] public EventCallback OnSubmit { get; set; }
 
     /// <summary>
+    /// The list of existing attempts passed into the component.
+    /// </summary>
+    [Parameter] public List<ProductionLogStepAttempt>? Attempts { get; set; }
+
+    /// <summary>
+    /// Internal copy of attempts used for display logic.
+    /// </summary>
+    private List<ProductionLogStepAttempt>? _internalAttempts;
+
+    /// <summary>
+    /// Gets the number of step attempts associated with the current log entry.
+    /// </summary>
+    private int AttemptNumber => _internalAttempts?.Count ?? 0;
+
+    /// <summary>
     /// The JavaScript module reference used for printing the red tag.
     /// </summary>
     private IJSObjectReference? _jsModule;
@@ -68,7 +90,6 @@
     /// <summary>
     /// Loads the JavaScript module after the component has rendered for the first time.
     /// </summary>
-    /// <param name="firstRender">Indicates if this is the first time the component is rendering.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -82,6 +103,17 @@
             {
                 Console.Error.WriteLine($"Failed to load JS module: {ex.Message}");
             }
+        }
+    }
+
+    /// <summary>
+    /// Called when component parameters are set. Syncs internal state with external inputs.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (Attempts != null)
+        {
+            _internalAttempts = new List<ProductionLogStepAttempt>(Attempts);
         }
     }
 
