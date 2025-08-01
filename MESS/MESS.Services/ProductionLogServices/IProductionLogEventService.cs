@@ -64,6 +64,12 @@ public interface IProductionLogEventService
     /// Event triggered to handle auto-save functionality.
     /// </summary>
     public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
+    
+    /// <summary>
+    /// Event invoked when it's time to save logs to the database.
+    /// </summary>
+    public event Func<List<ProductionLog>, Task>? DbSaveTriggered;
+
 
     /// <summary>
     /// Disables the auto-save functionality.
@@ -118,4 +124,18 @@ public interface IProductionLogEventService
     /// <param name="productionLogs">The list of production logs to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task SetCurrentProductionLogs(List<ProductionLog> productionLogs);
+    
+    /// <summary>
+    /// Starts or resets the periodic database save timer. 
+    /// This timer triggers the <see cref="DbSaveTriggered"/> event after 30 minutes unless reset earlier.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task ResetDbSaveTimerAsync();
+
+    /// <summary>
+    /// Stops the periodic database save timer, preventing future automatic database saves.
+    /// This should be called when the component or page is being disposed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StopDbSaveTimerAsync();
 }

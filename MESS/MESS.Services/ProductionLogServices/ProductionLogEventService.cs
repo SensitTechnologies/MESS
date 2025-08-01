@@ -10,6 +10,10 @@ public class ProductionLogEventService : IProductionLogEventService
     private Timer? _autoSaveTimer;
     private bool _shouldTriggerAutoSave = true;
     
+    //private const int DB_SAVE_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
+    private const int DB_SAVE_INTERVAL = 45 * 1000; // 30 minutes in milliseconds
+    private Timer? _periodicDbSaveTimer;
+    
     /// <inheritdoc />
     public event Action? ProductionLogEventChanged;
 
@@ -26,6 +30,9 @@ public class ProductionLogEventService : IProductionLogEventService
     
     /// <inheritdoc />
     public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
+    
+    /// <inheritdoc />
+    public event Func<List<ProductionLog>, Task>? DbSaveTriggered;
 
     /// <inheritdoc />
     public List<ProductionLog> CurrentProductionLogs { get; set; } = [];
@@ -127,6 +134,43 @@ public class ProductionLogEventService : IProductionLogEventService
         {
             var ids = string.Join(", ", productionLogs.Select(p => p.Id));
             Log.Warning("Exception thrown when attempting to SetCurrentProductionLogs to IDs: {ProductionLogIds}. Exception: {Exception}", ids, ex.ToString());
+        }
+    }
+    
+    /// <summary>
+    /// Starts or resets the periodic DB save timer.
+    /// </summary>
+    public async Task ResetDbSaveTimerAsync()
+    {
+        if (_periodicDbSaveTimer != null)
+        {
+            await _periodicDbSaveTimer.DisposeAsync();
+            _periodicDbSaveTimer = null;
+        }
+
+        _periodicDbSaveTimer = new Timer(async _ =>
+        {
+            await TriggerPeriodicDbSaveAsync();
+        }, null, DB_SAVE_INTERVAL, DB_SAVE_INTERVAL); // Start after 30 min, repeat every 30 min
+    }
+    
+    private async Task TriggerPeriodicDbSaveAsync()
+    {
+        if (DbSaveTriggered != null && CurrentProductionLogs is not null)
+        {
+            await DbSaveTriggered.Invoke(CurrentProductionLogs);
+        }
+    }
+
+    /// <summary>
+    /// Manually stop the DB save timer.
+    /// </summary>
+    public async Task StopDbSaveTimerAsync()
+    {
+        if (_periodicDbSaveTimer != null)
+        {
+            await _periodicDbSaveTimer.DisposeAsync();
+            _periodicDbSaveTimer = null;
         }
     }
 }
