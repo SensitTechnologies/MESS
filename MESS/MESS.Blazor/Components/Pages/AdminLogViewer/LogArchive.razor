@@ -1,8 +1,8 @@
-﻿@page "/LogArchive"
-@using System.Text
+﻿@page "/log-archive"
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Layout
 @using MESS.Services.ProductionLog
+@using MESS.Blazor.Components.LogDialog
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using SortDirection = MudBlazor.SortDirection
@@ -14,6 +14,8 @@
 @inject IProductionLogService ProductionLogService
 @inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
 @attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>Log Archives</PageTitle>
 
 <ErrorBoundary>
     <ChildContent>
@@ -45,11 +47,10 @@
                     <MudTable @ref="_table"
                               T="ProductionLog"
                               ServerData="ServerReload"
-                              Loading="IsLoading"
+                              Loading="@IsLoading"
                               Hover="true"
                               FixedHeader="true"
                               Class="border rounded-3 pt-1"
-                              Style="background: white"
                               TableClass="table table-striped table-hover">
                   
                         <HeaderContent>
@@ -59,7 +60,7 @@
                             <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLog, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLog, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLog, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
-                            <MudTh>Actions</MudTh>
+                            <MudTh><strong>Actions</strong></MudTh>
                         </HeaderContent>
                         <RowTemplate Context="productionLog">
                             <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
@@ -70,7 +71,7 @@
                             <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                             <MudTd DataLabel="Actions">
                                 <button class="btn btn-sm btn-primary" @onclick="@(() => OpenDialogAsync(productionLog))">
-                                    Options
+                                    Show Details
                                 </button>
                             </MudTd>
                         </RowTemplate>
@@ -100,9 +101,9 @@
 
 
 @code {
-    private bool IsLoading { get; set; } = true;
     private List<ProductionLog> ProductionLogs { get; set; } = new();
     private IEnumerable<ProductionLog> pagedData = new List<ProductionLog>();
+    private bool IsLoading { get; set; } = true;
 
     private MudTable<ProductionLog> _table = new MudTable<ProductionLog>();
 
@@ -200,6 +201,9 @@
         if (SatisfiesFilter(log.WorkInstruction?.Title, searchPhrase))
             hits++;
 
+        if (SatisfiesFilter(log.ProductSerialNumber, searchPhrase))
+            hits++;
+        
         if (SatisfiesFilter(log.CreatedBy, searchPhrase))
             hits++;
 
@@ -239,55 +243,29 @@
     }
 
     private string infoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    public record ModifiableLog
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        public ProductionLog? CurrentLog { get; set; }
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        public bool MarkedForDelete { get; set; }
-    }
+
 
     private async Task OpenDialogAsync(ProductionLog log)
     {
         // Create a new instance of Data
         // to allow the user to cancel the update
-
-        var Data = new ModifiableLog() { CurrentLog = log, MarkedForDelete = false };
+        var data = (log, true);
         
-        await DialogService.ShowDialogAsync<LogOptionsDialog>(Data, new DialogParameters()
+        await DialogService.ShowDialogAsync<LogOptionsDialog>(data, new DialogParameters()
             {
                 Title = $"Log #{log.Id}",
                 OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
-                Width = "80%",
+                Width = "85%",
                 PreventScroll = true,
             });
     }
 
     private async Task HandleDialogAsync(DialogResult result)
     {
-        if (!result.Cancelled && result.Data != null)
+        if (!result.Cancelled)
         {
-            var resultData = (ModifiableLog)result.Data;
-            
-            // Safely delete the log
-            if (resultData.CurrentLog != null)
-            {
-                var deletionResult = await ProductionLogService.DeleteProductionLogAsync(resultData.CurrentLog.Id);
-                if (deletionResult)
-                {
-                    await GrabServerData();
-                    await _table.ReloadServerData();
-                }
-            }
+            await GrabServerData();
+            await _table.ReloadServerData();
         }
     }
 }
