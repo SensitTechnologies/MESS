@@ -28,11 +28,13 @@
                 </div>
 
                 <div class="mt-auto">
-                    @if (_showRedTagDialog)
+                    @if (_showRedTagDialog && _pendingFailureAttempt is not null)
                     {
                         <RedTagDialog
                             StepName="@Step.Name"
                             FailureNotes="@_currentAttemptNotes"
+                            AttemptTime="@_pendingFailureAttempt?.SubmitTime"
+                            AttemptId="@(_pendingFailureAttempt?.Id)"
                             OnCancel="OnCancelClicked"
                             OnSubmit="OnSubmitClicked" />
                     }
@@ -393,6 +395,17 @@
 
     private void ToggleRedTagDialog()
     {
+        // If we don’t already have a pending failure, grab the latest one:
+        if (_pendingFailureAttempt is null)
+        {
+            _pendingFailureAttempt = LogSteps
+                .Select(ls => ls.LatestAttempt)
+                .FirstOrDefault(a => a?.Success == false);
+
+            // And copy its notes so the textarea shows the correct text:
+            _currentAttemptNotes = _pendingFailureAttempt?.Notes ?? "";
+        }
+
         _showRedTagDialog = !_showRedTagDialog;
     }
     

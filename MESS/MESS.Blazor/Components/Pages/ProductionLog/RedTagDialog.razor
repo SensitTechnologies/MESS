@@ -14,8 +14,8 @@
         <div class="red-tag-content">
             <div class="tag-info-grid">
                 <div class="tag-item"><span class="label">RED TAG</span></div>
-                <div class="tag-item"><span class="label">Date:</span> <span>@DateTime.Now.ToString("g")</span></div>
-                <div class="tag-item"><span class="label">ID:</span> <span>None</span></div>
+                <div class="tag-item"><span class="label">Date:</span><span>@(AttemptTime?.LocalDateTime.ToString("g") ?? "N/A")</span></div>
+                <div class="tag-item"><span class="label">ID:</span><span>@(AttemptId?.ToString() ?? "None")</span></div>
                 <div class="tag-item"><span class="label">Product:</span> <span>@ProductionLogEventService.CurrentProductName</span></div>
                 <div class="tag-item"><span class="label">Part Name:</span></div>
                 <div class="tag-item"><span class="label">Part #:</span></div>
@@ -35,6 +35,18 @@
 </div>
 
 @code {
+    /// <summary>
+    /// The timestamp of the selected attempt.
+    /// </summary>
+    [Parameter]
+    public DateTimeOffset? AttemptTime { get; set; }
+
+    /// <summary>
+    /// The ID of the selected attempt.
+    /// </summary>
+    [Parameter]
+    public int? AttemptId { get; set; }
+    
     /// <summary>
     /// Optional override for the current step description.
     /// If set, this value is displayed instead of steps from LogSteps.
