@@ -11,8 +11,8 @@ public class ProductionLogEventService : IProductionLogEventService
     private bool _shouldTriggerAutoSave = true;
     
     //private const int DB_SAVE_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
-    private const int DB_SAVE_INTERVAL = 45 * 1000; // 30 minutes in milliseconds
-    private Timer? _periodicDbSaveTimer;
+    private const int DB_SAVE_INTERVAL = 15 * 1000;
+    private Timer? _dbSaveTimer;
     
     /// <inheritdoc />
     public event Action? ProductionLogEventChanged;
@@ -45,8 +45,11 @@ public class ProductionLogEventService : IProductionLogEventService
     public string CurrentWorkInstructionName { get; set; } = "";
     /// <inheritdoc />
     public string CurrentLineOperatorName { get; set; } = "";
+    
     /// <inheritdoc />
     public bool IsSaved { get; set; } = false;
+    
+    private bool IsDirty { get; set; } = false;
 
     /// <inheritdoc />
     public void DisableAutoSave()
@@ -138,28 +141,32 @@ public class ProductionLogEventService : IProductionLogEventService
     }
     
     /// <summary>
-    /// Starts or resets the periodic DB save timer.
+    /// Starts the periodic database save timer, which attempts to flush dirty in-memory
+    /// production log data to the database every <see cref="DB_SAVE_INTERVAL"/> milliseconds.
+    /// If the log is not dirty, no save is triggered.
     /// </summary>
-    public async Task ResetDbSaveTimerAsync()
+    public void StartDbSaveTimer()
     {
-        if (_periodicDbSaveTimer != null)
+        if (_dbSaveTimer != null)
         {
-            await _periodicDbSaveTimer.DisposeAsync();
-            _periodicDbSaveTimer = null;
+            _dbSaveTimer.Dispose();
         }
 
-        _periodicDbSaveTimer = new Timer(async _ =>
+        _dbSaveTimer = new Timer(async _ =>
         {
-            await TriggerPeriodicDbSaveAsync();
-        }, null, DB_SAVE_INTERVAL, DB_SAVE_INTERVAL); // Start after 30 min, repeat every 30 min
-    }
-    
-    private async Task TriggerPeriodicDbSaveAsync()
-    {
-        if (DbSaveTriggered != null && CurrentProductionLogs is not null)
-        {
-            await DbSaveTriggered.Invoke(CurrentProductionLogs);
-        }
+            if (IsDirty && DbSaveTriggered is not null && CurrentProductionLogs is not null)
+            {
+                try
+                {
+                    await DbSaveTriggered.Invoke(CurrentProductionLogs);
+                    IsDirty = false;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("Periodic DB flush failed: {Exception}", ex.ToString());
+                }
+            }
+        }, null, DB_SAVE_INTERVAL, DB_SAVE_INTERVAL); // Start and repeat every 30 min
     }
 
     /// <summary>
@@ -167,10 +174,31 @@ public class ProductionLogEventService : IProductionLogEventService
     /// </summary>
     public async Task StopDbSaveTimerAsync()
     {
-        if (_periodicDbSaveTimer != null)
+        if (_dbSaveTimer != null)
         {
-            await _periodicDbSaveTimer.DisposeAsync();
-            _periodicDbSaveTimer = null;
+            await _dbSaveTimer.DisposeAsync();
+            _dbSaveTimer = null;
         }
+    }
+    
+    /// <summary>
+    /// Marks the production log state as dirty, indicating that there are unsaved changes
+    /// in memory which should eventually be flushed to the database.
+    /// </summary>
+    public void MarkDirty()
+    {
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// Marks the current production log state as clean in terms of database autosave, indicating that there are no
+    /// unsaved changes.
+    /// </summary>
+    /// <remarks>
+    /// This method should be called after initializing or resetting the form.
+    /// </remarks>
+    public void MarkClean()
+    {
+        IsDirty = false;
     }
 }

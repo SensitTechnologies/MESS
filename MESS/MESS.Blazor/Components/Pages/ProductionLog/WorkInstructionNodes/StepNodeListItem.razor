@@ -342,6 +342,7 @@
         {
             _pendingFailureAttempt.Notes = _currentAttemptNotes;
             await ProductionLogEventService.ChangeMadeToProductionLog();
+            ProductionLogEventService.MarkDirty();
         }
     }
     

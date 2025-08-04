@@ -68,13 +68,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
             ProductionLogEventService.EnableAutoSave();
             await InvokeAsync(StateHasChanged);
         }
+        
+        ProductionLogEventService.StartDbSaveTimer();
 
         if (ProductionLogBatch.Logs != null)
         {
             await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
         }
-        
-        await ProductionLogEventService.ResetDbSaveTimerAsync();
         
         // AutoSave Trigger
         _autoSaveHandler = async logs =>
@@ -194,6 +194,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             await SetSelectedWorkInstructionId(workInstructionId);
             ActiveWorkInstruction = workInstruction;
             ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
+            ProductionLogEventService.MarkClean();
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
@@ -225,6 +226,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ActiveProduct = product;
         ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
         ProductionLogEventService.SetCurrentProductName(product.Name);
+        ProductionLogEventService.MarkClean();
         await SetActiveWorkInstruction(-1);
         await LocalCacheManager.SetActiveProductAsync(product);
     }
@@ -489,13 +491,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
         // Notify the event service with the empty list
         await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
-        await ProductionLogEventService.ResetDbSaveTimerAsync();
 
         // Reinitialize the form with the current batch size
         AddProductionLogs(BatchSize);
         
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
+        ProductionLogEventService.MarkClean();
     }
     
     private async Task OnStepCompleted(List<ProductionLogStep> productionLogSteps, bool? success)
@@ -549,6 +551,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
                     await module.InvokeVoidAsync("scrollToStep", "submit-button");
                 }
             }
+            
+            ProductionLogEventService.MarkDirty();
         }
 
     }
