@@ -124,18 +124,47 @@ public interface IProductionLogEventService
     /// <param name="productionLogs">The list of production logs to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task SetCurrentProductionLogs(List<ProductionLog> productionLogs);
-    
-    /// <summary>
-    /// Starts or resets the periodic database save timer. 
-    /// This timer triggers the <see cref="DbSaveTriggered"/> event after 30 minutes unless reset earlier.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task ResetDbSaveTimerAsync();
 
+    /// <summary>
+    /// Starts a periodic timer that ensures dirty production logs are persisted to the database
+    /// at regular intervals (e.g., every 30 minutes), even if frequent changes are made.
+    /// </summary>
+    /// <remarks>
+    /// This method guarantees that unsaved changes will eventually be written to the database,
+    /// regardless of whether the user pauses editing or not. The timer checks the <c>IsDirty</c>
+    /// flag to determine whether changes exist, and if so, invokes the <see cref="DbSaveTriggered"/>
+    /// delegate to persist <see cref="CurrentProductionLogs"/> to the database.
+    /// </remarks>
+    /// <example>
+    /// Call this once when the application or component starts to ensure background flushing:
+    /// <code>
+    /// productionLogEventService.StartDbSaveTimer();
+    /// </code>
+    /// </example>
+    void StartDbSaveTimer();
+    
     /// <summary>
     /// Stops the periodic database save timer, preventing future automatic database saves.
     /// This should be called when the component or page is being disposed.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task StopDbSaveTimerAsync();
+
+    /// <summary>
+    /// Marks the current production log as dirty, indicating it has unsaved changes.
+    /// </summary>
+    /// <remarks>
+    /// This should be called whenever a change is made to a cached production log
+    /// that has not yet been saved to the database.
+    /// </remarks>
+    void MarkDirty();
+
+    /// <summary>
+    /// Marks the current production log state as clean in terms of database autosave, indicating that there are no
+    /// unsaved changes.
+    /// </summary>
+    /// <remarks>
+    /// This method should be called after initializing or resetting the form.
+    /// </remarks>
+    void MarkClean();
 }
