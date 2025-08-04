@@ -21,7 +21,7 @@
                 <div class="tag-item"><span class="label">Part #:</span></div>
 
                 <div class="tag-item"><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
-                <div class="tag-item"><span class="label">Step:</span> <span class="step-truncate">@StripHtmlTags(DerivedStep)</span></div>
+                <div class="tag-item"><span class="label">Step:</span> <span> @StepName</span></div>
                 <div class="tag-item"><span class="label">Operator:</span> <span>@OperatorName</span></div>
                 <div class="failure-note"><span class="label">Failure Note:</span> <span>@FailureNotes</span></div>
             </div>
@@ -40,7 +40,7 @@
     /// If set, this value is displayed instead of steps from LogSteps.
     /// </summary>
     [Parameter]
-    public string Step { get; set; } = string.Empty;
+    public string StepName { get; set; } = string.Empty;
 
     /// <summary>
     /// Notes entered by the operator describing the failure condition.
@@ -77,41 +77,6 @@
     /// JavaScript module reference used to invoke print functionality.
     /// </summary>
     private IJSObjectReference? _jsModule;
-
-    /// <summary>
-    /// Determines the step description to display.
-    /// If <see cref="Step"/> is non-empty, it returns that.
-    /// Otherwise, it finds the latest step from <see cref="LogSteps"/> with attempts and returns its step name.
-    /// Returns fallback messages if no valid step is found.
-    /// </summary>
-    private string DerivedStep
-    {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(Step))
-                return Step;
-
-            if (LogSteps == null || LogSteps.Count == 0)
-                return "No step description available.";
-
-            var stepsWithAttempts = LogSteps
-                .Where(s => s.Attempts != null && s.Attempts.Any())
-                .Where(s => s.WorkInstructionStep != null && !string.IsNullOrWhiteSpace(s.WorkInstructionStep.Name))  // filter valid step info
-                .ToList();
-
-            if (stepsWithAttempts.Count == 0)
-                return "No attempts found in steps with valid step info.";
-
-            var latestStepWithAttempt = stepsWithAttempts
-                .OrderByDescending(s => s.Attempts.Max(a => a.SubmitTime))
-                .FirstOrDefault();
-
-            if (latestStepWithAttempt == null)
-                return "No step with attempts found.";
-
-            return StripHtmlTags(latestStepWithAttempt.WorkInstructionStep!.Name);
-        }
-    }
 
     /// <summary>
     /// Called by the framework when parameters are set.
