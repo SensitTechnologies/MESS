@@ -46,15 +46,17 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private Func<List<ProductionLog>, Task>? _autoSaveHandler;
     
-    private int BatchSize { get; set; } = 1;
+    private int BatchSize { get; set; }
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         IsLoading = true;
         ProductionLogEventService.DisableAutoSave();
+        await ProductionLogEventService.StopDbSaveTimerAsync();
         await LoadProducts();
         await GetInProgressAsync();
+        BatchSize = await LocalCacheManager.GetBatchSizeAsync();
 
          // Load cached forms as a list of ProductionLog
         ProductionLogBatch.Logs = await LoadCachedFormsAsync();
@@ -66,6 +68,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             ProductionLogEventService.EnableAutoSave();
             await InvokeAsync(StateHasChanged);
         }
+        
+        ProductionLogEventService.StartDbSaveTimer();
 
         if (ProductionLogBatch.Logs != null)
         {
@@ -96,6 +100,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
+        
+        // Register periodic database save handler
+        ProductionLogEventService.DbSaveTriggered += async logs =>
+        {
+            await SaveLogsToDatabase();
+        };
+        
         ProductSerialNumber = SerializationService.CurrentProductNumber;
 
         SerializationService.CurrentProductionLogPartChanged += HandleProductionLogPartsChanged;
@@ -110,7 +121,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         if (firstRender)
         {
-
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Components/Pages/ProductionLog/Create.razor.js");
         }
@@ -184,6 +194,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             await SetSelectedWorkInstructionId(workInstructionId);
             ActiveWorkInstruction = workInstruction;
             ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
+            ProductionLogEventService.MarkClean();
             await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         }
     }
@@ -215,6 +226,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ActiveProduct = product;
         ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
         ProductionLogEventService.SetCurrentProductName(product.Name);
+        ProductionLogEventService.MarkClean();
         await SetActiveWorkInstruction(-1);
         await LocalCacheManager.SetActiveProductAsync(product);
     }
@@ -237,12 +249,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
     }
     
-    private Task OnBatchSizeChanged(int newSize)
+    private async Task OnBatchSizeChanged(int newSize)
     {
         if (newSize < 1)
             newSize = 1;
 
         BatchSize = newSize;
+        await LocalCacheManager.SetBatchSizeAsync(BatchSize);
 
         int currentCount = ProductionLogBatch.Logs.Count;
 
@@ -256,10 +269,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
             // Remove excess logs
             ProductionLogBatch.Logs.RemoveRange(newSize, currentCount - newSize);
-            ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+            await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
         }
-
-        return Task.CompletedTask;
     }
 
     /// Sets the local storage variable
@@ -379,16 +390,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
         popupRef?.Close();
     }
 
-    private async Task CompleteSubmit()
+    private async Task SaveLogsToDatabase()
     {
         var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        for (var i = 0; i < ProductionLogEventService.CurrentProductionLogs.Count; i++)
+        foreach (var productionLog in ProductionLogEventService.CurrentProductionLogs)
         {
-            var productionLog = ProductionLogEventService.CurrentProductionLogs[i];
-
             // Update log
             productionLog.CreatedOn = currentTime;
             productionLog.LastModifiedOn = currentTime;
@@ -407,7 +416,17 @@ public partial class Create : ComponentBase, IAsyncDisposable
             {
                 await ProductionLogService.UpdateAsync(productionLog);
             }
+        }
+    }
 
+    private async Task CompleteSubmit()
+    {
+        await SaveLogsToDatabase();
+        
+        for (var i = 0; i < ProductionLogEventService.CurrentProductionLogs.Count; i++)
+        {
+            var productionLog = ProductionLogEventService.CurrentProductionLogs[i];
+            
             if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
             {
                 await PrintQrCode(productionLog.Id, i);
@@ -478,6 +497,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
+        ProductionLogEventService.MarkClean();
     }
     
     private async Task OnStepCompleted(List<ProductionLogStep> productionLogSteps, bool? success)
@@ -531,6 +551,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
                     await module.InvokeVoidAsync("scrollToStep", "submit-button");
                 }
             }
+            
+            ProductionLogEventService.MarkDirty();
         }
 
     }
@@ -564,6 +586,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
         SerializationService.CurrentProductionLogPartChanged -= HandleProductionLogPartsChanged;
         SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
+        await ProductionLogEventService.StopDbSaveTimerAsync();
+        
         try
         {
             if (module is not null)

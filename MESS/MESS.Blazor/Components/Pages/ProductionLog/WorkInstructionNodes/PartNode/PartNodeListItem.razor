@@ -1,6 +1,8 @@
 @using MESS.Data.Models
+@using MESS.Services.ProductionLogServices
 @using MESS.Services.Serialization
 @inject ISerializationService SerializationService
+@inject IProductionLogEventService ProductionLogEventService
 
 @if (_initialized)
 {
@@ -65,5 +67,6 @@
         updatedList.Add(productionLogPart);
 
         SerializationService.CurrentProductionLogParts = updatedList;
+        ProductionLogEventService.MarkDirty();
     }
 }

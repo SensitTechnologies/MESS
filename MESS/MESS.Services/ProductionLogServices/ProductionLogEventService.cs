@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Serilog;
 
-namespace MESS.Services.ProductionLog;
+namespace MESS.Services.ProductionLogServices;
 using Data.Models;
 /// <inheritdoc />
 public class ProductionLogEventService : IProductionLogEventService
@@ -9,6 +9,10 @@ public class ProductionLogEventService : IProductionLogEventService
     private const int DEFAULT_AUTOSAVE_DELAY = 2000; // 2 seconds
     private Timer? _autoSaveTimer;
     private bool _shouldTriggerAutoSave = true;
+    
+    //private const int DB_SAVE_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
+    private const int DB_SAVE_INTERVAL = 15 * 1000;
+    private Timer? _dbSaveTimer;
     
     /// <inheritdoc />
     public event Action? ProductionLogEventChanged;
@@ -26,6 +30,9 @@ public class ProductionLogEventService : IProductionLogEventService
     
     /// <inheritdoc />
     public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
+    
+    /// <inheritdoc />
+    public event Func<List<ProductionLog>, Task>? DbSaveTriggered;
 
     /// <inheritdoc />
     public List<ProductionLog> CurrentProductionLogs { get; set; } = [];
@@ -38,8 +45,11 @@ public class ProductionLogEventService : IProductionLogEventService
     public string CurrentWorkInstructionName { get; set; } = "";
     /// <inheritdoc />
     public string CurrentLineOperatorName { get; set; } = "";
+    
     /// <inheritdoc />
     public bool IsSaved { get; set; } = false;
+    
+    private bool IsDirty { get; set; } = false;
 
     /// <inheritdoc />
     public void DisableAutoSave()
@@ -128,5 +138,67 @@ public class ProductionLogEventService : IProductionLogEventService
             var ids = string.Join(", ", productionLogs.Select(p => p.Id));
             Log.Warning("Exception thrown when attempting to SetCurrentProductionLogs to IDs: {ProductionLogIds}. Exception: {Exception}", ids, ex.ToString());
         }
+    }
+    
+    /// <summary>
+    /// Starts the periodic database save timer, which attempts to flush dirty in-memory
+    /// production log data to the database every <see cref="DB_SAVE_INTERVAL"/> milliseconds.
+    /// If the log is not dirty, no save is triggered.
+    /// </summary>
+    public void StartDbSaveTimer()
+    {
+        if (_dbSaveTimer != null)
+        {
+            _dbSaveTimer.Dispose();
+        }
+
+        _dbSaveTimer = new Timer(async _ =>
+        {
+            if (IsDirty && DbSaveTriggered is not null && CurrentProductionLogs is not null)
+            {
+                try
+                {
+                    await DbSaveTriggered.Invoke(CurrentProductionLogs);
+                    IsDirty = false;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("Periodic DB flush failed: {Exception}", ex.ToString());
+                }
+            }
+        }, null, DB_SAVE_INTERVAL, DB_SAVE_INTERVAL); // Start and repeat every 30 min
+    }
+
+    /// <summary>
+    /// Manually stop the DB save timer.
+    /// </summary>
+    public async Task StopDbSaveTimerAsync()
+    {
+        if (_dbSaveTimer != null)
+        {
+            await _dbSaveTimer.DisposeAsync();
+            _dbSaveTimer = null;
+        }
+    }
+    
+    /// <summary>
+    /// Marks the production log state as dirty, indicating that there are unsaved changes
+    /// in memory which should eventually be flushed to the database.
+    /// </summary>
+    public void MarkDirty()
+    {
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// Marks the current production log state as clean in terms of database autosave, indicating that there are no
+    /// unsaved changes.
+    /// </summary>
+    /// <remarks>
+    /// This method should be called after initializing or resetting the form.
+    /// </remarks>
+    public void MarkClean()
+    {
+        IsDirty = false;
     }
 }
