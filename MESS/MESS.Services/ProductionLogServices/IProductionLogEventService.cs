@@ -167,4 +167,19 @@ public interface IProductionLogEventService
     /// This method should be called after initializing or resetting the form.
     /// </remarks>
     void MarkClean();
+
+    /// <summary>
+    /// Attempts to manually trigger a database save of the current production logs
+    /// by invoking the <see cref="DbSaveTriggered"/> event, if it has subscribers.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if the save was successfully triggered and completed without exception;
+    /// <c>false</c> if the event was not subscribed or an exception occurred during invocation.
+    /// </returns>
+    /// <remarks>
+    /// This method can be safely called from external components to force a database save,
+    /// bypassing the periodic timer or debounced auto-save mechanism. If the save succeeds,
+    /// the internal dirty state is marked as clean using <see cref="MarkClean"/>.
+    /// </remarks>
+    public Task<bool> TryTriggerDbSaveAsync();
 }

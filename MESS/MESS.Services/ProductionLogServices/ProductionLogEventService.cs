@@ -201,4 +201,23 @@ public class ProductionLogEventService : IProductionLogEventService
     {
         IsDirty = false;
     }
+    
+    /// <inheritdoc />
+    public async Task<bool> TryTriggerDbSaveAsync()
+    {
+        if (DbSaveTriggered is null || CurrentProductionLogs is null)
+            return false;
+
+        try
+        {
+            await DbSaveTriggered.Invoke(CurrentProductionLogs);
+            MarkClean(); // Mark clean after successful save
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Manual DB save failed: {Exception}", ex.ToString());
+            return false;
+        }
+    }
 }
