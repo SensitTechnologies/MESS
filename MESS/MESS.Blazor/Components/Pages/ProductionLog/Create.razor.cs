@@ -344,6 +344,7 @@ private async Task SetActiveProduct(int productId)
         ProductionLog.Product = ActiveProduct;
         ProductionLog.OperatorId = userId;
         ProductionLog.CreatedBy = userName;
+        ProductionLog.LastModifiedBy = userName;
         
         // If no log is created, it gets created now to utilize the id for the QR code
         if (ProductionLog.Id <= 0)
