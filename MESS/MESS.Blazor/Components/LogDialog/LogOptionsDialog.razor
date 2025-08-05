@@ -82,11 +82,7 @@
             <MudTd Style="text-wrap: balance;" DataLabel="Step Name">@context.ProductionLogStep?.WorkInstructionStep?.Name.Trim()</MudTd>
             <MudTd Style="text-wrap: balance;" DataLabel="Submit Time">@context.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
             <MudTd Style="" DataLabel="Status">
-                @{
-                    var isConfirmed = context.Success.HasValue && context.Success.Value;
-                }
-
-                <button class="btn btn-sm @(isConfirmed ? "btn-success confirmed" : "btn-outline-success pending")"
+                <button class="btn btn-sm @((context.Success.HasValue && context.Success.Value) ? "btn-success confirmed" : "btn-outline-success pending")"
                         @onclick="() => UpdateStatus(context, true)">
                     Success
                 </button>
@@ -102,7 +98,6 @@
                       rows="1"
                       @bind="@context.Notes"
                       placeholder="Optional failure note"/>
-
                 }
             </MudTd>
             <MudTd Style="" DataLabel="Delete">
@@ -115,12 +110,10 @@
             <MudTablePager/>
         </PagerContent>
     </MudTable>
-
 </FluentDialogBody>
 
 @* Footer *@
 <FluentDialogFooter>
-    
     <button type="button" class="btn btn-sm btn-outline-secondary me-2" @onclick="SaveAsync">
         Save Log
     </button>
@@ -133,7 +126,8 @@
 @code {
 
     /// <summary>
-    /// 
+    /// A tuple representing the production log data to be shown
+    /// and a boolean expressing whether to show personal details or not
     /// </summary>
     [Parameter]
     public (ProductionLog, bool) Content { get; set; } = default!;
@@ -145,7 +139,7 @@
     private bool ShowPersonalInfo => Content.Item2;
     
     /// <summary>
-    ///  
+    ///  References this dialog while it's being displayed
     /// </summary>
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
@@ -249,7 +243,6 @@
             await Dialog.CloseAsync();
         else
             ToastService.ShowWarning("There was a problem deleting this log. Please try again");
-
     }
     
     private Task UpdateStatus(ProductionLogStepAttempt attempt, bool isSuccess)

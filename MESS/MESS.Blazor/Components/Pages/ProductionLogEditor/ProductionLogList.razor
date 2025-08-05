@@ -43,7 +43,6 @@
                         </button>
                         <input type="text" class="form-control w-auto" placeholder="Search..."
                                @bind="SearchString" @bind:event="oninput"  />
-                        
                     </div>
                     
                     <MudTable @ref="_table"
@@ -75,12 +74,11 @@
                             </MudTd>
                         </RowTemplate>
                         <PagerContent>
-                            <MudTablePager InfoFormat="@infoFormat()" 
+                            <MudTablePager InfoFormat="@InfoFormat()" 
                                            HorizontalAlignment="HorizontalAlignment.Center" 
                                            RowsPerPageString="Logs per Page"/>
                         </PagerContent>
                     </MudTable>
-                    
                 }
                 else
                 {
@@ -231,12 +229,7 @@
         return false;
     }
     
-    private string infoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
-
-    private void EditLog(int logId)
-    {
-        NavManager.NavigateTo($"/production-log/edit/{logId}");
-    }
+    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
     
     private void NavigateToCreate()
     {
