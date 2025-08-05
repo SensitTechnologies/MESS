@@ -1,4 +1,7 @@
-﻿<div>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+
+<div>
     @*<!-- Toggle Button (optional, uncomment if you want to use) -->
     <button class="btn btn-outline-secondary m-2"
             @onclick="OnToggleClicked"
@@ -14,22 +17,44 @@
 
         <!-- Styled Navigation Buttons -->
         <div class="d-grid gap-2">
-            <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                     href="/production-log" @onclick="OnToggleClicked">
-                Production
-            </NavLink>
-            <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                     href="/WorkInstructionManager" @onclick="OnToggleClicked">
-                Instructions
-            </NavLink>
-            <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                     href="/users" @onclick="OnToggleClicked">
-                Users
-            </NavLink>
-            <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                     href="/products" @onclick="OnToggleClicked">
-                Products
-            </NavLink>
+            
+            <!-- Available to every user -->
+            <AuthorizeView Roles="Operator, Technician, Administrator">
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/production-log" @onclick="OnToggleClicked">
+                    My Production
+                </NavLink>
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/production-logs" @onclick="OnToggleClicked">
+                    My Production Logs
+                </NavLink>
+            </AuthorizeView>
+
+
+            <!-- Available to Technicians & Admins -->
+            <AuthorizeView Roles="Technician, Administrator">
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/WorkInstructionManager" @onclick="OnToggleClicked">
+                    Instructions
+                </NavLink>
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/users" @onclick="OnToggleClicked">
+                    Users
+                </NavLink>
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/products" @onclick="OnToggleClicked">
+                    Products
+                </NavLink>
+            </AuthorizeView>
+
+
+            <!-- Available to Admins -->
+            <AuthorizeView Roles="Administrator">
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/log-archive" @onclick="OnToggleClicked">
+                    Log Archive
+                </NavLink>
+            </AuthorizeView>
         </div>
     </div>
 </div>

@@ -21,7 +21,6 @@
 
     <!-- Left-side button -->
     <div class="d-flex align-items-center">
-        <AuthorizeView Roles="Technician, Administrator">
             @if (ShowSidebarToggle)
             {
                 <button class="btn btn-outline-secondary"
@@ -30,7 +29,6 @@
                     ☰
                 </button>
             }
-        </AuthorizeView>
     </div>
 
     <!-- Right-side button -->
@@ -47,9 +45,7 @@
 </div>
 
 <!-- Sidebar -->
-<AuthorizeView Roles="Technician, Administrator">
-    <NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
-</AuthorizeView>
+<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar"/>
 
 <!-- Main Content -->
 <main class="content px-4 mx-auto"
@@ -59,6 +55,9 @@
           transition: margin-left 0.3s ease;">
     @Body
 </main>
+
+<!-- Mud Providers-->
+<MudPopoverProvider />
 
 <!-- Fluent Providers -->
 <FluentToastProvider />

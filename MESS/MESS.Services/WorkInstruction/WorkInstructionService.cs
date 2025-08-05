@@ -73,7 +73,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
             worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).Value = workInstructionToExport.ShouldGenerateQrCode;
             worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).Value = workInstructionToExport.CollectsProductSerialNumber;
-            worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId;
+            worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId ?? workInstructionToExport.Id;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
             if (workInstructionToExport.Products.Count > 0)
