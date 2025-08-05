@@ -297,7 +297,6 @@ body.light-mode .table th,
 body.light-mode .table td {
     background-color: #ffffff;
     color: #000000;
-    border: 1px solid #dee2e6;
 }
 
 body.light-mode .table.table-striped tbody tr {
@@ -309,7 +308,6 @@ body.dark-mode .table th,
 body.dark-mode .table td {
     background-color: transparent;
     color: #ffffff;
-    border: 1px solid #a8a8a8;
 }
 
 body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
@@ -319,7 +317,6 @@ body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
 body.dark-mode .list-group.container {
     color: #ffffff;
     background-color: #1e1e1e;
-    border: 1px solid rgba(255, 213, 2, 0);
 }
 
 /* ==========================================================================

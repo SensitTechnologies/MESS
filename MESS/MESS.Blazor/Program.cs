@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
+using MudBlazor.Services;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
@@ -71,6 +72,7 @@ builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddRazorPages();
+builder.Services.AddMudServices();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {

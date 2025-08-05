@@ -29,6 +29,7 @@ public class ProductionLogService : IProductionLogService
                 .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
                 .ThenInclude(p => p.WorkInstructionStep)
+                .Include(p => p.Product)
                 .ToListAsync();
         }
         catch (Exception e)
