@@ -1,10 +1,6 @@
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthProvider
-@implements IDisposable
-@implements IAsyncDisposable
-@using System.Text.RegularExpressions
-@using MESS.Data.Models
 @using MESS.Services.ProductionLogServices
 @using Microsoft.AspNetCore.Components.Authorization
 
@@ -48,8 +44,7 @@
     public int? AttemptId { get; set; }
     
     /// <summary>
-    /// Optional override for the current step description.
-    /// If set, this value is displayed instead of steps from LogSteps.
+    /// The name of the step this red tag is for.
     /// </summary>
     [Parameter]
     public string StepName { get; set; } = string.Empty;
@@ -74,13 +69,6 @@
     public EventCallback OnSubmit { get; set; }
 
     /// <summary>
-    /// List of production log steps passed from the parent component.
-    /// Used to determine the step description if <see cref="Step"/> is not set.
-    /// </summary>
-    [Parameter]
-    public List<ProductionLogStep>? LogSteps { get; set; }
-
-    /// <summary>
     /// The name of the current operator resolved from authentication claims.
     /// </summary>
     private string OperatorName { get; set; } = string.Empty;
@@ -89,23 +77,6 @@
     /// JavaScript module reference used to invoke print functionality.
     /// </summary>
     private IJSObjectReference? _jsModule;
-
-    /// <summary>
-    /// Called by the framework when parameters are set.
-    /// Logs debug information about each step and its attempts for diagnostics.
-    /// </summary>
-    protected override void OnParametersSet()
-    {
-        if (LogSteps != null)
-        {
-            foreach (var step in LogSteps)
-            {
-                var stepName = step.WorkInstructionStep?.Name ?? "(null)";
-                var attemptsCount = step.Attempts?.Count ?? 0;
-                Console.WriteLine($"[Debug] Step name: '{stepName}', Attempts count: {attemptsCount}");
-            }
-        }
-    }
 
     /// <summary>
     /// Called when the component is initialized.
@@ -162,14 +133,6 @@
     }
 
     /// <summary>
-    /// Removes all HTML tags from the input string.
-    /// </summary>
-    /// <param name="input">String potentially containing HTML tags.</param>
-    /// <returns>String with all HTML tags removed.</returns>
-    private static string StripHtmlTags(string? input) =>
-        string.IsNullOrWhiteSpace(input) ? "" : Regex.Replace(input, "<.*?>", "").Trim();
-
-    /// <summary>
     /// Invokes the cancel event callback when Cancel button is clicked.
     /// </summary>
     private async Task OnCancelClicked() => await OnCancel.InvokeAsync();
@@ -203,13 +166,5 @@
         {
             await _jsModule.DisposeAsync();
         }
-    }
-
-    /// <summary>
-    /// Performs synchronous cleanup. No synchronous disposable resources used.
-    /// </summary>
-    public void Dispose()
-    {
-        // No synchronous disposable resources
     }
 }
