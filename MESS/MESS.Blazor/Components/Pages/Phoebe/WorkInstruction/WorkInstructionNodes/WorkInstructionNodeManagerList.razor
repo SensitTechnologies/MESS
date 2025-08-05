@@ -165,11 +165,11 @@
                 switch (node)
                 {
                     case PartNode partNode:
-                        newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }] };
+                        newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, Parts = [new Part { PartName = "", PartNumber = "" }] };
                         break;
 
                     default:
-                        newNode = new Step { Name = "", Body = "", DetailedBody = "" };
+                        newNode = new Step {NodeType = WorkInstructionNodeType.Step, Name = "", Body = "", DetailedBody = "" };
                         break;
                 }
                 WorkInstructionNodes.Insert(index, node);           // original step at index

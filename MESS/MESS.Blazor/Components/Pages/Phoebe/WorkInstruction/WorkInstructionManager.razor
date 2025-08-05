@@ -35,7 +35,7 @@
 
 <NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
-<div class="d-flex w-100" style="flex-direction: row; margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+<div class="d-flex w-100" style="flex-direction: column; margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
     <div class="flex-grow-1">
         <WorkInstructionNodeManagerList
             WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
@@ -47,8 +47,8 @@
     </div>
     @if (HasInstruction)
     {
-        <div class="ms-2 disable-highlight">
-            <div class="d-flex align" style="flex-direction: column">
+        <div class="d-flex ms-2 disable-highlight justify-content-around">
+            <div class="d-flex" style="flex-direction: column">
                 @if ( !InstructionHasSteps)
                 {
                     <div class="alert alert-info" role="alert">
@@ -61,11 +61,11 @@
                     </div>
                 }
                 
-                <div class="d-flex justify-content-around border rounded py-1" style="flex-direction: row; max-width: 190px; min-width: 190px;">
-                    <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(part)">
+                <div class="d-flex border rounded p-2 justify-content-around" style="flex-direction: row; max-width: 190px; min-width: 190px;">
+                    <button class="btn btn-sm btn-primary p-2 me-1" @onclick="() => AddNode(part)">
                         Add Part
                     </button>
-                    <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(step)">
+                    <button class="btn btn-sm btn-primary p-2 ms-1" @onclick="() => AddNode(step)">
                         Add Step
                     </button>
                 </div>
@@ -314,15 +314,14 @@
         switch (action)
         {
             case "part":
-                newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }] };
+                newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, Parts = [new Part { PartName = "", PartNumber = "" }] };
                 break;
 
             default:
-                newNode = new Step { Name = "", Body = "", DetailedBody = "" };
+                newNode = new Step {NodeType = WorkInstructionNodeType.Step, Name = "", Body = "", DetailedBody = "" };
                 break;
         }
-        
-        WorkInstructionEditorService?.Current?.Nodes.Insert(0, newNode);    // new node at start
+        WorkInstructionEditorService?.Current?.Nodes.Add(newNode);      // new node at end
     }
     
     private async Task OnWorkInstructionSelected(int instructionId)
