@@ -394,7 +394,7 @@
     
     private bool _showRedTagDialog = false;
 
-    private void ToggleRedTagDialog()
+    private async Task ToggleRedTagDialog()
     {
         // If we don’t already have a pending failure, grab the latest one:
         if (_pendingFailureAttempt is null)
@@ -406,7 +406,17 @@
             // And copy its notes so the textarea shows the correct text:
             _currentAttemptNotes = _pendingFailureAttempt?.Notes ?? "";
         }
-
+        else
+        {
+            if (_pendingFailureAttempt.Id <= 0)
+            {
+                var success = await ProductionLogEventService.TryTriggerDbSaveAsync();
+                if (!success)
+                {
+                    // Show error or retry
+                } 
+            } 
+        }
         _showRedTagDialog = !_showRedTagDialog;
     }
     

@@ -5,7 +5,7 @@
 @implements IAsyncDisposable
 @using System.Text.RegularExpressions
 @using MESS.Data.Models
-@using MESS.Services.ProductionLog
+@using MESS.Services.ProductionLogServices
 @using Microsoft.AspNetCore.Components.Authorization
 
 <div id="red-tag-printable" class="red-tag-horizontal-wrapper print-only" style="width: 456px; height: 228px;">
@@ -115,9 +115,13 @@
     {
         var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
 
-        string firstName = user.Claims.FirstOrDefault(c => c.Type.Contains("givenname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
-        string lastName = user.Claims.FirstOrDefault(c => c.Type.Contains("surname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+        // Extract first and last name from claims
+        string firstName = user.Claims
+            .FirstOrDefault(c => c.Type.Contains("givenname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+        string lastName = user.Claims
+            .FirstOrDefault(c => c.Type.Contains("surname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
 
+        // Fallback to "name" or Identity Name if claims are missing
         if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
         {
             OperatorName = user.Claims.FirstOrDefault(c => c.Type == "name")?.Value
