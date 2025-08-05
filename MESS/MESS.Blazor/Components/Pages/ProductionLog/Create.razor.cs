@@ -32,7 +32,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     /// Represents the current production logs being created or modified.
     /// The object in this collection hold all the details of the production log.
     /// </summary>
-    protected readonly ProductionLogBatch ProductionLogBatch = new();
+    protected ProductionLogBatch ProductionLogBatch = new();
     
     private List<Product>? Products { get; set; }
     private List<WorkInstruction>? WorkInstructions { get; set; }
@@ -486,14 +486,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
     private async Task ResetFormState()
     {
-        // Reset the list to a new empty list
-        ProductionLogBatch.Logs = new List<ProductionLog>();
+        // Reset the ProductionLogBatch Object
+        ProductionLogBatch = new ProductionLogBatch();
+        
+        // Reinitialize the form with the current batch size
+        AddProductionLogs(BatchSize);
 
         // Notify the event service with the empty list
         await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
-
-        // Reinitialize the form with the current batch size
-        AddProductionLogs(BatchSize);
         
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
