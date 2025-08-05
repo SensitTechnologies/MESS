@@ -41,7 +41,6 @@
                         <div class="flex-grow-1"/>
                         <input type="text" class="form-control w-auto" placeholder="Search..."
                                @bind="SearchString" @bind:event="oninput"  />
-                        
                     </div>
                     
                     <MudTable @ref="_table"
@@ -76,7 +75,7 @@
                             </MudTd>
                         </RowTemplate>
                         <PagerContent>
-                            <MudTablePager InfoFormat="@infoFormat()" 
+                            <MudTablePager InfoFormat="@InfoFormat()" 
                                            HorizontalAlignment="HorizontalAlignment.Center" 
                                            RowsPerPageString="Logs per Page"/>
                         </PagerContent>
@@ -88,7 +87,6 @@
                         Loading...
                     </div>
                 }
-            
             </Authorized>
         </AuthorizeView>
     </ChildContent>
@@ -145,7 +143,6 @@
         
         IsLoading = false;
     }
-    
 
     private async Task<TableData<ProductionLog>> ServerReload(TableState state, CancellationToken token)
     {
@@ -242,9 +239,8 @@
         return false;
     }
 
-    private string infoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
-
-
+    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
+    
     private async Task OpenDialogAsync(ProductionLog log)
     {
         // Create a new instance of Data
