@@ -111,10 +111,16 @@
     /// Called when the component is initialized.
     /// Retrieves the operator's name from authentication claims.
     /// </summary>
+    /// <remarks>
+    /// Currently Line Operator Name is acquired from the AuthProvider directly.
+    /// Eventually ProductionLogEventService can be updated to properly set and provide the <code>
+    /// ProductionLogEventService.CurrentLineOperatorName
+    /// </code> value instead.
+    /// </remarks>
     protected override async Task OnInitializedAsync()
     {
         var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
-
+        
         // Extract first and last name from claims
         string firstName = user.Claims
             .FirstOrDefault(c => c.Type.Contains("givenname", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
