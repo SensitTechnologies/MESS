@@ -398,6 +398,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userName = authState.User.Identity?.Name ?? "";
 
         for (var i = 0; i < ProductionLogEventService.CurrentProductionLogs.Count; i++)
         {
@@ -410,6 +411,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             productionLog.Product = ActiveProduct;
             productionLog.OperatorId = userId;
             productionLog.FromBatchOf = BatchSize;
+            productionLog.CreatedBy = userName;
+            productionLog.LastModifiedBy = userName;
 
             // If no log is created, it gets created now to utilize the id for the QR code
             if (productionLog.Id <= 0)
