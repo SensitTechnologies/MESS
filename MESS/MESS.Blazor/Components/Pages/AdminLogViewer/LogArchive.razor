@@ -1,46 +1,44 @@
-@page "/production-logs"
-@using MESS.Blazor.Components.Layout
-@using MESS.Blazor.Components.LogDialog
+﻿@page "/log-archive"
 @using MESS.Data.Models
+@using MESS.Blazor.Components.Layout
 @using MESS.Services.ProductionLog
+@using MESS.Blazor.Components.LogDialog
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using SortDirection = MudBlazor.SortDirection
-@using HorizontalAlignment = MudBlazor.HorizontalAlignment
 @using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
+@using HorizontalAlignment = MudBlazor.HorizontalAlignment
 @using DialogResult = Microsoft.FluentUI.AspNetCore.Components.DialogResult
 @layout PhoebeLayout
-@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
-@inject IProductionLogService ProductionLogService
-@inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager NavManager
+@inject IProductionLogService ProductionLogService
+@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+@attribute [Authorize(Roles = "Administrator")]
 
-<PageTitle>Production Logs</PageTitle>
+<PageTitle>Log Archives</PageTitle>
 
 <ErrorBoundary>
     <ChildContent>
-        <AuthorizeView Roles="Operator, Technician, Administrator">
+        <AuthorizeView Roles="Administrator">
             <Authorizing>
                 <p>Authorizing...</p>
             </Authorizing>
             <NotAuthorized>
-                <div class="alert alert-warning">You are not authorized to view this page.</div>
+                <div class="col">
+                    <div class="alert alert-danger">
+                        You are not authorized to view this Page.
+                        <button class="btn btn-sm btn-outline-secondary text-start" @onclick="@(() => NavManager.NavigateTo("/"))">
+                            <i class="bi bi-arrow-left"/>To Login
+                        </button>
+                    </div>                    
+                </div>
             </NotAuthorized>
             <Authorized>
-                @if (IsLoading)
-                {
-                    <div class="text-center my-5">
-                        <div class="spinner-border" role="status"></div>
-                        <p>Loading production logs...</p>
-                    </div>
-                }
-                else if (ProductionLogs.Any())
+                @if (!IsLoading)
                 {
                     <div class="d-flex justify-content-between my-2" style="flex-direction: row">
-                        <h3>My Logs</h3>
+                        <h3>Log Archive</h3>
                         <div class="flex-grow-1"/>
-                        <button class="btn btn-secondary me-4" @onclick="NavigateToCreate">
-                            <i class="bi bi-arrow-left"></i> To Production
-                        </button>
                         <input type="text" class="form-control w-auto" placeholder="Search..."
                                @bind="SearchString" @bind:event="oninput"  />
                     </div>
@@ -48,27 +46,30 @@
                     <MudTable @ref="_table"
                               T="ProductionLog"
                               ServerData="ServerReload"
-                              Loading="IsLoading"
+                              Loading="@IsLoading"
                               Hover="true"
                               FixedHeader="true"
                               Class="border rounded-3 pt-1"
-                              Style="background: white"
                               TableClass="table table-striped table-hover">
                   
                         <HeaderContent>
                             <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLog, object>(x => x.Product?.Name ?? string.Empty)"><strong>Product</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLog, object>(x => x.WorkInstruction?.Title ?? string.Empty)"><strong>Work Instruction</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="serno_field" SortBy="new Func<ProductionLog, object>(x => x.ProductSerialNumber ?? string.Empty)"><strong>Product Serial Number</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLog, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLog, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLog, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
                             <MudTh><strong>Actions</strong></MudTh>
                         </HeaderContent>
                         <RowTemplate Context="productionLog">
                             <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
                             <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstruction?.Title ?? NoWorkInstruction)</MudTd>
                             <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
+                            <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
                             <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                            <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                             <MudTd DataLabel="Actions">
-                                <button class="btn btn-sm btn-primary" @onclick="() => OpenDialogAsync(productionLog)">
+                                <button class="btn btn-sm btn-primary" @onclick="@(() => OpenDialogAsync(productionLog))">
                                     Show Details
                                 </button>
                             </MudTd>
@@ -82,7 +83,9 @@
                 }
                 else
                 {
-                    <div class="alert alert-info">No production logs found.</div>
+                    <div class="container">
+                        Loading...
+                    </div>
                 }
             </Authorized>
         </AuthorizeView>
@@ -94,10 +97,11 @@
     </ErrorContent>
 </ErrorBoundary>
 
+
 @code {
-    private bool IsLoading { get; set; } = true;
     private List<ProductionLog> ProductionLogs { get; set; } = new();
     private IEnumerable<ProductionLog> pagedData = new List<ProductionLog>();
+    private bool IsLoading { get; set; } = true;
 
     private MudTable<ProductionLog> _table = new MudTable<ProductionLog>();
 
@@ -105,6 +109,7 @@
     
     private Dictionary<ProductionLog, int> SearchHits { get; } = [];
     private int MaxHits => SearchHits.Values.Max();
+    
     
     private const string NoProduct = "(No Product)";
     private const string NoWorkInstruction = "(No Work Instruction)";
@@ -119,33 +124,26 @@
             _table.ReloadServerData(); 
         }
     }
+
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         await GrabServerData();
     }
-    
+
     private async Task GrabServerData()
     {
         IsLoading = true;
-
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user.Identity is { IsAuthenticated: true })
+        ProductionLogs = await ProductionLogService.GetAllAsync() ?? [];
+        foreach (var log in ProductionLogs)
         {
-            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-            if (!string.IsNullOrWhiteSpace(userId))
-            {
-                ProductionLogs = await ProductionLogService.GetProductionLogsByOperatorIdAsync(userId) ?? [];
-            }
+            SearchHits.Add(log, 0);
         }
-
+        
         IsLoading = false;
     }
-    
+
     private async Task<TableData<ProductionLog>> ServerReload(TableState state, CancellationToken token)
     {
         IEnumerable<ProductionLog> data = ProductionLogs;
@@ -172,8 +170,14 @@
             case "serno_field":
                 data = data.OrderByDirection(state.SortDirection, o => o.ProductSerialNumber);
                 break;
+            case "worker_field":
+                data = data.OrderByDirection(state.SortDirection, o => o.CreatedBy);
+                break;
             case "created_field":
                 data = data.OrderByDirection(state.SortDirection, o => o.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"));
+                break;
+            case "modified_field":
+                data = data.OrderByDirection(state.SortDirection, o => o.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"));
                 break;
         }
         pagedData = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
@@ -190,14 +194,20 @@
         
         if (SatisfiesFilter(log.Product?.Name, searchPhrase))
             hits++;
-
-        if (SatisfiesFilter(log.ProductSerialNumber, searchPhrase))
-            hits++;
         
         if (SatisfiesFilter(log.WorkInstruction?.Title, searchPhrase))
             hits++;
 
+        if (SatisfiesFilter(log.ProductSerialNumber, searchPhrase))
+            hits++;
+        
+        if (SatisfiesFilter(log.CreatedBy, searchPhrase))
+            hits++;
+
         if (SatisfiesFilter(log.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"), searchPhrase))
+            hits++;
+        
+        if (SatisfiesFilter(log.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"), searchPhrase))
             hits++;
 
         return hits;
@@ -220,35 +230,30 @@
                 {
                     if (!string.IsNullOrWhiteSpace(searchPhraseWord) && 
                         (searchPhrase.Contains(columnPhraseWord, StringComparison.OrdinalIgnoreCase)
-                         || columnPhrase.Contains(searchPhraseWord, StringComparison.OrdinalIgnoreCase)))
-                        return true;
+                        || columnPhrase.Contains(searchPhraseWord, StringComparison.OrdinalIgnoreCase)))
+                    return true;
                 }
             }
         }
 
         return false;
     }
-    
+
     private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
-    
-    private void NavigateToCreate()
-    {
-        NavManager.NavigateTo("/production-log");
-    }
     
     private async Task OpenDialogAsync(ProductionLog log)
     {
         // Create a new instance of Data
         // to allow the user to cancel the update
-        var data = (log, false);
+        var data = (log, true);
         
         await DialogService.ShowDialogAsync<LogOptionsDialog>(data, new DialogParameters()
-        {
-            Title = $"Log #{log.Id}",
-            OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
-            Width = "85%",
-            PreventScroll = true,
-        });
+            {
+                Title = $"Log #{log.Id}",
+                OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
+                Width = "85%",
+                PreventScroll = true,
+            });
     }
 
     private async Task HandleDialogAsync(DialogResult result)

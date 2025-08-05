@@ -48,7 +48,7 @@
     @if (HasInstruction)
     {
         <div class="ms-2 disable-highlight">
-            <div class="d-flex p-1 align" style="flex-direction: column">
+            <div class="d-flex align" style="flex-direction: column">
                 @if ( !InstructionHasSteps)
                 {
                     <div class="alert alert-info" role="alert">
@@ -72,26 +72,6 @@
             </div>
         </div>
     }
-    <!--
-    <div class="ms-2 disable-highlight ">
-        <div class="d-flex p-1" style="flex-direction: column">
-            <div class="alert alert-info" role="alert">
-                @((!(InstructionHasPart || InstructionHasSteps)) ? "This Instruction is empty...\n" : 
-                    ((!InstructionHasSteps) ? "This Instruction has no steps...\n" : ""))<br/> 
-                Add a new Part or Step!
-            </div>
-
-            <div class="border rounded" style="flex-direction: row; max-width: 190px; min-width: 190px;">
-                <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(part)">
-                    Add Part
-                </button>
-                <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(step)">
-                    Add Step
-                </button>
-            </div>
-        </div>
-    </div>
-    -->
 </div>
 
 @code {
