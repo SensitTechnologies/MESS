@@ -13,31 +13,37 @@
         {
             var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == workInstructionNode.Id);
             // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
-            if (workInstructionNode is Step workInstructionStep && workInstructionNode.NodeType == WorkInstructionNodeType.Step)
+
+            switch (workInstructionNode)
             {
-                if (logStep == null && ProductionLog.LogSteps != null)
-                {
-                    logStep = new ProductionLogStep
+                case Step instructionStep:
+                    if (logStep == null && ProductionLog.LogSteps != null)
                     {
-                        WorkInstructionStepId = workInstructionNode.Id,
-                        WorkInstructionStep = workInstructionStep,
-                        ProductionLogId = ProductionLog.Id,
-                    };
-                    ProductionLog.LogSteps.Add(logStep);
-                }
-                <li class="mb-3">
-                    <div id="step-@workInstructionStep.Position">
-                        <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="workInstructionStep" />
-                    </div>
-                </li>
+                        logStep = new ProductionLogStep
+                        {
+                            WorkInstructionStepId = instructionStep.Id,
+                            WorkInstructionStep = instructionStep,
+                            ProductionLogId = ProductionLog.Id,
+                        };
+                        ProductionLog.LogSteps.Add(logStep);
+                    }
+                    <li class="mb-3">
+                        <div id="step-@instructionStep.Position">
+                            <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="instructionStep" />
+                        </div>
+                    </li>
+                    break;
+                    
+                case PartNode instructionPart:
+                    <li class="mb-3">
+                        <PartNodeListItem PartNode="instructionPart"/>
+                    </li>
+                    break;
+                    
+                default:
+                    <div>Unknown Instruction type</div>
+                    break;
             }
-            else if (workInstructionNode is PartNode workInstructionPart && workInstructionNode.NodeType == WorkInstructionNodeType.Part)
-            {
-                <li class="mb-3">
-                    <PartNodeListItem PartNode="workInstructionPart"/>
-                </li>
-            }
-            
         }
         @if (ActiveWorkInstruction.CollectsProductSerialNumber)
         {
