@@ -10,41 +10,51 @@
     <ul class="step">
         @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
         {
-            if (workInstructionNode is Step workInstructionStep && workInstructionNode.NodeType == WorkInstructionNodeType.Step)
+            // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
+            switch (workInstructionNode)
             {
-                // Ensure every log contains the step
-                foreach (var log in ProductionLogs)
-                {
-                    if (log.LogSteps.All(ls => ls.WorkInstructionStepId != workInstructionStep.Id))
+                case Step instructionStep:
+                    // Create or retrieve a list of log steps for all logs
+                    var logSteps = new List<ProductionLogStep>();
+
+                    foreach (var log in ProductionLogs)
                     {
-                        log.LogSteps.Add(new ProductionLogStep
+                        var step = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == instructionStep.Id);
+                        if (step == null)
                         {
-                            WorkInstructionStepId = workInstructionStep.Id,
-                            WorkInstructionStep = workInstructionStep,
-                            ProductionLogId = log.Id,
-                        });
+                            step = new ProductionLogStep
+                            {
+                                WorkInstructionStepId = instructionStep.Id,
+                                WorkInstructionStep = instructionStep,
+                                ProductionLogId = log.Id,
+                            };
+                            log.LogSteps?.Add(step);
+                        }
+                        logSteps.Add(step);
                     }
-                }
 
-                // Gather all steps across logs for this node
-                var logSteps = ProductionLogs
-                    .SelectMany(p => p.LogSteps)
-                    .Where(ls => ls.WorkInstructionStepId == workInstructionStep.Id)
-                    .ToList();
+                    <li class="mb-3">
+                        <div id="step-@instructionStep.Position">
+                            <!-- If you have a batch-aware StepNodeListItem -->
+                            <StepNodeListItem 
+                                Step="instructionStep" 
+                                LogSteps="logSteps"
+                                OnStepCompleted="OnStepCompleted" />
+                        </div>
+                    </li>
+                    break;
 
-                <li class="mb-3">
-                    <div id="step-@workInstructionStep.Position">
-                        <StepNodeListItem OnStepCompleted="OnStepCompleted" LogSteps="logSteps" Step="workInstructionStep" />
-                    </div>
-                </li>
+                case PartNode instructionPart:
+                    <li class="mb-3">
+                        <PartNodeListItem PartNode="instructionPart" />
+                    </li>
+                    break;
+
+                default:
+                    <div>Unknown Instruction type</div>
+                    break;
             }
-            else if (workInstructionNode is PartNode workInstructionPart && workInstructionNode.NodeType == WorkInstructionNodeType.Part)
-            {
-                <li class="mb-3">
-                    <PartNodeListItem PartNode="workInstructionPart"/>
-                </li>
-            }
-            
+
         }
         @if (ActiveWorkInstruction.CollectsProductSerialNumber)
         {
