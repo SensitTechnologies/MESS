@@ -7,11 +7,11 @@
     <div class="card p-3 mb-3 shadow-sm">
         <div class="card-body">
             <div class="d-flex align-items-start w-100 gap-2">
-    
+
                 <!-- Group with vertical stack: up arrow, input, down arrow -->
                 <div class="d-flex flex-column align-items-center" style="width: 100px; user-select: none;">
-                    <button type="button" 
-                            @onclick="IncrementLogIndex" 
+                    <button type="button"
+                            @onclick="IncrementLogIndex"
                             class="btn btn-danger btn-sm d-flex align-items-center justify-content-center p-0 w-100"
                             style="height: 35px;">
                         <i class="bi bi-caret-up" style="font-size: 1.0rem;"></i>
@@ -27,29 +27,28 @@
                                @bind="SelectedLogNumber"
                                @bind:event="oninput"
                                @onchange="ReloadPartsForSelectedIndex"
-                               onfocus="this.select()" />
+                               onfocus="this.select()"/>
                         <label for="logIndexInput"
                                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             Which One?
                         </label>
                     </div>
 
-                    <button type="button" 
-                            @onclick="DecrementLogIndex" 
+                    <button type="button"
+                            @onclick="DecrementLogIndex"
                             class="btn btn-danger btn-sm d-flex align-items-center justify-content-center p-0 w-100"
                             style="height: 35px;">
                         <i class="bi bi-caret-down" style="font-size: 1.0rem;"></i>
                     </button>
                 </div>
-                
+
                 <!-- RequiredPartsList immediately to the right of the input -->
                 <div class="d-flex flex-wrap justify-content-end gap-2">
-                    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput" />
+                    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput"/>
                 </div>
             </div>
         </div>
     </div>
-}
 
 @code {
 
@@ -225,6 +224,5 @@
             ReloadPartsForSelectedIndex();
         }
     }
-
 }
 }
