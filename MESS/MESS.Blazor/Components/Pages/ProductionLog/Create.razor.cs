@@ -41,9 +41,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private string? ActiveLineOperator { get; set; }
     private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
-    private IJSObjectReference? module;
     
     private Dictionary<int, List<ProductionLogPart>> PartsByLogIndex { get; set; } = new();
+    private IJSObjectReference? scrollToModule;
+    private IJSObjectReference? qrModule;
     
     private Func<List<ProductionLog>, Task>? _autoSaveHandler;
     
@@ -121,8 +122,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         if (firstRender)
         {
-
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+            scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "./Scripts/ScrollTo.js");
+            qrModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Components/Pages/ProductionLog/Create.razor.js");
         }
     }
@@ -498,10 +500,11 @@ private async Task SetActiveProduct(int productId)
         if (string.IsNullOrEmpty(QRCodeDataUrl))
             return;
 
-        if (module == null)
+        if (qrModule == null)
+        {
             return;
-
-        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl, index + 1);
+        }
+        await qrModule.InvokeVoidAsync("printQRCode", QRCodeDataUrl, index + 1);
     }
 
     private async Task ResetFormState()
@@ -555,9 +558,9 @@ private async Task SetActiveProduct(int productId)
                 {
                     string elementId = $"step-{nextStep.Position}";
 
-                    if (module != null)
+                    if (scrollToModule != null)
                     {
-                        await module.InvokeVoidAsync("scrollToStep", elementId);
+                        await scrollToModule.InvokeVoidAsync("scrollTo", elementId);
                     }
                 } 
             }
@@ -565,9 +568,9 @@ private async Task SetActiveProduct(int productId)
             // Scroll to the submit button if it's the last step and it was successful
             if (currentIndex == orderedNodes.Count - 1 && success == true)
             {
-                if (module != null)
+                if (scrollToModule != null)
                 {
-                    await module.InvokeVoidAsync("scrollToStep", "submit-button");
+                    await scrollToModule.InvokeVoidAsync("scrollTo", "submit-button");
                 }
             }
         }
@@ -604,9 +607,13 @@ private async Task SetActiveProduct(int productId)
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
         try
         {
-            if (module is not null)
+            if (qrModule is not null)
             {
-                await module.DisposeAsync();
+                await qrModule.DisposeAsync();
+            }
+            if (scrollToModule is not null)
+            {
+                await scrollToModule.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
