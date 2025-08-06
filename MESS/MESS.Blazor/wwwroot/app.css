@@ -786,3 +786,13 @@ body.dark-mode .confirmation-toast {
 input[name="ActiveProductionLogPart.PartSerialNumber"]:not(:placeholder-shown) {
     border-color: #28a745 !important;
 }
+
+.form-floating input[type=number]::-webkit-inner-spin-button,
+.form-floating input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.form-floating input[type=number] {
+    -moz-appearance: textfield;
+}
