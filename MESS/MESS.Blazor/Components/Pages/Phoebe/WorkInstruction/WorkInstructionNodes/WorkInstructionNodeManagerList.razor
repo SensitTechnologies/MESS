@@ -29,56 +29,46 @@
     /// Use this to notify the parent page that the editor state should be marked as dirty.
     /// </summary>
     [Parameter]
-    public EventCallback OnChanged { get; set; }
-    
-    /// <summary>
-    /// Details if there is a current work instruction
-    /// </summary>
-    [Parameter]
-    public bool HasInstruction { get; set; }
+    public EventCallback<WorkInstructionNode?> OnChanged { get; set; }
     
     /// <summary>
     /// 
     /// </summary>
     [Parameter]
-    public bool HasParts { get; set; }
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    [Parameter]
-    public bool HasSteps { get; set; }
+    public EventCallback<(string, int)> OnNewNodeAt { get; set; }
 
     private Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; } = new();
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-    @<div class="d-flex mb-3 border rounded disable-highlight">
-            <div class="d-flex align-items-center drag-handle me-2">
-                <i class="bi bi-grip-vertical h3" />
-                <div class="vr me-2" />
-            </div>
-            <div class="flex-grow-1 my-1">
-                @switch (node)
-                {
+    @<div id="node-@node.Position">
+            <div class="d-flex mb-3 border rounded disable-highlight">
+                <div class="d-flex align-items-center drag-handle me-2">
+                    <i class="bi bi-grip-vertical h3" />
+                    <div class="vr me-2" />
+                </div>
+                <div class="flex-grow-1 my-1">
+                    @switch (node)
+                    {
                     case PartNode partNode:
                         <PartNodeView PartNode="partNode"
                                       OnNodeAction="HandleNodeAction"
-                                      OnChanged="OnChanged" />
-                    break;
+                                      OnChanged="() => OnChanged.InvokeAsync(node)" />
+                        break;
 
                     case Step stepNode:
                         <StepNodeView Step="stepNode"
                                       EditorRefs="EditorRefs"
                                       ActiveFields="ActiveFields"
                                       OnAction="HandleNodeAction"
-                                      OnChanged="OnChanged" />
-                    break;
+                                      OnChanged="() => OnChanged.InvokeAsync(node)" />
+                        break;
 
                     default:
                         <div>Unknown node type: @node.NodeType</div>
-                    break;
-                }
+                        break;
+                    }
+                </div>    
             </div>
     </div>;
 
@@ -101,19 +91,9 @@
             WorkInstructionNodes.Add(itemToMove);
         }
 
-        RecalculatePositions();
-
         if (OnChanged.HasDelegate)
         {
             await OnChanged.InvokeAsync();
-        }
-    }
-
-    private void RecalculatePositions()
-    {
-        for (var i = 0; i < WorkInstructionNodes.Count; i++)
-        {
-            WorkInstructionNodes[i].Position = i;
         }
     }
 
@@ -123,92 +103,50 @@
         var index = WorkInstructionNodes.IndexOf(node);
         if (index == -1) return;
 
-        // Only save if moving or removing
-        if (action is not ("insertBefore" or "insertAfter"))
+        if (action is ("insertBefore" or "insertAfter"))
+        {
+            if (OnNewNodeAt.HasDelegate)
+            {
+                switch (action)
+                {
+                    case "insertBefore":
+                        await OnNewNodeAt.InvokeAsync((node is PartNode? "part" : "step" , index));
+                        break;
+                    case "insertAfter":
+                        await OnNewNodeAt.InvokeAsync((node is PartNode? "part" : "step" , index+1));
+                        break;
+                }
+            }
+        }
+        else
         {
             await SaveAllEditorsContentAsync();
-        }
-
-        WorkInstructionNodes.Remove(node);
-
-        WorkInstructionNode newNode;
-
-        switch (action)
-        {
-            case "up":
-                WorkInstructionNodes.Insert(Math.Max(0, index - 1), node);
-                break;
-            case "down":
-                WorkInstructionNodes.Insert(Math.Min(WorkInstructionNodes.Count, index + 1), node);
-                break;
-            case "top":
-                WorkInstructionNodes.Insert(0, node);
-                break;
-            case "bottom":
-                WorkInstructionNodes.Add(node);
-                break;
-            case "insertBefore":
-                switch (node)
-                {
-                    case PartNode partNode:
-                        newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }]};
-                        break;
-
-                    default:
-                        newNode = new Step { Name = "", Body = "", DetailedBody = "" };
-                        break;
-                }
-                WorkInstructionNodes.Insert(index, newNode);    // new step at index
-                WorkInstructionNodes.Insert(index + 1, node);   // original step after
-                break;
-            case "insertAfter":
-                switch (node)
-                {
-                    case PartNode partNode:
-                        newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, Parts = [new Part { PartName = "", PartNumber = "" }] };
-                        break;
-
-                    default:
-                        newNode = new Step {NodeType = WorkInstructionNodeType.Step, Name = "", Body = "", DetailedBody = "" };
-                        break;
-                }
-                WorkInstructionNodes.Insert(index, node);           // original step at index
-                WorkInstructionNodes.Insert(index + 1, newNode);    // new step after
-                break;
-            case "remove":
-                // already removed above
-                break;
-        }
-
-        RecalculatePositions();
-        
-        if (OnChanged.HasDelegate)
-        {
-            await OnChanged.InvokeAsync();
-        }
-    }
-
-    private const string step = "step";
-    private const string part = "part";
-
-    /// <summary>
-    /// 
-    /// </summary>
-    [Parameter]
-    public EventCallback<string> OnAddNode { get; set; }
-    
-    private async Task AddNode(string action)
-    {
-        if (OnAddNode.HasDelegate)
-        {
-            await OnAddNode.InvokeAsync(action);
             
-            RecalculatePositions();
+            WorkInstructionNodes.Remove(node);
+
+            switch (action)
+            {
+                case "up":
+                    WorkInstructionNodes.Insert(Math.Max(0, index - 1), node);
+                    break;
+                case "down":
+                    WorkInstructionNodes.Insert(Math.Min(WorkInstructionNodes.Count, index + 1), node);
+                    break;
+                case "top":
+                    WorkInstructionNodes.Insert(0, node);
+                    break;
+                case "bottom":
+                    WorkInstructionNodes.Add(node);
+                    break;
+                case "remove":
+                    // already removed above
+                    break;
+            }
             
             if (OnChanged.HasDelegate)
             {
-                await OnChanged.InvokeAsync();
-            }            
+                await OnChanged.InvokeAsync(node);
+            }
         }
     }
     
