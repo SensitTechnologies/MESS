@@ -10,30 +10,36 @@
     
                 <!-- Group with vertical stack: up arrow, input, down arrow -->
                 <div class="d-flex flex-column align-items-center" style="width: 100px; user-select: none;">
-                    <div @onclick="IncrementLogIndex" style="cursor: pointer; font-size: 1.5rem; color: #ffd502;">
-                        <i class="bi bi-caret-up"></i>
-                    </div>
+                    <button type="button" 
+                            @onclick="IncrementLogIndex" 
+                            class="btn btn-danger btn-sm d-flex align-items-center justify-content-center p-0 w-100"
+                            style="height: 35px;">
+                        <i class="bi bi-caret-up" style="font-size: 1.0rem;"></i>
+                    </button>
 
                     <div class="form-floating mb-0 flex-grow-1 w-100" style="height: 100%;">
                         <input type="number"
                                id="logIndexInput"
-                               class="form-control text-center h-250"
-                               style="width: 100%;"
+                               class="form-control text-center"
+                               style="width: 100%; min-width: 100px;"
                                min="1"
                                max="@ProductionLogs.Count"
                                @bind="SelectedLogNumber"
                                @bind:event="oninput"
                                @onchange="ReloadPartsForSelectedIndex"
                                onfocus="this.select()" />
-                        <label for="logIndexInput" 
+                        <label for="logIndexInput"
                                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             Which One?
                         </label>
                     </div>
 
-                    <div @onclick="DecrementLogIndex" style="cursor: pointer; font-size: 1.5rem; color: #ffd502;">
-                        <i class="bi bi-caret-down"></i>
-                    </div>
+                    <button type="button" 
+                            @onclick="DecrementLogIndex" 
+                            class="btn btn-danger btn-sm d-flex align-items-center justify-content-center p-0 w-100"
+                            style="height: 35px;">
+                        <i class="bi bi-caret-down" style="font-size: 1.0rem;"></i>
+                    </button>
                 </div>
 
                 <!-- Spacer to push RequiredPartsList to the right -->
