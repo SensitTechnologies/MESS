@@ -62,25 +62,25 @@
     /// </summary>
     [Parameter]
     public required PartNode PartNode { get; set; }
-    
+
     /// <summary>
     /// The list of all production logs. Required to access log IDs by index.
     /// </summary>
     [Parameter]
     public required List<ProductionLog> ProductionLogs { get; set; }
-    
+
     private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
     private bool _initialized = false;
-    
+
     private int SelectedLogIndex { get; set; } = 0;
 
     // This property is 1-based for the UI binding:
     private int SelectedLogNumber
     {
-        get => SelectedLogIndex + 1;     // show 1-based to user
+        get => SelectedLogIndex + 1; // show 1-based to user
         set
         {
-            var newIndex = value - 1;     // convert back to 0-based
+            var newIndex = value - 1; // convert back to 0-based
             if (newIndex < 0)
                 newIndex = 0;
             else if (newIndex >= ProductionLogs.Count)
@@ -93,7 +93,7 @@
             }
         }
     }
-    
+
     /// <inheritdoc />
     protected override void OnInitialized()
     {
@@ -107,7 +107,7 @@
         ReloadPartsForSelectedIndex();
         InvokeAsync(StateHasChanged);
     }
-    
+
     /// <summary>
     /// Unsubscribes from the <see cref="SerializationService.PartsReloadRequested"/> event
     /// to prevent memory leaks when the component is disposed.
@@ -129,14 +129,14 @@
             StateHasChanged();
         }
     }
-    
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
         InitializeProductionLogParts();
     }
-    
+
     private void InitializeProductionLogParts()
     {
         for (int i = 0; i < ProductionLogs.Count; i++)
@@ -157,7 +157,7 @@
         }
     }
 
-    
+
     private void ReloadPartsForSelectedIndex()
     {
         if (SelectedLogIndex >= 0 && SelectedLogIndex < ProductionLogs.Count)
@@ -181,7 +181,7 @@
             ProductionLogParts = [];
         }
     }
-    
+
     private void AfterSerialNumberInput(ProductionLogPart updatedPart)
     {
         if (SelectedLogIndex < 0 || SelectedLogIndex >= ProductionLogs.Count)
@@ -210,6 +210,7 @@
 
         SerializationService.SetPartsForLogIndex(SelectedLogIndex, storedParts);
     }
+
     private void IncrementLogIndex()
     {
         if (SelectedLogNumber < ProductionLogs.Count)
@@ -228,4 +229,5 @@
         }
     }
 
+}
 }
