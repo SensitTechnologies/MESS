@@ -4,21 +4,24 @@
 
 @if (_initialized)
 {
-    <div class="mb-2">
-        <label for="logIndexInput" class="form-label me-2">Log #</label>
-        <input type="number"
-               id="logIndexInput"
-               class="form-control"
-               style="max-width: 80px"
-               min="1"
-               max="@ProductionLogs.Count"
-               @bind="SelectedLogNumber"
-               @bind:event="oninput"
-               @onchange="ReloadPartsForSelectedIndex" />
-    </div>
+    @if (ProductionLogs.Count > 1)
+    {
+        <div class="form-floating p-2 mb-2" style="max-width: 90px;">
+            <input type="number"
+                   id="logIndexInput"
+                   class="form-control"
+                   style="max-width: 90px"
+                   min="1"
+                   max="@ProductionLogs.Count"
+                   @bind="SelectedLogNumber"
+                   @bind:event="oninput"
+                   @onchange="ReloadPartsForSelectedIndex" 
+                   onfocus="this.select()"/>
+            <label for="logIndexInput">Which One?</label>
+        </div>  
+    }
     
     <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput" />
-    
 }
 
 @code {
