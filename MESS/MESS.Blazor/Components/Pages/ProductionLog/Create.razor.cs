@@ -522,6 +522,12 @@ private async Task SetActiveProduct(int productId)
         
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
+        
+        
+        if (scrollToModule != null)
+        {
+            await scrollToModule.InvokeVoidAsync("ScrollToTop");
+        }
     }
     
     private async Task OnStepCompleted(List<ProductionLogStep> productionLogSteps, bool? success)
