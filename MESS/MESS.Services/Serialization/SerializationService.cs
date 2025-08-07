@@ -71,7 +71,6 @@ public class SerializationService : ISerializationService
 
             if (partsWithSerials.Count == 0)
             {
-                Log.Debug("No parts with serial numbers for log index {LogIndex}; skipping save.", logIndex);
                 continue;
             }
 
@@ -223,11 +222,9 @@ public class SerializationService : ISerializationService
     {
         if (_partsByLogIndex.TryGetValue(logIndex, out var parts))
         {
-            Log.Debug("Retrieved {Count} parts for log index {Index}", parts.Count, logIndex);
             return parts;
         }
-
-        Log.Debug("No parts found for log index {Index}", logIndex);
+        
         return new();
     }
 
@@ -235,7 +232,6 @@ public class SerializationService : ISerializationService
     public void SetPartsForLogIndex(int logIndex, List<ProductionLogPart> parts)
     {
         _partsByLogIndex[logIndex] = parts;
-        Log.Debug("Set {Count} parts for log index {Index}", parts.Count, logIndex);
     }
     
     /// <inheritdoc />
@@ -244,10 +240,6 @@ public class SerializationService : ISerializationService
         if (_partsByLogIndex.Remove(logIndex))
         {
             Log.Information("Cleared parts for production log at index {LogIndex}", logIndex);
-        }
-        else
-        {
-            Log.Debug("No parts found to clear for production log at index {LogIndex}", logIndex);
         }
     }
     
