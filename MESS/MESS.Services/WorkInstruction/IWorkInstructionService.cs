@@ -166,6 +166,15 @@ public interface IWorkInstructionService
     /// A task representing the synchronous operation.
     /// </returns>
     Task DeleteImageFile(string FileName);
+    
+    /// <summary>
+    /// Removes all Image Files related to a Work Instruction from the server
+    /// </summary>
+    /// <param name="instruction">The Work Instruction to delete all images from</param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    Task DeleteImagesByWorkInstructionAsync(WorkInstruction instruction);
 
     /// <summary>
     /// Sets IsActive = false for all other versions in this version chain.

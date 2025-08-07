@@ -63,6 +63,7 @@
         <_ContentIncludedByDefault Remove="Components\Pages\Product\Index.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\Product\ProductDetails.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\Product\WorkInstructionSelector.razor" />
+        <_ContentIncludedByDefault Remove="Components\ConfirmationDialog\ConfirmationDialog.razor" />
 
     </ItemGroup>
 
@@ -75,6 +76,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Components\LogDialog\" />
       <Folder Include="wwwroot\WorkInstructionExports\" />
       <Folder Include="wwwroot\WorkInstructionImages\" />
     </ItemGroup>

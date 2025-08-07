@@ -32,7 +32,8 @@
     public EventCallback<WorkInstructionNode?> OnChanged { get; set; }
     
     /// <summary>
-    /// 
+    /// Event callback that is triggered when a New Node needs to be made
+    /// Use this to create a new node of a specific node type at a specified index.
     /// </summary>
     [Parameter]
     public EventCallback<(string, int)> OnNewNodeAt { get; set; }

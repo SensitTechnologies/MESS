@@ -1,5 +1,4 @@
 @inject NavigationManager Navigation
-@inject IJSRuntime JsRuntime
 
 <div class="toast-container position-fixed top-50 start-50 translate-middle p-3 @(IsVisible ? "d-block" : "d-none")" data-bs-autohide="true" data-bs-delay="5000">
     <div class="toast show confirmation-toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -92,7 +91,6 @@
     {
         Close();
         await OnSubmit.InvokeAsync(true);
-        await JsRuntime.InvokeVoidAsync("ScrollToTop");
         await showSaveAlert();
     }
 }
