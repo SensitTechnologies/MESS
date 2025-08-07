@@ -14,7 +14,7 @@
                         <p class="card-text d-block mb-1" style="white-space: pre-wrap;">
                             
                             @* Replace text with extra details i.e. body text *@
-                            @switch (ShowDetails)
+                            @switch (_showDetails)
                             {
                                 case false:
                                     @((MarkupString)Step.Body)
@@ -36,57 +36,121 @@
                         @bind-Value="_currentAttemptNotes"
                         @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
                     
-                    <div class="row mt-2">
-                        <div class="col text-start">
-                            <div class="position-relative d-inline-block">
-                                <!-- Success Button -->
-                                <input type="radio"
-                                       class="btn-check"
-                                       name="statusToggle"
-                                       id="radioSuccessBtn{@Step.Body}-@Step.Id"
-                                       checked="@(SelectedButton == "Success")"
-                                       @onclick="@(async (e) => await HandleButtonPress(true))"/>
-                                <label class="btn btn-outline-success @(SelectedButton == "Success" ? "active" : "")"
-                                       for="radioSuccessBtn{@Step.Body}-@Step.Id">
-                                    Success
-                                </label>
-
-                                @if (_showSuccessFloat)
-                                {
-                                    <div class="floating-label" style="left: 50%; transform: translateX(-50%);">
-                                        Success!
-                                    </div>
-                                }
-                            </div>
-                            <div class="position-relative d-inline-block">
-                                <!-- Failure Button -->
-                                <input type="radio"
-                                       class="btn-check"
-                                       name="statusToggle"
-                                       id="radioFailureBtn{@Step.Body}-@Step.Id"
-                                       checked="@(SelectedButton == "Failure")"
-                                       @onclick="@(async (e) => await HandleButtonPress(false))"/>
-                                <label class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
-                                       for="radioFailureBtn{@Step.Body}-@Step.Id">
-                                    Failure
-                                </label>
-
-                                @if (_showFailureFloat)
-                                {
-                                    <div class="floating-label" style="left: 50%; transform: translateX(-50%); color: #dc3545;">
-                                        Failure!
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                        <div class="col text-end">
-                            @if (HasDetails)
+                    <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap" style="gap: 0.5rem;">
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 0.5rem;">
+                            <!-- Buttons Visible in One Piece Flow-->
+                            @if (LogSteps.Count == 1)
                             {
-                                <button @onclick="toggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
-                                    @(ShowDetails ? "Hide Details" : "Show Details")
-                                </button>
+                                <div class="button-wrapper">
+                                    <button type="button"
+                                            class="btn btn-outline-success @(GetStepSuccessState(LogSteps[TargetIndex]) == true ? "active" : "")"
+                                            @onclick="async () => await HandleButtonPressIndexed(true)">
+                                        Success
+                                    </button>
+
+                                    @if (_showSuccessFloat)
+                                    {
+                                        <div class="floating-label">Success!</div>
+                                    }
+                                </div>
+
+                                <div class="button-wrapper">
+                                    <button type="button"
+                                            class="btn btn-outline-danger @(GetStepSuccessState(LogSteps[TargetIndex]) == false ? "active" : "")"
+                                            @onclick="async () => await HandleButtonPressIndexed(false)">
+                                        Failure
+                                    </button>
+
+                                    @if (_showFailureFloat)
+                                    {
+                                        <div class="floating-label failure">Failure!</div>
+                                    }
+                                </div>
+
+                            }
+                            else
+                            {
+                                <!-- Buttons Visible in Batch Mode-->
+                                <!--Pass All Button-->
+                                <div class="button-wrapper">
+                                    <button type="button"
+                                            class="btn btn-outline-success @(SelectedButton == "Success" ? "active" : "")"
+                                            @onclick="async () => await HandleButtonPressAll(true)">
+                                        Pass All
+                                    </button>
+                                    
+                                    @if (_showSuccessFloatAll)
+                                    {
+                                        <div class="floating-label">
+                                            Pass All!
+                                        </div>
+                                    }
+                                </div>
+
+                                <!--Card for Controlling Individual Successes and Failures-->
+                                <div class="card px-2 py-1 d-flex flex-row align-items-center justify-content-center flex-shrink-0"
+                                     style="gap: 0.5rem; max-width: 300px;">
+                                    <input class="form-control"
+                                           type="number"
+                                           min="1"
+                                           max="@LogSteps.Count"
+                                           style="width: 60px;"
+                                           @bind="TargetIndexInput"
+                                           @bind:event="oninput" 
+                                           onfocus="this.select()"
+                                           @ref="_targetIndexInputRef" />
+                                    
+                                    <div class="button-wrapper">
+                                        <button type="button"
+                                                class="btn btn-outline-success @(GetStepSuccessState(LogSteps[TargetIndex]) == true ? "active" : "")"
+                                                @onclick="async () => await HandleButtonPressIndexed(true)">
+                                            Success
+                                        </button>
+                                        
+                                        @if (_showSuccessFloatIndexed)
+                                        {
+                                            <div class="floating-label">Success!</div>
+                                        }
+                                    </div>
+                                    
+                                    <div class="button-wrapper">
+                                        <button type="button"
+                                                class="btn btn-outline-danger @(GetStepSuccessState(LogSteps[TargetIndex]) == false ? "active" : "")"
+                                                @onclick="async () => await HandleButtonPressIndexed(false)">
+                                            Failure
+                                        </button>
+                                        
+                                        @if (_showFailureFloatIndexed)
+                                        {
+                                            <div class="floating-label failure">Failure!</div>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                <!--Fail All Button-->
+                                <div class="button-wrapper">
+                                    <button type="button"
+                                            class="btn btn-outline-danger @(SelectedButton == "Failure" ? "active" : "")"
+                                            @onclick="async () => await HandleButtonPressAll(false)">
+                                        Fail All
+                                    </button>
+                                    
+                                    @if (_showFailureFloatAll)
+                                    {
+                                        <div class="floating-label failure">Fail All!</div>
+                                    }
+                                </div>
                             }
                         </div>
+
+                        @if (HasDetails)
+                        {
+                            <div class="d-flex align-items-center">
+                                <button @onclick="ToggleDetails" class="btn btn-outline-secondary text-decoration-none" type="button">
+                                    @(_showDetails ? "Hide Details" : "Show Details")
+                                </button>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -94,7 +158,7 @@
             <div class="col col-md-6 secondary-content">
                 @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0) 
                 {
-                    @if (ShowDetails)
+                    @if (_showDetails)
                     {
                         if (Step.SecondaryMedia.Count > 0)
                         {
@@ -177,8 +241,43 @@
         return string.IsNullOrWhiteSpace(textOnly);
     }
     
+    private int _targetIndex;
+
+    private int TargetIndex
+    {
+        get => _targetIndex;
+        set
+        {
+            if (value != _targetIndex)
+            {
+                _targetIndex = value;
+                UpdateNoteForTargetIndex();
+            }
+        }
+    }
+
+    private string TargetIndexInput
+    {
+        get => (TargetIndex + 1).ToString();
+        set
+        {
+            if (int.TryParse(value, out var parsed))
+            {
+                var clamped = Math.Clamp(parsed, 1, LogSteps.Count);
+                TargetIndex = clamped - 1;
+            }
+        }
+    }
+    
+    private ElementReference _targetIndexInputRef;
+
     private bool _showSuccessFloat = false;
     private bool _showFailureFloat = false;
+    private bool _showSuccessFloatAll = false;
+    private bool _showFailureFloatAll = false;
+    private bool _showSuccessFloatIndexed = false;
+    private bool _showFailureFloatIndexed = false;
+
 
     /// <inheritdoc />
     protected override void OnInitialized()
@@ -233,11 +332,11 @@
     }
 
 
-    private bool ShowDetails = false;
+    private bool _showDetails = false;
 
-    private void toggleDetails()
+    private void ToggleDetails()
     {
-        ShowDetails = !ShowDetails;
+        _showDetails = !_showDetails;
         StateHasChanged();
     }
     
@@ -263,18 +362,35 @@
         }
     }
 
-    private async Task HandleButtonPress(bool? result)
+    private async Task HandleButtonPressAll(bool? result)
     {
         if (!result.HasValue)
-        {
-            ShowOptionalNotesField = false;
-            _pendingFailureAttempt = null;
-            _currentAttemptNotes = string.Empty;
-            SetSelectedButton("");
             return;
-        }
 
-        if (result.Value) // SUCCESS
+        _pendingFailureAttempt = null;
+        if (!result.Value) // failure
+        {
+            var newFailureAttempt = new ProductionLogStepAttempt
+            {
+                Success = false,
+                SubmitTime = DateTimeOffset.UtcNow,
+                Notes = ""
+            };
+
+            foreach (var step in LogSteps)
+            {
+                step.Attempts.Add(newFailureAttempt);
+            }
+
+            _pendingFailureAttempt = newFailureAttempt; // Track the failure attempt for note editing
+            ShowOptionalNotesField = true;
+
+            if (_failureNoteTextArea?.Element != null)
+            {
+                await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
+            }
+        }
+        else // success
         {
             foreach (var step in LogSteps)
             {
@@ -285,55 +401,46 @@
                     Notes = ""
                 });
             }
-            
-            await OnStepCompleted.InvokeAsync((LogSteps, true));
 
-            _pendingFailureAttempt = null;
-            _currentAttemptNotes = string.Empty;
             ShowOptionalNotesField = false;
-            SetSelectedButton("Success");
-
-            await ShowFloatMessage(true);
+            _currentAttemptNotes = "";
         }
-        else // FAILURE
+
+        SetSelectedButton(result.Value ? "Success" : "Failure");
+
+        await OnStepCompleted.InvokeAsync((LogSteps, result.Value));
+        await ShowFloatMessage(result.Value ? "all-success" : "all-failure");
+    }
+
+    
+    private async Task HandleButtonPressIndexed(bool isSuccess)
+    {
+        if (TargetIndex < 0 || TargetIndex >= LogSteps.Count)
+            return; // Invalid index
+
+        var targetStep = LogSteps[TargetIndex];
+        var attempt = new ProductionLogStepAttempt
         {
-            // If there's already a pending failure, finalize it by setting its notes
-            if (_pendingFailureAttempt != null)
-            {
-                _pendingFailureAttempt.Notes = _currentAttemptNotes;
-                _pendingFailureAttempt = null;
-            }
+            Success = isSuccess,
+            SubmitTime = DateTimeOffset.UtcNow,
+            Notes = isSuccess ? "" : _currentAttemptNotes
+        };
 
-            // Clear input for the next note
-            _currentAttemptNotes = string.Empty;
+        targetStep.Attempts.Add(attempt);
 
-            // Create new pending attempt
-            _pendingFailureAttempt = new ProductionLogStepAttempt
-            {
-                Success = false,
-                SubmitTime = DateTimeOffset.UtcNow,
-                Notes = ""
-            };
-
-            foreach (var logStep in LogSteps)
-            {
-                logStep.Attempts.Add(_pendingFailureAttempt);
-            }
-
+        if (!isSuccess)
+        {
+            _pendingFailureAttempt = attempt;
             ShowOptionalNotesField = true;
-            SetSelectedButton("Failure");
-
-            await OnStepCompleted.InvokeAsync((LogSteps, false));
-            StateHasChanged();
-            await Task.Yield();
 
             if (_failureNoteTextArea?.Element != null)
             {
                 await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
             }
-            
-            await ShowFloatMessage(false);
         }
+
+        await OnStepCompleted.InvokeAsync((new List<ProductionLogStep> { targetStep }, isSuccess));
+        await ShowFloatMessage(isSuccess ? "indexed-success" : "indexed-failure");
     }
     
     private async Task HandleNoteChangedAsync()
@@ -345,22 +452,75 @@
         }
     }
     
-    private async Task ShowFloatMessage(bool isSuccess)
+    private async Task ShowFloatMessage(string type)
     {
-        if (isSuccess)
+        if (LogSteps.Count == 1)
         {
-            _showSuccessFloat = true;
-            StateHasChanged();
-            await Task.Delay(800);
-            _showSuccessFloat = false;
+            switch (type)
+            {
+                case "indexed-success":
+                case "success":
+                    _showSuccessFloat = true;
+                    break;
+                case "indexed-failure":
+                case "failure":
+                    _showFailureFloat = true;
+                    break;
+            }
         }
         else
         {
-            _showFailureFloat = true;
-            StateHasChanged();
-            await Task.Delay(800);
-            _showFailureFloat = false;
+            switch (type)
+            {
+                case "all-success":
+                    _showSuccessFloatAll = true;
+                    break;
+                case "all-failure":
+                    _showFailureFloatAll = true;
+                    break;
+                case "indexed-success":
+                    _showSuccessFloatIndexed = true;
+                    break;
+                case "indexed-failure":
+                    _showFailureFloatIndexed = true;
+                    break;
+            }
         }
+
         StateHasChanged();
+        await Task.Delay(800);
+
+        _showSuccessFloat = false;
+        _showFailureFloat = false;
+        _showSuccessFloatAll = false;
+        _showFailureFloatAll = false;
+        _showSuccessFloatIndexed = false;
+        _showFailureFloatIndexed = false;
+
+        StateHasChanged();
+    }
+
+    private void UpdateNoteForTargetIndex()
+    {
+        if (_targetIndex >= 0 && _targetIndex < LogSteps.Count)
+        {
+            var latest = LogSteps[_targetIndex].LatestAttempt;
+
+            if (latest is { Success: false, Notes: not null })
+            {
+                _currentAttemptNotes = latest.Notes;
+                ShowOptionalNotesField = true;
+            }
+            else
+            {
+                _currentAttemptNotes = "";
+                ShowOptionalNotesField = false;
+            }
+        }
+        else
+        {
+            _currentAttemptNotes = "";
+            ShowOptionalNotesField = false;
+        }
     }
 }
