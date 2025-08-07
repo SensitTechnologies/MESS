@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using System.Net;
 using System.Text;
+using MESS.Services.ProductionLog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 
@@ -18,6 +19,7 @@ using MESS.Data.Models;
 public partial class WorkInstructionService : IWorkInstructionService
 {
     private readonly IProductService _productService;
+    private readonly IProductionLogService _productionLogService;
     private readonly IMemoryCache _cache;
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
@@ -49,12 +51,14 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
     /// </summary>
     /// <param name="productService">The service for managing product-related operations.</param>
+    /// <param name="productionLogService">The service for managing product-related operations.</param>
     /// <param name="cache">The memory cache for caching work instructions.</param>
     /// <param name="webHostEnvironment">The hosting environment for accessing web root paths.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
-    public WorkInstructionService(IProductService productService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
+    public WorkInstructionService(IProductService productService, IProductionLogService productionLogService, IMemoryCache cache, IWebHostEnvironment webHostEnvironment, IDbContextFactory<ApplicationContext> contextFactory)
     {
         _productService = productService;
+        _productionLogService = productionLogService;
         _cache = cache;
         _webHostEnvironment = webHostEnvironment;
         _contextFactory = contextFactory;
@@ -1456,6 +1460,9 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return false;
             }
             
+            // Remove associated Work Instruction Node Images first
+            await DeleteImagesByWorkInstructionAsync(workInstruction);
+            
             // Remove associated Work Instruction Nodes first
             context.WorkInstructionNodes.RemoveRange(workInstruction.Nodes);
 
@@ -1501,20 +1508,33 @@ public partial class WorkInstructionService : IWorkInstructionService
 
                 originalWorkInstruction = await context.WorkInstructions
                     .Include(w => w.Nodes)
-                    .FirstOrDefaultAsync(w => w.Id ==ogId);
+                    .FirstOrDefaultAsync(w => w.Id == ogId);
 
                 if (originalWorkInstruction == null)
                 {
                     return false;
                 }
             }
-
+            
+            // record original id to get the rest or the versions but delete this one now
+            var originalId =  originalWorkInstruction.Id;
+            
             // query for all work instructions associated with the original
-            var versions = await GetVersionHistoryAsync(originalWorkInstruction.Id);
-
+            var otherVersions = await context.WorkInstructions
+                .Where(w => w.OriginalId == originalId)
+                .Include(w => w.Nodes)
+                .ThenInclude(w => ((PartNode)w).Parts)
+                .ToListAsync();
+            
+            otherVersions.Add(originalWorkInstruction);
+            
             // delete each one
-            foreach (var version in versions)
+            foreach (var version in otherVersions)
             {
+                // Remove all production logs associated with a work instruction
+                await  _productionLogService.DeleteProductionLogByWorkInstructionAsync(version);
+                await DeleteImagesByWorkInstructionAsync(version);
+               
                 // Remove associated Work Instruction Nodes first
                 context.WorkInstructionNodes.RemoveRange(version.Nodes);
                 context.WorkInstructions.Remove(version);
@@ -1801,6 +1821,21 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
     }
 
+    /// <inheritdoc/>
+    public async Task DeleteImagesByWorkInstructionAsync(WorkInstruction instruction)
+    {
+        foreach (var node in instruction.Nodes)
+        {
+            if (node is Step stepNode)
+            {
+                List<string> allImages = [..stepNode.PrimaryMedia, ..stepNode.SecondaryMedia];
+                foreach (var im in allImages)
+                {
+                    await DeleteImageFile(im);
+                }
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public Task DeleteImageFile(string FileName)

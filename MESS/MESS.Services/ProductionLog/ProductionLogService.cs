@@ -232,4 +232,27 @@ public class ProductionLogService : IProductionLogService
         await context.SaveChangesAsync();
         return true;
     }
+
+    /// <summary>
+    /// Deletes all production logs associated with a work instruction
+    /// </summary>
+    /// <param name="workInstruction">work instruction to queary all production logs by</param>
+    /// <returns></returns>
+    public async Task<bool> DeleteProductionLogByWorkInstructionAsync(WorkInstruction workInstruction)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var logs = await context.ProductionLogs
+            .Include(p => p.WorkInstruction)
+            .Include(p => p.LogSteps)
+            .Where(p => p.WorkInstruction == workInstruction)
+            .ToListAsync();
+
+        if (logs == null || logs.Count == 0)
+            return false;
+        
+        context.ProductionLogs.RemoveRange(logs);
+        await context.SaveChangesAsync();
+        return true;
+    }
 }

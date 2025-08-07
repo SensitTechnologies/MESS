@@ -1,6 +1,8 @@
 @using MESS.Data.Models
+@using MESS.Blazor.Components.Dialogs
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
-@using MESS.Blazor.Components.ConfirmationDialog
+@using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
+@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
 
 <tr>
     <td>
@@ -41,14 +43,6 @@
             <button class="btn btn-sm btn-danger ms-2" @onclick="ShowDeleteConfirmation">
                 <i class="bi bi-trash" />
             </button>
-
-            <ConfirmationDialog
-                Title="Delete Product"
-                Message="@($"Are you sure you want to delete '{Product.Name}'?")"
-                ConfirmButtonText="Delete"
-                Visible="@showDeleteDialog"
-                VisibleChanged="@DeleteDialogVisibilityChanged"
-                OnConfirmed="RaiseDeleteEvent" />
         }
         else
         {
@@ -108,15 +102,12 @@
     /// </summary>
     [Parameter]
     public EventCallback<Product> OnSubmit { get; set; }
-    
-    private EventCallback<bool> DeleteDialogVisibilityChanged =>
-        EventCallback.Factory.Create<bool>(this, SetDeleteDialogVisibility);
 
     private bool IsNewProduct => Product.Id == 0;
     private bool isSaving = false;
     private bool IsDirty { get; set; } = false;
     
-    private bool showDeleteDialog;
+
     
     private void OnInputChanged(ChangeEventArgs e)
     {
@@ -133,20 +124,29 @@
         isSaving = false;
         IsDirty = false;
     }
+
     
-    private void ShowDeleteConfirmation()
+    private async Task ShowDeleteConfirmation()
     {
-        showDeleteDialog = true;
+        var data = (
+            bodyMessage: $"Are you sure you want to delete '{Product.Name}'?", 
+            callback: EventCallback.Factory.Create(this, RaiseDeleteEvent)
+        );
+        
+        var dialog =  await DialogService.ShowDialogAsync<ConfirmationDialog>(data, new DialogParameters()
+        {
+            Title = $"Delete Product",
+            PreventScroll = true,
+            PreventDismissOnOverlayClick = true,
+        });
+
+        await dialog.Result;
     }
+    
 
     private async Task RaiseDeleteEvent()
     {
         await OnDeleteRequested.InvokeAsync(Product);
-    }
-    
-    private void SetDeleteDialogVisibility(bool visible)
-    {
-        showDeleteDialog = visible;
     }
     
     private void HandleCheckboxChanged(bool newValue)

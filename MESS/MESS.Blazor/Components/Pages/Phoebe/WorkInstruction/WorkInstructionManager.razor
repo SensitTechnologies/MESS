@@ -1,4 +1,5 @@
 @page "/WorkInstructionManager"
+@using MESS.Blazor.Components.Dialogs
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes
 @using MESS.Data.Models
 @using MESS.Services.Product
@@ -7,11 +8,15 @@
 @using MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using MESS.Blazor.Components.Navigator
 @using Microsoft.AspNetCore.Authorization
+@using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
+@using DialogResult = Microsoft.FluentUI.AspNetCore.Components.DialogResult
 @inject IJSRuntime JSRuntime
 @inject IWorkInstructionService WorkInstructionService
+@inject IWorkInstructionEditorService WorkInstructionEditorService
 @inject IProductService ProductService
 @inject IToastService ToastService
-@inject IWorkInstructionEditorService WorkInstructionEditorService
+@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+
 @attribute [Authorize(Roles = "Technician, Administrator")]
 
 <MenuBarPhoebe 
@@ -23,7 +28,7 @@
     OnWorkInstructionSelected="OnWorkInstructionSelected"
     OnSidebarToggle="ToggleSidebar"
     OnNewConfirmed="HandleNewInstruction"
-    OnDelete="DeleteInstruction"
+    OnDelete="ConfirmAndDelete"
     OnSave="SaveEditorChanges"
     OnSaveAsConfirmed="HandleSaveAs"
     OnEditAssociationsConfirmed="HandleEditAssociations"
@@ -61,10 +66,10 @@
                 }
                 
                 <div id="buttons-holder" class="d-flex border rounded p-2 justify-content-around" style="flex-direction: row; max-width: 190px; min-width: 190px;">
-                    <button class="btn btn-sm btn-primary p-2 me-1" @onclick="(async () => await NewNodeAtBottom(part))">
+                    <button class="btn btn-sm btn-primary p-2 me-1" @onclick="(() => NewNodeAtBottom(part))">
                         Add Part
                     </button>
-                    <button class="btn btn-sm btn-primary p-2 ms-1" @onclick="(async () => await NewNodeAtBottom(step))">
+                    <button class="btn btn-sm btn-primary p-2 ms-1" @onclick="(() => NewNodeAtBottom(step))">
                         Add Step
                     </button>
                 </div>
@@ -208,25 +213,20 @@
             ToastService.ShowError("No Work Instruction is currently loaded.");
             return;
         }
-
-        if (string.IsNullOrWhiteSpace(current.Title))
-        {
-            ToastService.ShowError("A Work Instruction must have a title.");
-            return;
-        }
-
+        
         try
         {
             bool success = await WorkInstructionService.DeleteAllVersionsByIdAsync(current.Id);
             if (success)
                 ToastService.ShowSuccess("Work Instructions deleted successfully.");
             else
-                ToastService.ShowError("Unable to delete Work Instruction. Please ensure Title and Version are unique.");
+                ToastService.ShowError("Unable to delete Work Instruction.");
 
             if (success)
             {
-                // Refresh all latest work instructions list after save
+                // Refresh all latest work instructions list after delete
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                WorkInstructionEditorService.Reset();
             }
         }
         catch (Exception ex)
@@ -235,7 +235,47 @@
             ToastService.ShowError("An error occurred while deleting Instructions");
         }
     }
+    
+    private async Task ConfirmAndDelete()
+    {
 
+        bool needsConfirmation = false;
+        var current = WorkInstructionEditorService.Current;
+
+        if (current != null)
+        {
+            if (current.OriginalId != null)
+            {
+                needsConfirmation = true;
+            }
+            
+        }
+
+        if (needsConfirmation)
+        {
+            var data = (
+                message: "This Work Instruction or one of its older versions has already been used in Production. " +
+                         "Deleting it now will result in the deletion of sensitive data that will become unrecoverable. " +
+                         "Would you like to proceed?",
+                callback: EventCallback.Factory.Create(this, DeleteInstruction)
+            );
+
+            var dialog =  await DialogService.ShowDialogAsync<ConfirmationDialog>(data, new DialogParameters()
+            {
+                Title = $"Warning: Sensitive Data Might Be Lost",
+                Width = "43%",
+                PreventScroll = true,
+                PreventDismissOnOverlayClick = true,
+            });
+
+            await dialog.Result;            
+        }
+        else
+        {
+            await DeleteInstruction();
+        }
+    }
+    
     private async Task HandleImportComplete(WorkInstruction importedWorkInstruction)
     {
         ToastService.ShowSuccess(
@@ -332,7 +372,6 @@
     
     private const string step = "step";
     private const string part = "part";
-
     private async Task NewNodeAtBottom(string nodeType) => await NewNodeAt((nodeType, -1));
     
     private async Task NewNodeAt((string nodeType, int index)args)
