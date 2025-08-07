@@ -49,9 +49,9 @@ public class ProductionLogService : IProductionLogService
         // Load existing ProductionLog with related data from DB
         var existingLog = await context.ProductionLogs
             .Include(p => p.LogSteps)
-            .ThenInclude(ls => ls.Attempts)
+                .ThenInclude(ls => ls.Attempts)
             .Include(p => p.WorkInstruction)
-            .ThenInclude(wi => wi!.Nodes)
+                .ThenInclude(wi => wi!.Nodes)
             .FirstOrDefaultAsync(p => p.Id == updatedLog.Id);
 
         if (existingLog == null)
@@ -66,12 +66,20 @@ public class ProductionLogService : IProductionLogService
         // Update or add LogSteps and their Attempts
         foreach (var updatedStep in updatedLog.LogSteps)
         {
-            // Try to find matching existing step
             var existingStep = existingLog.LogSteps.FirstOrDefault(s => s.Id == updatedStep.Id);
 
             if (existingStep == null)
             {
-                // New step: add it 
+                // Fix: Resolved potential tracking conflict for WorkInstructionStep
+                if (updatedStep.WorkInstructionStep is { Id: > 0 })
+                {
+                    var trackedStep = await context.Steps.FindAsync(updatedStep.WorkInstructionStep.Id);
+                    if (trackedStep != null)
+                    {
+                        updatedStep.WorkInstructionStep = trackedStep;
+                    }
+                }
+
                 existingLog.LogSteps.Add(updatedStep);
             }
             else
@@ -83,12 +91,10 @@ public class ProductionLogService : IProductionLogService
 
                     if (existingAttempt == null)
                     {
-                        // New attempt
                         existingStep.Attempts.Add(updatedAttempt);
                     }
                     else
                     {
-                        // Update attempt properties
                         existingAttempt.SubmitTime = updatedAttempt.SubmitTime;
                         existingAttempt.Success = updatedAttempt.Success;
                         existingAttempt.Notes = updatedAttempt.Notes;
@@ -137,57 +143,69 @@ public class ProductionLogService : IProductionLogService
 
     /// <inheritdoc />
     public async Task<int> CreateAsync(ProductionLog productionLog)
+{
+    try
     {
-        try
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Mark existing related entities as Unchanged to avoid re-insertion
+        if (productionLog.Product is { Id: > 0 })
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            
+            context.Entry(productionLog.Product).State = EntityState.Unchanged;
+        }
 
+        if (productionLog.WorkInstruction is { Id: > 0 })
+        {
+            context.Entry(productionLog.WorkInstruction).State = EntityState.Unchanged;
 
-            if (productionLog.Product is { Id: > 0 })
+            foreach (var node in productionLog.WorkInstruction.Nodes.Where(node => node.Id > 0))
             {
-                context.Entry(productionLog.Product).State = EntityState.Unchanged;
+                context.Entry(node).State = EntityState.Unchanged;
             }
-            
-            if (productionLog.WorkInstruction is { Id: > 0 })
+        }
+
+        // Reset IDs on the new ProductionLog and related new child entities to allow DB to generate IDs
+        productionLog.Id = 0;
+
+        if (productionLog.LogSteps != null)
+        {
+            foreach (var step in productionLog.LogSteps)
             {
-                context.Entry(productionLog.WorkInstruction).State = EntityState.Unchanged;
-                
-                foreach (var node in productionLog.WorkInstruction.Nodes.Where(node => node.Id > 0))
+                step.Id = 0;
+                step.ProductionLogId = 0;  // Will be set automatically after productionLog is saved
+
+                if (step.WorkInstructionStep is { Id: > 0 })
                 {
-                    context.Entry(node).State = EntityState.Unchanged;
+                    context.Entry(step.WorkInstructionStep).State = EntityState.Unchanged;
                 }
-            }
-            
-            productionLog.CreatedOn = DateTimeOffset.UtcNow;
-            productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
-            
-            await context.ProductionLogs.AddAsync(productionLog);
-            await context.SaveChangesAsync();
 
-            if (productionLog.LogSteps is {Count: > 0})
-            {
-                foreach (var logStep in productionLog.LogSteps)
+                if (step.Attempts != null)
                 {
-                    logStep.ProductionLogId = productionLog.Id;
-                    if (logStep.WorkInstructionStep is { Id: > 0 })
+                    foreach (var attempt in step.Attempts)
                     {
-                        context.Entry(logStep.WorkInstructionStep).State = EntityState.Unchanged;
+                        attempt.Id = 0;
+                        attempt.ProductionLogStepId = 0; // FK to be set automatically
                     }
                 }
-                await context.SaveChangesAsync();
             }
-            
-            Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
-            
-            return productionLog.Id;
         }
-        catch (Exception e)
-        {
-            Log.Warning("Exception thrown when attempting to CreateAsync ProductionLog, in ProductionLogService: {Exception}", e.ToString());
-            return -1;
-        }
+
+        productionLog.CreatedOn = DateTimeOffset.UtcNow;
+        productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
+
+        await context.ProductionLogs.AddAsync(productionLog);
+        await context.SaveChangesAsync();
+
+        Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
+
+        return productionLog.Id;
     }
+    catch (Exception e)
+    {
+        Log.Warning("Exception thrown when attempting to CreateAsync ProductionLog, in ProductionLogService: {Exception}", e.ToString());
+        return -1;
+    }
+}
 
     /// <inheritdoc />
     public async Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds)
