@@ -1,6 +1,6 @@
 @using MESS.Data.Models
-@using MESS.Services.Serialization
-@inject ISerializationService SerializationService
+@using MESS.Services.ProductionLogPartService
+@inject IProductionLogPartService ProductionLogPartService
 
 @if (_initialized)
 {
@@ -10,19 +10,19 @@
                 @if (ProductionLogs.Count > 1)
                 {
                     <!-- Group with vertical stack: up arrow, input, down arrow -->
-                    <div class="d-flex flex-column align-items-center" style="width: 100px; user-select: none;">
+                    <div class="col-auto d-flex flex-column align-items-center" style="user-select: none;">
                         <button type="button"
                                 @onclick="IncrementLogIndex"
-                                class="btn btn-sm d-flex align-items-center justify-content-center p-0 w-100"
+                                class="btn btn-primary btn-sm w-100"
                                 style="height: 35px;">
                             <i class="bi bi-caret-up" style="font-size: 1.0rem;"></i>
                         </button>
 
-                        <div class="form-floating mb-0 flex-grow-1 w-100" style="height: 100%;">
+                        <div class="form-floating mb-0 w-100" style="height: 100%;">
                             <input type="number"
                                    id="logIndexInput"
                                    class="form-control text-center"
-                                   style="width: 100%; min-width: 100px;"
+                                   style="width: 100%; min-width: 85px;"
                                    min="1"
                                    max="@ProductionLogs.Count"
                                    @bind="SelectedLogNumber"
@@ -37,7 +37,7 @@
 
                         <button type="button"
                                 @onclick="DecrementLogIndex"
-                                class="btn btn-sm d-flex align-items-center justify-content-center p-0 w-100"
+                                class="btn btn-primary btn-sm w-100"
                                 style="height: 35px;">
                             <i class="bi bi-caret-down" style="font-size: 1.0rem;"></i>
                         </button>
@@ -45,9 +45,9 @@
                 }
 
                 <!-- RequiredPartsList immediately to the right of the input -->
-                    <div class="d-flex flex-wrap justify-content-end gap-2">
-                        <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput"/>
-                    </div>
+                <div class="col">
+                    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput"/>
+                </div>
             </div>
         </div>
     </div>
@@ -96,7 +96,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        SerializationService.PartsReloadRequested += OnPartsReloadRequested;
+        ProductionLogPartService.PartsReloadRequested += OnPartsReloadRequested;
     }
 
     private void OnPartsReloadRequested()
@@ -107,12 +107,12 @@
     }
 
     /// <summary>
-    /// Unsubscribes from the <see cref="SerializationService.PartsReloadRequested"/> event
+    /// Unsubscribes from the <see cref="Services.ProductionLogPartService.ProductionLogPartService.PartsReloadRequested"/> event
     /// to prevent memory leaks when the component is disposed.
     /// </summary>
     public void Dispose()
     {
-        SerializationService.PartsReloadRequested -= OnPartsReloadRequested;
+        ProductionLogPartService.PartsReloadRequested -= OnPartsReloadRequested;
     }
 
     /// <inheritdoc />
@@ -139,7 +139,7 @@
     {
         for (int i = 0; i < ProductionLogs.Count; i++)
         {
-            var existing = SerializationService.GetPartsForLogIndex(i);
+            var existing = ProductionLogPartService.GetPartsForLogIndex(i);
 
             // Only add new parts that aren't already present
             var newParts = PartNode.Parts
@@ -150,7 +150,7 @@
             if (newParts.Any())
             {
                 existing.AddRange(newParts);
-                SerializationService.SetPartsForLogIndex(i, existing);
+                ProductionLogPartService.SetPartsForLogIndex(i, existing);
             }
         }
     }
@@ -160,7 +160,7 @@
     {
         if (SelectedLogIndex >= 0 && SelectedLogIndex < ProductionLogs.Count)
         {
-            var loaded = SerializationService.GetPartsForLogIndex(SelectedLogIndex);
+            var loaded = ProductionLogPartService.GetPartsForLogIndex(SelectedLogIndex);
 
             // Safety fallback in case it was missed in initialization
             if (loaded.Count == 0)
@@ -169,7 +169,7 @@
                     .Select(p => new ProductionLogPart { Part = p })
                     .ToList();
 
-                SerializationService.SetPartsForLogIndex(SelectedLogIndex, loaded);
+                ProductionLogPartService.SetPartsForLogIndex(SelectedLogIndex, loaded);
             }
 
             ProductionLogParts = loaded;
@@ -195,7 +195,7 @@
         }
 
         // Now sync to the serialization service
-        var storedParts = SerializationService.GetPartsForLogIndex(SelectedLogIndex);
+        var storedParts = ProductionLogPartService.GetPartsForLogIndex(SelectedLogIndex);
         var storedIndex = storedParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
         if (storedIndex != -1)
         {
@@ -206,7 +206,7 @@
             storedParts.Add(updatedPart);
         }
 
-        SerializationService.SetPartsForLogIndex(SelectedLogIndex, storedParts);
+        ProductionLogPartService.SetPartsForLogIndex(SelectedLogIndex, storedParts);
     }
 
     private void IncrementLogIndex()

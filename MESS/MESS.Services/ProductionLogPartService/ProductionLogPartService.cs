@@ -3,17 +3,17 @@ using MESS.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace MESS.Services.Serialization;
+namespace MESS.Services.ProductionLogPartService;
 
 /// <inheritdoc />
-public class SerializationService : ISerializationService
+public class ProductionLogPartService : IProductionLogPartService
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     /// <summary>
-    /// Initializes a new instance of the <see cref="SerializationService"/> class.
+    /// Initializes a new instance of the <see cref="ProductionLogPartService"/> class.
     /// </summary>
     /// <param name="contextFactory">The application database context used for data operations.</param>
-    public SerializationService(IDbContextFactory<ApplicationContext> contextFactory)
+    public ProductionLogPartService(IDbContextFactory<ApplicationContext> contextFactory)
     {
         _contextFactory = contextFactory;
     }

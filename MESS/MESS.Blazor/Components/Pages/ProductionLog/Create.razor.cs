@@ -99,9 +99,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
-        ProductSerialNumber = SerializationService.CurrentProductNumber;
+        ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
         
-        SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
+        ProductionLogPartService.CurrentProductNumberChanged += HandleProductNumberChanged;
         
         PartsByLogIndex.Clear();
 
@@ -109,7 +109,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
             for (int index = 0; index < ProductionLogBatch.Logs.Count; index++)
             {
-                var partsForLog = SerializationService.GetPartsForLogIndex(index);  // pass index here
+                var partsForLog = ProductionLogPartService.GetPartsForLogIndex(index);  // pass index here
                 PartsByLogIndex[index] = partsForLog; 
             }
         }
@@ -179,7 +179,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         await SetSelectedWorkInstructionId(null);
         ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
 
-        SerializationService.ClearAllLogParts();
+        ProductionLogPartService.ClearAllLogParts();
         PartsByLogIndex.Clear();
         return;
     }
@@ -194,7 +194,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         await LocalCacheManager.ClearProductionLogBatchAsync();
         ProductionLogBatch.Logs.Clear();
         await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-        SerializationService.ClearAllLogParts();
+        ProductionLogPartService.ClearAllLogParts();
         PartsByLogIndex.Clear();
 
         // Set the new work instruction
@@ -221,7 +221,7 @@ private async Task SetActiveProduct(int productId)
         await LocalCacheManager.ClearProductionLogBatchAsync();
         ProductionLogBatch.Logs.Clear();
         await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-        SerializationService.ClearAllLogParts();
+        ProductionLogPartService.ClearAllLogParts();
         PartsByLogIndex.Clear();
 
         await SetActiveWorkInstruction(-1);
@@ -237,7 +237,7 @@ private async Task SetActiveProduct(int productId)
     await LocalCacheManager.ClearProductionLogBatchAsync();
     ProductionLogBatch.Logs.Clear();
     await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-    SerializationService.ClearAllLogParts();
+    ProductionLogPartService.ClearAllLogParts();
     PartsByLogIndex.Clear();
 
     // Set the new product
@@ -454,7 +454,7 @@ private async Task SetActiveProduct(int productId)
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
         
-        await SerializationService.SaveAllLogPartsAsync(ProductionLogBatch.Logs);
+        await ProductionLogPartService.SaveAllLogPartsAsync(ProductionLogBatch.Logs);
 
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();
@@ -470,7 +470,7 @@ private async Task SetActiveProduct(int productId)
         {
             for (int index = 0; index < ProductionLogBatch.Logs.Count; index++)
             {
-                var partsForLog = SerializationService.GetPartsForLogIndex(index);
+                var partsForLog = ProductionLogPartService.GetPartsForLogIndex(index);
                 PartsByLogIndex[index] = partsForLog;
             }
         }
@@ -480,7 +480,7 @@ private async Task SetActiveProduct(int productId)
     
     private void HandleProductNumberChanged()
     {
-        ProductSerialNumber = SerializationService.CurrentProductNumber;
+        ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
 
         InvokeAsync(StateHasChanged);
     }
@@ -605,7 +605,7 @@ private async Task SetActiveProduct(int productId)
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
+        ProductionLogPartService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
         try
         {

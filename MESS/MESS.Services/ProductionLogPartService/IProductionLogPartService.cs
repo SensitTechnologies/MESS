@@ -1,12 +1,12 @@
 ﻿using MESS.Data.Models;
 
-namespace MESS.Services.Serialization;
+namespace MESS.Services.ProductionLogPartService;
 
 /// <summary>
-/// Interface for serialization services, providing methods and events
+/// Interface for managing part entry during production log creation. Provides methods and events
 /// for managing production log parts and product numbers.
 /// </summary>
-public interface ISerializationService
+public interface IProductionLogPartService
 {
     /// <summary>
     /// Event triggered when the current product number changes.

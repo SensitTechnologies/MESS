@@ -4,7 +4,7 @@
 @using MESS.Services.BrowserCacheManager
 @using MESS.Services.Product
 @using MESS.Services.ProductionLogServices
-@using MESS.Services.Serialization
+@using MESS.Services.ProductionLogPartService
 @using MESS.Services.WorkInstruction
 @using MESS.Services.SessionManager
 @using Microsoft.AspNetCore.Authorization
@@ -17,7 +17,7 @@
 @inject ISessionManager SessionManager
 @inject IApplicationUserService LineOperatorService
 @inject AuthenticationStateProvider AuthProvider
-@inject ISerializationService SerializationService
+@inject IProductionLogPartService ProductionLogPartService
 @inject IJSRuntime JSRuntime
 @inject IToastService ToastService
 @implements IAsyncDisposable

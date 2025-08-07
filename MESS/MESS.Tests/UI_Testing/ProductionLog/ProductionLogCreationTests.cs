@@ -7,7 +7,7 @@ using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
 using MESS.Services.Product;
 using MESS.Services.ProductionLogServices;
-using MESS.Services.Serialization;
+using MESS.Services.ProductionLogPartService;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using Microsoft.AspNetCore.Authorization;
@@ -30,7 +30,7 @@ public class ProductionLogCreationTests : TestContext
     private readonly Mock<IApplicationUserService> _userServiceMock;
     
     private readonly Mock<ILocalCacheManager> _localCacheManagerMock;
-    private readonly Mock<ISerializationService> _serializationServiceMock;
+    private readonly Mock<IProductionLogPartService> _serializationServiceMock;
     private readonly Mock<IProductionLogEventService> _productionLogEventServiceMock;
     private readonly Mock<AuthenticationStateProvider> _authProviderMock;
     private readonly Mock<ISessionManager> _sessionManagerMock;
@@ -45,7 +45,7 @@ public class ProductionLogCreationTests : TestContext
         _productServiceMock = new Mock<IProductService>();
         _userServiceMock = new Mock<IApplicationUserService>();
         _localCacheManagerMock = new Mock<ILocalCacheManager>();
-        _serializationServiceMock = new Mock<ISerializationService>();
+        _serializationServiceMock = new Mock<IProductionLogPartService>();
         _productionLogEventServiceMock = new Mock<IProductionLogEventService>();
         _authProviderMock = new Mock<AuthenticationStateProvider>();
         _sessionManagerMock = new Mock<ISessionManager>();
