@@ -522,10 +522,18 @@ td {
 
 .floating-label {
     position: absolute;
+    top: -1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
     font-weight: bold;
     pointer-events: none;
+    white-space: nowrap;
     animation: floatAway 0.8s ease-out forwards;
     color: #28a745;
+}
+
+.floating-label.failure {
+    color: #dc3545;
 }
 
 /* ==========================================================================
