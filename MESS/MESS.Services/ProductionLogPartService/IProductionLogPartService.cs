@@ -17,34 +17,31 @@ public interface IProductionLogPartService
     /// Gets or sets the current product number.
     /// </summary>
     public string? CurrentProductNumber { get; set; }
-    
-    /// <summary>
-    /// Retrieves the list of <see cref="ProductionLogPart"/>s associated with the specified production log index.
-    /// </summary>
-    /// <param name="logIndex">The index of the production log in the batch (0-based).</param>
-    /// <returns>A list of parts associated with the specified log index. Returns an empty list if none are found.</returns>
-    List<ProductionLogPart> GetPartsForLogIndex(int logIndex);
 
     /// <summary>
-    /// Stores the list of <see cref="ProductionLogPart"/>s for the specified production log index.
+    /// Retrieves the list of <see cref="ProductionLogPart"/> entries associated with a specific 
+    /// <see cref="PartNode"/> in a given production log index.
     /// </summary>
-    /// <param name="logIndex">The index of the production log in the batch (0-based).</param>
-    /// <param name="parts">The list of parts to associate with the specified log index.</param>
-    void SetPartsForLogIndex(int logIndex, List<ProductionLogPart> parts);
+    /// <param name="logIndex">The index of the production log in the session.</param>
+    /// <param name="partNodeId">The ID of the <see cref="PartNode"/> whose parts should be retrieved.</param>
+    /// <returns>A list of <see cref="ProductionLogPart"/> entries, or an empty list if none are found.</returns>
+    public List<ProductionLogPart> GetPartsForNode(int logIndex, int partNodeId);
 
     /// <summary>
-    /// Persists all <see cref="ProductionLogPart"/> entries that have been associated with cached production logs,
-    /// assigning the correct <see cref="ProductionLog.Id"/> to each part based on its log index.
-    /// This method should only be called after all <see cref="ProductionLog"/>s have been saved to the database,
-    /// and their corresponding IDs are available.
+    /// Sets the list of <see cref="ProductionLogPart"/> entries associated with a specific <see cref="PartNode"/> 
+    /// within a given production log index.
     /// </summary>
-    /// <param name="savedLogs">
-    /// A list of saved <see cref="ProductionLog"/> instances. The index of each log in this list
-    /// must match the index used when calling <see cref="SetPartsForLogIndex(int, List&lt;ProductionLogPart&gt;)"/>.
-    /// </param>
-    /// <returns>
-    /// A task that resolves to <c>true</c> if all parts were saved successfully; otherwise, <c>false</c>.
-    /// </returns>
+    /// <param name="logIndex">The index of the production log in the session.</param>
+    /// <param name="partNodeId">The ID of the <see cref="PartNode"/> to associate the parts with.</param>
+    /// <param name="parts">The list of <see cref="ProductionLogPart"/> entries to assign to this node.</param>
+    public void SetPartsForNode(int logIndex, int partNodeId, List<ProductionLogPart> parts);
+
+    /// <summary>
+    /// Saves all in-memory <see cref="ProductionLogPart"/> entries to the database for the given list of saved production logs.
+    /// Each part will be assigned the corresponding <see cref="ProductionLog"/> ID before persistence.
+    /// </summary>
+    /// <param name="savedLogs">The list of production logs that have been saved, mapped by index.</param>
+    /// <returns><c>true</c> if all parts were saved successfully; otherwise, <c>false</c>.</returns>
     Task<bool> SaveAllLogPartsAsync(List<ProductionLog> savedLogs);
     
     /// <summary>
@@ -78,12 +75,14 @@ public interface IProductionLogPartService
     /// <param name="serialNumberLogId"></param>
     /// <returns>True value if the operation succeeded, false otherwise</returns>
     public Task<bool> DeleteAsync(int serialNumberLogId);
-    
+
     /// <summary>
-    /// Clears any parts associated with the specified production log index.
+    /// Clears all <see cref="ProductionLogPart"/> entries associated with the specified <see cref="PartNode"/> 
+    /// in the given production log index.
     /// </summary>
-    /// <param name="logIndex">The index of the production log in the batch (0-based).</param>
-    void ClearPartsForLogIndex(int logIndex);
+    /// <param name="logIndex">The index of the production log in the session.</param>
+    /// <param name="partNodeId">The ID of the <see cref="PartNode"/> to clear parts from.</param>
+    public void ClearPartsForNode(int logIndex, int partNodeId);
     
     /// <summary>
     /// Occurs when all production log parts are cleared and need to be reloaded.
@@ -98,8 +97,27 @@ public interface IProductionLogPartService
     public void RequestPartsReload();
 
     /// <summary>
-    /// Clears all stored part data for every production log index and triggers a reload event.
-    /// Use this when the active work instruction or product context changes.
+    /// Ensures that a <see cref="ProductionLogPart"/> exists for each required <see cref="Part"/>
+    /// within the specified log index and part node.
+    /// Any missing parts will result in new <see cref="ProductionLogPart"/> entries being added.
+    /// </summary>
+    /// <param name="logIndex">The index of the production log.</param>
+    /// <param name="partNodeId">The ID of the <see cref="PartNode"/> to associate the parts with.</param>
+    /// <param name="requiredParts">The list of required <see cref="Part"/> entities.</param>
+    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<Part> requiredParts);
+
+    /// <summary>
+    /// Clears all in-memory <see cref="ProductionLogPart"/> entries across all production log indexes and part nodes.
+    /// Triggers a parts reload notification via <see cref="PartsReloadRequested"/>.
     /// </summary>
     public void ClearAllLogParts();
+
+    /// <summary>
+    /// Gets the total number of <see cref="ProductionLogPart"/> entries
+    /// currently stored across all logs and nodes in memory.
+    /// </summary>
+    /// <returns>
+    /// The total count of parts stored in the service's in-memory log entries.
+    /// </returns>
+    public int GetTotalPartsLogged();
 }

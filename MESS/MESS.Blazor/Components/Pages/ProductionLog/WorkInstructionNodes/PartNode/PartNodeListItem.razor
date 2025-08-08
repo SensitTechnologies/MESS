@@ -9,12 +9,8 @@
             <div class="d-flex align-items-start w-100 gap-2">
                 @if (ProductionLogs.Count > 1)
                 {
-                    <!-- Group with vertical stack: up arrow, input, down arrow -->
                     <div class="col-auto d-flex flex-column align-items-center" style="user-select: none;">
-                        <button type="button"
-                                @onclick="IncrementLogIndex"
-                                class="btn btn-primary btn-sm w-100"
-                                style="height: 35px;">
+                        <button type="button" @onclick="IncrementLogIndex" class="btn btn-primary btn-sm w-100" style="height: 35px;">
                             <i class="bi bi-caret-up" style="font-size: 1.0rem;"></i>
                         </button>
 
@@ -27,186 +23,134 @@
                                    max="@ProductionLogs.Count"
                                    @bind="SelectedLogNumber"
                                    @bind:event="oninput"
-                                   @onchange="ReloadPartsForSelectedIndex"
-                                   onfocus="this.select()"/>
-                            <label for="logIndexInput"
-                                   style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                Which One?
-                            </label>
+                                   onfocus="this.select()" />
+                            <label for="logIndexInput">Which One?</label>
                         </div>
 
-                        <button type="button"
-                                @onclick="DecrementLogIndex"
-                                class="btn btn-primary btn-sm w-100"
-                                style="height: 35px;">
+                        <button type="button" @onclick="DecrementLogIndex" class="btn btn-primary btn-sm w-100" style="height: 35px;">
                             <i class="bi bi-caret-down" style="font-size: 1.0rem;"></i>
                         </button>
                     </div>
                 }
 
-                <!-- RequiredPartsList immediately to the right of the input -->
                 <div class="col">
-                    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput"/>
+                    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput" />
                 </div>
             </div>
         </div>
     </div>
+}
 
 @code {
-
     /// <summary>
-    /// The part node that contains the parts to be displayed.
-    /// This parameter is required.
+    /// Gets or sets the <see cref="PartNode"/> associated with this component.
     /// </summary>
-    [Parameter]
-    public required PartNode PartNode { get; set; }
-
+    [Parameter, EditorRequired] public required PartNode PartNode { get; set; }
+    
     /// <summary>
-    /// The list of all production logs. Required to access log IDs by index.
+    /// Gets or sets the list of <see cref="ProductionLog"/> instances referenced in this component.
     /// </summary>
-    [Parameter]
-    public required List<ProductionLog> ProductionLogs { get; set; }
+    [Parameter, EditorRequired] public required List<ProductionLog> ProductionLogs { get; set; }
 
     private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
-    private bool _initialized = false;
+    private bool _initialized;
+    private int SelectedLogIndex;
 
-    private int SelectedLogIndex { get; set; } = 0;
-
-    // This property is 1-based for the UI binding:
+    /// <summary>
+    /// Gets or sets the selected log number (1-based UI value).
+    /// When set, this property clamps the value and updates the selected log index accordingly.
+    /// </summary>
     private int SelectedLogNumber
     {
-        get => SelectedLogIndex + 1; // show 1-based to user
+        get => SelectedLogIndex + 1;
         set
         {
-            var newIndex = value - 1; // convert back to 0-based
-            if (newIndex < 0)
-                newIndex = 0;
-            else if (newIndex >= ProductionLogs.Count)
-                newIndex = ProductionLogs.Count - 1;
+            var newIndex = Math.Clamp(value - 1, 0, ProductionLogs.Count - 1);
             if (newIndex != SelectedLogIndex)
             {
                 SelectedLogIndex = newIndex;
-                ReloadPartsForSelectedIndex();
-                StateHasChanged();
+                LoadPartsForSelectedIndex();
             }
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Subscribes to the <see cref="IProductionLogPartService.PartsReloadRequested"/> event on initialization.
+    /// </summary>
     protected override void OnInitialized()
     {
-        base.OnInitialized();
         ProductionLogPartService.PartsReloadRequested += OnPartsReloadRequested;
     }
 
-    private void OnPartsReloadRequested()
-    {
-        InitializeProductionLogParts();
-        ReloadPartsForSelectedIndex();
-        InvokeAsync(StateHasChanged);
-    }
-
     /// <summary>
-    /// Unsubscribes from the <see cref="Services.ProductionLogPartService.ProductionLogPartService.PartsReloadRequested"/> event
-    /// to prevent memory leaks when the component is disposed.
+    /// Unsubscribes from the <see cref="IProductionLogPartService.PartsReloadRequested"/> event when the component is disposed.
     /// </summary>
     public void Dispose()
     {
         ProductionLogPartService.PartsReloadRequested -= OnPartsReloadRequested;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Ensures required parts are logged for each <see cref="ProductionLog"/> when parameters are set.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        for (int i = 0; i < ProductionLogs.Count; i++)
+        {
+            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, PartNode.Parts);
+        }
+    }
+
+    /// <summary>
+    /// Marks the component as initialized and loads part data after first render.
+    /// </summary>
+    /// <param name="firstRender">Whether this is the first render of the component.</param>
     protected override void OnAfterRender(bool firstRender)
     {
-        base.OnAfterRender(firstRender);
-
         if (firstRender)
         {
             _initialized = true;
-            ReloadPartsForSelectedIndex(); // load initially
+            LoadPartsForSelectedIndex();
             StateHasChanged();
         }
     }
 
-    /// <inheritdoc />
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
-        InitializeProductionLogParts();
-    }
-
-    private void InitializeProductionLogParts()
+    /// <summary>
+    /// Handles external requests to reload part data from the <see cref="IProductionLogPartService"/>.
+    /// </summary>
+    private void OnPartsReloadRequested()
     {
         for (int i = 0; i < ProductionLogs.Count; i++)
         {
-            var existing = ProductionLogPartService.GetPartsForLogIndex(i);
-
-            // Only add new parts that aren't already present
-            var newParts = PartNode.Parts
-                .Where(p => !existing.Any(ep => ep.Part?.Id == p.Id))
-                .Select(p => new ProductionLogPart { Part = p })
-                .ToList();
-
-            if (newParts.Any())
-            {
-                existing.AddRange(newParts);
-                ProductionLogPartService.SetPartsForLogIndex(i, existing);
-            }
+            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, PartNode.Parts);
         }
+
+        LoadPartsForSelectedIndex();
+        InvokeAsync(StateHasChanged);
     }
 
-
-    private void ReloadPartsForSelectedIndex()
+    /// <summary>
+    /// Loads part data for the currently selected log index from the <see cref="IProductionLogPartService"/>.
+    /// </summary>
+    private void LoadPartsForSelectedIndex()
     {
-        if (SelectedLogIndex >= 0 && SelectedLogIndex < ProductionLogs.Count)
-        {
-            var loaded = ProductionLogPartService.GetPartsForLogIndex(SelectedLogIndex);
-
-            // Safety fallback in case it was missed in initialization
-            if (loaded.Count == 0)
-            {
-                loaded = PartNode.Parts
-                    .Select(p => new ProductionLogPart { Part = p })
-                    .ToList();
-
-                ProductionLogPartService.SetPartsForLogIndex(SelectedLogIndex, loaded);
-            }
-
-            ProductionLogParts = loaded;
-        }
-        else
-        {
-            ProductionLogParts = [];
-        }
+        ProductionLogParts = ProductionLogPartService.GetPartsForNode(SelectedLogIndex, PartNode.Id);
     }
 
+    /// <summary>
+    /// Updates a <see cref="ProductionLogPart"/> with its serial number input and submit time,
+    /// and stores the updated parts via the <see cref="IProductionLogPartService"/>.
+    /// </summary>
+    /// <param name="updatedPart">The part that was updated with serial number input.</param>
     private void AfterSerialNumberInput(ProductionLogPart updatedPart)
     {
-        if (SelectedLogIndex < 0 || SelectedLogIndex >= ProductionLogs.Count)
-            return;
-
         updatedPart.SubmitTimeQc = DateTimeOffset.UtcNow;
 
-        // Update the displayed list first (in-place modification)
-        var displayIndex = ProductionLogParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
-        if (displayIndex != -1)
-        {
-            ProductionLogParts[displayIndex] = updatedPart;
-        }
+        var index = ProductionLogParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
+        if (index != -1)
+            ProductionLogParts[index] = updatedPart;
 
-        // Now sync to the serialization service
-        var storedParts = ProductionLogPartService.GetPartsForLogIndex(SelectedLogIndex);
-        var storedIndex = storedParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
-        if (storedIndex != -1)
-        {
-            storedParts[storedIndex] = updatedPart;
-        }
-        else
-        {
-            storedParts.Add(updatedPart);
-        }
-
-        ProductionLogPartService.SetPartsForLogIndex(SelectedLogIndex, storedParts);
+        ProductionLogPartService.SetPartsForNode(SelectedLogIndex, PartNode.Id, ProductionLogParts);
     }
 
     private void IncrementLogIndex()
@@ -214,7 +158,6 @@
         if (SelectedLogNumber < ProductionLogs.Count)
         {
             SelectedLogNumber++;
-            ReloadPartsForSelectedIndex();
         }
     }
 
@@ -223,8 +166,6 @@
         if (SelectedLogNumber > 1)
         {
             SelectedLogNumber--;
-            ReloadPartsForSelectedIndex();
         }
     }
-}
 }

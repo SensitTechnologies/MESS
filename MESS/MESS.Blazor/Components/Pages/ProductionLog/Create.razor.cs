@@ -42,7 +42,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
     
-    private Dictionary<int, List<ProductionLogPart>> PartsByLogIndex { get; set; } = new();
     private IJSObjectReference? scrollToModule;
     private IJSObjectReference? qrModule;
     
@@ -103,17 +102,23 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         ProductionLogPartService.CurrentProductNumberChanged += HandleProductNumberChanged;
         
-        PartsByLogIndex.Clear();
-
-        if (ProductionLogBatch.Logs != null)
+        if (ProductionLogBatch.Logs != null && ActiveWorkInstruction != null)
         {
-            for (int index = 0; index < ProductionLogBatch.Logs.Count; index++)
+            var partNodes = ActiveWorkInstruction.Nodes.Where(node => node.NodeType == WorkInstructionNodeType.Part);
+            
+            for (var i = 0; i < ProductionLogBatch.Logs.Count; i++)
             {
-                var partsForLog = ProductionLogPartService.GetPartsForLogIndex(index);  // pass index here
-                PartsByLogIndex[index] = partsForLog; 
+                // Ensure required parts exist for this log index & nodes
+                foreach (var node in partNodes)
+                {
+                    if (node is PartNode partNode)
+                    {
+                        ProductionLogPartService.EnsureRequiredPartsLogged(i, partNode.Id, partNode.Parts);
+                    }
+                }
             }
         }
-
+        
         IsLoading = false;
     }
     
@@ -180,7 +185,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
 
         ProductionLogPartService.ClearAllLogParts();
-        PartsByLogIndex.Clear();
         return;
     }
 
@@ -195,7 +199,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogBatch.Logs.Clear();
         await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
         ProductionLogPartService.ClearAllLogParts();
-        PartsByLogIndex.Clear();
 
         // Set the new work instruction
         ActiveWorkInstruction = workInstruction;
@@ -222,7 +225,6 @@ private async Task SetActiveProduct(int productId)
         ProductionLogBatch.Logs.Clear();
         await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
         ProductionLogPartService.ClearAllLogParts();
-        PartsByLogIndex.Clear();
 
         await SetActiveWorkInstruction(-1);
         await LocalCacheManager.SetActiveProductAsync(null);
@@ -238,7 +240,6 @@ private async Task SetActiveProduct(int productId)
     ProductionLogBatch.Logs.Clear();
     await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
     ProductionLogPartService.ClearAllLogParts();
-    PartsByLogIndex.Clear();
 
     // Set the new product
     ActiveProduct = product;
@@ -384,8 +385,7 @@ private async Task SetActiveProduct(int productId)
             }
         }
         
-        // Calculate total parts logged (sum of parts in your dictionary keyed by log index)
-        var totalPartsLogged = PartsByLogIndex.Values.Sum(partsList => partsList.Count);
+        var totalPartsLogged = ProductionLogPartService.GetTotalPartsLogged();
         
         var allStepsHavePartsNeeded = totalPartsLogged >= totalPartsNeeded;
 
@@ -462,22 +462,6 @@ private async Task SetActiveProduct(int productId)
         await ResetFormState();
     }
     
-    private void HandleProductionLogPartsChanged()
-    {
-        PartsByLogIndex.Clear();
-
-        if (ProductionLogBatch.Logs != null)
-        {
-            for (int index = 0; index < ProductionLogBatch.Logs.Count; index++)
-            {
-                var partsForLog = ProductionLogPartService.GetPartsForLogIndex(index);
-                PartsByLogIndex[index] = partsForLog;
-            }
-        }
-
-        InvokeAsync(StateHasChanged);
-    }
-    
     private void HandleProductNumberChanged()
     {
         ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
@@ -487,7 +471,7 @@ private async Task SetActiveProduct(int productId)
     
     private void GenerateQRCode(int productionLogId)
     {
-        var productionLogIdString = productionLogId + ",";
+        var productionLogIdString = productionLogId.ToString();
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(productionLogIdString, QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new BitmapByteQRCode(qrCodeData);
@@ -652,6 +636,15 @@ private async Task SetActiveProduct(int productId)
             };
 
             ProductionLogBatch.Logs.Add(emptyLog);
+            
+            // Create production log parts for new logs based on the part node
+            if (ActiveWorkInstruction != null)
+            {
+                foreach (var partNode in ActiveWorkInstruction.Nodes.OfType<PartNode>())
+                {
+                    ProductionLogPartService.EnsureRequiredPartsLogged(ProductionLogBatch.Logs.Count - 1, partNode.Id, partNode.Parts);
+                }
+            }
         }
 
         // Notify downstream services

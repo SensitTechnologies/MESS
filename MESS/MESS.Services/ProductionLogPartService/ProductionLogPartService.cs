@@ -42,7 +42,7 @@ public class ProductionLogPartService : IProductionLogPartService
         }
     }
 
-    private readonly Dictionary<int, List<ProductionLogPart>> _partsByLogIndex = new();
+    private readonly Dictionary<int, LogPartEntryGroup> _logEntries = new();
 
     
     /// <inheritdoc />
@@ -50,50 +50,45 @@ public class ProductionLogPartService : IProductionLogPartService
     {
         bool allSaved = true;
 
-        foreach (var kvp in _partsByLogIndex)
+        foreach (var group in _logEntries.Values)
         {
-            int logIndex = kvp.Key;
-            List<ProductionLogPart> parts = kvp.Value;
-
-            if (logIndex < 0 || logIndex >= savedLogs.Count)
+            if (group.LogIndex < 0 || group.LogIndex >= savedLogs.Count)
             {
-                Log.Error("Invalid log index {LogIndex} during SaveAllLogPartsAsync", logIndex);
+                Log.Error("Invalid log index {LogIndex} during SaveAllLogPartsAsync", group.LogIndex);
                 allSaved = false;
                 continue;
             }
 
-            int productionLogId = savedLogs[logIndex].Id;
+            var productionLogId = savedLogs[group.LogIndex].Id;
 
-            // Filter out parts without a serial number
-            var partsWithSerials = parts
+            var allParts = group.GetAllParts()
                 .Where(p => !string.IsNullOrWhiteSpace(p.PartSerialNumber))
                 .ToList();
 
-            if (partsWithSerials.Count == 0)
-            {
-                continue;
-            }
-
-            foreach (var part in partsWithSerials)
+            foreach (var part in allParts)
             {
                 part.ProductionLogId = productionLogId;
             }
 
-            var success = await CreateRangeAsync(partsWithSerials);
+            if (allParts.Count == 0)
+                continue;
+
+            var success = await CreateRangeAsync(allParts);
             if (!success)
             {
-                Log.Warning("Failed to save parts for log at index {LogIndex}", logIndex);
+                Log.Warning("Failed to save parts for log at index {LogIndex}", group.LogIndex);
                 allSaved = false;
             }
             else
             {
-                Log.Information("Saved {Count} parts for log ID {LogId} (index {LogIndex})", partsWithSerials.Count, productionLogId, logIndex);
+                Log.Information("Saved {Count} parts for log ID {LogId} (index {LogIndex})", allParts.Count, productionLogId, group.LogIndex);
             }
         }
 
-        _partsByLogIndex.Clear();
+        _logEntries.Clear();
         return allSaved;
     }
+
 
 
     /// <inheritdoc />
@@ -218,37 +213,64 @@ public class ProductionLogPartService : IProductionLogPartService
     }
     
     /// <inheritdoc />
-    public List<ProductionLogPart> GetPartsForLogIndex(int logIndex)
+    public void SetPartsForNode(int logIndex, int partNodeId, List<ProductionLogPart> parts)
     {
-        if (_partsByLogIndex.TryGetValue(logIndex, out var parts))
+        if (!_logEntries.TryGetValue(logIndex, out var group))
         {
-            return parts;
+            group = new LogPartEntryGroup(logIndex);
+            _logEntries[logIndex] = group;
         }
-        
-        return new();
+
+        group.SetPartsForNode(partNodeId, parts);
     }
 
     /// <inheritdoc />
-    public void SetPartsForLogIndex(int logIndex, List<ProductionLogPart> parts)
+    public List<ProductionLogPart> GetPartsForNode(int logIndex, int partNodeId)
     {
-        _partsByLogIndex[logIndex] = parts;
+        return _logEntries.TryGetValue(logIndex, out var group)
+            ? group.GetPartsForNode(partNodeId)
+            : [];
+    }
+
+    /// <inheritdoc />
+    public void ClearPartsForNode(int logIndex, int partNodeId)
+    {
+        if (_logEntries.TryGetValue(logIndex, out var group))
+        {
+            group.ClearPartsForNode(partNodeId);
+        }
+    }
+
+    /// <inheritdoc />
+    public void ClearAllLogParts()
+    {
+        _logEntries.Clear();
+        Log.Information("Cleared all log parts.");
+        RequestPartsReload();
     }
     
     /// <inheritdoc />
-    public void ClearPartsForLogIndex(int logIndex)
+    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<Part> requiredParts)
     {
-        if (_partsByLogIndex.Remove(logIndex))
+        var existingParts = GetPartsForNode(logIndex, partNodeId);
+
+        var missingParts = requiredParts
+            .Where(required => existingParts.All(existing => existing.Part?.Id != required.Id))
+            .Select(p => new ProductionLogPart { Part = p })
+            .ToList();
+
+        if (missingParts.Count > 0)
         {
-            Log.Information("Cleared parts for production log at index {LogIndex}", logIndex);
+            existingParts.AddRange(missingParts);
+            SetPartsForNode(logIndex, partNodeId, existingParts);
         }
     }
     
     /// <inheritdoc />
-    public void ClearAllLogParts()
+    public int GetTotalPartsLogged()
     {
-        _partsByLogIndex.Clear();
-        Log.Information("Cleared all log parts across all log indexes.");
-        RequestPartsReload();
+        return _logEntries.Values
+            .SelectMany(group => group.GetAllParts())
+            .Count();
     }
-    
 }
