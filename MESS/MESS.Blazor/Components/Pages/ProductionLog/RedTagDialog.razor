@@ -55,6 +55,14 @@
     /// </summary>
     [Parameter]
     public string FailureNotes { get; set; } = "";
+    
+    /// <summary>
+    /// Event callback invoked when the <see cref="FailureNotes"/> value changes.
+    /// Used for two-way binding so updates in the parent component
+    /// are immediately reflected in the red tag, and vice versa.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> FailureNotesChanged { get; set; }
 
     /// <summary>
     /// Event callback invoked when the Cancel button is clicked.

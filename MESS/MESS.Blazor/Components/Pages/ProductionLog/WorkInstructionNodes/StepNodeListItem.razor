@@ -32,7 +32,7 @@
                     {
                         <RedTagDialog
                             StepName="@Step.Name"
-                            FailureNotes="@_currentAttemptNotes"
+                            @bind-FailureNotes="@_currentAttemptNotes"
                             AttemptTime="@_pendingFailureAttempt?.SubmitTime"
                             AttemptId="@(_pendingFailureAttempt?.Id)"
                             OnCancel="OnCancelClicked"
