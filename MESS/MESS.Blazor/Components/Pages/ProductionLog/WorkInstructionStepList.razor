@@ -2,6 +2,9 @@
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes
 @using PartNode = MESS.Data.Models.PartNode
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
+@using MESS.Services.ProductionLogServices
+@inject IProductionLogEventService ProductionLogEventService
+
 
 @if (ActiveWorkInstruction != null && ProductionLogs?.Any() == true)
 {
@@ -52,7 +55,6 @@
                     <div>Unknown Instruction type</div>
                     break;
             }
-
         }
         @if (ActiveWorkInstruction.CollectsProductSerialNumber)
         {
@@ -72,7 +74,8 @@
                             <InputText
                                 id=@($"productSerialNumber-{i}")
                                 class="form-control tall-input text-lightweight"
-                                @bind-Value="log.ProductSerialNumber" />
+                                value="@log.ProductSerialNumber"
+                                @oninput="e => OnSerialNumberChanged(e, log)" />
                             @if (ProductionLogs.Count > 1)
                             {
                                 <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
@@ -133,5 +136,11 @@
         }
 
         return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
+    }
+    
+    private void OnSerialNumberChanged(ChangeEventArgs e, ProductionLog log)
+    {
+        log.ProductSerialNumber = e?.Value?.ToString() ?? "";
+        ProductionLogEventService.MarkDirty();
     }
 }

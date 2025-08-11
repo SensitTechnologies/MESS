@@ -54,6 +54,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         IsLoading = true;
         ProductionLogEventService.DisableAutoSave();
+        await ProductionLogEventService.StopDbSaveTimerAsync();
         await LoadProducts();
         await GetInProgressAsync();
         BatchSize = await LocalCacheManager.GetBatchSizeAsync();
@@ -68,6 +69,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             ProductionLogEventService.EnableAutoSave();
             await InvokeAsync(StateHasChanged);
         }
+        
+        ProductionLogEventService.StartDbSaveTimer();
 
         if (ProductionLogBatch.Logs != null)
         {
@@ -98,6 +101,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
         WorkInstructionStatus = Status.NotStarted;
         
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
+        
+        // Register periodic database save handler
+        ProductionLogEventService.DbSaveTriggered += async logs =>
+        {
+            await SaveLogsToDatabase();
+        };
+        
         ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
         
         ProductionLogPartService.CurrentProductNumberChanged += HandleProductNumberChanged;
@@ -205,35 +215,36 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
         await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
         await SetSelectedWorkInstructionId(workInstructionId);
+        ProductionLogEventService.MarkClean();
 
         // Add new logs for the new instruction
         AddProductionLogs(BatchSize);
     }
 }
 
-private async Task SetActiveProduct(int productId)
-{
-    if (Products == null)
-        return;
-
-    if (productId < 0)
+    private async Task SetActiveProduct(int productId)
     {
-        ActiveWorkInstruction = null;
-        ActiveProductWorkInstructionList = null;
+        if (Products == null)
+            return;
 
-        await LocalCacheManager.ClearProductionLogBatchAsync();
-        ProductionLogBatch.Logs.Clear();
-        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-        ProductionLogPartService.ClearAllLogParts();
+        if (productId < 0)
+        {
+            ActiveWorkInstruction = null;
+            ActiveProductWorkInstructionList = null;
 
-        await SetActiveWorkInstruction(-1);
-        await LocalCacheManager.SetActiveProductAsync(null);
-        return;
-    }
+            await LocalCacheManager.ClearProductionLogBatchAsync();
+            ProductionLogBatch.Logs.Clear();
+            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+            ProductionLogPartService.ClearAllLogParts();
 
-    var product = Products.FirstOrDefault(p => p.Id == productId);
-    if (product?.WorkInstructions == null)
-        return;
+            await SetActiveWorkInstruction(-1);
+            await LocalCacheManager.SetActiveProductAsync(null);
+            return;
+        }
+
+        var product = Products.FirstOrDefault(p => p.Id == productId);
+        if (product?.WorkInstructions == null)
+            return;
 
     // Clear all related cached and in-memory data
     await LocalCacheManager.ClearProductionLogBatchAsync();
@@ -241,14 +252,15 @@ private async Task SetActiveProduct(int productId)
     await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
     ProductionLogPartService.ClearAllLogParts();
 
-    // Set the new product
-    ActiveProduct = product;
-    ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
-    ProductionLogEventService.SetCurrentProductName(product.Name);
-
-    await SetActiveWorkInstruction(-1);
-    await LocalCacheManager.SetActiveProductAsync(product);
-}
+        // Proceed with setting new state
+        ActiveProduct = product;
+        ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
+        ProductionLogEventService.SetCurrentProductName(product.Name);
+        ProductionLogEventService.MarkClean();
+        
+        await SetActiveWorkInstruction(-1);
+        await LocalCacheManager.SetActiveProductAsync(product);
+    }
 
     private async Task GetCachedActiveProductAsync()
     {
@@ -409,17 +421,15 @@ private async Task SetActiveProduct(int productId)
         popupRef?.Close();
     }
 
-    private async Task CompleteSubmit()
+    private async Task SaveLogsToDatabase()
     {
         var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var userName = authState.User.Identity?.Name ?? "";
 
-        for (var i = 0; i < ProductionLogEventService.CurrentProductionLogs.Count; i++)
+        foreach (var productionLog in ProductionLogEventService.CurrentProductionLogs)
         {
-            var productionLog = ProductionLogEventService.CurrentProductionLogs[i];
-
             // Update log
             productionLog.CreatedOn = currentTime;
             productionLog.LastModifiedOn = currentTime;
@@ -429,8 +439,6 @@ private async Task SetActiveProduct(int productId)
             productionLog.CreatedBy = userName;
             productionLog.LastModifiedBy = userName;
             productionLog.FromBatchOf = BatchSize;
-            productionLog.CreatedBy = userName;
-            productionLog.LastModifiedBy = userName;
 
             // If no log is created, it gets created now to utilize the id for the QR code
             if (productionLog.Id <= 0)
@@ -442,7 +450,17 @@ private async Task SetActiveProduct(int productId)
             {
                 await ProductionLogService.UpdateAsync(productionLog);
             }
+        }
+    }
 
+    private async Task CompleteSubmit()
+    {
+        await SaveLogsToDatabase();
+        
+        for (var i = 0; i < ProductionLogEventService.CurrentProductionLogs.Count; i++)
+        {
+            var productionLog = ProductionLogEventService.CurrentProductionLogs[i];
+            
             if (ActiveWorkInstruction is { ShouldGenerateQrCode: true })
             {
                 await PrintQrCode(productionLog.Id, i);
@@ -506,7 +524,7 @@ private async Task SetActiveProduct(int productId)
         
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
-        
+        ProductionLogEventService.MarkClean();
         
         if (scrollToModule != null)
         {
@@ -565,6 +583,8 @@ private async Task SetActiveProduct(int productId)
                     await scrollToModule.InvokeVoidAsync("scrollTo", "submit-button");
                 }
             }
+            
+            ProductionLogEventService.MarkDirty();
         }
 
     }
@@ -597,6 +617,8 @@ private async Task SetActiveProduct(int productId)
     {
         ProductionLogPartService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
+        await ProductionLogEventService.StopDbSaveTimerAsync();
+        
         try
         {
             if (qrModule is not null)

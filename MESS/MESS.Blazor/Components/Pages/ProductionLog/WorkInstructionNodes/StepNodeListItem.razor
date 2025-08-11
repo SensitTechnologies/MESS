@@ -26,16 +26,41 @@
                         </p>
                     </div>
                 </div>
-                
+
                 <div class="mt-auto">
-                    <FluentTextArea 
-                        @ref="_failureNoteTextArea" 
-                        data-testid="optional-notes" 
-                        class=@($"w-100 mt-3 {(ShowOptionalNotesField ? "" : "d-none")}")
-                        placeholder="Optional: Add a failure note (if needed)"
-                        @bind-Value="_currentAttemptNotes"
-                        @bind-Value:after="@(async () => await HandleNoteChangedAsync())" />
+                    @if (_showRedTagDialog && _pendingFailureAttempt is not null)
+                    {
+                        <RedTagDialog
+                            StepName="@Step.Name"
+                            @bind-FailureNotes="@_currentAttemptNotes"
+                            AttemptTime="@_pendingFailureAttempt?.SubmitTime"
+                            AttemptId="@(_pendingFailureAttempt?.Id)"
+                            OnCancel="OnCancelClicked"
+                            OnSubmit="OnSubmitClicked" />
+                    }
                     
+                    @if (ShowOptionalNotesField)
+                    {
+                        <div class="d-flex align-items-start mt-3">
+                            <FluentTextArea
+                                @ref="_failureNoteTextArea"
+                                data-testid="optional-notes"
+                                class="flex-grow-1 me-2"
+                                placeholder="Optional: Add a failure note (if needed)"
+                                @bind-Value="_currentAttemptNotes"
+                                @bind-Value:after="@(async () => await HandleNoteChangedAsync())"/>
+
+                            <!-- Red Tag Button next to failure note -->
+                            <button type="button"
+                                    class="btn btn-sm btn-danger px-2 py-1"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="ToggleRedTagDialog"
+                                    style="font-size: 0.75rem; white-space: nowrap;">
+                                Red Tag
+                            </button>
+                        </div>
+                    }
+
                     <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap" style="gap: 0.5rem;">
                         <div class="d-flex align-items-center flex-wrap" style="gap: 0.5rem;">
                             <!-- Buttons Visible in One Piece Flow-->
@@ -78,7 +103,7 @@
                                             @onclick="async () => await HandleButtonPressAll(true)">
                                         Pass All
                                     </button>
-                                    
+
                                     @if (_showSuccessFloatAll)
                                     {
                                         <div class="floating-label">
@@ -96,37 +121,37 @@
                                            max="@LogSteps.Count"
                                            style="width: 60px;"
                                            @bind="TargetIndexInput"
-                                           @bind:event="oninput" 
+                                           @bind:event="oninput"
                                            onfocus="this.select()"
-                                           @ref="_targetIndexInputRef" />
-                                    
+                                           @ref="_targetIndexInputRef"/>
+
                                     <div class="button-wrapper">
                                         <button type="button"
                                                 class="btn btn-outline-success @(GetStepSuccessState(LogSteps[TargetIndex]) == true ? "active" : "")"
                                                 @onclick="async () => await HandleButtonPressIndexed(true)">
                                             Success
                                         </button>
-                                        
+
                                         @if (_showSuccessFloatIndexed)
                                         {
                                             <div class="floating-label">Success!</div>
                                         }
                                     </div>
-                                    
+
                                     <div class="button-wrapper">
                                         <button type="button"
                                                 class="btn btn-outline-danger @(GetStepSuccessState(LogSteps[TargetIndex]) == false ? "active" : "")"
                                                 @onclick="async () => await HandleButtonPressIndexed(false)">
                                             Failure
                                         </button>
-                                        
+
                                         @if (_showFailureFloatIndexed)
                                         {
                                             <div class="floating-label failure">Failure!</div>
                                         }
                                     </div>
                                 </div>
-                                
+
                                 <!--Fail All Button-->
                                 <div class="button-wrapper">
                                     <button type="button"
@@ -134,7 +159,7 @@
                                             @onclick="async () => await HandleButtonPressAll(false)">
                                         Fail All
                                     </button>
-                                    
+
                                     @if (_showFailureFloatAll)
                                     {
                                         <div class="floating-label failure">Fail All!</div>
@@ -154,7 +179,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="col col-md-6 secondary-content">
                 @if (Step.PrimaryMedia.Count > 0 || Step.SecondaryMedia.Count > 0) 
                 {
@@ -449,6 +474,7 @@
         {
             _pendingFailureAttempt.Notes = _currentAttemptNotes;
             await ProductionLogEventService.ChangeMadeToProductionLog();
+            ProductionLogEventService.MarkDirty();
         }
     }
     
@@ -523,4 +549,45 @@
             ShowOptionalNotesField = false;
         }
     }
+    
+    private bool _showRedTagDialog = false;
+
+    private async Task ToggleRedTagDialog()
+    {
+        // If we don’t already have a pending failure, grab the latest one:
+        if (_pendingFailureAttempt is null)
+        {
+            _pendingFailureAttempt = LogSteps
+                .Select(ls => ls.LatestAttempt)
+                .FirstOrDefault(a => a?.Success == false);
+
+            // And copy its notes so the textarea shows the correct text:
+            _currentAttemptNotes = _pendingFailureAttempt?.Notes ?? "";
+        }
+        else
+        {
+            if (_pendingFailureAttempt.Id <= 0)
+            {
+                var success = await ProductionLogEventService.TryTriggerDbSaveAsync();
+                if (!success)
+                {
+                    // Show error or retry
+                } 
+            } 
+        }
+        _showRedTagDialog = !_showRedTagDialog;
+    }
+    
+    private void OnCancelClicked()
+    {
+        _showRedTagDialog = false;
+        StateHasChanged();
+    }
+    
+    private void OnSubmitClicked()
+    {
+        _showRedTagDialog = false;
+        StateHasChanged();
+    }
+    
 }
