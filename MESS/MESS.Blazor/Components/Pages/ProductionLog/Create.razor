@@ -34,14 +34,9 @@
                 <p>Not Authorized</p>
             </NotAuthorized>
             <ChildContent Context="auth_context">
-                <EditForm class="container" FormName="EditProductionLogs" Model="@ProductionLogBatch" OnValidSubmit="HandleSubmit">
-                    <DataAnnotationsValidator/>
-                    <ValidationSummary/>
-                    <ConfirmationModal @ref="popupRef" OnSubmit="HandleConfirmation"/>
-
                     @if (!IsLoading)
                     {
-                        <div class="mb-3">
+                        <div class="container mb-3">
                             <div class="container ps-0 d-inline-flex justify-content-between gap-4 mb-2 flex-wrap">
                                 <CreateHeader
                                     WorkInstructions="@ActiveProductWorkInstructionList"
@@ -67,19 +62,25 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <EditForm class="" FormName="EditProductionLogs" Model="@ProductionLogBatch" OnValidSubmit="HandleSubmit">
+                                <DataAnnotationsValidator/>
+                                <ValidationSummary/>
+                                <ConfirmationModal @ref="popupRef" OnSubmit="HandleConfirmation"/>
 
-                            @if (ActiveWorkInstruction != null && ActiveProduct != null)
-                            {
-                                <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLogs="ProductionLogBatch.Logs" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
-                            }
+                                @if (ActiveWorkInstruction != null && ActiveProduct != null)
+                                {
+                                    <WorkInstructionStepList ActiveWorkInstruction="@ActiveWorkInstruction" ProductionLogs="ProductionLogBatch.Logs" OnStepCompleted="@(async (args) => await OnStepCompleted(args.Item1, args.Item2))"/>
+                                }
+                                
+                                <div id="submit-button" class="d-flex justify-content-center mt-4 gap-4">
 
-                        </div>
-                        <div id="submit-button" class="d-flex justify-content-center mt-4 gap-4">
-
-                            <div class="mb-4">
-                                <button type="submit" class="btn btn-primary">Submit Log</button>
-                            </div>
-
+                                    <div class="mb-4">
+                                        <button type="submit" class="btn btn-primary">Submit Log</button>
+                                    </div>
+                                    
+                                </div>
+                            </EditForm>
                         </div>
                     }
                     else
@@ -88,7 +89,6 @@
                             Loading...
                         </div>
                     }
-                </EditForm>
             </ChildContent>
         </AuthorizeView>
     </ChildContent>
