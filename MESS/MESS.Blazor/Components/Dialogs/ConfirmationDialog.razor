@@ -1,0 +1,68 @@
+﻿@implements IDialogContentComponent<(string, EventCallback)>
+
+
+@* Header *@
+<FluentDialogHeader ShowDismiss="false">
+    <h2 class="fw-semibold text-dark mb-1">
+        <i class="bi bi-exclamation-circle"></i>
+        <strong>@Dialog.Instance.Parameters.Title</strong>
+    </h2>
+    <FluentDivider></FluentDivider>
+</FluentDialogHeader>
+
+@* Body *@
+<FluentDialogBody >
+    @if (!IsProcessing)
+    {
+        <strong>@BodyMessage</strong>
+    }
+    else
+    {
+        <p class="h1">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span> Processing...</span>
+        </p>
+    }
+</FluentDialogBody>
+
+@* Footer *@
+<FluentDialogFooter>
+    <button type="button" class="btn btn-sm btn-outline-secondary me-2" @onclick="ConfirmAsync" disabled="@IsProcessing">
+        <strong>Delete</strong>
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="CancelAsync" disabled="@IsProcessing">
+        <strong>Cancel</strong>
+    </button>
+</FluentDialogFooter>
+
+@code {
+    /// <summary>
+    ///  References this dialog while it's being displayed
+    /// </summary>
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    /// <summary>
+    /// A tuple representing the production log data to be shown
+    /// and a boolean expressing whether to show personal details or not
+    /// </summary>
+    [Parameter]
+    public (string, EventCallback) Content { get; set; } = default!;
+    private string BodyMessage => Content.Item1;
+    private EventCallback OnConfirm => Content.Item2;
+
+    private bool IsProcessing { get; set; } = false;
+    
+    private async Task ConfirmAsync()
+    {
+        IsProcessing = true;
+        await OnConfirm.InvokeAsync();
+        IsProcessing = false;
+        await Dialog.CloseAsync(Content);
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+}

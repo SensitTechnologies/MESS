@@ -63,6 +63,7 @@
         <_ContentIncludedByDefault Remove="Components\Pages\Product\Index.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\Product\ProductDetails.razor" />
         <_ContentIncludedByDefault Remove="Components\Pages\Product\WorkInstructionSelector.razor" />
+        <_ContentIncludedByDefault Remove="Components\ConfirmationDialog\ConfirmationDialog.razor" />
 
     </ItemGroup>
 
@@ -71,6 +72,7 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
+      <None Include="wwwroot\Scripts\RedTagDialog.js" />
       <None Include="wwwroot\SortableList.js" />
     </ItemGroup>
 

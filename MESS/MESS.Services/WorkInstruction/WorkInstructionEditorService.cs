@@ -214,6 +214,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         {
             return new PartNode
             {
+                NodeType = WorkInstructionNodeType.Part,
                 Parts = partNode.Parts
                     .Select(p => new Part
                     {
@@ -227,6 +228,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         {
             return new Step
             {
+                NodeType = WorkInstructionNodeType.Step,
                 Name = stepNode.Name,
                 Body = stepNode.Body,
                 DetailedBody = stepNode.DetailedBody,

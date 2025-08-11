@@ -37,10 +37,11 @@ public class WorkInstructionServiceTests
             .Returns(() => new ApplicationContext(options)); // Create new instance on each call
         
         var productMock = new Mock<IProductService>();
+        var logMock = new Mock<IProductionLogService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
         var webHostMock = new Mock<IWebHostEnvironment>();
         
-        return new WorkInstructionService(productMock.Object, memoryCacheMock.Object, webHostMock.Object, dbFactory.Object);
+        return new WorkInstructionService(productMock.Object, logMock.Object, memoryCacheMock.Object, webHostMock.Object, dbFactory.Object);
     }
     
     [Fact]
@@ -52,10 +53,11 @@ public class WorkInstructionServiceTests
             .ThrowsAsync(new Exception("Test exception"));
     
         var productMock = new Mock<IProductService>();
+        var logMock = new Mock<IProductionLogService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
         var webHostMock = new Mock<IWebHostEnvironment>();
     
-        var service = new WorkInstructionService(productMock.Object, memoryCacheMock.Object, 
+        var service = new WorkInstructionService(productMock.Object, logMock.Object, memoryCacheMock.Object, 
             webHostMock.Object, dbFactory.Object);
 
         // Act

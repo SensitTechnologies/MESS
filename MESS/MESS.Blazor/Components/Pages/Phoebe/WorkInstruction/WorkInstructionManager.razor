@@ -1,4 +1,5 @@
 @page "/WorkInstructionManager"
+@using MESS.Blazor.Components.Dialogs
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes
 @using MESS.Data.Models
 @using MESS.Services.Product
@@ -7,10 +8,15 @@
 @using MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using MESS.Blazor.Components.Navigator
 @using Microsoft.AspNetCore.Authorization
+@using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
+@using DialogResult = Microsoft.FluentUI.AspNetCore.Components.DialogResult
+@inject IJSRuntime JSRuntime
 @inject IWorkInstructionService WorkInstructionService
+@inject IWorkInstructionEditorService WorkInstructionEditorService
 @inject IProductService ProductService
 @inject IToastService ToastService
-@inject IWorkInstructionEditorService WorkInstructionEditorService
+@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+
 @attribute [Authorize(Roles = "Technician, Administrator")]
 
 <MenuBarPhoebe 
@@ -22,7 +28,7 @@
     OnWorkInstructionSelected="OnWorkInstructionSelected"
     OnSidebarToggle="ToggleSidebar"
     OnNewConfirmed="HandleNewInstruction"
-    OnDelete="DeleteInstruction"
+    OnDelete="ConfirmAndDelete"
     OnSave="SaveEditorChanges"
     OnSaveAsConfirmed="HandleSaveAs"
     OnEditAssociationsConfirmed="HandleEditAssociations"
@@ -30,25 +36,23 @@
     OnImportComplete="HandleImportComplete"
     IsDirty="WorkInstructionEditorService.IsDirty"
     CurrentInstruction="WorkInstructionEditorService.Current" 
-    OnNewPart="@(() => AddNode(part))"
-    OnNewStep="@(() => AddNode(step))"/>
+    OnNewPart="(() => NewNodeAtBottom(part))"
+    OnNewStep="(() => NewNodeAtBottom(step))"/>
 
 <NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
 
-<div class="d-flex w-100" style="flex-direction: row; margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
-    <div class="flex-grow-1">
-        <WorkInstructionNodeManagerList
-            WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
-            OnChanged="MarkEditorDirty" 
-            HasInstruction="@HasInstruction"
-            HasParts="@InstructionHasPart"
-            HasSteps="@InstructionHasSteps"
-            OnAddNode="@AddNode"/>
-    </div>
+<div class="d-flex w-100" style="flex-direction: column; margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
     @if (HasInstruction)
     {
-        <div class="ms-2 disable-highlight">
-            <div class="d-flex align" style="flex-direction: column">
+        <div class="flex-grow-1">
+            <WorkInstructionNodeManagerList
+                WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
+                OnChanged="OnListChanged" 
+                OnNewNodeAt="NewNodeAt"/>
+        </div>
+        
+        <div class="d-flex ms-2 disable-highlight justify-content-around">
+            <div class="d-flex" style="flex-direction: column">
                 @if ( !InstructionHasSteps)
                 {
                     <div class="alert alert-info" role="alert">
@@ -61,11 +65,11 @@
                     </div>
                 }
                 
-                <div class="d-flex justify-content-around border rounded py-1" style="flex-direction: row; max-width: 190px; min-width: 190px;">
-                    <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(part)">
+                <div id="buttons-holder" class="d-flex border rounded p-2 justify-content-around" style="flex-direction: row; max-width: 190px; min-width: 190px;">
+                    <button class="btn btn-sm btn-primary p-2 me-1" @onclick="(() => NewNodeAtBottom(part))">
                         Add Part
                     </button>
-                    <button class="btn btn-sm btn-primary m-1" @onclick="() => AddNode(step)">
+                    <button class="btn btn-sm btn-primary p-2 ms-1" @onclick="(() => NewNodeAtBottom(step))">
                         Add Step
                     </button>
                 </div>
@@ -94,7 +98,9 @@
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
-
+    
+    private IJSObjectReference? scrollToModule;
+    
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
@@ -107,6 +113,16 @@
         AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
         
         await base.OnInitializedAsync();
+    }
+    
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "./Scripts/ScrollTo.js");
+        }
     }
 
     private void HandleEditorChanged()
@@ -134,6 +150,8 @@
             ToastService.ShowError("A Work Instruction must have a title.");
             return;
         }
+
+        await OnListChanged(null);
 
         try
         {
@@ -195,25 +213,20 @@
             ToastService.ShowError("No Work Instruction is currently loaded.");
             return;
         }
-
-        if (string.IsNullOrWhiteSpace(current.Title))
-        {
-            ToastService.ShowError("A Work Instruction must have a title.");
-            return;
-        }
-
+        
         try
         {
             bool success = await WorkInstructionService.DeleteAllVersionsByIdAsync(current.Id);
             if (success)
                 ToastService.ShowSuccess("Work Instructions deleted successfully.");
             else
-                ToastService.ShowError("Unable to delete Work Instruction. Please ensure Title and Version are unique.");
+                ToastService.ShowError("Unable to delete Work Instruction.");
 
             if (success)
             {
-                // Refresh all latest work instructions list after save
+                // Refresh all latest work instructions list after delete
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                WorkInstructionEditorService.Reset();
             }
         }
         catch (Exception ex)
@@ -222,7 +235,47 @@
             ToastService.ShowError("An error occurred while deleting Instructions");
         }
     }
+    
+    private async Task ConfirmAndDelete()
+    {
 
+        bool needsConfirmation = false;
+        var current = WorkInstructionEditorService.Current;
+
+        if (current != null)
+        {
+            if (current.OriginalId != null)
+            {
+                needsConfirmation = true;
+            }
+            
+        }
+
+        if (needsConfirmation)
+        {
+            var data = (
+                message: "This Work Instruction or one of its older versions has already been used in Production. " +
+                         "Deleting it now will result in the deletion of sensitive data that will become unrecoverable. " +
+                         "Would you like to proceed?",
+                callback: EventCallback.Factory.Create(this, DeleteInstruction)
+            );
+
+            var dialog =  await DialogService.ShowDialogAsync<ConfirmationDialog>(data, new DialogParameters()
+            {
+                Title = $"Warning: Sensitive Data Might Be Lost",
+                Width = "43%",
+                PreventScroll = true,
+                PreventDismissOnOverlayClick = true,
+            });
+
+            await dialog.Result;            
+        }
+        else
+        {
+            await DeleteInstruction();
+        }
+    }
+    
     private async Task HandleImportComplete(WorkInstruction importedWorkInstruction)
     {
         ToastService.ShowSuccess(
@@ -305,24 +358,67 @@
         return Task.CompletedTask;
     }
 
+    private async Task OnListChanged(WorkInstructionNode? node)
+    {
+        RecalculatePositions();
+        WorkInstructionEditorService.MarkDirty();
+        await InvokeAsync(StateHasChanged);
+        if (node != null)
+        {
+            await Task.Delay(20);
+            await ScrollToElement(node);
+        }
+    }
+    
     private const string step = "step";
     private const string part = "part";
-    private void AddNode(string action)
+    private async Task NewNodeAtBottom(string nodeType) => await NewNodeAt((nodeType, -1));
+    
+    private async Task NewNodeAt((string nodeType, int index)args)
     {
         WorkInstructionNode newNode;
 
-        switch (action)
+        switch (args.nodeType)
         {
-            case "part":
-                newNode = new PartNode { Parts = [new Part { PartName = "", PartNumber = "" }] };
+            case part:
+                newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, Parts = [new Part { PartName = "", PartNumber = "" }] };
                 break;
 
             default:
-                newNode = new Step { Name = "", Body = "", DetailedBody = "" };
+                newNode = new Step {NodeType = WorkInstructionNodeType.Step, Name = "", Body = "", DetailedBody = "" };
                 break;
         }
-        
-        WorkInstructionEditorService?.Current?.Nodes.Insert(0, newNode);    // new node at start
+
+        if (args.index < 0 || args.index > WorkInstructionEditorService?.Current?.Nodes.Count)
+        {
+            WorkInstructionEditorService?.Current?.Nodes.Add(newNode);      // new node at end
+        }
+        else
+        {
+            WorkInstructionEditorService?.Current?.Nodes.Insert(args.index, newNode);    // new step at index
+        }
+
+        await OnListChanged(newNode);
+    }
+
+    private void RecalculatePositions()
+    {
+        if (WorkInstructionEditorService?.Current?.Nodes != null)
+        {
+            for (var i = 0; i < WorkInstructionEditorService?.Current?.Nodes.Count; i++)
+            {
+                WorkInstructionEditorService.Current.Nodes[i].Position = i;
+            }
+        }
+    }
+
+    private async Task ScrollToElement(WorkInstructionNode node)
+    {
+        string elementId = $"node-{node.Position}";
+        if (scrollToModule != null)
+        {
+            await scrollToModule.InvokeVoidAsync("scrollTo", elementId);
+        }
     }
     
     private async Task OnWorkInstructionSelected(int instructionId)

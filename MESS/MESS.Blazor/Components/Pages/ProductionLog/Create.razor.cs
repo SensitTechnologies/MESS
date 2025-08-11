@@ -41,8 +41,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private string? ActiveLineOperator { get; set; }
     private string? ProductSerialNumber { get; set; }
     private string? QRCodeDataUrl;
-    private IJSObjectReference? module;
-    private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
+    
+    private IJSObjectReference? scrollToModule;
+    private IJSObjectReference? qrModule;
     
     private Func<List<ProductionLog>, Task>? _autoSaveHandler;
     
@@ -107,12 +108,27 @@ public partial class Create : ComponentBase, IAsyncDisposable
             await SaveLogsToDatabase();
         };
         
-        ProductSerialNumber = SerializationService.CurrentProductNumber;
-
-        SerializationService.CurrentProductionLogPartChanged += HandleProductionLogPartsChanged;
-        SerializationService.CurrentProductNumberChanged += HandleProductNumberChanged;
-        ProductionLogParts = SerializationService.CurrentProductionLogParts;
-
+        ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
+        
+        ProductionLogPartService.CurrentProductNumberChanged += HandleProductNumberChanged;
+        
+        if (ProductionLogBatch.Logs != null && ActiveWorkInstruction != null)
+        {
+            var partNodes = ActiveWorkInstruction.Nodes.Where(node => node.NodeType == WorkInstructionNodeType.Part);
+            
+            for (var i = 0; i < ProductionLogBatch.Logs.Count; i++)
+            {
+                // Ensure required parts exist for this log index & nodes
+                foreach (var node in partNodes)
+                {
+                    if (node is PartNode partNode)
+                    {
+                        ProductionLogPartService.EnsureRequiredPartsLogged(i, partNode.Id, partNode.Parts);
+                    }
+                }
+            }
+        }
+        
         IsLoading = false;
     }
     
@@ -121,7 +137,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         if (firstRender)
         {
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+            scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "./Scripts/ScrollTo.js");
+            qrModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Components/Pages/ProductionLog/Create.razor.js");
         }
     }
@@ -169,35 +187,40 @@ public partial class Create : ComponentBase, IAsyncDisposable
     }
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
+{
+    if (workInstructionId <= 0)
     {
-        if (workInstructionId <= 0)
-        {
-            ActiveWorkInstruction = null;
-            await SetSelectedWorkInstructionId(null);
-            ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
-            return;
-        }
+        ActiveWorkInstruction = null;
+        await SetSelectedWorkInstructionId(null);
+        ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
 
-        if (ActiveProductWorkInstructionList != null)
-        {
-            var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
-            if (workInstruction?.Products == null)
-                return;
-
-            // Reset the cached log and internal state
-            await LocalCacheManager.ClearProductionLogBatchAsync();
-            ProductionLogBatch.Logs.Clear();
-            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-            AddProductionLogs(BatchSize);
-
-            // Proceed with setting new state
-            await SetSelectedWorkInstructionId(workInstructionId);
-            ActiveWorkInstruction = workInstruction;
-            ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
-            ProductionLogEventService.MarkClean();
-            await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
-        }
+        ProductionLogPartService.ClearAllLogParts();
+        return;
     }
+
+    if (ActiveProductWorkInstructionList != null)
+    {
+        var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
+        if (workInstruction?.Products == null)
+            return;
+
+        // Clear all related cached and in-memory data
+        await LocalCacheManager.ClearProductionLogBatchAsync();
+        ProductionLogBatch.Logs.Clear();
+        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+        ProductionLogPartService.ClearAllLogParts();
+
+        // Set the new work instruction
+        ActiveWorkInstruction = workInstruction;
+        ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
+        await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
+        await SetSelectedWorkInstructionId(workInstructionId);
+        ProductionLogEventService.MarkClean();
+
+        // Add new logs for the new instruction
+        AddProductionLogs(BatchSize);
+    }
+}
 
     private async Task SetActiveProduct(int productId)
     {
@@ -208,6 +231,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
             ActiveWorkInstruction = null;
             ActiveProductWorkInstructionList = null;
+
+            await LocalCacheManager.ClearProductionLogBatchAsync();
+            ProductionLogBatch.Logs.Clear();
+            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+            ProductionLogPartService.ClearAllLogParts();
+
             await SetActiveWorkInstruction(-1);
             await LocalCacheManager.SetActiveProductAsync(null);
             return;
@@ -217,21 +246,22 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (product?.WorkInstructions == null)
             return;
 
-        // Reset the cached log and internal state
-        await LocalCacheManager.ClearProductionLogBatchAsync();
-        ProductionLogBatch.Logs.Clear();
-        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+    // Clear all related cached and in-memory data
+    await LocalCacheManager.ClearProductionLogBatchAsync();
+    ProductionLogBatch.Logs.Clear();
+    await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+    ProductionLogPartService.ClearAllLogParts();
 
         // Proceed with setting new state
         ActiveProduct = product;
         ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
         ProductionLogEventService.SetCurrentProductName(product.Name);
         ProductionLogEventService.MarkClean();
+        
         await SetActiveWorkInstruction(-1);
         await LocalCacheManager.SetActiveProductAsync(product);
     }
 
-    
     private async Task GetCachedActiveProductAsync()
     {
         var result = await LocalCacheManager.GetActiveProductAsync();
@@ -367,8 +397,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
             }
         }
         
-
-        bool allStepsHavePartsNeeded = ProductionLogParts.Count >= totalPartsNeeded;
+        var totalPartsLogged = ProductionLogPartService.GetTotalPartsLogged();
+        
+        var allStepsHavePartsNeeded = totalPartsLogged >= totalPartsNeeded;
 
         if (!allStepsHavePartsNeeded)
         {
@@ -436,13 +467,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
             }
 
             ToastService.ShowSuccess("Successfully Created Production Log", 3000);
-
-            // Create any associated SerialNumberLogs
-            await SerializationService.SaveCurrentProductionLogPartsAsync(productionLog.Id);
             
             // Add the new log to the session
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
+        
+        await ProductionLogPartService.SaveAllLogPartsAsync(ProductionLogBatch.Logs);
 
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();
@@ -450,23 +480,16 @@ public partial class Create : ComponentBase, IAsyncDisposable
         await ResetFormState();
     }
     
-    private void HandleProductionLogPartsChanged()
-    {
-        ProductionLogParts = SerializationService.CurrentProductionLogParts;
-    
-        InvokeAsync(StateHasChanged);
-    }
-
     private void HandleProductNumberChanged()
     {
-        ProductSerialNumber = SerializationService.CurrentProductNumber;
+        ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
 
         InvokeAsync(StateHasChanged);
     }
     
     private void GenerateQRCode(int productionLogId)
     {
-        var productionLogIdString = productionLogId + ",";
+        var productionLogIdString = productionLogId.ToString();
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(productionLogIdString, QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new BitmapByteQRCode(qrCodeData);
@@ -481,10 +504,11 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (string.IsNullOrEmpty(QRCodeDataUrl))
             return;
 
-        if (module == null)
+        if (qrModule == null)
+        {
             return;
-
-        await module.InvokeVoidAsync("printQRCode", QRCodeDataUrl, index + 1);
+        }
+        await qrModule.InvokeVoidAsync("printQRCode", QRCodeDataUrl, index + 1);
     }
 
     private async Task ResetFormState()
@@ -501,6 +525,11 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.EnableAutoSave();
         WorkInstructionStatus = Status.NotStarted;
         ProductionLogEventService.MarkClean();
+        
+        if (scrollToModule != null)
+        {
+            await scrollToModule.InvokeVoidAsync("ScrollToTop");
+        }
     }
     
     private async Task OnStepCompleted(List<ProductionLogStep> productionLogSteps, bool? success)
@@ -539,9 +568,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 {
                     string elementId = $"step-{nextStep.Position}";
 
-                    if (module != null)
+                    if (scrollToModule != null)
                     {
-                        await module.InvokeVoidAsync("scrollToStep", elementId);
+                        await scrollToModule.InvokeVoidAsync("scrollTo", elementId);
                     }
                 } 
             }
@@ -549,9 +578,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
             // Scroll to the submit button if it's the last step and it was successful
             if (currentIndex == orderedNodes.Count - 1 && success == true)
             {
-                if (module != null)
+                if (scrollToModule != null)
                 {
-                    await module.InvokeVoidAsync("scrollToStep", "submit-button");
+                    await scrollToModule.InvokeVoidAsync("scrollTo", "submit-button");
                 }
             }
             
@@ -586,16 +615,19 @@ public partial class Create : ComponentBase, IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        SerializationService.CurrentProductionLogPartChanged -= HandleProductionLogPartsChanged;
-        SerializationService.CurrentProductNumberChanged -= HandleProductNumberChanged;
+        ProductionLogPartService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
         await ProductionLogEventService.StopDbSaveTimerAsync();
         
         try
         {
-            if (module is not null)
+            if (qrModule is not null)
             {
-                await module.DisposeAsync();
+                await qrModule.DisposeAsync();
+            }
+            if (scrollToModule is not null)
+            {
+                await scrollToModule.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
@@ -626,6 +658,15 @@ public partial class Create : ComponentBase, IAsyncDisposable
             };
 
             ProductionLogBatch.Logs.Add(emptyLog);
+            
+            // Create production log parts for new logs based on the part node
+            if (ActiveWorkInstruction != null)
+            {
+                foreach (var partNode in ActiveWorkInstruction.Nodes.OfType<PartNode>())
+                {
+                    ProductionLogPartService.EnsureRequiredPartsLogged(ProductionLogBatch.Logs.Count - 1, partNode.Id, partNode.Parts);
+                }
+            }
         }
 
         // Notify downstream services

@@ -522,10 +522,18 @@ td {
 
 .floating-label {
     position: absolute;
+    top: -1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
     font-weight: bold;
     pointer-events: none;
+    white-space: nowrap;
     animation: floatAway 0.8s ease-out forwards;
     color: #28a745;
+}
+
+.floating-label.failure {
+    color: #dc3545;
 }
 
 /* ==========================================================================
@@ -772,7 +780,27 @@ body.dark-mode .confirmation-toast {
     color: #dc3545 !important; /* keep red for danger */
 }
 
+/* ==========================================================================
+   Production Log Part Node Input Behavior
+========================================================================== */
+.form-floating .form-control {
+    border: 1px solid #ccc !important; /* Default gray border */
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transition: border-color 0.2s ease;
+}
 
+input[name="ActiveProductionLogPart.PartSerialNumber"]:not(:placeholder-shown) {
+    border-color: #28a745 !important;
+}
 
+.form-floating input[type=number]::-webkit-inner-spin-button,
+.form-floating input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 
-
+.form-floating input[type=number] {
+    -moz-appearance: textfield;
+}

@@ -45,10 +45,3 @@ export function printQRCode(value, index = null) {
     `);
     doc.close();
 }
-
-export function scrollToStep(elementId) {
-    const el = document.getElementById(elementId);
-    if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-}

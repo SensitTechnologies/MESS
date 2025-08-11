@@ -6,3 +6,9 @@ AutoFocus.setFocus = function (id) {
         element.focus()
     }
 }
+
+AutoFocus.selectAll = function (element) {
+    if (element && typeof element.select === "function") {
+        element.select();
+    }
+};

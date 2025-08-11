@@ -62,4 +62,15 @@ public interface IProductionLogService
     /// The task result contains <c>true</c> if the log was found and successfully deleted; otherwise, <c>false</c>.
     /// </returns>
     Task<bool> DeleteProductionLogAsync(int id);
+
+    /// <summary>
+    /// Deletes a specified production log and all associated log steps and attempts from the database.
+    /// </summary>
+    /// <param name="workInstruction">The work instruction object to delete from</param>
+    /// <returns>
+    /// A task that represents the asynchronous delete operation.
+    /// The task result contains <c>true</c> if the log was found and successfully deleted; otherwise, <c>false</c>.
+    /// </returns>
+    Task<bool> DeleteProductionLogByWorkInstructionAsync(WorkInstruction workInstruction);
+
 }

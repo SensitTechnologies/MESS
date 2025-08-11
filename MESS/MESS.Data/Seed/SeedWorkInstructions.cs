@@ -44,6 +44,7 @@ public static class SeedWorkInstructions
                     },
                     new PartNode
                     {
+                        NodeType = WorkInstructionNodeType.Part,
                         Position = 1,
                         Parts = new List<Part>
                         {

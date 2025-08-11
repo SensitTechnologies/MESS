@@ -1,5 +1,6 @@
 ﻿@using MESS.Data.Models
-<div class="d-flex flex-wrap gap-2 mt-2 justify-content-around align-content-center">
+
+<div class="d-flex flex-wrap gap-2 justify-content-around align-content-center">
     @foreach (var log in ProductionLogParts)
     {
         <RequiredPartInput ActiveProductionLogPart="log" AfterSerialNumberInput="AfterSerialNumberInput" />
