@@ -75,8 +75,7 @@
                                 id=@($"productSerialNumber-{i}")
                                 class="form-control tall-input text-lightweight"
                                 @bind-Value="log.ProductSerialNumber"
-                                @bind-Value:event="oninput"
-                                @oninput="() => ProductionLogEventService.MarkDirty()" />
+                                @onchange="() => ProductionLogEventService.MarkDirty()" />
                             @if (ProductionLogs.Count > 1)
                             {
                                 <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
