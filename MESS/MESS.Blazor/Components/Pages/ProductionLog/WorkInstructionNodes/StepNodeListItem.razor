@@ -393,8 +393,12 @@
             return;
 
         _pendingFailureAttempt = null;
+
         if (!result.Value) // failure
         {
+            // Clear failure note before creating new attempts
+            _currentAttemptNotes = "";
+
             var newFailureAttempt = new ProductionLogStepAttempt
             {
                 Success = false,
@@ -443,7 +447,12 @@
         if (TargetIndex < 0 || TargetIndex >= LogSteps.Count)
             return; // Invalid index
 
-        var targetStep = LogSteps[TargetIndex];
+        if (!isSuccess)
+        {
+            // Clear failure note for new failure attempt
+            _currentAttemptNotes = "";
+        }
+
         var attempt = new ProductionLogStepAttempt
         {
             Success = isSuccess,
@@ -451,7 +460,7 @@
             Notes = isSuccess ? "" : _currentAttemptNotes
         };
 
-        targetStep.Attempts.Add(attempt);
+        LogSteps[TargetIndex].Attempts.Add(attempt);
 
         if (!isSuccess)
         {
@@ -464,7 +473,7 @@
             }
         }
 
-        await OnStepCompleted.InvokeAsync((new List<ProductionLogStep> { targetStep }, isSuccess));
+        await OnStepCompleted.InvokeAsync((new List<ProductionLogStep> { LogSteps[TargetIndex] }, isSuccess));
         await ShowFloatMessage(isSuccess ? "indexed-success" : "indexed-failure");
     }
     

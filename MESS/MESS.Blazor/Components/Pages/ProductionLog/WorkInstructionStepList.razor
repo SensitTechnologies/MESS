@@ -74,8 +74,9 @@
                             <InputText
                                 id=@($"productSerialNumber-{i}")
                                 class="form-control tall-input text-lightweight"
-                                value="@log.ProductSerialNumber"
-                                @oninput="e => OnSerialNumberChanged(e, log)" />
+                                @bind-Value="log.ProductSerialNumber"
+                                @bind-Value:event="oninput"
+                                @oninput="() => ProductionLogEventService.MarkDirty()" />
                             @if (ProductionLogs.Count > 1)
                             {
                                 <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
@@ -86,6 +87,7 @@
                     }
                 </div>
             </div>
+
         }
     </ul>
 }
@@ -136,11 +138,5 @@
         }
 
         return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
-    }
-    
-    private void OnSerialNumberChanged(ChangeEventArgs e, ProductionLog log)
-    {
-        log.ProductSerialNumber = e?.Value?.ToString() ?? "";
-        ProductionLogEventService.MarkDirty();
     }
 }
