@@ -77,7 +77,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Components\LogDialog\" />
       <Folder Include="wwwroot\WorkInstructionExports\" />
       <Folder Include="wwwroot\WorkInstructionImages\" />
     </ItemGroup>
