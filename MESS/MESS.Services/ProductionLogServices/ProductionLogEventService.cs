@@ -10,8 +10,8 @@ public class ProductionLogEventService : IProductionLogEventService
     private Timer? _autoSaveTimer;
     private bool _shouldTriggerAutoSave = true;
     
-    //private const int DB_SAVE_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
-    private const int DB_SAVE_INTERVAL = 15 * 1000;
+    private const int DB_SAVE_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
+    //private const int DB_SAVE_INTERVAL = 15 * 1000;
     private Timer? _dbSaveTimer;
     
     /// <inheritdoc />

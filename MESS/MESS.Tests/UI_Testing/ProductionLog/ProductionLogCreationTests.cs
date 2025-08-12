@@ -11,24 +11,26 @@ using MESS.Services.ProductionLogPartService;
 using MESS.Services.SessionManager;
 using MESS.Services.WorkInstruction;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Moq;
+using Xunit.Abstractions;
 
 namespace MESS.Tests.UI_Testing.ProductionLog;
 using Data.Models;
 
 public class ProductionLogCreationTests : TestContext
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Mock<IProductionLogService> _productionLogServiceMock;
     private readonly Mock<IWorkInstructionService> _workInstructionServiceMock;
     private readonly Mock<IProductService> _productServiceMock;
     private readonly Mock<IApplicationUserService> _userServiceMock;
-    
+
     private readonly Mock<ILocalCacheManager> _localCacheManagerMock;
     private readonly Mock<IProductionLogPartService> _serializationServiceMock;
     private readonly Mock<IProductionLogEventService> _productionLogEventServiceMock;
@@ -38,8 +40,9 @@ public class ProductionLogCreationTests : TestContext
     private readonly Mock<IJSObjectReference> _jsModuleMock;
     private readonly Mock<IToastService> _toastServiceMock;
 
-    public ProductionLogCreationTests()
+    public ProductionLogCreationTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         _productionLogServiceMock = new Mock<IProductionLogService>();
         _workInstructionServiceMock = new Mock<IWorkInstructionService>();
         _productServiceMock = new Mock<IProductService>();
@@ -81,11 +84,11 @@ public class ProductionLogCreationTests : TestContext
                 new Claim(ClaimTypes.Name, "testuser"),
                 new Claim(ClaimTypes.NameIdentifier, "user123"),
             }, "testauth")));
-            
+
         _authProviderMock.Setup(p => p.GetAuthenticationStateAsync())
             .ReturnsAsync(authState);
     }
-    
+
     private void SetupAuthorizationServices()
     {
         // Add required authorization services
@@ -94,34 +97,44 @@ public class ProductionLogCreationTests : TestContext
             Options.Create(new AuthorizationOptions())));
         Services.AddSingleton<IAuthorizationService, DefaultAuthorizationService>();
     }
-        
+
     private void SetupCacheDefaults()
     {
         _localCacheManagerMock.Setup(m => m.GetProductionLogFormAsync())
             .ReturnsAsync(new ProductionLogFormDTO());
-                
+
         _localCacheManagerMock.Setup(m => m.GetWorkflowActiveStatusAsync())
             .ReturnsAsync(false);
     }
-    
-    [Fact]
-    public void Create_OnlyWorkInstructionSelected_DoesNotCreateLog()
+
+    [Fact] 
+    public async Task Create_OnlyWorkInstructionSelected_DoesNotCreateLog()
     {
         // Arrange
         var authContext = this.AddTestAuthorization();
         authContext.SetAuthorized("TechnicianUser");
         authContext.SetRoles("Technician");
 
+        _localCacheManagerMock.Setup(m => m.GetProductionLogBatchAsync())
+            .ReturnsAsync(new List<ProductionLogFormDTO> 
+            {
+                new ProductionLogFormDTO 
+                {
+                    ProductionLogId = 1,
+                    LogSteps = new List<ProductionLogStepDTO>()
+                }
+            });
+
+        // Render the component
         var cut = RenderComponent<Create>();
-        
-        // No need to access the protected HandleSubmit directly
-        // Instead, find and click the submit button
-        var submitButton = cut.Find("button[type='submit']");
-    
-        // Act
-        submitButton.Click();
-    
-        // Assert
+
+        // Find the EditForm component
+        var editForm = cut.FindComponent<EditForm>();
+
+        // Invoke the OnValidSubmit event callback manually
+        await cut.InvokeAsync(async () => await editForm.Instance.OnValidSubmit.InvokeAsync());
+
+        // Assert that CreateAsync was never called
         _productionLogServiceMock.Verify(
             service => service.CreateAsync(It.IsAny<ProductionLog>()),
             Times.Never);
