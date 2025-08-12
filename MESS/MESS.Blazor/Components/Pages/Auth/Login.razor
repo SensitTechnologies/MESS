@@ -2,10 +2,12 @@
 @using MESS.Data.Models
 @using MESS.Services.ApplicationUser
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 @using Serilog
 @inject NavigationManager Navigation
 @inject IApplicationUserService ApplicationUserService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 <div class="d-flex justify-content-center align-items-center">
     <div class="card shadow" style="min-width: 350px; max-width: 450px;">
@@ -29,10 +31,10 @@
                     <form method="post" action="/api/auth/login">
                         <AntiforgeryToken />
                         <div class="position-relative" @onfocusout="HideDropdown">
-                            <label for="email" class="form-label">Username:</label>
+                            <label for="username" class="form-label">Username:</label>
                             <input type="text"
-                                   id="email"
-                                   name="email"
+                                   id="username"
+                                   name="username"
                                    class="form-control mb-2"
                                    @bind-value="SearchFilter"
                                    @bind-value:event="oninput"
@@ -47,24 +49,34 @@
                                      @onmouseleave="OnDropdownMouseLeave"
                                      class="login-dropdown position-absolute w-100 mt-1 shadow border rounded"
                                      style="max-height: 200px; overflow-y: auto; z-index: 1000;">
-                                @if (ApplicationUsers != null)
-                                {
-                                    @foreach (var lineOperator in ApplicationUsers.Where(u =>
-                                        u.UserName != null && (string.IsNullOrEmpty(SearchFilter) ||
-                                                            u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
-                                                            u.UserName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
+                                    @if (ApplicationUsers != null)
                                     {
-                                    <div class="dropdown-item py-2 px-3"
-                                         @onclick="() => SelectOperator(lineOperator)"
-                                         style="cursor: pointer;">
-                                        <div>@lineOperator.FullName</div>
-                                        <small class="text-muted">@lineOperator.UserName</small>
-                                    </div>
-                                }
-                                }
-                            </div>
+                                        @foreach (var lineOperator in ApplicationUsers.Where(u =>
+                                                      u.UserName != null && (string.IsNullOrEmpty(SearchFilter) ||
+                                                                             u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
+                                                                             u.UserName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
+                                        {
+                                            <div class="dropdown-item py-2 px-3"
+                                                 @onclick="() => SelectOperator(lineOperator)"
+                                                 style="cursor: pointer;">
+                                                <div>@lineOperator.FullName</div>
+                                                <small class="text-muted">@lineOperator.UserName</small>
+                                            </div>
+                                        }
+                                    }
+                                </div>
                             }
                         </div>
+                        
+                        @* Show password input only if SelectedUser required password *@
+                        @if (SelectedUser != null && UserHasPassword)
+                        {
+                            <div class="form-group mb-3">
+                                <label for="password" class="form-label">Password:</label>
+                                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password..." required />
+                            </div>
+                        }
+                        
                         <div class="d-grid gap-2 mb-2">
                             <button type="submit" class="btn btn-primary">Login</button>
                         </div>
@@ -88,6 +100,10 @@
     private string SearchFilter { get; set; } = "";
     private bool IsDropdownVisible { get; set; }
     private ElementReference _dropdownContainer;
+
+    private bool UserHasPassword { get; set; } = false;
+    
+    private ApplicationUser? SelectedUser { get; set; } // Keep the selected user
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -118,12 +134,14 @@
     {
         IsDropdownVisible = true;
     }
-    
 
-    private void SelectOperator(ApplicationUser user)
+    private async Task SelectOperator(ApplicationUser user)
     {
-        if (user.UserName != null) SearchFilter = user.UserName;
+        SelectedUser = user;
+        SearchFilter = user.UserName ?? "";
         IsDropdownVisible = false;
-    }
 
+        UserHasPassword = await UserManager.HasPasswordAsync(user);
+        StateHasChanged();
+    }
 }

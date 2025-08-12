@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Transactions;
 using MESS.Data.Context;
+using MESS.Data.DTO;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -16,6 +17,34 @@ public class ApplicationUserService : IApplicationUserService
     private readonly SignInManager<ApplicationUser> _signInManager;
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
+    
+    /// <summary>
+    /// Registers a new user with the specified registration details.
+    /// </summary>
+    /// <param name="request">The registration request containing user information such as username, email, and password.</param>
+    /// <returns>
+    /// An <see cref="IdentityResult"/> indicating the success or failure of the registration operation.
+    /// If successful, the new user is also assigned the default role.
+    /// </returns>
+    public async Task<IdentityResult> RegisterUserAsync(UserRoleDto.RegisterRequest request)
+    {
+        var user = new ApplicationUser
+        {
+            UserName = request.Username,
+            Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email,
+            // If you want to add FirstName, LastName here, extend RegisterRequest or pass separately
+        };
+
+        var result = await _userManager.CreateAsync(user, request.Password);
+
+        if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(user, DEFAULT_ROLE);
+        }
+
+        return result;
+    }
+
 
     /// <inheritdoc cref="IApplicationUserService"/>
     public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager,
@@ -169,20 +198,20 @@ public class ApplicationUserService : IApplicationUserService
     }
 
     /// <inheritdoc />
-    public async Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser)
+    public async Task<IdentityResult> AddApplicationUser(ApplicationUser user, string password)
     {
         try
         {
-            var result = await _userManager.CreateAsync(ApplicationUser);
+            var result = await _userManager.CreateAsync(user, password);
             
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(ApplicationUser, DEFAULT_ROLE);
-                Log.Information("Added ApplicationUser with ID {id}", ApplicationUser.Id);
+                await _userManager.AddToRoleAsync(user, DEFAULT_ROLE);
+                Log.Information("Added ApplicationUser with ID {id}", user.Id);
                 return IdentityResult.Success;
             }
             
-            Log.Warning("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
+            Log.Warning("Unable to create ApplicationUser with ID {id}", user.Id);
             return result;
         }
         catch (Exception ex)

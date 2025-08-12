@@ -12,6 +12,13 @@ public class UserRoleDto
     /// The application user associated with these roles.
     /// </summary>
     public required ApplicationUser User { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the password for the user.  
+    /// This is required only when creating a new user.
+    /// </summary>
+    public string Password { get; set; } = "";
+    
     /// <summary>
     /// List of role names assigned to the user
     /// </summary>
@@ -25,4 +32,28 @@ public class UserRoleDto
     /// Indicates whether the user has been saved to the database
     /// </summary>
     public bool IsNew { get; set; }
+    
+    /// <summary>
+    /// Represents the data required to register a new user.
+    /// </summary>
+    public class RegisterRequest
+    {
+        /// <summary>
+        /// Gets or sets the email address of the user.
+        /// This field is optional and can be null.
+        /// </summary>
+        public string? Email { get; set; }
+
+        /// <summary>
+        /// Gets or sets the username for the new user.
+        /// This field is required.
+        /// </summary>
+        public string Username { get; set; } = "";
+
+        /// <summary>
+        /// Gets or sets the password for the new user.
+        /// This field is required.
+        /// </summary>
+        public string Password { get; set; } = "";
+    }
 }

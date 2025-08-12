@@ -1,3 +1,4 @@
+using MESS.Data.DTO;
 using Microsoft.AspNetCore.Identity;
 
 namespace MESS.Services.ApplicationUser;
@@ -69,11 +70,20 @@ public interface IApplicationUserService
     /// Creates a ApplicationUser object and saves it to the database
     ///</summary>
     ///<returns>ApplicationUser object</returns>
-    public Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser);
+    public Task<IdentityResult> AddApplicationUser(ApplicationUser user, string password);
     
     ///<summary>
     /// Updates a ApplicationUser currently in the database
     ///</summary>
     ///<returns>Updated ApplicationUser object</returns>
     public Task<bool> UpdateApplicationUser(ApplicationUser ApplicationUser);
+    
+    /// <summary>
+    /// Registers a new user with the specified registration details.
+    /// </summary>
+    /// <param name="request">The registration request containing user information and password.</param>
+    /// <returns>
+    /// An <see cref="IdentityResult"/> indicating the success or failure of the registration operation.
+    /// </returns>
+    Task<IdentityResult> RegisterUserAsync(UserRoleDto.RegisterRequest request);
 }

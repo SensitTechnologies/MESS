@@ -101,11 +101,21 @@
             if (isNewUser.Value)
             {
                 user.UserName = user.UserName is {Length: >= 0} ? user.UserName : user.Email;
-                await ApplicationUserService.AddApplicationUser(user);
                 
                 // Update IsNew = false in the UserRoleDto
                 var userDto = ApplicationUserDtoList.FirstOrDefault(u => u.User == user);
-                if (userDto is not null)
+                if (userDto == null || string.IsNullOrEmpty(userDto.Password))
+                {
+                    ToastService.ShowError("Password is required for new users.");
+                    return;
+                }
+
+                var result = await ApplicationUserService.AddApplicationUser(user, userDto.Password);
+                if (!result.Succeeded)
+                {
+                    ToastService.ShowError($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    return;
+                }
                     userDto.IsNew = false;
 
                 StateHasChanged();

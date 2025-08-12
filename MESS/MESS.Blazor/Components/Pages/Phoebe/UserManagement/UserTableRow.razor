@@ -21,6 +21,15 @@
             <input type="text" class="form-control" @bind="User.LastName" @bind:event="oninput" />
         </td>
         <td>
+            @if (UserRoleDto.IsNew)
+            {
+                <InputText @bind-Value="UserRoleDto.Password" type="password" placeholder="Password" class="form-control mb-2" />
+            }
+            <button type="button" class="btn btn-user" @onclick="async () => await SaveChanges.InvokeAsync(User)">
+                Save Changes
+            </button>
+        </td>
+        <td>
             <div class="btn-group" role="group">
                 <input type="checkbox" checked="@IsOperator" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="operator@(User.Id)">Operator</label>
