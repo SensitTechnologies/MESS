@@ -32,6 +32,13 @@
     public EventCallback<WorkInstructionNode?> OnChanged { get; set; }
     
     /// <summary>
+    /// Event callback triggered when a node is removed from the list.
+    /// The removed <see cref="WorkInstructionNode"/> is passed as the argument.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkInstructionNode> OnNodeRemoved { get; set; }
+    
+    /// <summary>
     /// Event callback that is triggered when a New Node needs to be made
     /// Use this to create a new node of a specific node type at a specified index.
     /// </summary>
@@ -141,6 +148,10 @@
                     break;
                 case "remove":
                     // already removed above
+                    if (OnNodeRemoved.HasDelegate)
+                    {
+                        await OnNodeRemoved.InvokeAsync(node);
+                    }
                     break;
             }
             

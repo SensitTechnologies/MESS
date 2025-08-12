@@ -182,4 +182,10 @@ public interface IWorkInstructionService
     /// <param name="workInstructionId"></param>
     /// <returns></returns>
     Task MarkOtherVersionsInactiveAsync(int workInstructionId);
+
+    /// <summary>
+    /// Deletes images and other media files associated with the specified <paramref name="nodes"/>.
+    /// </summary>
+    /// <param name="nodes">The collection of <see cref="WorkInstructionNode"/> entities whose images should be deleted.</param>
+    public Task<bool> DeleteNodesAsync(IEnumerable<WorkInstructionNode> nodes);
 }
