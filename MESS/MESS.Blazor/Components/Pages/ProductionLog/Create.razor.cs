@@ -246,11 +246,11 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (product?.WorkInstructions == null)
             return;
 
-    // Clear all related cached and in-memory data
-    await LocalCacheManager.ClearProductionLogBatchAsync();
-    ProductionLogBatch.Logs.Clear();
-    await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-    ProductionLogPartService.ClearAllLogParts();
+        // Clear all related cached and in-memory data
+        await LocalCacheManager.ClearProductionLogBatchAsync();
+        ProductionLogBatch.Logs.Clear();
+        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+        ProductionLogPartService.ClearAllLogParts();
 
         // Proceed with setting new state
         ActiveProduct = product;
