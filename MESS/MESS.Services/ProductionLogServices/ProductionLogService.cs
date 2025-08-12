@@ -159,9 +159,6 @@ public class ProductionLogService : IProductionLogService
                 }
             }
             
-            productionLog.CreatedOn = DateTimeOffset.UtcNow;
-            productionLog.LastModifiedOn = DateTimeOffset.UtcNow;
-            
             await context.ProductionLogs.AddAsync(productionLog);
             await context.SaveChangesAsync();
 

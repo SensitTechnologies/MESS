@@ -1483,6 +1483,48 @@ public partial class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<bool> DeleteNodesAsync(IEnumerable<WorkInstructionNode> nodes)
+    {
+        if (nodes == null || !nodes.Any())
+            return true; // Nothing to delete, treat as success
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var nodeIds = nodes.Select(n => n.Id).ToList();
+
+            var nodesToDelete = await context.WorkInstructionNodes
+                .Where(n => nodeIds.Contains(n.Id))
+                .ToListAsync();
+
+            if (nodesToDelete.Count == 0)
+                return true; // No matching nodes found
+
+            // Delete associated images/media files first
+            await DeleteImagesByNodesAsync(nodesToDelete);
+
+            // Remove the nodes themselves
+            context.WorkInstructionNodes.RemoveRange(nodesToDelete);
+
+            await context.SaveChangesAsync();
+
+            // Invalidate cache if applicable
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+
+            Log.Information("Deleted {Count} WorkInstructionNodes and their images successfully.", nodesToDelete.Count);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown when attempting to delete WorkInstructionNodes and images. Exception: {Exception}", e.ToString());
+            return false;
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<bool> DeleteAllVersionsByIdAsync(int id)
@@ -1832,6 +1874,27 @@ public partial class WorkInstructionService : IWorkInstructionService
                 foreach (var im in allImages)
                 {
                     await DeleteImageFile(im);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Deletes images associated with the specified <paramref name="nodes"/>.
+    /// </summary>
+    /// <param name="nodes">The collection of <see cref="WorkInstructionNode"/> entities whose images should be deleted.</param>
+    private async Task DeleteImagesByNodesAsync(IEnumerable<WorkInstructionNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            if (node is Step stepNode)
+            {
+                // Concatenate all images from primary and secondary media
+                var allImages = stepNode.PrimaryMedia.Concat(stepNode.SecondaryMedia).ToList();
+
+                foreach (var image in allImages)
+                {
+                    await DeleteImageFile(image);
                 }
             }
         }

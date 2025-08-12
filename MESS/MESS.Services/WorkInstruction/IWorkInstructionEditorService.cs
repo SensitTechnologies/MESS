@@ -169,5 +169,21 @@ public interface IWorkInstructionEditorService
     /// This does not persist the change to the database immediately; the update will be applied when <see cref="SaveAsync"/> is called.
     /// </summary>
     void ToggleActive();
+    
+    /// <summary>
+    /// Gets a read-only list of <see cref="WorkInstructionNode"/> instances
+    /// that have been queued for deletion but not yet removed from the database.
+    /// </summary>
+    IReadOnlyList<WorkInstructionNode> NodesQueuedForDeletion { get; }
+
+    /// <summary>
+    /// Adds the specified <paramref name="node"/> to the list of nodes queued for deletion.
+    /// This method marks the editor as dirty and triggers the <see cref="OnChanged"/> event.
+    /// </summary>
+    /// <param name="node">The <see cref="WorkInstructionNode"/> to queue for deletion.</param>
+    /// <remarks>
+    /// The queued nodes will be removed from the database when <see cref="SaveAsync"/> is called.
+    /// </remarks>
+    public void QueueNodeForDeletion(WorkInstructionNode node);
 }
 

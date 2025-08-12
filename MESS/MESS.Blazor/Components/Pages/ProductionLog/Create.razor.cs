@@ -187,40 +187,40 @@ public partial class Create : ComponentBase, IAsyncDisposable
     }
     
     private async Task SetActiveWorkInstruction(int workInstructionId)
-{
-    if (workInstructionId <= 0)
     {
-        ActiveWorkInstruction = null;
-        await SetSelectedWorkInstructionId(null);
-        ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
+        if (workInstructionId <= 0)
+        {
+            ActiveWorkInstruction = null;
+            await SetSelectedWorkInstructionId(null);
+            ProductionLogEventService.SetCurrentWorkInstructionName(string.Empty);
 
-        ProductionLogPartService.ClearAllLogParts();
-        return;
-    }
-
-    if (ActiveProductWorkInstructionList != null)
-    {
-        var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
-        if (workInstruction?.Products == null)
+            ProductionLogPartService.ClearAllLogParts();
             return;
+        }
 
-        // Clear all related cached and in-memory data
-        await LocalCacheManager.ClearProductionLogBatchAsync();
-        ProductionLogBatch.Logs.Clear();
-        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-        ProductionLogPartService.ClearAllLogParts();
+        if (ActiveProductWorkInstructionList != null)
+        {
+            var workInstruction = await WorkInstructionService.GetByIdAsync(workInstructionId);
+            if (workInstruction?.Products == null)
+                return;
 
-        // Set the new work instruction
-        ActiveWorkInstruction = workInstruction;
-        ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
-        await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
-        await SetSelectedWorkInstructionId(workInstructionId);
-        ProductionLogEventService.MarkClean();
+            // Clear all related cached and in-memory data
+            await LocalCacheManager.ClearProductionLogBatchAsync();
+            ProductionLogBatch.Logs.Clear();
+            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+            ProductionLogPartService.ClearAllLogParts();
 
-        // Add new logs for the new instruction
-        AddProductionLogs(BatchSize);
+            // Set the new work instruction
+            ActiveWorkInstruction = workInstruction;
+            ProductionLogEventService.SetCurrentWorkInstructionName(workInstruction.Title);
+            await LocalCacheManager.SetActiveWorkInstructionIdAsync(workInstruction.Id);
+            await SetSelectedWorkInstructionId(workInstructionId);
+            ProductionLogEventService.MarkClean();
+
+            // Add new logs for the new instruction
+            AddProductionLogs(BatchSize);
+        }
     }
-}
 
     private async Task SetActiveProduct(int productId)
     {
@@ -246,11 +246,11 @@ public partial class Create : ComponentBase, IAsyncDisposable
         if (product?.WorkInstructions == null)
             return;
 
-    // Clear all related cached and in-memory data
-    await LocalCacheManager.ClearProductionLogBatchAsync();
-    ProductionLogBatch.Logs.Clear();
-    await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
-    ProductionLogPartService.ClearAllLogParts();
+        // Clear all related cached and in-memory data
+        await LocalCacheManager.ClearProductionLogBatchAsync();
+        ProductionLogBatch.Logs.Clear();
+        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+        ProductionLogPartService.ClearAllLogParts();
 
         // Proceed with setting new state
         ActiveProduct = product;
