@@ -72,11 +72,11 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Remove="Components\Pages\Phoebe\Product\ProductTableRow.css" />
+      <None Include="wwwroot\Scripts\RedTagDialog.js" />
       <None Include="wwwroot\SortableList.js" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Components\LogDialog\" />
       <Folder Include="wwwroot\WorkInstructionExports\" />
       <Folder Include="wwwroot\WorkInstructionImages\" />
     </ItemGroup>

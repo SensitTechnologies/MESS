@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace MESS.Services.ProductionLog;
+namespace MESS.Services.ProductionLogServices;
 using Data.Models;
 
 /// <inheritdoc />
@@ -40,30 +40,76 @@ public class ProductionLogService : IProductionLogService
     }
     
     /// <inheritdoc />
-    public async Task<bool> UpdateAsync(ProductionLog existingProductionLog)
+    public async Task<bool> UpdateAsync(ProductionLog updatedLog)
+{
+    try
     {
-        try
-        {
-            if (existingProductionLog == null)
-            {
-                return false;
-            }
-            
-            await using var context = await _contextFactory.CreateDbContextAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-            context.ProductionLogs.Update(existingProductionLog);
-            await context.SaveChangesAsync();
-            
-            Log.Information("Production Log with ID: {productionLogId}, successfully updated.", existingProductionLog.Id);
+        // Load existing ProductionLog with related data from DB
+        var existingLog = await context.ProductionLogs
+            .Include(p => p.LogSteps)
+            .ThenInclude(ls => ls.Attempts)
+            .Include(p => p.WorkInstruction)
+            .ThenInclude(wi => wi!.Nodes)
+            .FirstOrDefaultAsync(p => p.Id == updatedLog.Id);
 
-            return true;
-        }
-        catch (Exception e)
+        if (existingLog == null)
         {
-            Log.Warning("Exception thrown when attempting to UpdateAsync, with ID: {productionLogId} in Production Logs, in ProductionLogService. Exception: {Exception}", existingProductionLog.Id, e.ToString());
+            Log.Warning("ProductionLog with ID {LogId} not found for update.", updatedLog.Id);
             return false;
         }
+
+        // Update simple properties on ProductionLog
+        existingLog.LastModifiedOn = DateTimeOffset.UtcNow;
+
+        // Update or add LogSteps and their Attempts
+        foreach (var updatedStep in updatedLog.LogSteps)
+        {
+            // Try to find matching existing step
+            var existingStep = existingLog.LogSteps.FirstOrDefault(s => s.Id == updatedStep.Id);
+
+            if (existingStep == null)
+            {
+                // New step: add it 
+                existingLog.LogSteps.Add(updatedStep);
+            }
+            else
+            {
+                // Sync Attempts
+                foreach (var updatedAttempt in updatedStep.Attempts)
+                {
+                    var existingAttempt = existingStep.Attempts.FirstOrDefault(a => a.Id == updatedAttempt.Id);
+
+                    if (existingAttempt == null)
+                    {
+                        // New attempt
+                        existingStep.Attempts.Add(updatedAttempt);
+                    }
+                    else
+                    {
+                        // Update attempt properties
+                        existingAttempt.SubmitTime = updatedAttempt.SubmitTime;
+                        existingAttempt.Success = updatedAttempt.Success;
+                        existingAttempt.Notes = updatedAttempt.Notes;
+                    }
+                }
+            }
+        }
+
+        // Save changes
+        await context.SaveChangesAsync();
+
+        Log.Information("Successfully updated Production Log with ID: {LogId}", updatedLog.Id);
+        return true;
     }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Exception thrown when attempting to UpdateAsync, with ID: {LogId} in Production Logs, in ProductionLogService.", updatedLog.Id);
+        return false;
+    }
+}
+
 
     /// <inheritdoc />
     public async Task<ProductionLog?> GetByIdAsync(int id)

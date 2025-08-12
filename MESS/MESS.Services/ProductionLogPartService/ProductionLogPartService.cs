@@ -3,26 +3,33 @@ using MESS.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace MESS.Services.Serialization;
+namespace MESS.Services.ProductionLogPartService;
 
 /// <inheritdoc />
-public class SerializationService : ISerializationService
+public class ProductionLogPartService : IProductionLogPartService
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     /// <summary>
-    /// Initializes a new instance of the <see cref="SerializationService"/> class.
+    /// Initializes a new instance of the <see cref="ProductionLogPartService"/> class.
     /// </summary>
     /// <param name="contextFactory">The application database context used for data operations.</param>
-    public SerializationService(IDbContextFactory<ApplicationContext> contextFactory)
+    public ProductionLogPartService(IDbContextFactory<ApplicationContext> contextFactory)
     {
         _contextFactory = contextFactory;
     }
-
-    /// <inheritdoc />
-    public event Action? CurrentProductionLogPartChanged;
+    
     /// <inheritdoc />
     public event Action? CurrentProductNumberChanged;
     private string? _currentProductNumber;
+    
+    /// <inheritdoc />
+    public event Action? PartsReloadRequested;
+
+    /// <inheritdoc />
+    public void RequestPartsReload()
+    {
+        PartsReloadRequested?.Invoke();
+    }
 
     /// <inheritdoc />
     public string? CurrentProductNumber
@@ -35,46 +42,54 @@ public class SerializationService : ISerializationService
         }
     }
 
-    private List<ProductionLogPart> _currentProductionLogParts = [];
+    private readonly Dictionary<int, LogPartEntryGroup> _logEntries = new();
+
+    
     /// <inheritdoc />
-    public List<ProductionLogPart> CurrentProductionLogParts
+    public async Task<bool> SaveAllLogPartsAsync(List<ProductionLog> savedLogs)
     {
-        get => _currentProductionLogParts;
-        set
+        bool allSaved = true;
+
+        foreach (var group in _logEntries.Values)
         {
-            _currentProductionLogParts = value;
-            CurrentProductionLogPartChanged?.Invoke();
+            if (group.LogIndex < 0 || group.LogIndex >= savedLogs.Count)
+            {
+                Log.Error("Invalid log index {LogIndex} during SaveAllLogPartsAsync", group.LogIndex);
+                allSaved = false;
+                continue;
+            }
+
+            var productionLogId = savedLogs[group.LogIndex].Id;
+
+            var allParts = group.GetAllParts()
+                .Where(p => !string.IsNullOrWhiteSpace(p.PartSerialNumber))
+                .ToList();
+
+            foreach (var part in allParts)
+            {
+                part.ProductionLogId = productionLogId;
+            }
+
+            if (allParts.Count == 0)
+                continue;
+
+            var success = await CreateRangeAsync(allParts);
+            if (!success)
+            {
+                Log.Warning("Failed to save parts for log at index {LogIndex}", group.LogIndex);
+                allSaved = false;
+            }
+            else
+            {
+                Log.Information("Saved {Count} parts for log ID {LogId} (index {LogIndex})", allParts.Count, productionLogId, group.LogIndex);
+            }
         }
+
+        _logEntries.Clear();
+        return allSaved;
     }
 
-    /// <inheritdoc />
-    public async Task<bool> SaveCurrentProductionLogPartsAsync(int productionLogId)
-    {
-        try
-        {
-            if (CurrentProductionLogParts.Count <= 0)
-            {
-                return false;
-            }
 
-            foreach (var log in CurrentProductionLogParts)
-            {
-                log.ProductionLogId = productionLogId;
-            }
-
-            var result = await CreateRangeAsync(CurrentProductionLogParts);
-            if (result)
-            {
-                CurrentProductionLogParts.Clear();
-            }
-            return result;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception caught when attempting to save Current Production Log Parts with ProductionLogID: {ID}. Exception Message {Message}", productionLogId, e.Message);
-            return false;
-        }
-    }
 
     /// <inheritdoc />
     public async Task<List<ProductionLogPart>?> GetAllAsync()
@@ -195,5 +210,67 @@ public class SerializationService : ISerializationService
             Log.Warning("Exception caught while attempting to delete productionLogPart with ID: {ID}: {ExceptionMessage}",serialNumberLogId, e.Message);
             return false;
         }
+    }
+    
+    /// <inheritdoc />
+    public void SetPartsForNode(int logIndex, int partNodeId, List<ProductionLogPart> parts)
+    {
+        if (!_logEntries.TryGetValue(logIndex, out var group))
+        {
+            group = new LogPartEntryGroup(logIndex);
+            _logEntries[logIndex] = group;
+        }
+
+        group.SetPartsForNode(partNodeId, parts);
+    }
+
+    /// <inheritdoc />
+    public List<ProductionLogPart> GetPartsForNode(int logIndex, int partNodeId)
+    {
+        return _logEntries.TryGetValue(logIndex, out var group)
+            ? group.GetPartsForNode(partNodeId)
+            : [];
+    }
+
+    /// <inheritdoc />
+    public void ClearPartsForNode(int logIndex, int partNodeId)
+    {
+        if (_logEntries.TryGetValue(logIndex, out var group))
+        {
+            group.ClearPartsForNode(partNodeId);
+        }
+    }
+
+    /// <inheritdoc />
+    public void ClearAllLogParts()
+    {
+        _logEntries.Clear();
+        Log.Information("Cleared all log parts.");
+        RequestPartsReload();
+    }
+    
+    /// <inheritdoc />
+    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<Part> requiredParts)
+    {
+        var existingParts = GetPartsForNode(logIndex, partNodeId);
+
+        var missingParts = requiredParts
+            .Where(required => existingParts.All(existing => existing.Part?.Id != required.Id))
+            .Select(p => new ProductionLogPart { Part = p })
+            .ToList();
+
+        if (missingParts.Count > 0)
+        {
+            existingParts.AddRange(missingParts);
+            SetPartsForNode(logIndex, partNodeId, existingParts);
+        }
+    }
+    
+    /// <inheritdoc />
+    public int GetTotalPartsLogged()
+    {
+        return _logEntries.Values
+            .SelectMany(group => group.GetAllParts())
+            .Count();
     }
 }
