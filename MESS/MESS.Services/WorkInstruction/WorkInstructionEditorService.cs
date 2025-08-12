@@ -56,7 +56,13 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public event Action? OnChanged;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkInstructionEditorService"/> class.
+    /// </summary>
+    /// <param name="workInstructionService">
+    /// The service used to retrieve, create, update, and clone <see cref="WorkInstruction"/> 
+    /// entities during the editing process.
+    /// </param>
     public WorkInstructionEditorService(IWorkInstructionService workInstructionService)
     {
         _workInstructionService = workInstructionService;
