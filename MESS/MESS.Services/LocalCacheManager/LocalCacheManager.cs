@@ -14,6 +14,9 @@ public class LocalCacheManager : ILocalCacheManager
     private const string ACTIVE_PRODUCT_KEY = "LAST_KNOWN_ACTIVE_PRODUCT";
     private const string PRODUCTION_LOG_FORM_KEY = "PRODUCTION_LOG_FORM_PROGRESS";
     private const string ACTIVE_WORK_STATION_KEY = "LAST_KNOWN_WORK_STATION";
+    private const string PRODUCTION_LOG_BATCH_KEY = "PRODUCTION_LOG_BATCH";
+    private const string BATCH_SIZE_KEY = "PRODUCTION_LOG_BATCH_SIZE";
+
     private readonly ProtectedLocalStorage _protectedLocalStorage;
     
     /// <summary>
@@ -26,38 +29,61 @@ public class LocalCacheManager : ILocalCacheManager
     {
         _protectedLocalStorage = protectedLocalStorage;
     }
-
+    
     /// <inheritdoc />
-    public async Task SetNewProductionLogFormAsync(ProductionLog? productionLog)
+    public async Task<List<ProductionLogFormDTO>> GetProductionLogBatchAsync()
     {
         try
         {
-            if (productionLog == null)
+            var result = await _protectedLocalStorage.GetAsync<List<ProductionLogFormDTO>>(PRODUCTION_LOG_BATCH_KEY);
+
+            if (result.Success && result.Value != null)
             {
-                await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_FORM_KEY);
+                Log.Information("Retrieved {Count} logs from ProductionLogBatch cache", result.Value.Count);
+                return result.Value;
+            }
+
+            return new List<ProductionLogFormDTO>();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error while retrieving ProductionLogBatchAsync: {Exception}", ex);
+            return new List<ProductionLogFormDTO>();
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task SetProductionLogBatchAsync(List<ProductionLog> logs)
+    {
+        try
+        {
+            if (logs == null || logs.Count == 0)
+            {
+                await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_BATCH_KEY);
                 return;
             }
 
-            Log.Information("Successfully Set New Production Log Form with ID: {PLogID}", productionLog.Id);
-            var productionLogForm = MapProductionLogToDto(productionLog);
+            var dtoList = logs.Select(MapProductionLogToDto).ToList();
             
-            try
-            {
-                await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_FORM_KEY, productionLogForm);
-            }
-            catch (TaskCanceledException ex)
-            {
-                Log.Warning("SetNewProductionLogFormAsync was canceled. The app may have been navigating or busy. Exception: {Exception}", ex);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Unexpected error while setting ProductionLogForm in local storage: {Exception}", ex);
-            }
-            
+            await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_BATCH_KEY, dtoList);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log.Warning("Exception caught when attempting to SetNewProductionLogFormAsync: {Exception}", e.ToString());
+            Log.Error("Error while setting ProductionLogBatchAsync: {Exception}", ex);
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task ClearProductionLogBatchAsync()
+    {
+        try
+        {
+            await _protectedLocalStorage.DeleteAsync(PRODUCTION_LOG_BATCH_KEY);
+            Log.Information("Cleared ProductionLogBatch from local cache");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error while clearing ProductionLogBatchAsync: {Exception}", ex);
         }
     }
     
@@ -229,6 +255,36 @@ public class LocalCacheManager : ILocalCacheManager
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<int> GetBatchSizeAsync()
+    {
+        try
+        {
+            var result = await _protectedLocalStorage.GetAsync<int>(BATCH_SIZE_KEY);
+            if (result.Success) return result.Value;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error retrieving batch size: {Exception}", ex);
+        }
+
+        return 1; // default
+    }
+
+    /// <inheritdoc />
+    public async Task SetBatchSizeAsync(int size)
+    {
+        try
+        {
+            await _protectedLocalStorage.SetAsync(BATCH_SIZE_KEY, size);
+            Log.Information("Saved batch size: {Size}", size);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Error setting batch size: {Exception}", ex);
+        }
+    }
 
     /// <inheritdoc />
     public async Task ResetCachedValuesAsync()
@@ -246,5 +302,5 @@ public class LocalCacheManager : ILocalCacheManager
             Log.Warning("Exception caught when attempting to ResetCachedValuesAsync: {Exception}", e.ToString());
         }
     }
-
+    
 }

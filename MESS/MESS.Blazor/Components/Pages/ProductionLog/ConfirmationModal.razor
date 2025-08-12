@@ -17,13 +17,6 @@
     </div>
 </div>
 
-@if (saveAlert)
-{
-    <div class="alert alert-success" role="alert">
-        Production log saved successfully.
-    </div>
-}
-
 @code {
     /// <summary>
     /// Determines whether the confirmation modal is visible.
@@ -54,18 +47,7 @@
     /// </summary>
     [Parameter]
     public EventCallback<bool> OnSubmit { get; set; }
-
-    private bool saveAlert = false;
-
-    private async Task showSaveAlert()
-    {
-        saveAlert = true;
-        await Task.Delay(3000);
-        saveAlert = false;
-        StateHasChanged();
-    }
-
-
+    
     /// <summary>
     /// Shows the confirmation modal with the specified body and header text.
     /// </summary>
@@ -79,7 +61,14 @@
         StateHasChanged();
     }
 
-    private void Close()
+    /// <summary>
+    /// Closes the confirmation modal by hiding it and clearing its header and body text.
+    /// </summary>
+    /// <remarks>
+    /// This method can be called from parent components via <c>@ref</c> to programmatically dismiss the modal.
+    /// It resets the visibility state and forces a UI re-render.
+    /// </remarks>
+    public void Close()
     {
         HeaderText = string.Empty;
         BodyText = string.Empty;
@@ -91,6 +80,5 @@
     {
         Close();
         await OnSubmit.InvokeAsync(true);
-        await showSaveAlert();
     }
 }

@@ -10,17 +10,30 @@ using Data.Models;
 public interface ILocalCacheManager
 {
     /// <summary>
-    /// If the ProductionLog is null, it will clear the cache.
-    /// Otherwise, it will set the ProductionLog to the client-side localstorage cache.
-    /// </summary>
-    /// <param name="productionLog">The current ProductionLog object</param>
-    /// <returns></returns>
-    public Task SetNewProductionLogFormAsync(ProductionLog? productionLog);
-    /// <summary>
     /// Retrieves the current ProductionLog form data.
     /// </summary>
     /// <returns>A <see cref="ProductionLogFormDTO"/> object containing the ProductionLog form data.</returns>
     public Task<ProductionLogFormDTO> GetProductionLogFormAsync();
+    
+    /// <summary>
+    /// Stores a batch of production logs in local cache storage. 
+    /// If the provided list is null or empty, the cached logs will be removed.
+    /// </summary>
+    /// <param name="logs">The list of production logs to cache.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task SetProductionLogBatchAsync(List<ProductionLog> logs);
+
+    /// <summary>
+    /// Retrieves the cached batch of production log form DTOs.
+    /// </summary>
+    /// <returns>A task that returns the list of <see cref="ProductionLogFormDTO"/> objects. Returns an empty list if nothing is cached.</returns>
+    Task<List<ProductionLogFormDTO>> GetProductionLogBatchAsync();
+
+    /// <summary>
+    /// Clears the cached batch of production log forms from local storage.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task ClearProductionLogBatchAsync();
 
     /// <summary>
     /// Sets the active product in the cache.
@@ -63,4 +76,24 @@ public interface ILocalCacheManager
     /// Resets all cached values to their default state.
     /// </summary>
     public Task ResetCachedValuesAsync();
+    
+    /// <summary>
+    /// Retrieves the last cached batch size from local storage.
+    /// </summary>
+    /// <returns>
+    /// An <see cref="int"/> representing the last known batch size. 
+    /// If no batch size is found or an error occurs, this returns a default value of <c>1</c>.
+    /// </returns>
+    public Task<int> GetBatchSizeAsync();
+
+    /// <summary>
+    /// Stores the specified batch size in local storage for future retrieval.
+    /// </summary>
+    /// <param name="size">
+    /// The <see cref="int"/> value representing the desired batch size to cache.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    public Task SetBatchSizeAsync(int size);
 }

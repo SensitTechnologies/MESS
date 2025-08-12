@@ -1,12 +1,22 @@
 @using MESS.Data.Models
-@using MESS.Services.ProductionLog
+@using MESS.Services.ProductionLogServices
 @inject NavigationManager NavigationManager
 
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
-    
     <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
-    <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected"></WorkInstructionSelect>
+    <WorkInstructionSelect WorkInstructions="@WorkInstructions" OnWorkInstructionSelected="@OnWorkInstructionSelected" />
 
+    <div class="d-flex align-items-center">
+        <label for="batchSizeInput" class="form-label me-2 mb-0">Batch Size</label>
+        <input type="number"
+               id="batchSizeInput"
+               class="form-control"
+               style="max-width: 75px"
+               @bind="BatchSize"
+               @bind:event="oninput"
+               @onchange="@(() => OnBatchSizeChanged.InvokeAsync(BatchSize))"
+               min="1" />
+    </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
@@ -71,6 +81,18 @@ else
     /// </summary>
     [Parameter]
     public string? ActiveLineOperator { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the batch size for the current production log group.
+    /// </summary>
+    [Parameter]
+    public int BatchSize { get; set; } = 1;
+
+    /// <summary>
+    /// Event callback triggered when the batch size is changed by the user.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnBatchSizeChanged { get; set; }
     
     private void NavigateToLogs()
     {
