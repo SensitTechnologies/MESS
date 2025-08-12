@@ -1,45 +1,56 @@
 @using MESS.Data.Models
-@using MESS.Services.Serialization
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes
 @using PartNode = MESS.Data.Models.PartNode
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
-@inject ISerializationService SerializationService
+@using MESS.Services.ProductionLogServices
+@inject IProductionLogEventService ProductionLogEventService
 
-@if (ActiveWorkInstruction != null && ProductionLog != null)
+
+@if (ActiveWorkInstruction != null && ProductionLogs?.Any() == true)
 {
-
     <ul class="step">
         @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
         {
-            var logStep = ProductionLog.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == workInstructionNode.Id);
             // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
-
             switch (workInstructionNode)
             {
                 case Step instructionStep:
-                    if (logStep == null && ProductionLog.LogSteps != null)
+                    // Create or retrieve a list of log steps for all logs
+                    var logSteps = new List<ProductionLogStep>();
+
+                    foreach (var log in ProductionLogs)
                     {
-                        logStep = new ProductionLogStep
+                        var step = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == instructionStep.Id);
+                        if (step == null)
                         {
-                            WorkInstructionStepId = instructionStep.Id,
-                            WorkInstructionStep = instructionStep,
-                            ProductionLogId = ProductionLog.Id,
-                        };
-                        ProductionLog.LogSteps.Add(logStep);
+                            step = new ProductionLogStep
+                            {
+                                WorkInstructionStepId = instructionStep.Id,
+                                WorkInstructionStep = instructionStep,
+                                ProductionLogId = log.Id,
+                            };
+                            log.LogSteps?.Add(step);
+                        }
+                        logSteps.Add(step);
                     }
+
                     <li class="mb-3">
                         <div id="step-@instructionStep.Position">
-                            <StepNodeListItem OnStepCompleted="OnStepCompleted" LogStep="logStep" Step="instructionStep" />
+                            <!-- If you have a batch-aware StepNodeListItem -->
+                            <StepNodeListItem 
+                                Step="instructionStep" 
+                                LogSteps="logSteps"
+                                OnStepCompleted="OnStepCompleted" />
                         </div>
                     </li>
                     break;
-                    
+
                 case PartNode instructionPart:
                     <li class="mb-3">
-                        <PartNodeListItem PartNode="instructionPart"/>
+                        <PartNodeListItem PartNode="instructionPart" ProductionLogs="ProductionLogs" />
                     </li>
                     break;
-                    
+
                 default:
                     <div>Unknown Instruction type</div>
                     break;
@@ -47,10 +58,35 @@
         }
         @if (ActiveWorkInstruction.CollectsProductSerialNumber)
         {
-            <div class="form-floating p-2 mb-2">
-                <InputText id="productSerialNumber" class="form-control" @bind-Value="@ProductSerialNumber" @bind-Value:after="SetProductionLogSerialNumber"></InputText>
-                <label for="productSerialNumber">Product Serial Number:</label>
+            <div class="card card-body">
+                <div class="mb-2">
+                    <div class="form-label">
+                        @(ProductionLogs.Count == 1 ? "Product Serial Number" : "Product Serial Numbers")
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 justify-content-around align-content-center">
+                    @for (var i = 0; i < ProductionLogs.Count; i++)
+                    {
+                        var log = ProductionLogs[i];
+
+                        <div class="form-floating flex-grow-1" style="min-width: 220px;">
+                            <InputText
+                                id=@($"productSerialNumber-{i}")
+                                class="form-control tall-input text-lightweight"
+                                @bind-Value="log.ProductSerialNumber"
+                                @onchange="() => ProductionLogEventService.MarkDirty()" />
+                            @if (ProductionLogs.Count > 1)
+                            {
+                                <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
+                                    #@(i + 1)
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
+
         }
     </ul>
 }
@@ -62,17 +98,15 @@
     [Parameter] public required WorkInstruction ActiveWorkInstruction { get; set; }
 
     /// <summary>
-    /// The production log associated with the current work instruction.
+    /// The production logs associated with the current work instruction.
     /// </summary>
-    [Parameter] public required ProductionLog ProductionLog { get; set; }
+    [Parameter] public required List<ProductionLog> ProductionLogs { get; set; }
 
     /// <summary>
     /// Event callback triggered when a step is completed.
     /// The tuple contains the production log step and an optional boolean indicating completion status.
     /// </summary>
-    [Parameter] public EventCallback<(ProductionLogStep, bool?)> OnStepCompleted { get; set; }
-
-    private string? ProductSerialNumber { get; set; }
+    [Parameter] public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
 
     private string? SelectedButton { get; set; } = "";
 
@@ -104,10 +138,4 @@
 
         return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
     }
-
-    private void SetProductionLogSerialNumber()
-    {
-        ProductionLog.ProductSerialNumber = ProductSerialNumber;
-    }
-
 }
