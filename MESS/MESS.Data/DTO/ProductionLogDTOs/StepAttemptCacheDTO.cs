@@ -1,4 +1,4 @@
-namespace MESS.Data.DTO;
+namespace MESS.Data.DTO.ProductionLogDTOs;
 
 
 /// <summary>
