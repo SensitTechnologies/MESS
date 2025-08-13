@@ -4,7 +4,7 @@ namespace MESS.Data.DTO;
 /// <summary>
 /// Represents an individual attempt at completing a production log step.
 /// </summary>
-public class ProductionLogStepAttemptDTO
+public class StepAttemptCacheDTO
 {
     /// <summary>
     /// Gets or sets a value indicating whether the attempt was successful.

@@ -100,7 +100,7 @@ public class LocalCacheManager : ILocalCacheManager
             };
 
             // Map all attempts
-            stepDto.Attempts = step.Attempts.Select(a => new ProductionLogStepAttemptDTO
+            stepDto.Attempts = step.Attempts.Select(a => new StepAttemptCacheDTO
             {
                 Success = a.Success,
                 SubmitTime = a.SubmitTime,

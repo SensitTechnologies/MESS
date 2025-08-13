@@ -21,5 +21,5 @@ public class ProductionLogStepDTO
     /// <summary>
     /// Gets or sets the collection of attempts for this step.
     /// </summary>
-    public List<ProductionLogStepAttemptDTO> Attempts { get; set; } = new();
+    public List<StepAttemptCacheDTO> Attempts { get; set; } = new();
 }
