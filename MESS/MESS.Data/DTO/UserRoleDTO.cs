@@ -6,7 +6,7 @@ namespace MESS.Data.DTO;
 /// <summary>
 /// Data transfer object representing a user and their associated roles
 /// </summary>
-public class UserRoleDto
+public class UserRoleDTO
 {
     /// <summary>
     /// The application user associated with these roles.

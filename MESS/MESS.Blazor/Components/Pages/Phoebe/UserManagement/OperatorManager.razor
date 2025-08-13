@@ -40,7 +40,7 @@
             {
                 @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
                 {
-                    <UserTableRow RowNumber="index" UserRoleDto="userDto" SaveChanges="SaveChanges" />
+                    <UserTableRow RowNumber="index" UserRoleDTO="userDto" SaveChanges="SaveChanges" />
                 }
             }
             </tbody>
@@ -55,7 +55,7 @@
 </div>
 
 @code {
-    private List<UserRoleDto> ApplicationUserDtoList { get; set; } = [];
+    private List<UserRoleDTO> ApplicationUserDtoList { get; set; } = [];
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -67,7 +67,7 @@
             var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
             var IsLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
 
-            var userDto = new UserRoleDto
+            var userDto = new UserRoleDTO
             {
                 User = user,
                 Roles = roles,
@@ -129,7 +129,7 @@
     private void CreateNewUser()
     {
         var newApplicationUser = new ApplicationUser();
-        var newUser = new UserRoleDto
+        var newUser = new UserRoleDTO
         {
             User = newApplicationUser,
             IsNew = true
