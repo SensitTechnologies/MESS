@@ -54,7 +54,7 @@
         
         <div class="d-flex ms-2 disable-highlight justify-content-around">
             <div class="d-flex" style="flex-direction: column">
-                @if ( !InstructionHasSteps)
+                @if (!InstructionHasSteps)
                 {
                     <div class="alert alert-info" role="alert">
                         <div>
@@ -183,7 +183,13 @@
                     await WorkInstructionEditorService.LoadForNewVersionFromCurrentAsync();
                     success = await WorkInstructionEditorService.SaveAsync();
                     if (success)
+                    {
                         ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+                        if (WorkInstructionEditorService.Current != null)
+                            await WorkInstructionEditorService.LoadForEditAsync(WorkInstructionEditorService.Current.Id);
+                        else
+                            WorkInstructionEditorService.Reset();
+                    }
                     else
                         ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
                 }
@@ -197,6 +203,7 @@
                 Products = (await ProductService.GetAllAsync())?
                     .Where(p => p.IsActive)
                     .ToList() ?? new List<Product>();
+                StateHasChanged();
             }
         }
         catch (Exception ex)

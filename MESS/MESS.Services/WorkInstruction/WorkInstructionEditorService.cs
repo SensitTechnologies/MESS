@@ -318,8 +318,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 break;
 
             case EditorMode.EditExisting:
-                success = await _workInstructionService.UpdateWorkInstructionAsync(Current);
                 Current.IsLatest = true;
+                success = await _workInstructionService.UpdateWorkInstructionAsync(Current);
                 break;
 
             case EditorMode.CreateNewVersion:
