@@ -144,7 +144,20 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         IsDirty = false;
         NotifyChanged();
     }
+    
+    /// <inheritdoc />
+    public async Task LoadForNewVersionFromCurrentAsync()
+    {
+        if (Current != null)
+        {
+          Current = await CloneForNewVersion(Current);
+          Mode = EditorMode.CreateNewVersion;
+          IsDirty = true;
+          NotifyChanged();          
+        }
+    }
 
+    
     /// <inheritdoc />
     public async Task LoadForNewVersionAsync(int originalId)
     {
@@ -245,6 +258,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 NodeType = WorkInstructionNodeType.Step,
                 Name = stepNode.Name,
                 Body = stepNode.Body,
+                Position = stepNode.Position,
                 DetailedBody = stepNode.DetailedBody,
                 PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? new List<string>(),
                 SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? new List<string>()
@@ -305,6 +319,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
             case EditorMode.EditExisting:
                 success = await _workInstructionService.UpdateWorkInstructionAsync(Current);
+                Current.IsLatest = true;
                 break;
 
             case EditorMode.CreateNewVersion:

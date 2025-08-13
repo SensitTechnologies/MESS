@@ -180,7 +180,7 @@
                 else
                 {
                     // Create new version, then save
-                    await WorkInstructionEditorService.LoadForNewVersionAsync(current.OriginalId ?? current.Id);
+                    await WorkInstructionEditorService.LoadForNewVersionFromCurrentAsync();
                     success = await WorkInstructionEditorService.SaveAsync();
                     if (success)
                         ToastService.ShowSuccess("New version of Work Instruction created successfully.");

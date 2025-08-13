@@ -84,6 +84,16 @@ public interface IWorkInstructionEditorService
     Task LoadForEditAsync(int id);
 
     /// <summary>
+    /// Loads the current work instruction to serve as a template
+    /// for creating a new version. The resulting WorkInstruction is not yet saved
+    /// to the database and remains in memory for user editing.
+    /// </summary>
+    /// <returns>
+    /// A task that completes when the new version template is prepared.
+    /// </returns>
+    Task LoadForNewVersionFromCurrentAsync();
+    
+    /// <summary>
     /// Loads the latest version of a WorkInstruction chain to serve as a template
     /// for creating a new version. The resulting WorkInstruction is not yet saved
     /// to the database and remains in memory for user editing.
