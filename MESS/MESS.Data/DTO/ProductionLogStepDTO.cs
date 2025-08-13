@@ -22,9 +22,4 @@ public class ProductionLogStepDTO
     /// Gets or sets the collection of attempts for this step.
     /// </summary>
     public List<ProductionLogStepAttemptDTO> Attempts { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets a value indicating whether to show notes for the step.
-    /// </summary>
-    public bool ShowNotes { get; set; }
 }

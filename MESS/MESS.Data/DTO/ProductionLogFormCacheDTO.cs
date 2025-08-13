@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a data transfer object for a production log form.
 /// </summary>
-public class ProductionLogFormDTO
+public class ProductionLogFormCacheDTO
 {
     /// <summary>
     /// Gets or sets the unique identifier for the production log.

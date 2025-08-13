@@ -31,11 +31,11 @@ public class LocalCacheManager : ILocalCacheManager
     }
     
     /// <inheritdoc />
-    public async Task<List<ProductionLogFormDTO>> GetProductionLogBatchAsync()
+    public async Task<List<ProductionLogFormCacheDTO>> GetProductionLogBatchAsync()
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<List<ProductionLogFormDTO>>(PRODUCTION_LOG_BATCH_KEY);
+            var result = await _protectedLocalStorage.GetAsync<List<ProductionLogFormCacheDTO>>(PRODUCTION_LOG_BATCH_KEY);
 
             if (result.Success && result.Value != null)
             {
@@ -43,12 +43,12 @@ public class LocalCacheManager : ILocalCacheManager
                 return result.Value;
             }
 
-            return new List<ProductionLogFormDTO>();
+            return new List<ProductionLogFormCacheDTO>();
         }
         catch (Exception ex)
         {
             Log.Warning("Error while retrieving ProductionLogBatchAsync: {Exception}", ex);
-            return new List<ProductionLogFormDTO>();
+            return new List<ProductionLogFormCacheDTO>();
         }
     }
     
@@ -87,17 +87,16 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
     
-    private static ProductionLogFormDTO MapProductionLogToDto(ProductionLog productionLog)
+    private static ProductionLogFormCacheDTO MapProductionLogToDto(ProductionLog productionLog)
     {
-        var productionLogFormDto = new ProductionLogFormDTO();
+        var productionLogFormDto = new ProductionLogFormCacheDTO();
     
         foreach (var step in productionLog.LogSteps)
         {
             var stepDto = new ProductionLogStepDTO
             {
                 WorkInstructionStepId = step.WorkInstructionStepId,
-                ProductionLogId = step.ProductionLogId,
-                ShowNotes = step.Attempts.Any(a => !string.IsNullOrEmpty(a.Notes))
+                ProductionLogId = step.ProductionLogId
             };
 
             // Map all attempts
@@ -116,11 +115,11 @@ public class LocalCacheManager : ILocalCacheManager
     }
 
     /// <inheritdoc />
-    public async Task<ProductionLogFormDTO> GetProductionLogFormAsync()
+    public async Task<ProductionLogFormCacheDTO> GetProductionLogFormAsync()
     {
         try
         {
-            var result = await _protectedLocalStorage.GetAsync<ProductionLogFormDTO>(PRODUCTION_LOG_FORM_KEY);
+            var result = await _protectedLocalStorage.GetAsync<ProductionLogFormCacheDTO>(PRODUCTION_LOG_FORM_KEY);
 
             if (result is { Success: true, Value: not null })
             {
@@ -128,12 +127,12 @@ public class LocalCacheManager : ILocalCacheManager
             }
 
             Log.Information("Successfully retrieved ProductionLogFormAsync from local cache");
-            return new ProductionLogFormDTO();
+            return new ProductionLogFormCacheDTO();
         }
         catch (Exception e)
         {
             Log.Warning("Exception caught when attempting to GetProductionLogFormAsync: {Exception}", e.ToString());
-            return new ProductionLogFormDTO();
+            return new ProductionLogFormCacheDTO();
         }
     }
 

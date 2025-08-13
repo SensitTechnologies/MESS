@@ -12,8 +12,8 @@ public interface ILocalCacheManager
     /// <summary>
     /// Retrieves the current ProductionLog form data.
     /// </summary>
-    /// <returns>A <see cref="ProductionLogFormDTO"/> object containing the ProductionLog form data.</returns>
-    public Task<ProductionLogFormDTO> GetProductionLogFormAsync();
+    /// <returns>A <see cref="ProductionLogFormCacheDTO"/> object containing the ProductionLog form data.</returns>
+    public Task<ProductionLogFormCacheDTO> GetProductionLogFormAsync();
     
     /// <summary>
     /// Stores a batch of production logs in local cache storage. 
@@ -26,8 +26,8 @@ public interface ILocalCacheManager
     /// <summary>
     /// Retrieves the cached batch of production log form DTOs.
     /// </summary>
-    /// <returns>A task that returns the list of <see cref="ProductionLogFormDTO"/> objects. Returns an empty list if nothing is cached.</returns>
-    Task<List<ProductionLogFormDTO>> GetProductionLogBatchAsync();
+    /// <returns>A task that returns the list of <see cref="ProductionLogFormCacheDTO"/> objects. Returns an empty list if nothing is cached.</returns>
+    Task<List<ProductionLogFormCacheDTO>> GetProductionLogBatchAsync();
 
     /// <summary>
     /// Clears the cached batch of production log forms from local storage.

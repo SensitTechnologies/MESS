@@ -101,7 +101,7 @@ public class ProductionLogCreationTests : TestContext
     private void SetupCacheDefaults()
     {
         _localCacheManagerMock.Setup(m => m.GetProductionLogFormAsync())
-            .ReturnsAsync(new ProductionLogFormDTO());
+            .ReturnsAsync(new ProductionLogFormCacheDTO());
 
         _localCacheManagerMock.Setup(m => m.GetWorkflowActiveStatusAsync())
             .ReturnsAsync(false);
@@ -116,9 +116,9 @@ public class ProductionLogCreationTests : TestContext
         authContext.SetRoles("Technician");
 
         _localCacheManagerMock.Setup(m => m.GetProductionLogBatchAsync())
-            .ReturnsAsync(new List<ProductionLogFormDTO> 
+            .ReturnsAsync(new List<ProductionLogFormCacheDTO> 
             {
-                new ProductionLogFormDTO 
+                new ProductionLogFormCacheDTO 
                 {
                     ProductionLogId = 1,
                     LogSteps = new List<ProductionLogStepDTO>()
