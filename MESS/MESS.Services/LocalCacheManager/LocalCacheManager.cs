@@ -1,5 +1,7 @@
 ﻿using MESS.Data.DTO;
 using MESS.Data.DTO.ProductionLogDTOs;
+using MESS.Data.DTO.ProductionLogDTOs.LogSteps;
+using MESS.Data.DTO.ProductionLogDTOs.LogSteps.Attempts;
 using MESS.Services.BrowserCacheManager;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Serilog;
@@ -94,19 +96,18 @@ public class LocalCacheManager : ILocalCacheManager
     
         foreach (var step in productionLog.LogSteps)
         {
-            var stepDto = new ProductionLogStepDTO
+            var stepDto = new LogStepCacheDTO
             {
                 WorkInstructionStepId = step.WorkInstructionStepId,
-                ProductionLogId = step.ProductionLogId
+                ProductionLogId = step.ProductionLogId,
+                // Map all attempts
+                Attempts = step.Attempts.Select(a => new StepAttemptCacheDTO
+                {
+                    Success = a.Success,
+                    SubmitTime = a.SubmitTime,
+                    FailureNote = a.Notes,
+                }).ToList()
             };
-
-            // Map all attempts
-            stepDto.Attempts = step.Attempts.Select(a => new StepAttemptCacheDTO
-            {
-                Success = a.Success,
-                SubmitTime = a.SubmitTime,
-                Notes = a.Notes,
-            }).ToList();
 
             productionLogFormDto.LogSteps.Add(stepDto);
         }

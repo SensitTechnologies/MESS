@@ -1,4 +1,4 @@
-namespace MESS.Data.DTO.ProductionLogDTOs;
+namespace MESS.Data.DTO.ProductionLogDTOs.LogSteps.Attempts;
 
 
 /// <summary>
@@ -19,5 +19,5 @@ public class StepAttemptCacheDTO
     /// <summary>
     /// Gets or sets the notes associated with this specific attempt.
     /// </summary>
-    public string? Notes { get; set; }
+    public string? FailureNote { get; set; }
 }

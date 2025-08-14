@@ -164,7 +164,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 Attempts = step.Attempts.Select(a => new ProductionLogStepAttempt
                 {
                     Success = a.Success,
-                    Notes = a.Notes ?? "",
+                    Notes = a.FailureNote ?? "",
                     SubmitTime = a.SubmitTime
                 }).ToList()
             }).ToList()

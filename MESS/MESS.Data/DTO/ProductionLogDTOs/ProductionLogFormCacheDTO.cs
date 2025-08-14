@@ -1,4 +1,6 @@
-﻿namespace MESS.Data.DTO.ProductionLogDTOs;
+﻿using MESS.Data.DTO.ProductionLogDTOs.LogSteps;
+
+namespace MESS.Data.DTO.ProductionLogDTOs;
 
 /// <summary>
 /// Represents a data transfer object for a production log form.
@@ -13,5 +15,5 @@ public class ProductionLogFormCacheDTO
     /// <summary>
     /// Gets or sets the list of steps associated with the production log.
     /// </summary>
-    public List<ProductionLogStepDTO> LogSteps { get; set; } = [];
+    public List<LogStepCacheDTO> LogSteps { get; init; } = [];
 }

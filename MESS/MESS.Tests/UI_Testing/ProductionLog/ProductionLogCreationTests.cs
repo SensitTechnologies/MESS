@@ -3,6 +3,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using MESS.Blazor.Components.Pages.ProductionLog;
 using MESS.Data.DTO.ProductionLogDTOs;
+using MESS.Data.DTO.ProductionLogDTOs.LogSteps;
 using MESS.Services.ApplicationUser;
 using MESS.Services.BrowserCacheManager;
 using MESS.Services.Product;
@@ -121,7 +122,7 @@ public class ProductionLogCreationTests : TestContext
                 new ProductionLogFormCacheDTO 
                 {
                     ProductionLogId = 1,
-                    LogSteps = new List<ProductionLogStepDTO>()
+                    LogSteps = new List<LogStepCacheDTO>()
                 }
             });
 
