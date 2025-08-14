@@ -149,6 +149,10 @@ jobs:
           path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
           overwrite: true
 
+      - name: Upload Documentation To GitHub Site
+        if: needs.compare-results.outputs.new-build == 'true'
+        uses: ./.github/workflows/deploy_documentation.yml
+
 
   # There is a new version. Deploy it to Azure
   deploy:
