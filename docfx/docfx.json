@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../MESS/MESS.Blazor/bin/Release/net9.0",
+          "files": [
+            "MESS.Blazor.dll",
+            "MESS.Data.dll",
+            "MESS.Services.dll"
+          ]
+        }
+      ],
+      "dest": "api",
+      "namespaceLayout": "nested"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "MESS API",
+      "_appTitle": "MESS API",
+      "_enableSearch": true,
+      "pdf": false
+    }
+  }
+}
