@@ -4,54 +4,47 @@
 @using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
 @inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
 
-<tr>
-    <td>
-        <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" @oninput="OnInputChanged"/>
-    </td>
-    <td>
-        <InputCheckbox id="isActive"
-                       Value="Product.IsActive"
-                       ValueChanged="HandleCheckboxChanged"
-                       ValueExpression="() => Product.IsActive"
-                       class="form-check-input" />
-    </td>
-    <td>
-        @if (!IsNewProduct)
-        {
-            <div class="save-button-container">
-                <button class="btn btn-sm btn-success" @onclick="HandleSubmit" disabled="@isSaving" title="Save">
-                    <i class="bi bi-floppy"></i>
-                    @if (IsDirty)
-                    {
-                        <span class="red-dot"></span>
-                    }
-                </button>
-            </div>
-        }
-    </td>
-    <td>
-        <WorkInstructionSelector 
-            Instructions="Instructions"
-            SelectedInstructionIds="SelectedInstructionIds"
-            SelectedInstructionIdsChanged="SelectedInstructionIdsChanged"
-            OnAddClicked="OnAddInstructions"
-            OnRemoveSelected="OnRemoveInstructions" />
-    </td>
-    <td>
-        @if (!IsNewProduct)
-        {
-            <button class="btn btn-sm btn-danger ms-2" @onclick="ShowDeleteConfirmation">
-                <i class="bi bi-trash" />
+<MudTd DataLabel="Name">
+    <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" @oninput="OnInputChanged"/>
+</MudTd>
+<MudTd DataLabel="Active">
+    <InputCheckbox id="isActive"
+                   Value="Product.IsActive"
+                   ValueChanged="HandleCheckboxChanged"
+                   ValueExpression="() => Product.IsActive"
+                   class="form-check-input" />
+</MudTd>
+<MudTd DataLabel="Work Instruction">
+    <WorkInstructionSelector 
+        Instructions="Instructions"
+        SelectedInstructionIds="SelectedInstructionIds"
+        SelectedInstructionIdsChanged="SelectedInstructionIdsChanged"
+        OnAddClicked="OnAddInstructions"
+        OnRemoveSelected="OnRemoveInstructions" />
+</MudTd>
+<MudTd DataLabel="Actions">
+    @if (!IsNewProduct)
+    {
+        <div class="save-button-container">
+            <button class="btn btn-sm btn-success" @onclick="HandleSubmit" disabled="@isSaving" title="Save">
+                <i class="bi bi-floppy"></i>
+                @if (IsDirty)
+                {
+                    <span class="red-dot"></span>
+                }
             </button>
-        }
-        else
-        {
-            <button class="btn btn-sm btn-primary" @onclick="HandleSubmit" disabled="@isSaving">
-                <i class="bi bi-plus-lg"></i>
-            </button>
-        }
-    </td>
-</tr>
+        </div>
+        <button class="btn btn-sm btn-danger ms-2" @onclick="ShowDeleteConfirmation">
+            <i class="bi bi-trash" />
+        </button>
+    }
+    else
+    {
+        <button class="btn btn-sm btn-primary" @onclick="HandleSubmit" disabled="@isSaving">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    }
+</MudTd>
 
 @code {
     /// <summary>

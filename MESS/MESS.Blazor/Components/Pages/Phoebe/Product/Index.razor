@@ -6,6 +6,7 @@
 @using MESS.Services.Product
 @using MESS.Services.WorkInstruction
 @using Microsoft.AspNetCore.Authorization
+@using HorizontalAlignment = MudBlazor.HorizontalAlignment
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow
@@ -15,27 +16,35 @@
 
 <PageTitle>Product List</PageTitle>
 
-<h3>Product List</h3>
-
 @if (Products.Count == 0)
 {
+    <h3>Product List</h3>
     <p>No products currently available.</p>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Active</th>
-                <th></th>
-                <th>Work Instructions</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var product in Products)
-        {
+    <div class="d-flex justify-content-between my-2" style="flex-direction: row">
+        <h3>Products</h3>
+        <div class="flex-grow-1"/>
+        <input type="text" class="form-control w-auto" placeholder="Search..."
+               @bind="SearchString" @bind:event="oninput"  />
+    </div>
+    <MudTable @ref="_table"
+              T="Product"
+              ServerData="ServerReload"
+              Loading="IsLoading"
+              FixedHeader="true"
+              Class="border rounded-3 pt-1"
+              TableClass="table table-striped table-hover align-top"
+              CellClass="align-top">
+        
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortLabel="name_field" SortBy="new Func<Product, object>(x => x.Name)"><strong>Name</strong></MudTableSortLabel></MudTh>
+            <MudTh><strong>Active</strong></MudTh>
+            <MudTh><strong>Work Instruction</strong></MudTh>
+            <MudTh><strong>Actions</strong></MudTh>
+        </HeaderContent>
+        <RowTemplate Context="product">
             <ProductTableRow 
                 Product="product" 
                 Instructions="_associatedInstructionsMap.ContainsKey(product.Id) 
@@ -47,19 +56,24 @@ else
                 OnRemoveInstructions="@GetRemoveInstructionsCallback(product.Id)"
                 OnSubmit="@SubmitProductCallback"
                 OnDeleteRequested="@HandleDeleteProductAsync" />
-        }
-
-        <ProductTableRow 
-            Product="_newProduct" 
-            Instructions="[]" 
-            SelectedInstructionIds="[]" 
-            SelectedInstructionIdsChanged="@NoOpSelectedIdsChangedCallback"
-            OnAddInstructions="@EventCallback.Empty"
-            OnRemoveInstructions="@NoOpRemoveInstructionsCallback"
-            OnSubmit="@SubmitProductCallback" />
-        </tbody>
-    </table>
-
+        </RowTemplate>
+        <FooterContent>
+            <ProductTableRow
+                Product="_newProduct"
+                Instructions="[]"
+                SelectedInstructionIds="[]"
+                SelectedInstructionIdsChanged="@NoOpSelectedIdsChangedCallback"
+                OnAddInstructions="@EventCallback.Empty"
+                OnRemoveInstructions="@NoOpRemoveInstructionsCallback"
+                OnSubmit="@SubmitProductCallback"/> 
+        </FooterContent>
+        <PagerContent>
+            <MudTablePager InfoFormat="@InfoFormat()" 
+                           HorizontalAlignment="HorizontalAlignment.Center" 
+                           RowsPerPageString="Products per Page"/>
+        </PagerContent>
+    </MudTable>
+    
     <AddWorkInstructionDialog 
         Visible="@_addDialogVisible"
         VisibleChanged="@OnVisibleChanged"
@@ -79,19 +93,92 @@ else
     private List<WorkInstruction> _nonAssociatedInstructions = [];
     private int CurrentProductId { get; set; }
 
+    private IEnumerable<Product> pagedData = new List<Product>();
+    private MudTable<Product> _table = new MudTable<Product>();
+    private int _totalTablePages => (_table.GetFilteredItemsCount() / _table.RowsPerPage) + 1;
+    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {_totalTablePages}";
+    private int totalItems;
+    private bool IsLoading = false;
+    private string _searchString = "";
+    private String SearchString
+    {
+        get => _searchString;
+        set
+        {
+            _searchString = value;
+            _table.ReloadServerData();
+        } 
+    }
+
     /// <summary>
     /// Called by the Blazor framework when the component is initialized.
     /// Loads products and associated instructions.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
+        await GrabServerData();
+    }
+
+    private async Task GrabServerData()
+    {
+        IsLoading = true;
         await LoadProducts();
         _allInstructions = await WorkInstructionService.GetAllLatestAsync();
         RebuildInstructionMap();
+        IsLoading = false;
+    }
+
+    private async Task<TableData<Product>> ServerReload(TableState state, CancellationToken token)
+    {
+        IEnumerable<Product> data = Products;
+        await Task.Delay(20, token);
+        
+        
+        data = data.Where(product => 
+            SatisfiesFilter(product.Name, SearchString)
+        ).ToArray();
+        totalItems = data.Count();
+
+        switch (state.SortLabel)
+        {
+            case "name_field":
+                data = data.OrderByDirection(state.SortDirection, o => o.Name);
+                break;
+        }
+
+        pagedData = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
+        return new TableData<Product>() {TotalItems = totalItems, Items = pagedData};
+    }
+    
+    private bool SatisfiesFilter(string? columnPhrase, string searchPhrase)
+    {
+        if (!string.IsNullOrWhiteSpace(columnPhrase))
+        {
+            var trimmedColumnPhrase = columnPhrase.Trim();
+            
+            // intended for columns to catch smaller search phrases
+            if (trimmedColumnPhrase.Contains(searchPhrase, StringComparison.OrdinalIgnoreCase))
+                return true;
+    
+            // for multi worded search phrase
+            foreach (var columnPhraseWord in trimmedColumnPhrase.Split(" "))
+            {
+                foreach (var searchPhraseWord in searchPhrase.Split(" "))
+                {
+                    if (!string.IsNullOrWhiteSpace(searchPhraseWord) && 
+                        (searchPhrase.Contains(columnPhraseWord, StringComparison.OrdinalIgnoreCase)
+                         || columnPhrase.Contains(searchPhraseWord, StringComparison.OrdinalIgnoreCase)))
+                        return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private async Task LoadProducts()
     {
+        _newProduct = new Product() { Name = "", IsActive = true };
         Products = (await ProductService.GetAllAsync()).ToList();
     }
 
@@ -111,9 +198,8 @@ else
                 await ProductService.UpdateProductAsync(product);
                 ToastService.ShowSuccess($"Product '{product.Name}' updated successfully!");
             }
-
-            await LoadProducts();
-            _newProduct = new() { Name = "", IsActive = true };
+            await GrabServerData();
+            await _table.ReloadServerData();
 
             Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
         }
@@ -215,9 +301,8 @@ else
     {
         await ProductService.AddWorkInstructionsAsync(productId, instructionIds);
         SelectedInstructionMap[productId] = [];
-        await LoadProducts();
-        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
-        RebuildInstructionMap();
+        await GrabServerData();
+        await _table.ReloadServerData();
         ToastService.ShowSuccess("Work instructions added.");
     }
 
@@ -225,9 +310,8 @@ else
     {
         await ProductService.RemoveWorkInstructionsAsync(productId, instructionIds);
         SelectedInstructionMap[productId] = [];
-        await LoadProducts();
-        _allInstructions = await WorkInstructionService.GetAllLatestAsync();
-        RebuildInstructionMap();
+        await GrabServerData();
+        await _table.ReloadServerData();
         ToastService.ShowSuccess("Selected work instructions removed.");
     }
     
@@ -240,8 +324,11 @@ else
             _associatedInstructionsMap.Remove(product.Id);
             SelectedInstructionMap.Remove(product.Id);
             _selectedIdsChangedCallbacks.Remove(product.Id);
-
+            
             ToastService.ShowSuccess($"Product '{product.Name}' was deleted.");
+            await GrabServerData();
+            await _table.ReloadServerData();
+
         }
         catch (Exception ex)
         {
