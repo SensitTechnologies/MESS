@@ -1,8 +1,15 @@
-# This workflow will build a .NET project and Upload documentation to Github Pages using Docfx
+# This workflow will build a .NET project and Upload documentation to GitHub Pages using Docfx
 
 name: Deploy Documentation to Github Sites
 
-on: 
+on:
+  push:
+    branches: [ "main" ]
+    paths: # Only runs when a file ending in any of these markers is changed
+      - '**.md'
+      - '**.yml'
+      - '**/docfx.json'
+  
   # Will be called by Deploy workflow if needed
   workflow_call:
 
@@ -46,6 +53,7 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
 
+      # update and run docfx from docfx.json config file
       - run: dotnet tool update -g docfx
       - run: docfx ${{ env.DOCFX_PATH }}/docfx.json
 
