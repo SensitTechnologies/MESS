@@ -185,15 +185,9 @@ jobs:
 
       
   Call-Documentation:
-    runs-on: ubuntu-latest
-
     # wait for these jobs to finish first
     needs: 
       - deploy                  # Be done before Documentation is run for concurrency reasons
       - compare-results         # needed for results comparrison
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Upload Documentation To GitHub Site
-        uses: ./.github/workflows/deploy_documentation.yml
+    uses: ./.github/workflows/deploy_documentation.yml
