@@ -196,5 +196,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Upload Documentation To GitHub Site
-        if: needs.compare-results.outputs.new-build == 'true'
         uses: ./.github/workflows/deploy_documentation.yml
