@@ -111,10 +111,6 @@ jobs:
   Call-Documentation:
     runs-on: ubuntu-latest
 
-    # wait for these jobs to finish first
-    needs: 
-      - deploy                  # Be done before Documentation is run for concurrency reasons
-
     steps:
       - uses: actions/checkout@v4
 
