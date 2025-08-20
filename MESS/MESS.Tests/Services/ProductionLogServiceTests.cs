@@ -1,7 +1,6 @@
 using MESS.Data.Context;
-using MESS.Services.ProductionLogServices;
+using MESS.Services.CRUD.ProductionLogs;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Moq;
 
 namespace MESS.Tests.Services.ProductionLog;

@@ -2,7 +2,7 @@
 @using MESS.Blazor.Components.Layout
 @using MESS.Blazor.Components.Dialogs
 @using MESS.Data.Models
-@using MESS.Services.ProductionLogServices
+@using MESS.Services.CRUD.ProductionLogs
 @using Microsoft.AspNetCore.Components.Authorization
 @using SortDirection = MudBlazor.SortDirection
 @using HorizontalAlignment = MudBlazor.HorizontalAlignment
@@ -66,7 +66,7 @@
                             <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
                             <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstruction?.Title ?? NoWorkInstruction)</MudTd>
                             <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
-                            <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                            <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
                             <MudTd DataLabel="Actions">
                                 <button class="btn btn-sm btn-primary" @onclick="() => OpenDialogAsync(productionLog)">
                                     Show Details

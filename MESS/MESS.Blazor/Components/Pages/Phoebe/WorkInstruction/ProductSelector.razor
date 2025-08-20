@@ -1,5 +1,7 @@
 @using MESS.Data.Models
-@inject MESS.Services.Product.IProductService ProductService
+@using MESS.Services.CRUD.Products
+
+@inject IProductService ProductService
 
 <div class="list-group scrollable-checkbox-container">
     @if (AllProducts == null)

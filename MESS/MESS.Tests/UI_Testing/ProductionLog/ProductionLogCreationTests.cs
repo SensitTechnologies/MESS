@@ -2,15 +2,16 @@
 using Bunit;
 using Bunit.TestDoubles;
 using MESS.Blazor.Components.Pages.ProductionLog;
-using MESS.Data.DTO.ProductionLogDTOs;
-using MESS.Data.DTO.ProductionLogDTOs.LogSteps;
-using MESS.Services.ApplicationUser;
-using MESS.Services.BrowserCacheManager;
-using MESS.Services.Product;
-using MESS.Services.ProductionLogServices;
-using MESS.Services.ProductionLogPartService;
-using MESS.Services.SessionManager;
-using MESS.Services.WorkInstruction;
+using MESS.Services.CRUD.ApplicationUser;
+using MESS.Services.CRUD.Products;
+using MESS.Services.CRUD.ProductionLogs;
+using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.DTOs.ProductionLogs.Cache;
+using MESS.Services.DTOs.ProductionLogs.LogSteps.Cache;
+using MESS.Services.CRUD.ProductionLogParts;
+using MESS.Services.UI.SessionManager;
+using MESS.Services.UI.LocalCacheManager;
+using MESS.Services.UI.ProductionLogEvent;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
@@ -102,7 +103,7 @@ public class ProductionLogCreationTests : TestContext
     private void SetupCacheDefaults()
     {
         _localCacheManagerMock.Setup(m => m.GetProductionLogFormAsync())
-            .ReturnsAsync(new ProductionLogFormCacheDTO());
+            .ReturnsAsync(new ProductionLogCacheDTO());
 
         _localCacheManagerMock.Setup(m => m.GetWorkflowActiveStatusAsync())
             .ReturnsAsync(false);
@@ -117,9 +118,9 @@ public class ProductionLogCreationTests : TestContext
         authContext.SetRoles("Technician");
 
         _localCacheManagerMock.Setup(m => m.GetProductionLogBatchAsync())
-            .ReturnsAsync(new List<ProductionLogFormCacheDTO> 
+            .ReturnsAsync(new List<ProductionLogCacheDTO> 
             {
-                new ProductionLogFormCacheDTO 
+                new ProductionLogCacheDTO 
                 {
                     ProductionLogId = 1,
                     LogSteps = new List<LogStepCacheDTO>()
