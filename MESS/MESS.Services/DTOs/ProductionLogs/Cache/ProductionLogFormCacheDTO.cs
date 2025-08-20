@@ -1,11 +1,11 @@
-﻿using MESS.Data.DTO.ProductionLogDTOs.LogSteps;
+﻿using MESS.Services.DTOs.ProductionLogs.LogSteps.Cache;
 
-namespace MESS.Data.DTO.ProductionLogDTOs;
+namespace MESS.Services.DTOs.ProductionLogs.Cache;
 
 /// <summary>
 /// Represents a data transfer object for a production log form.
 /// </summary>
-public class ProductionLogFormCacheDTO
+public class ProductionLogCacheDTO
 {
     /// <summary>
     /// Gets or sets the unique identifier for the production log.
