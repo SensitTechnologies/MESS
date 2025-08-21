@@ -234,7 +234,9 @@ public partial class WorkInstructionService : IWorkInstructionService
         }
         catch (Exception e)
         {
-            Log.Warning("Unable to export work instruction: {workInstructionTitle} to xlsx. Exception type: {exceptionType}", workInstructionToExport.Title, e.GetType());
+            Log.Warning(e, "Unable to export work instruction: {workInstructionTitle} to xlsx. Exception type: {exceptionType}", 
+                workInstructionToExport.Title, 
+                e.GetType());
             return null;
         }
     }
