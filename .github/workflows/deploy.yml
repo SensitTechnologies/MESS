@@ -183,18 +183,10 @@ jobs:
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
 
-      
+
   Call-Documentation:
-    runs-on: ubuntu-latest
-
-    # wait for these jobs to finish first
-    needs: 
-      - deploy                  # Be done before Documentation is run for concurrency reasons
-      - compare-results         # needed for results comparrison
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Upload Documentation To GitHub Site
-        if: needs.compare-results.outputs.new-build == 'true'
-        uses: ./.github/workflows/deploy_documentation.yml
+    needs:
+      - deploy
+      - compare-results
+    if: needs.compare-results.outputs.new-build == 'true'
+    uses: ./.github/workflows/deploy_documentation.yml
