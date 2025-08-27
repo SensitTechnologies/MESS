@@ -3,7 +3,7 @@
 namespace MESS.Services.DTOs.ProductionLogs.Cache;
 
 /// <summary>
-/// Represents a data transfer object for a production log form.
+/// Represents a data transfer object for a production log form that will be stored in browser storage.
 /// </summary>
 public class ProductionLogCacheDTO
 {
