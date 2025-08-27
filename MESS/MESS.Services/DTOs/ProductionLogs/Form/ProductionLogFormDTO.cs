@@ -5,6 +5,9 @@ namespace MESS.Services.DTOs.ProductionLogs.Form;
 /// Represents the state of a production log on the form page.
 /// Used for client-side caching and for submitting the form to the server.
 /// </summary>
+/// <remarks>
+/// Production Log navigation properties are not included here because they are only set once during initial save. Because
+/// this data is stored in the LocalCacheManager service directly, it is not needed for the FormDTO.
 public class ProductionLogFormDTO
 {
     /// <summary>
@@ -12,16 +15,6 @@ public class ProductionLogFormDTO
     /// Will be <c>0</c> if the log has not yet been created in the database.
     /// </summary>
     public int Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the product associated with this production log.
-    /// </summary>
-    public int ProductId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the work instruction associated with this production log.
-    /// </summary>
-    public int WorkInstructionId { get; set; }
 
     /// <summary>
     /// Gets or sets the serial number of the product, if applicable.
