@@ -21,8 +21,8 @@ public static class LogStepFormDTOMapper
 
         return new LogStepFormDTO
         {
-            ProductionLogId = step.ProductionLogId,
-            WorkInstructionStepId = step.WorkInstructionStepId,
+            ProductionLogStepId = step.Id, // PK of the log step
+            WorkInstructionStepId = step.WorkInstructionStepId, // FK to template step
             Attempts = step.Attempts.ToFormDTOList()
         };
     }
@@ -38,7 +38,7 @@ public static class LogStepFormDTOMapper
 
         return new ProductionLogStep
         {
-            ProductionLogId = dto.ProductionLogId,
+            Id = dto.ProductionLogStepId ?? 0, // 0 = new step (not yet persisted)
             WorkInstructionStepId = dto.WorkInstructionStepId,
             Attempts = dto.Attempts.ToEntityList()
         };

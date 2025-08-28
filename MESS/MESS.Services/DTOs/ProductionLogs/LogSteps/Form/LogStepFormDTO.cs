@@ -9,13 +9,15 @@ namespace MESS.Services.DTOs.ProductionLogs.LogSteps.Form;
 public class LogStepFormDTO
 {
     /// <summary>
-    /// Gets or sets the ID of the production log this step belongs to.
-    /// This will be null if the production log has not yet been persisted.
+    /// Gets or sets the unique identifier of the production log step (database PK).
+    /// Will be <c>null</c> if this step has not yet been persisted.
+    /// Required for updates.
     /// </summary>
-    public int ProductionLogId { get; set; }
+    public int? ProductionLogStepId { get; set; }
 
     /// <summary>
-    /// Gets or sets the ID of the associated work instruction step.
+    /// Gets or sets the ID of the associated work instruction step (foreign key).
+    /// Immutable after creation — used to tie the log step to its template definition.
     /// </summary>
     public int WorkInstructionStepId { get; set; }
 
