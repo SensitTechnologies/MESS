@@ -7,6 +7,7 @@ namespace MESS.Services.DTOs.ProductionLogs.LogSteps.UpdateRequest;
 /// </summary>
 /// <remarks>
 /// Intended for server-side processing when modifying existing steps within a production log.
+/// Includes both the log step identifier and the associated work instruction step.
 /// </remarks>
 public class LogStepUpdateRequest
 {
@@ -15,6 +16,12 @@ public class LogStepUpdateRequest
     /// Used to locate the step for updating.
     /// </summary>
     public int Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the associated work instruction step.
+    /// This ties the log step back to its definition in the work instruction.
+    /// </summary>
+    public int WorkInstructionStepId { get; set; }
 
     /// <summary>
     /// Gets or sets the list of step attempts associated with this step.

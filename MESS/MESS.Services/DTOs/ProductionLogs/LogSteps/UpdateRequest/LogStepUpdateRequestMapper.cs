@@ -1,5 +1,6 @@
 using MESS.Data.Models;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.UpdateRequest;
+using MESS.Services.DTOs.ProductionLogs.LogSteps.Form;
 
 namespace MESS.Services.DTOs.ProductionLogs.LogSteps.UpdateRequest;
 
@@ -20,16 +21,20 @@ public static class LogStepUpdateRequestMapper
     /// <para>
     /// - Existing attempts are updated in place.  
     /// - New attempts (Id == 0) coming from the Production Log page are created and attached.  
+    /// - The <see cref="ProductionLogStep.WorkInstructionStepId"/> is updated if it differs.  
     /// </para>
     /// </summary>
     /// <param name="entity">The <see cref="ProductionLogStep"/> to update.</param>
-    /// <param name="dto">The <see cref="LogStepUpdateRequest"/> containing updated attempt data.</param>
+    /// <param name="dto">The <see cref="LogStepUpdateRequest"/> containing updated step + attempt data.</param>
     public static void ApplyUpdate(this ProductionLogStep entity, LogStepUpdateRequest dto)
     {
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentNullException.ThrowIfNull(dto);
 
-        // Delegate the attempt updates to StepAttemptUpdateRequestMapper
+        // Update FK relationship if needed
+        entity.WorkInstructionStepId = dto.WorkInstructionStepId;
+
+        // Delegate the attempt updates
         if (dto.Attempts?.Any() == true)
         {
             entity.Attempts.ApplyUpdateList(dto.Attempts);
@@ -40,17 +45,17 @@ public static class LogStepUpdateRequestMapper
     /// Converts a <see cref="LogStepUpdateRequest"/> into a new <see cref="ProductionLogStep"/> entity.
     /// </summary>
     /// <param name="dto">The update request DTO.</param>
-    /// <returns>A new <see cref="ProductionLogStep"/> initialized with the attempts.</returns>
+    /// <returns>A new <see cref="ProductionLogStep"/> initialized with the provided data.</returns>
     public static ProductionLogStep ToEntity(this LogStepUpdateRequest dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var step = new ProductionLogStep();
-
-        if (dto.Attempts?.Any() == true)
+        var step = new ProductionLogStep
         {
-            step.Attempts = dto.Attempts.Select(a => a.ToEntity()).ToList();
-        }
+            Id = dto.Id,
+            WorkInstructionStepId = dto.WorkInstructionStepId,
+            Attempts = dto.Attempts?.Select(a => a.ToEntity()).ToList() ?? new List<ProductionLogStepAttempt>()
+        };
 
         return step;
     }
