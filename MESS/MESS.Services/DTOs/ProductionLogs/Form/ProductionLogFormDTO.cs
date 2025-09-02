@@ -8,6 +8,7 @@ namespace MESS.Services.DTOs.ProductionLogs.Form;
 /// <remarks>
 /// Production Log navigation properties are not included here because they are only set once during initial save. Because
 /// this data is stored in the LocalCacheManager service directly, it is not needed for the FormDTO.
+/// </remarks>
 public class ProductionLogFormDTO
 {
     /// <summary>
