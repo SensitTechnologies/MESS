@@ -9,6 +9,7 @@ using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.DTOs.ProductionLogs.Cache;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Cache;
 using MESS.Services.CRUD.ProductionLogParts;
+using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.UI.SessionManager;
 using MESS.Services.UI.LocalCacheManager;
 using MESS.Services.UI.ProductionLogEvent;
@@ -138,7 +139,7 @@ public class ProductionLogCreationTests : TestContext
 
         // Assert that CreateAsync was never called
         _productionLogServiceMock.Verify(
-            service => service.CreateAsync(It.IsAny<ProductionLog>()),
+            service => service.CreateAsync(It.IsAny<ProductionLogCreateRequest>()),
             Times.Never);
     }
 }
