@@ -371,7 +371,7 @@ public class ProductionLogService : IProductionLogService
     /// </summary>
     /// <param name="workInstruction">work instruction to query all production logs by</param>
     /// <returns></returns>
-    public async Task<bool> DeleteProductionLogByWorkInstructionAsync(WorkInstruction workInstruction)
+    public async Task<bool> DeleteByWorkInstructionAsync(WorkInstruction workInstruction)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
 

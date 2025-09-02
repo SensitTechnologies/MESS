@@ -1574,7 +1574,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             foreach (var version in otherVersions)
             {
                 // Remove all production logs associated with a work instruction
-                await  _productionLogService.DeleteProductionLogByWorkInstructionAsync(version);
+                await  _productionLogService.DeleteByWorkInstructionAsync(version);
                 await DeleteImagesByWorkInstructionAsync(version);
                
                 // Remove associated Work Instruction Nodes first

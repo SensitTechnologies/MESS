@@ -135,6 +135,6 @@ public interface IProductionLogService
     /// A task that represents the asynchronous delete operation.
     /// The task result contains <c>true</c> if the log was found and successfully deleted; otherwise, <c>false</c>.
     /// </returns>
-    Task<bool> DeleteProductionLogByWorkInstructionAsync(WorkInstruction workInstruction);
+    Task<bool> DeleteByWorkInstructionAsync(WorkInstruction workInstruction);
 
 }
