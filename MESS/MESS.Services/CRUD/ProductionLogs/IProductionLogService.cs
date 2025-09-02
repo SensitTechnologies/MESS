@@ -1,4 +1,11 @@
-﻿namespace MESS.Services.CRUD.ProductionLogs;
+﻿using MESS.Services.DTOs.ProductionLogs.Batch;
+using MESS.Services.DTOs.ProductionLogs.CreateRequest;
+using MESS.Services.DTOs.ProductionLogs.Detail;
+using MESS.Services.DTOs.ProductionLogs.Form;
+using MESS.Services.DTOs.ProductionLogs.Summary;
+using MESS.Services.DTOs.ProductionLogs.UpdateRequest;
+
+namespace MESS.Services.CRUD.ProductionLogs;
 using Data.Models;
 /// <summary>
 /// Interface for managing ProductionLog operations, including retrieval, creation, 
@@ -11,26 +18,83 @@ public interface IProductionLogService
     /// </summary>
     /// <returns>List of ProductionLog objects</returns>
     public Task<List<ProductionLog>?> GetAllAsync();
+    
+    /// <summary>
+    /// Retrieves all production logs in a lightweight form as <see cref="ProductionLogSummaryDTO"/> objects.
+    /// This method performs a projection to avoid loading full entity graphs, returning only the summary data.
+    /// </summary>
+    /// <returns>
+    /// A task representing the asynchronous operation. 
+    /// The result contains a list of <see cref="ProductionLogSummaryDTO"/> objects, one for each production log.
+    /// If no logs exist, the list will be empty.
+    /// </returns>
+    Task<List<ProductionLogSummaryDTO>> GetAllSummariesAsync();
+
     /// <summary>
     /// Retrieves a single ProductionLog object asynchronously
     /// </summary>
     /// <param name="id">integer ID value</param>
     /// <returns>A nullable ProductionLog</returns>
     public Task<ProductionLog?> GetByIdAsync(int id);
-    /// <summary>
-    /// Creates a new ProductionLog object and saves it to the database
-    /// NOTE: Handles Audit related data
-    /// </summary>
-    /// <param name="productionLog">ProductionLog</param>
-    /// <returns>int value indicating the logs ID if successful or a -1 if an exception is thrown</returns>
-    public Task<int> CreateAsync(ProductionLog productionLog);
 
     /// <summary>
-    /// Edits/Updates an existing ProductionLog object stored in the database Asynchronously
+    /// Retrieves a single production log by its ID and maps it to a <see cref="ProductionLogDetailDTO"/>.
+    /// EF will track the underlying entities so that step attempts can be updated via DTOs.
     /// </summary>
-    /// <param name="existingProductionLog">The existing ProductionLog object</param>
-    /// <returns>boolean success/failure value</returns>
-    public Task<bool> UpdateAsync(ProductionLog existingProductionLog);
+    /// <param name="id">The ID of the production log to retrieve.</param>
+    /// <returns>
+    /// A <see cref="ProductionLogDetailDTO"/> representing the log, or <c>null</c> if not found.
+    /// </returns>
+    Task<ProductionLogDetailDTO?> GetDetailByIdAsync(int id);
+    
+    /// <summary>
+    /// Creates a new <see cref="ProductionLog"/> in the database using the provided <see cref="ProductionLogCreateRequest"/> DTO.
+    /// </summary>
+    /// <param name="request">The DTO containing data for the new production log, including steps and attempts.</param>
+    /// <returns>
+    /// A <see cref="Task{Int32}"/> representing the asynchronous operation.
+    /// Returns the ID of the newly created production log if successful, or <c>-1</c> if creation failed.
+    /// </returns>
+    /// <remarks>
+    /// This method only assigns foreign key IDs for related entities (Product and WorkInstruction) 
+    /// to avoid EF Core tracking conflicts. Navigation properties are not attached.
+    /// Steps and their attempts are created via EF Core cascade.
+    /// </remarks>
+    Task<int> CreateAsync(ProductionLogCreateRequest request);
+
+    /// <summary>
+    /// Updates an existing <see cref="ProductionLog"/> based on the specified <see cref="ProductionLogUpdateRequest"/> DTO.
+    /// </summary>
+    /// <param name="request">The DTO containing updated values for the production log, including attempts for existing steps.</param>
+    /// <param name="modifiedBy">The identifier of the user performing the update, used for audit tracking.</param>
+    /// <returns>
+    /// A <see cref="Task{Boolean}"/> representing the asynchronous operation.
+    /// Returns <c>true</c> if the update succeeded, or <c>false</c> if the log was not found or an error occurred.
+    /// </returns>
+    /// <remarks>
+    /// Only existing <see cref="ProductionLogStep"/> attempts are updated. Steps themselves are not modified, 
+    /// but the mapping supports future addition or removal of steps.  
+    /// Foreign key relationships are maintained without attaching navigation properties to ensure EF Core tracking safety.  
+    /// Only the necessary steps and attempts are loaded for efficient updates.
+    /// </remarks>
+    Task<bool> UpdateAsync(ProductionLogUpdateRequest request, string modifiedBy);
+
+    /// <summary>
+    /// Saves or updates a batch of production logs for a single operator.
+    /// </summary>
+    /// <param name="formDtos">The collection of <see cref="ProductionLogFormDTO"/> objects to save or update.</param>
+    /// <param name="createdBy">Identifier of the user creating new logs.</param>
+    /// <param name="operatorId">Identifier of the operator associated with the logs.</param>
+    /// <param name="productId">The product ID associated with all logs in this batch.</param>
+    /// <param name="workInstructionId">The work instruction ID associated with all logs in this batch.</param>
+    /// <returns>A <see cref="ProductionLogBatchResult"/> containing counts and IDs of created and updated logs.</returns>
+    Task<ProductionLogBatchResult> SaveOrUpdateBatchAsync(
+        IEnumerable<ProductionLogFormDTO> formDtos,
+        string createdBy,
+        string operatorId,
+        int productId,
+        int workInstructionId);
+    
     /// <summary>
     /// Retrieves a List of ProductionLog objects asynchronously from a list of IDs
     /// </summary>

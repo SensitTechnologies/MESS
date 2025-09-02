@@ -1,4 +1,10 @@
 ﻿using MESS.Data.Context;
+using MESS.Services.DTOs.ProductionLogs.Batch;
+using MESS.Services.DTOs.ProductionLogs.CreateRequest;
+using MESS.Services.DTOs.ProductionLogs.Detail;
+using MESS.Services.DTOs.ProductionLogs.Form;
+using MESS.Services.DTOs.ProductionLogs.Summary;
+using MESS.Services.DTOs.ProductionLogs.UpdateRequest;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -40,76 +46,137 @@ public class ProductionLogService : IProductionLogService
     }
     
     /// <inheritdoc />
-    public async Task<bool> UpdateAsync(ProductionLog updatedLog)
-{
-    try
+    public async Task<List<ProductionLogSummaryDTO>> GetAllSummariesAsync()
     {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.ProductionLogs
+                .Include(p => p.Product)             // Only include what the DTO needs
+                .Include(p => p.WorkInstruction)
+                .Select(p => new ProductionLogSummaryDTO
+                {
+                    Id = p.Id,
+                    ProductName = p.Product != null ? p.Product.Name : string.Empty,
+                    WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
+                    ProductSerialNumber = p.ProductSerialNumber,
+                    CreatedOn = p.CreatedOn,
+                    LastModifiedOn = p.LastModifiedOn,
+                    LastModifiedBy = p.LastModifiedBy
+                })
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown when attempting to GetAllSummariesAsync Production Logs: {Exception}", e);
+            return [];
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<ProductionLogBatchResult> SaveOrUpdateBatchAsync(
+        IEnumerable<ProductionLogFormDTO> formDtos,
+        string createdBy,
+        string operatorId,
+        int productId,
+        int workInstructionId)
+    {
+        if (formDtos == null) throw new ArgumentNullException(nameof(formDtos));
+
+        var result = new ProductionLogBatchResult();
+
         await using var context = await _contextFactory.CreateDbContextAsync();
 
-        // Load existing ProductionLog with related data from DB
-        var existingLog = await context.ProductionLogs
-            .Include(p => p.LogSteps)
+        // Pre-fetch all existing logs for this operator and work instruction
+        var existingLogs = await context.ProductionLogs
+            .Where(l => l.OperatorId == operatorId && l.WorkInstructionId == workInstructionId)
+            .Include(l => l.LogSteps)
             .ThenInclude(ls => ls.Attempts)
-            .Include(p => p.WorkInstruction)
-            .ThenInclude(wi => wi!.Nodes)
-            .FirstOrDefaultAsync(p => p.Id == updatedLog.Id);
+            .ToListAsync();
+        
+        var logsToCreate = new List<ProductionLog>();
 
-        if (existingLog == null)
+        foreach (var formDto in formDtos)
         {
-            Log.Warning("ProductionLog with ID {LogId} not found for update.", updatedLog.Id);
-            return false;
-        }
-
-        // Update simple properties on ProductionLog
-        existingLog.LastModifiedOn = DateTimeOffset.UtcNow;
-
-        // Update or add LogSteps and their Attempts
-        foreach (var updatedStep in updatedLog.LogSteps)
-        {
-            // Try to find matching existing step
-            var existingStep = existingLog.LogSteps.FirstOrDefault(s => s.Id == updatedStep.Id);
-
-            if (existingStep == null)
+            if (formDto.Id > 0)
             {
-                // New step: add it 
-                existingLog.LogSteps.Add(updatedStep);
+                // Update path
+                var existingLog = existingLogs.FirstOrDefault(l => l.Id == formDto.Id);
+                if (existingLog != null)
+                {
+                    var updateRequest = formDto.ToUpdateRequest();
+                    existingLog.ApplyUpdateRequest(updateRequest, modifiedBy: createdBy);
+                    result.UpdatedCount++;
+                    result.UpdatedIds.Add(existingLog.Id);
+                }
+                else
+                {
+                    // Fallback: treat as new log if not found
+                    var createRequest = formDto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
+                    var newLog = createRequest.ToEntity() ?? throw new InvalidOperationException("Failed to map create request to entity.");
+                    logsToCreate.Add(newLog);
+                    result.CreatedCount++;
+                }
             }
             else
             {
-                // Sync Attempts
-                foreach (var updatedAttempt in updatedStep.Attempts)
-                {
-                    var existingAttempt = existingStep.Attempts.FirstOrDefault(a => a.Id == updatedAttempt.Id);
-
-                    if (existingAttempt == null)
-                    {
-                        // New attempt
-                        existingStep.Attempts.Add(updatedAttempt);
-                    }
-                    else
-                    {
-                        // Update attempt properties
-                        existingAttempt.SubmitTime = updatedAttempt.SubmitTime;
-                        existingAttempt.Success = updatedAttempt.Success;
-                        existingAttempt.Notes = updatedAttempt.Notes;
-                    }
-                }
+                // Create path
+                var createRequest = formDto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
+                var newLog = createRequest.ToEntity() ?? throw new InvalidOperationException("Failed to map create request to entity.");
+                logsToCreate.Add(newLog);
+                result.CreatedCount++;
             }
         }
 
-        // Save changes
+        // Bulk insert
+        if (logsToCreate.Count > 0)
+            await context.ProductionLogs.AddRangeAsync(logsToCreate);
+
+        // EF Core tracks changes to existing logs, so updates are auto-detected
+
         await context.SaveChangesAsync();
 
-        Log.Information("Successfully updated Production Log with ID: {LogId}", updatedLog.Id);
-        return true;
-    }
-    catch (Exception ex)
-    {
-        Log.Warning(ex, "Exception thrown when attempting to UpdateAsync, with ID: {LogId} in Production Logs, in ProductionLogService.", updatedLog.Id);
-        return false;
-    }
-}
+        // Collect IDs of newly created logs
+        result.CreatedIds.AddRange(logsToCreate.Select(l => l.Id));
 
+        return result;
+    }
+    
+    /// <inheritdoc />
+    public async Task<bool> UpdateAsync(ProductionLogUpdateRequest request, string modifiedBy)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load existing log with steps and attempts
+            var existingLog = await context.ProductionLogs
+                .Include(p => p.LogSteps)
+                .ThenInclude(ls => ls.Attempts)
+                .FirstOrDefaultAsync(p => p.Id == request.Id);
+
+            if (existingLog == null)
+            {
+                Log.Warning("ProductionLog with ID {LogId} not found for update.", request.Id);
+                return false;
+            }
+
+            // Apply updates from DTO (mapper handles step/attempt updates)
+            existingLog.ApplyUpdateRequest(request, modifiedBy);
+
+            // No need to attach WorkInstructionStep; EF tracks attempts via LogSteps
+            await context.SaveChangesAsync();
+
+            Log.Information("Successfully updated Production Log with ID: {LogId}", request.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Exception thrown when attempting to UpdateAsync Production Log with ID: {LogId}", request.Id);
+            return false;
+        }
+    }
 
     /// <inheritdoc />
     public async Task<ProductionLog?> GetByIdAsync(int id)
@@ -134,58 +201,81 @@ public class ProductionLogService : IProductionLogService
             return null;
         }
     }
-
+    
     /// <inheritdoc />
-    public async Task<int> CreateAsync(ProductionLog productionLog)
+    public async Task<ProductionLogDetailDTO?> GetDetailByIdAsync(int id)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
 
+            // Load log with its steps and attempts, tracked by EF
+            var log = await context.ProductionLogs
+                .Include(p => p.Product)
+                .Include(p => p.WorkInstruction)
+                .ThenInclude(w => w!.Nodes)
+                .Include(p => p.LogSteps)
+                .ThenInclude(ls => ls.Attempts)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (productionLog.Product is { Id: > 0 })
+            if (log == null)
             {
-                context.Entry(productionLog.Product).State = EntityState.Unchanged;
+                Log.Warning("ProductionLog with ID {LogId} not found in GetDetailByIdAsync.", id);
+                return null;
             }
-            
-            if (productionLog.WorkInstruction is { Id: > 0 })
+
+            // Map to DTO for UI consumption
+            return log.ToDetailDTO();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Exception thrown when attempting to GetDetailByIdAsync Production Log with ID: {LogId}", id);
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CreateAsync(ProductionLogCreateRequest request)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Map DTO → Entity
+            var productionLog = request.ToEntity();
+            if (productionLog == null)
             {
-                context.Entry(productionLog.WorkInstruction).State = EntityState.Unchanged;
-                
-                foreach (var node in productionLog.WorkInstruction.Nodes.Where(node => node.Id > 0))
-                {
-                    context.Entry(node).State = EntityState.Unchanged;
-                }
+                Log.Warning("ProductionLogCreateRequest mapping returned null");
+                return -1;
             }
-            
+
+            // Assign FK references only
+            if (request.ProductId > 0)
+                productionLog.ProductId = request.ProductId;
+
+            if (request.WorkInstructionId > 0)
+                productionLog.WorkInstructionId = request.WorkInstructionId;
+
+            foreach (var step in productionLog.LogSteps)
+            {
+                if (step.WorkInstructionStepId > 0)
+                    step.WorkInstructionStepId = step.WorkInstructionStepId;
+            }
+
+            // Add root entity; EF will cascade inserts to steps and attempts
             await context.ProductionLogs.AddAsync(productionLog);
             await context.SaveChangesAsync();
 
-            if (productionLog.LogSteps is {Count: > 0})
-            {
-                foreach (var logStep in productionLog.LogSteps)
-                {
-                    logStep.ProductionLogId = productionLog.Id;
-                    if (logStep.WorkInstructionStep is { Id: > 0 })
-                    {
-                        context.Entry(logStep.WorkInstructionStep).State = EntityState.Unchanged;
-                    }
-                }
-                await context.SaveChangesAsync();
-            }
-            
-            Log.Information("Successfully created Production Log with ID: {productionLogID}", productionLog.Id);
-            
+            Log.Information("Successfully created Production Log with ID: {LogId}", productionLog.Id);
             return productionLog.Id;
         }
         catch (Exception e)
         {
-            Log.Warning("Exception thrown when attempting to CreateAsync ProductionLog, in ProductionLogService: {Exception}", e.ToString());
+            Log.Warning("Exception thrown when attempting to CreateAsync ProductionLog: {Exception}", e);
             return -1;
         }
     }
-
+    
     /// <inheritdoc />
     public async Task<List<ProductionLog>?> GetProductionLogsByListOfIdsAsync(List<int> logIds)
     {
@@ -291,7 +381,7 @@ public class ProductionLogService : IProductionLogService
             .Where(p => p.WorkInstruction == workInstruction)
             .ToListAsync();
 
-        if (logs == null || logs.Count == 0)
+        if (logs.Count == 0)
             return false;
         
         context.ProductionLogs.RemoveRange(logs);
