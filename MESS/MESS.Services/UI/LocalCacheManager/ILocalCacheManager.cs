@@ -1,5 +1,6 @@
 ﻿using MESS.Services.DTOs;
 using MESS.Services.DTOs.ProductionLogs.Cache;
+using MESS.Services.DTOs.ProductionLogs.Form;
 
 namespace MESS.Services.UI.LocalCacheManager;
 using Data.Models;
@@ -13,7 +14,7 @@ public interface ILocalCacheManager
     /// <summary>
     /// Retrieves the current ProductionLog form data.
     /// </summary>
-    /// <returns>A <see cref="ProductionLogFormCacheDTO"/> object containing the ProductionLog form data.</returns>
+    /// <returns>A <see cref="ProductionLogFormDTO"/> object containing the ProductionLog form data.</returns>
     public Task<ProductionLogCacheDTO> GetProductionLogFormAsync();
     
     /// <summary>
@@ -27,7 +28,7 @@ public interface ILocalCacheManager
     /// <summary>
     /// Retrieves the cached batch of production log form DTOs.
     /// </summary>
-    /// <returns>A task that returns the list of <see cref="ProductionLogFormCacheDTO"/> objects. Returns an empty list if nothing is cached.</returns>
+    /// <returns>A task that returns the list of <see cref="ProductionLogCacheDTO"/> objects. Returns an empty list if nothing is cached.</returns>
     Task<List<ProductionLogCacheDTO>> GetProductionLogBatchAsync();
 
     /// <summary>
