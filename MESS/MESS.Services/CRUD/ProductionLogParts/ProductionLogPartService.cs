@@ -1,5 +1,6 @@
 ﻿using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.DTOs.ProductionLogs.Form;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -46,9 +47,9 @@ public class ProductionLogPartService : IProductionLogPartService
 
     
     /// <inheritdoc />
-    public async Task<bool> SaveAllLogPartsAsync(List<ProductionLog> savedLogs)
+    public async Task<bool> SaveAllLogPartsAsync(List<ProductionLogFormDTO> savedLogs)
     {
-        bool allSaved = true;
+        var allSaved = true;
 
         foreach (var group in _logEntries.Values)
         {

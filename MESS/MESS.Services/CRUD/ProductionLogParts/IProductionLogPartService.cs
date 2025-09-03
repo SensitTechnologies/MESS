@@ -1,4 +1,5 @@
 ﻿using MESS.Data.Models;
+using MESS.Services.DTOs.ProductionLogs.Form;
 
 namespace MESS.Services.CRUD.ProductionLogParts;
 
@@ -42,7 +43,7 @@ public interface IProductionLogPartService
     /// </summary>
     /// <param name="savedLogs">The list of production logs that have been saved, mapped by index.</param>
     /// <returns><c>true</c> if all parts were saved successfully; otherwise, <c>false</c>.</returns>
-    Task<bool> SaveAllLogPartsAsync(List<ProductionLog> savedLogs);
+    Task<bool> SaveAllLogPartsAsync(List<ProductionLogFormDTO> savedLogs);
     
     /// <summary>
     /// Retrieves all SerialNumberLogs Async
