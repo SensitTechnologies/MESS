@@ -1,4 +1,6 @@
-﻿namespace MESS.Services.UI.ProductionLogEvent;
+﻿using MESS.Services.DTOs.ProductionLogs.Form;
+
+namespace MESS.Services.UI.ProductionLogEvent;
 using Data.Models;
 /// <summary>
 /// Interface for managing production log events and related details.
@@ -8,7 +10,7 @@ public interface IProductionLogEventService
     /// <summary>
     /// Gets or sets the current production logs.
     /// </summary>
-    public List<ProductionLog> CurrentProductionLogs { get; set; }
+    public List<ProductionLogFormDTO> CurrentProductionLogs { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the current product.
@@ -63,12 +65,12 @@ public interface IProductionLogEventService
     /// <summary>
     /// Event triggered to handle auto-save functionality.
     /// </summary>
-    public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
+    public event Func<List<ProductionLogFormDTO>, Task>? AutoSaveTriggered;
     
     /// <summary>
     /// Event invoked when it's time to save logs to the database.
     /// </summary>
-    public event Func<List<ProductionLog>, Task>? DbSaveTriggered;
+    public event Func<List<ProductionLogFormDTO>, Task>? DbSaveTriggered;
 
 
     /// <summary>
@@ -115,7 +117,7 @@ public interface IProductionLogEventService
     /// Gets the current list of production logs in memory.
     /// </summary>
     /// <returns>A list of current production logs. Returns an empty list if none are set.</returns>
-    List<ProductionLog> GetCurrentProductionLogs();
+    List<ProductionLogFormDTO> GetCurrentProductionLogs();
 
     /// <summary>
     /// Sets the current list of production logs in memory.
@@ -123,7 +125,7 @@ public interface IProductionLogEventService
     /// </summary>
     /// <param name="productionLogs">The list of production logs to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task SetCurrentProductionLogs(List<ProductionLog> productionLogs);
+    Task SetCurrentProductionLogs(List<ProductionLogFormDTO> productionLogs);
 
     /// <summary>
     /// Starts a periodic timer that ensures dirty production logs are persisted to the database

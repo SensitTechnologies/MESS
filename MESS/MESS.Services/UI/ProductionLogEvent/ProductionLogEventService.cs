@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
+using MESS.Services.DTOs.ProductionLogs.Form;
 using Serilog;
 
 namespace MESS.Services.UI.ProductionLogEvent;
-using Data.Models;
+
 /// <inheritdoc />
 public class ProductionLogEventService : IProductionLogEventService
 {
@@ -29,13 +30,13 @@ public class ProductionLogEventService : IProductionLogEventService
     public event Action? LineOperatorDetailsChanged;
     
     /// <inheritdoc />
-    public event Func<List<ProductionLog>, Task>? AutoSaveTriggered;
+    public event Func<List<ProductionLogFormDTO>, Task>? AutoSaveTriggered;
     
     /// <inheritdoc />
-    public event Func<List<ProductionLog>, Task>? DbSaveTriggered;
+    public event Func<List<ProductionLogFormDTO>, Task>? DbSaveTriggered;
 
     /// <inheritdoc />
-    public List<ProductionLog> CurrentProductionLogs { get; set; } = [];
+    public List<ProductionLogFormDTO> CurrentProductionLogs { get; set; } = [];
 
     /// <inheritdoc />
     public string CurrentProductName { get; set; } = "";
@@ -47,9 +48,9 @@ public class ProductionLogEventService : IProductionLogEventService
     public string CurrentLineOperatorName { get; set; } = "";
     
     /// <inheritdoc />
-    public bool IsSaved { get; set; } = false;
+    public bool IsSaved { get; set; }
     
-    private bool IsDirty { get; set; } = false;
+    private bool IsDirty { get; set; }
 
     /// <inheritdoc />
     public void DisableAutoSave()
@@ -72,7 +73,7 @@ public class ProductionLogEventService : IProductionLogEventService
 
     private async Task TriggerAutoSaveAsync()
     {
-        if (CurrentProductionLogs == null || !_shouldTriggerAutoSave)
+        if (!_shouldTriggerAutoSave)
         {
             Debug.WriteLine("Cannot trigger autosave. Production log or timer is null.");
             return;
@@ -120,13 +121,13 @@ public class ProductionLogEventService : IProductionLogEventService
     }
 
     /// <inheritdoc />
-    public List<ProductionLog> GetCurrentProductionLogs()
+    public List<ProductionLogFormDTO> GetCurrentProductionLogs()
     {
         return CurrentProductionLogs;
     }
 
     /// <inheritdoc />
-    public async Task SetCurrentProductionLogs(List<ProductionLog> productionLogs)
+    public async Task SetCurrentProductionLogs(List<ProductionLogFormDTO> productionLogs)
     {
         try
         {
@@ -154,7 +155,7 @@ public class ProductionLogEventService : IProductionLogEventService
 
         _dbSaveTimer = new Timer(async _ =>
         {
-            if (IsDirty && DbSaveTriggered is not null && CurrentProductionLogs is not null)
+            if (IsDirty && DbSaveTriggered is not null)
             {
                 try
                 {
@@ -205,7 +206,7 @@ public class ProductionLogEventService : IProductionLogEventService
     /// <inheritdoc />
     public async Task<bool> TryTriggerDbSaveAsync()
     {
-        if (DbSaveTriggered is null || CurrentProductionLogs is null)
+        if (DbSaveTriggered is null)
             return false;
 
         try
