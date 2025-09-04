@@ -1,7 +1,6 @@
 ﻿using MESS.Services.DTOs;
 using MESS.Services.DTOs.ProductionLogs.Cache;
-using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Cache;
-using MESS.Services.DTOs.ProductionLogs.LogSteps.Cache;
+using MESS.Services.DTOs.ProductionLogs.Form;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Serilog;
 
@@ -45,17 +44,17 @@ public class LocalCacheManager : ILocalCacheManager
                 return result.Value;
             }
 
-            return new List<ProductionLogCacheDTO>();
+            return [];
         }
         catch (Exception ex)
         {
             Log.Warning("Error while retrieving ProductionLogBatchAsync: {Exception}", ex);
-            return new List<ProductionLogCacheDTO>();
+            return [];
         }
     }
     
     /// <inheritdoc />
-    public async Task SetProductionLogBatchAsync(List<ProductionLog> logs)
+    public async Task SetProductionLogBatchAsync(List<ProductionLogFormDTO>? logs)
     {
         try
         {
@@ -65,8 +64,8 @@ public class LocalCacheManager : ILocalCacheManager
                 return;
             }
 
-            var dtoList = logs.Select(MapProductionLogToDto).ToList();
-            
+            var dtoList = logs.ToCacheDTOList(); //using mapper here
+
             await _protectedLocalStorage.SetAsync(PRODUCTION_LOG_BATCH_KEY, dtoList);
         }
         catch (Exception ex)
@@ -89,32 +88,6 @@ public class LocalCacheManager : ILocalCacheManager
         }
     }
     
-    private static ProductionLogCacheDTO MapProductionLogToDto(ProductionLog productionLog)
-    {
-        var productionLogFormDto = new ProductionLogCacheDTO();
-    
-        foreach (var step in productionLog.LogSteps)
-        {
-            var stepDto = new LogStepCacheDTO
-            {
-                WorkInstructionStepId = step.WorkInstructionStepId,
-                ProductionLogId = step.ProductionLogId,
-                // Map all attempts
-                Attempts = step.Attempts.Select(a => new StepAttemptCacheDTO
-                {
-                    Success = a.Success,
-                    SubmitTime = a.SubmitTime,
-                    FailureNote = a.Notes,
-                }).ToList()
-            };
-
-            productionLogFormDto.LogSteps.Add(stepDto);
-        }
-
-        productionLogFormDto.ProductionLogId = productionLog.Id;
-        return productionLogFormDto;
-    }
-
     /// <inheritdoc />
     public async Task<ProductionLogCacheDTO> GetProductionLogFormAsync()
     {

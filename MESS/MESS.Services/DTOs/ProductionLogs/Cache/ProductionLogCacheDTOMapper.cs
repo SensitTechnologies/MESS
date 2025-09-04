@@ -1,6 +1,7 @@
-using MESS.Services.DTOs.ProductionLogs.Cache;
 using MESS.Services.DTOs.ProductionLogs.Form;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Cache;
+
+namespace MESS.Services.DTOs.ProductionLogs.Cache;
 
 /// <summary>
 /// Provides mapping between <see cref="ProductionLogCacheDTO"/> and <see cref="ProductionLogFormDTO"/>.
@@ -51,4 +52,16 @@ public static class ProductionLogCacheDTOMapper
                 .ToList()
         };
     }
+    
+    /// <summary>
+    /// Maps a collection of cached production logs to a list of form DTOs.
+    /// </summary>
+    public static List<ProductionLogFormDTO> ToFormDTOList(this IEnumerable<ProductionLogCacheDTO> cacheDtos)
+        => cacheDtos.Select(dto => dto.ToFormDTO()).ToList();
+
+    /// <summary>
+    /// Maps a collection of form DTOs to a list of cached production logs.
+    /// </summary>
+    public static List<ProductionLogCacheDTO> ToCacheDTOList(this IEnumerable<ProductionLogFormDTO> formDtos)
+        => formDtos.Select(dto => dto.ToCacheDTO()).ToList();
 }
