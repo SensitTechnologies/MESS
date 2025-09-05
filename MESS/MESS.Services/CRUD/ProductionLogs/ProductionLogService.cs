@@ -82,64 +82,93 @@ public class ProductionLogService : IProductionLogService
         int productId,
         int workInstructionId)
     {
-        if (formDtos == null) throw new ArgumentNullException(nameof(formDtos));
-
-        var result = new ProductionLogBatchResult();
-
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        
-        var product = await context.Products.FindAsync(productId)
-                      ?? throw new InvalidOperationException($"Product {productId} not found.");
-        
-        var workInstruction = await context.WorkInstructions.FindAsync(workInstructionId)
-                              ?? throw new InvalidOperationException($"WorkInstruction {workInstructionId} not found.");
-
-        // Pre-fetch all existing logs for this operator and work instruction
-        var existingLogs = await context.ProductionLogs
-            .Where(l => l.OperatorId == operatorId && l.WorkInstructionId == workInstructionId)
-            .Include(l => l.LogSteps)
-            .ThenInclude(ls => ls.Attempts)
-            .ToListAsync();
-        var existingLogsDict = existingLogs.ToDictionary(l => l.Id);
-        
-        var logsToCreate = new List<ProductionLog>();
-
-        foreach (var formDto in formDtos)
+        try
         {
-            if (formDto.Id > 0 && existingLogsDict.TryGetValue(formDto.Id, out var existingLog))
+            ArgumentNullException.ThrowIfNull(formDtos);
+
+            var result = new ProductionLogBatchResult();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var product = await context.Products.FindAsync(productId)
+                          ?? throw new InvalidOperationException($"Product {productId} not found.");
+
+            var workInstruction = await context.WorkInstructions.FindAsync(workInstructionId)
+                                  ?? throw new InvalidOperationException(
+                                      $"WorkInstruction {workInstructionId} not found.");
+
+            Log.Information(
+                "Starting SaveOrUpdateBatchAsync for ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}, CreatedBy={CreatedBy}",
+                productId, workInstructionId, operatorId, createdBy);
+
+            // Pre-fetch all existing logs for this operator and work instruction
+            var existingLogs = await context.ProductionLogs
+                .Where(l => l.OperatorId == operatorId && l.WorkInstructionId == workInstructionId)
+                .Include(l => l.LogSteps)
+                .ThenInclude(ls => ls.Attempts)
+                .ToListAsync();
+
+            Log.Debug(
+                "Fetched {ExistingCount} existing logs for OperatorId={OperatorId}, WorkInstructionId={WorkInstructionId}",
+                existingLogs.Count, operatorId, workInstructionId);
+            var existingLogsDict = existingLogs.ToDictionary(l => l.Id);
+
+            var logsToCreate = new List<ProductionLog>();
+
+            foreach (var formDto in formDtos)
             {
-                existingLog.ApplyUpdateRequest(formDto.ToUpdateRequest(), modifiedBy: createdBy);
-                result.UpdatedCount++;
-                result.UpdatedIds.Add(existingLog.Id);
+                if (formDto.Id > 0 && existingLogsDict.TryGetValue(formDto.Id, out var existingLog))
+                {
+                    existingLog.ApplyUpdateRequest(formDto.ToUpdateRequest(), modifiedBy: createdBy);
+                    result.UpdatedCount++;
+                    result.UpdatedIds.Add(existingLog.Id);
+                    Log.Debug("Updated existing ProductionLog Id={LogId}", existingLog.Id);
+                }
+                else
+                {
+                    logsToCreate.Add(CreateLog(formDto));
+                    result.CreatedCount++;
+                    Log.Debug("Queued new ProductionLog for creation (TempId={TempId})", formDto.Id);
+                }
             }
-            else
+
+            // Bulk insert
+            if (logsToCreate.Count > 0)
             {
-                logsToCreate.Add(CreateLog(formDto));
-                result.CreatedCount++;
+                await context.ProductionLogs.AddRangeAsync(logsToCreate);
+                Log.Information("Queued {CreatedCount} new ProductionLogs for creation", logsToCreate.Count);
+            }
+
+            // EF Core tracks changes to existing logs, so updates are auto-detected
+
+            await context.SaveChangesAsync();
+
+            // Collect IDs of newly created logs
+            result.CreatedIds.AddRange(logsToCreate.Select(l => l.Id));
+
+            Log.Information(
+                "Successfully processed batch: Created={CreatedCount}, Updated={UpdatedCount}, ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}",
+                result.CreatedCount, result.UpdatedCount, productId, workInstructionId, operatorId);
+
+            return result;
+
+            // Local Helper Function
+            ProductionLog CreateLog(ProductionLogFormDTO dto)
+            {
+                var createRequest = dto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
+                var log = createRequest.ToEntity() ??
+                          throw new InvalidOperationException("Failed to map create request to entity.");
+                log.Product = product;
+                log.WorkInstruction = workInstruction;
+                return log;
             }
         }
-        
-        // Bulk insert
-        if (logsToCreate.Count > 0)
-            await context.ProductionLogs.AddRangeAsync(logsToCreate);
-
-        // EF Core tracks changes to existing logs, so updates are auto-detected
-
-        await context.SaveChangesAsync();
-
-        // Collect IDs of newly created logs
-        result.CreatedIds.AddRange(logsToCreate.Select(l => l.Id));
-
-        return result;
-        
-        // Local Helper Function
-        ProductionLog CreateLog(ProductionLogFormDTO dto)
+        catch (Exception ex)
         {
-            var createRequest = dto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
-            var log = createRequest.ToEntity() ?? throw new InvalidOperationException("Failed to map create request to entity.");
-            log.Product = product;
-            log.WorkInstruction = workInstruction;
-            return log;
+            Log.Error(ex,
+                "Exception thrown in SaveOrUpdateBatchAsync for ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}, CreatedBy={CreatedBy}",
+                productId, workInstructionId, operatorId, createdBy);
+            throw; // rethrow to preserve stack trace
         }
     }
     
