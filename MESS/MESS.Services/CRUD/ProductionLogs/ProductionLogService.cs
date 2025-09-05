@@ -87,6 +87,12 @@ public class ProductionLogService : IProductionLogService
         var result = new ProductionLogBatchResult();
 
         await using var context = await _contextFactory.CreateDbContextAsync();
+        
+        var product = await context.Products.FindAsync(productId)
+                      ?? throw new InvalidOperationException($"Product {productId} not found.");
+        
+        var workInstruction = await context.WorkInstructions.FindAsync(workInstructionId)
+                              ?? throw new InvalidOperationException($"WorkInstruction {workInstructionId} not found.");
 
         // Pre-fetch all existing logs for this operator and work instruction
         var existingLogs = await context.ProductionLogs
@@ -94,41 +100,25 @@ public class ProductionLogService : IProductionLogService
             .Include(l => l.LogSteps)
             .ThenInclude(ls => ls.Attempts)
             .ToListAsync();
+        var existingLogsDict = existingLogs.ToDictionary(l => l.Id);
         
         var logsToCreate = new List<ProductionLog>();
 
         foreach (var formDto in formDtos)
         {
-            if (formDto.Id > 0)
+            if (formDto.Id > 0 && existingLogsDict.TryGetValue(formDto.Id, out var existingLog))
             {
-                // Update path
-                var existingLog = existingLogs.FirstOrDefault(l => l.Id == formDto.Id);
-                if (existingLog != null)
-                {
-                    var updateRequest = formDto.ToUpdateRequest();
-                    existingLog.ApplyUpdateRequest(updateRequest, modifiedBy: createdBy);
-                    result.UpdatedCount++;
-                    result.UpdatedIds.Add(existingLog.Id);
-                }
-                else
-                {
-                    // Fallback: treat as new log if not found
-                    var createRequest = formDto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
-                    var newLog = createRequest.ToEntity() ?? throw new InvalidOperationException("Failed to map create request to entity.");
-                    logsToCreate.Add(newLog);
-                    result.CreatedCount++;
-                }
+                existingLog.ApplyUpdateRequest(formDto.ToUpdateRequest(), modifiedBy: createdBy);
+                result.UpdatedCount++;
+                result.UpdatedIds.Add(existingLog.Id);
             }
             else
             {
-                // Create path
-                var createRequest = formDto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
-                var newLog = createRequest.ToEntity() ?? throw new InvalidOperationException("Failed to map create request to entity.");
-                logsToCreate.Add(newLog);
+                logsToCreate.Add(CreateLog(formDto));
                 result.CreatedCount++;
             }
         }
-
+        
         // Bulk insert
         if (logsToCreate.Count > 0)
             await context.ProductionLogs.AddRangeAsync(logsToCreate);
@@ -141,6 +131,16 @@ public class ProductionLogService : IProductionLogService
         result.CreatedIds.AddRange(logsToCreate.Select(l => l.Id));
 
         return result;
+        
+        // Local Helper Function
+        ProductionLog CreateLog(ProductionLogFormDTO dto)
+        {
+            var createRequest = dto.ToCreateRequest(createdBy, operatorId, productId, workInstructionId);
+            var log = createRequest.ToEntity() ?? throw new InvalidOperationException("Failed to map create request to entity.");
+            log.Product = product;
+            log.WorkInstruction = workInstruction;
+            return log;
+        }
     }
     
     /// <inheritdoc />
@@ -218,14 +218,11 @@ public class ProductionLogService : IProductionLogService
                 .ThenInclude(ls => ls.Attempts)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (log == null)
-            {
-                Log.Warning("ProductionLog with ID {LogId} not found in GetDetailByIdAsync.", id);
-                return null;
-            }
+            if (log != null) return log.ToDetailDTO();
+            Log.Warning("ProductionLog with ID {LogId} not found in GetDetailByIdAsync.", id);
+            return null;
 
             // Map to DTO for UI consumption
-            return log.ToDetailDTO();
         }
         catch (Exception ex)
         {
@@ -325,7 +322,7 @@ public class ProductionLogService : IProductionLogService
                 operatorId,
                 e.ToString()
             );
-            return new List<ProductionLog>();
+            return [];
         }
     }
     
