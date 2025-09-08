@@ -101,21 +101,37 @@ public class ProductionLogService : IProductionLogService
                 "Starting SaveOrUpdateBatchAsync for ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}, CreatedBy={CreatedBy}",
                 productId, workInstructionId, operatorId, createdBy);
 
-            // Pre-fetch all existing logs for this operator and work instruction
-            var existingLogs = await context.ProductionLogs
-                .Where(l => l.OperatorId == operatorId && l.WorkInstructionId == workInstructionId)
-                .Include(l => l.LogSteps)
-                .ThenInclude(ls => ls.Attempts)
-                .ToListAsync();
+            // Gather IDs of logs that might already exist
+            var productionLogFormDtos = formDtos.ToList();
+            var dtoIds = productionLogFormDtos.Where(f => f.Id > 0).Select(f => f.Id).Distinct().ToList();
+            
+            var existingLogs = dtoIds.Count > 0
+                ? await context.ProductionLogs
+                    .Where(l => dtoIds.Contains(l.Id))
+                    .Include(l => l.LogSteps)
+                    .ThenInclude(ls => ls.Attempts)
+                    .ToListAsync()
+                : [];
+           
+            if (existingLogs.Count > 0)
+            {
+                Log.Debug(
+                    "Fetched {ExistingCount} existing logs (targeted lookup) for OperatorId={OperatorId}, WorkInstructionId={WorkInstructionId}",
+                    existingLogs.Count, operatorId, workInstructionId);
+            }
+            else
+            {
+                Log.Debug(
+                    "All logs in batch are new — skipping lookup for OperatorId={OperatorId}, WorkInstructionId={WorkInstructionId}",
+                    operatorId, workInstructionId);
+            }
 
-            Log.Debug(
-                "Fetched {ExistingCount} existing logs for OperatorId={OperatorId}, WorkInstructionId={WorkInstructionId}",
-                existingLogs.Count, operatorId, workInstructionId);
-            var existingLogsDict = existingLogs.ToDictionary(l => l.Id);
+            var existingLogsDict = existingLogs.ToDictionary(l => l.Id, l => l);
+
 
             var logsToCreate = new List<ProductionLog>();
 
-            foreach (var formDto in formDtos)
+            foreach (var formDto in productionLogFormDtos)
             {
                 if (formDto.Id > 0 && existingLogsDict.TryGetValue(formDto.Id, out var existingLog))
                 {
