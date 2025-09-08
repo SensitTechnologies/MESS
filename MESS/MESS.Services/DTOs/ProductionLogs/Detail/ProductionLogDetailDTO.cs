@@ -37,6 +37,11 @@ public class ProductionLogDetailDTO
     /// Gets or sets the date and time when the production log was created, including time zone offset.
     /// </summary>
     public DateTimeOffset CreatedOn { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the user who first created the production log.
+    /// </summary>
+    public string? CreatedBy { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time when the production log was last modified, including time zone offset.

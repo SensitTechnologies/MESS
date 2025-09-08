@@ -20,7 +20,7 @@ public static class ProductionLogDetailDTOMapper
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="log"/> is <c>null</c>.</exception>
     public static ProductionLogDetailDTO ToDetailDTO(this ProductionLog log)
     {
-        if (log == null) throw new ArgumentNullException(nameof(log));
+        ArgumentNullException.ThrowIfNull(log);
 
         return new ProductionLogDetailDTO
         {
@@ -30,6 +30,7 @@ public static class ProductionLogDetailDTOMapper
             ProductSerialNumber = log.ProductSerialNumber,
             FromBatchOf = log.FromBatchOf,
             CreatedOn = log.CreatedOn,
+            CreatedBy = log.CreatedBy,
             LastModifiedOn = log.LastModifiedOn,
             LastModifiedBy = log.LastModifiedBy,
             Attempts = log.LogSteps
