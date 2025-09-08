@@ -42,5 +42,5 @@ public static class StepAttemptDetailDTOMapper
     /// Returns an empty list if <paramref name="attempts"/> is null.
     /// </returns>
     public static List<StepAttemptDetailDTO> ToDetailDTOList(this IEnumerable<ProductionLogStepAttempt> attempts)
-        => attempts?.Select(ToDetailDTO).ToList() ?? new List<StepAttemptDetailDTO>();
+        => attempts?.Select(ToDetailDTO).ToList() ?? [];
 }
