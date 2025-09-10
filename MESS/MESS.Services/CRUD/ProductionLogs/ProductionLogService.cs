@@ -222,6 +222,13 @@ public class ProductionLogService : IProductionLogService
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<bool> UpdateDetailAsync(ProductionLogDetailDTO dto)
+    {
+        var request = dto.ToUpdateRequest();
+        return await UpdateAsync(request, dto.LastModifiedBy ?? "system");
+    }
 
     /// <inheritdoc />
     public async Task<ProductionLog?> GetByIdAsync(int id)

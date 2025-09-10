@@ -78,6 +78,22 @@ public interface IProductionLogService
     /// Only the necessary steps and attempts are loaded for efficient updates.
     /// </remarks>
     Task<bool> UpdateAsync(ProductionLogUpdateRequest request, string modifiedBy);
+    
+    /// <summary>
+    /// Updates an existing production log using a <see cref="ProductionLogDetailDTO"/> as input.
+    /// </summary>
+    /// <param name="dto">
+    /// The detail DTO containing the flattened step attempts and metadata for the log to update.
+    /// </param>
+    /// <returns>
+    /// A task that resolves to <c>true</c> if the update succeeded; otherwise, <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// This method converts the flattened attempt structure in <paramref name="dto"/> into an
+    /// update request grouped by log step. The <see cref="ProductionLogDetailDTO.LastModifiedBy"/>
+    /// value is used when available; otherwise, the default user identifier "system" is applied.
+    /// </remarks>
+    Task<bool> UpdateDetailAsync(ProductionLogDetailDTO dto);
 
     /// <summary>
     /// Saves or updates a batch of production logs for a single operator.
