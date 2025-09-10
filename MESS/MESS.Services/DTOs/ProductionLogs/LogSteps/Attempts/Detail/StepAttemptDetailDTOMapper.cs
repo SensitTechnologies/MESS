@@ -20,7 +20,7 @@ public static class StepAttemptDetailDTOMapper
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="attempt"/> is null.</exception>
     public static StepAttemptDetailDTO ToDetailDTO(this ProductionLogStepAttempt attempt)
     {
-        if (attempt == null) throw new ArgumentNullException(nameof(attempt));
+        ArgumentNullException.ThrowIfNull(attempt);
 
         return new StepAttemptDetailDTO
         {
