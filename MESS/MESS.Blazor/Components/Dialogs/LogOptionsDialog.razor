@@ -1,7 +1,9 @@
 ﻿@using MESS.Data.Models
 @using MESS.Services.CRUD.ProductionLogs
+@using MESS.Services.DTOs.ProductionLogs.Detail
+@using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Detail
 @using Microsoft.AspNetCore.Components.Authorization
-@implements IDialogContentComponent<(ProductionLog, bool)>
+@implements IDialogContentComponent<(ProductionLogDetailDTO, bool)>
 @inject IProductionLogService ProductionLogService
 @inject IToastService ToastService
 @inject AuthenticationStateProvider AuthProvider
@@ -25,8 +27,8 @@
                 Product SN:<br/>
             </p>
             <p class="ms-1">
-                @shownLog?.Product?.Name<br/>
-                @shownLog?.WorkInstruction?.Title<br/>
+                @shownLog.ProductName<br/>
+                @shownLog.WorkInstructionName<br/>
                 @shownLog?.ProductSerialNumber<br/>
             </p>
         </div>
@@ -63,13 +65,13 @@
               Height="250px"
               Loading="@IsLoading"
               Class="border rounded-3 pt-1"
-              TableClass="fixed-header-cell table table-striped ">
+              TableClass="fixed-header-cell table table-striped">
         <ColGroup>
-            <col style="width: 45%"/>
-            <col/>
-            <col/>
-            <col style="width: 20%"/>
-            <col/>
+            <col style="width: 45%" />
+            <col />
+            <col />
+            <col style="width: 20%" />
+            <col />
         </ColGroup>
         <HeaderContent>
             <MudTh>Step Name</MudTh>
@@ -79,37 +81,38 @@
             <MudTh>Delete</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd Style="text-wrap: balance;" DataLabel="Step Name">@context.ProductionLogStep?.WorkInstructionStep?.Name.Trim()</MudTd>
-            <MudTd Style="text-wrap: balance;" DataLabel="Submit Time">@context.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
-            <MudTd Style="" DataLabel="Status">
-                <button class="btn btn-sm @((context.Success.HasValue && context.Success.Value) ? "btn-success confirmed" : "btn-outline-success pending")"
+            <MudTd DataLabel="Step Name">@context.StepName</MudTd>
+            <MudTd DataLabel="Submit Time">@context.SubmitTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd DataLabel="Status">
+                <button class="btn btn-sm @(context.IsSuccess ? "btn-success confirmed" : "btn-outline-success pending")"
                         @onclick="() => UpdateStatus(context, true)">
                     Success
                 </button>
-                <button class="btn btn-sm @(context.Success == false ? "btn-danger failed" : "btn-outline-danger")" 
+                <button class="btn btn-sm @(!context.IsSuccess ? "btn-danger failed" : "btn-outline-danger")"
                         @onclick="() => UpdateStatus(context, false)">
                     Failure
                 </button>
             </MudTd>
-            <MudTd Style="text-wrap: balance;" DataLabel="Failure Notes">
-                @if (context.Success != true)  @* Show textarea only if not success *@
+            <MudTd DataLabel="Failure Notes">
+                @if (!context.IsSuccess)  @* Show textarea only if not success *@
                 {
                     <textarea class="form-control form-control-sm"
-                      rows="1"
-                      @bind="@context.Notes"
-                      placeholder="Optional failure note"/>
+                          rows="1"
+                          @bind="context.FailureNote"
+                          placeholder="Optional failure note" />
                 }
             </MudTd>
-            <MudTd Style="" DataLabel="Delete">
+            <MudTd DataLabel="Delete">
                 <button class="btn btn-sm btn-danger" @onclick="@(() => HandleAttemptDeleted(context))">
                     Delete
                 </button>
             </MudTd>
         </RowTemplate>
         <PagerContent>
-            <MudTablePager/>
+            <MudTablePager />
         </PagerContent>
     </MudTable>
+
 </FluentDialogBody>
 
 @* Footer *@
@@ -130,10 +133,10 @@
     /// and a boolean expressing whether to show personal details or not
     /// </summary>
     [Parameter]
-    public (ProductionLog, bool) Content { get; set; } = default!;
-    private ProductionLog shownLog = default!;
-    private List<ProductionLogStepAttempt> shownAttempts = [];
-    private ProductionLogStepAttempt[] attemptsToDelete = [];
+    public (ProductionLogDetailDTO, bool) Content { get; set; } = default!;
+    private ProductionLogDetailDTO shownLog = default!;
+    private List<StepAttemptDetailDTO> shownAttempts = [];
+    private StepAttemptDetailDTO[] attemptsToDelete = [];
     private bool IsLoading { get; set; } = true;
     
     private bool ShowPersonalInfo => Content.Item2;
@@ -144,8 +147,8 @@
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
     
-    private IEnumerable<ProductionLogStepAttempt> pagedData = new List<ProductionLogStepAttempt>();
-    private MudTable<ProductionLogStepAttempt> table = new MudTable<ProductionLogStepAttempt>();
+    private IEnumerable<StepAttemptDetailDTO> pagedData = new List<StepAttemptDetailDTO>();
+    private MudTable<StepAttemptDetailDTO> table = new();
     private int totalItems;
 
     /// <inheritdoc />
@@ -157,73 +160,62 @@
 
     private async Task GrabServerData()
     {
-        IsLoading = true; 
-        shownLog = await ProductionLogService.GetByIdAsync(Content.Item1.Id) ?? default!;
-        shownAttempts = shownLog.LogSteps.SelectMany(step => step.Attempts).ToList() ?? [];
+        IsLoading = true;
+
+        // Get fresh DTO from service
+        shownLog = await ProductionLogService.GetDetailByIdAsync(Content.Item1.Id) ?? new ProductionLogDetailDTO();
+
+        // Flattened attempts are already included in the DTO
+        shownAttempts = shownLog.Attempts?.ToList() ?? [];
+
         IsLoading = false;
     }
     
-    private async Task<TableData<ProductionLogStepAttempt>> ServerReload(TableState state, CancellationToken token)
+    private async Task<TableData<StepAttemptDetailDTO>> ServerReload(TableState state, CancellationToken token)
     {
-        IEnumerable<ProductionLogStepAttempt> data = shownAttempts;
+        IEnumerable<StepAttemptDetailDTO> data = shownAttempts;
         await Task.Delay(20, token);
         totalItems = data.Count();
         pagedData = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
-        return new TableData<ProductionLogStepAttempt>() {TotalItems = totalItems, Items = pagedData};
+        return new TableData<StepAttemptDetailDTO>() {TotalItems = totalItems, Items = pagedData};
     }
     
     private async Task SaveAsync()
     {
-        // delete everything
+        // If all attempts are removed → delete log
         if (shownAttempts.Count <= 0)
         {
             await DeleteLog();
             return;
         }
-        
-        if (shownAttempts.Count > 0)
-        {
-            foreach (var step in shownLog.LogSteps)
-            {
-                step.Attempts.Clear();
-                foreach (var attempt in  shownAttempts)
-                {
-                    if (attempt.ProductionLogStep == step)
-                    {
-                        step.Attempts.Add(attempt);
-                    }
-                }
-            }
-        }
-        
-        
-        // delete some stuff
+
+        // Handle deletions
         if (attemptsToDelete.Length > 0)
         {
             foreach (var attempt in attemptsToDelete)
             {
-                // Explicitly Delete the Attempt
-                await ProductionLogService.DeleteAttemptAsync(attempt.Id);
-            }   
-            // refresh from server 
+                await ProductionLogService.DeleteAttemptAsync(attempt.AttemptId);
+            }
+
+            // Refresh from server
             await GrabServerData();
         }
 
+        // Update metadata (last modified by)
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
         if (user.Identity is { IsAuthenticated: true })
         {
             var username = user.Identity.Name;
-
             if (!string.IsNullOrWhiteSpace(username))
             {
                 shownLog.LastModifiedBy = username;
             }
         }
+        
+        var success = await ProductionLogService.UpdateDetailAsync(shownLog);
 
-
-        var success = await ProductionLogService.UpdateAsync(shownLog);
         if (success)
         {
             ToastService.ShowSuccess("Production log saved successfully.");
@@ -232,9 +224,10 @@
         {
             ToastService.ShowError("Failed to save production log.");
         }
+
         await Dialog.CloseAsync(Content);
     }
-
+    
     private async Task DeleteLog()
     {
         var deletionResult = await ProductionLogService.DeleteProductionLogAsync(shownLog.Id);
@@ -245,28 +238,27 @@
             ToastService.ShowWarning("There was a problem deleting this log. Please try again");
     }
     
-    private Task UpdateStatus(ProductionLogStepAttempt attempt, bool isSuccess)
+    private Task UpdateStatus(StepAttemptDetailDTO attempt, bool isSuccess)
     {
-        attempt.Success = isSuccess;
+        attempt.IsSuccess = isSuccess;
         if (isSuccess)
         {
-            attempt.Notes = string.Empty;
+            attempt.FailureNote = string.Empty;
         }
         return Task.CompletedTask;
     }
    
-    private async Task HandleAttemptDeleted(ProductionLogStepAttempt attempt)
+    private async Task HandleAttemptDeleted(StepAttemptDetailDTO attempt)
     {
         // Mark attempt for deletion
-        attemptsToDelete = [..attemptsToDelete, attempt];
-        
-        // cosmetically remove the attempt from the log step
+        attemptsToDelete = [.. attemptsToDelete, attempt];
+
+        // Remove from list
         shownAttempts.Remove(attempt);
-        
-        // Reload the Table
+
+        // Reload table
         await table.ReloadServerData();
-        
-        // User feedback if no attempts remain
+
         if (!table.FilteredItems.Any())
         {
             ToastService.ShowWarning("All attempts removed. Saving will now delete this log.");
