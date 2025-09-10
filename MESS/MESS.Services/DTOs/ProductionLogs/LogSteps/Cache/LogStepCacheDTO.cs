@@ -14,7 +14,7 @@ public class LogStepCacheDTO
     public int WorkInstructionStepId { get; init; }
 
     /// <summary>
-    /// Gets or sets the ID of the production log.
+    /// Gets or sets the ID of the production log step.
     /// </summary>
     public int ProductionLogStepId { get; init; }
 
