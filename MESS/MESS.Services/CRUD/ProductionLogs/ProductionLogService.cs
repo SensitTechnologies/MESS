@@ -62,6 +62,7 @@ public class ProductionLogService : IProductionLogService
                     WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
                     ProductSerialNumber = p.ProductSerialNumber,
                     CreatedOn = p.CreatedOn,
+                    CreatedBy = p.CreatedBy,
                     LastModifiedOn = p.LastModifiedOn,
                     LastModifiedBy = p.LastModifiedBy
                 })

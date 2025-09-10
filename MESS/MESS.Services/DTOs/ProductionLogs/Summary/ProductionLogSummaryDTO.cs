@@ -41,4 +41,9 @@ public class ProductionLogSummaryDTO
     /// Gets or sets the name of the user who last modified the production log.
     /// </summary>
     public string? LastModifiedBy { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the user who originally created the production log.
+    /// </summary>
+    public string CreatedBy { get; set; } = string.Empty;
 }

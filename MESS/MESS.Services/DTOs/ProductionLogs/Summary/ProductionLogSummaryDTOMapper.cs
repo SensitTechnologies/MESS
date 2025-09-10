@@ -24,6 +24,7 @@ public static class ProductionLogSummaryMapper
             WorkInstructionName = entity.WorkInstruction?.Title ?? string.Empty,
             ProductSerialNumber = entity.ProductSerialNumber,
             CreatedOn = entity.CreatedOn,
+            CreatedBy = entity.CreatedBy,
             LastModifiedOn = entity.LastModifiedOn,
             LastModifiedBy = entity.LastModifiedBy
         };
