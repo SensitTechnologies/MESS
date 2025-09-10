@@ -29,7 +29,7 @@ namespace MESS.Services.DTOs.ProductionLogs.LogSteps.Cache
             return new LogStepFormDTO
             {
                 WorkInstructionStepId = cacheDto.WorkInstructionStepId,
-                ProductionLogStepId = cacheDto.ProductionLogId,
+                ProductionLogStepId = cacheDto.ProductionLogStepId,
                 Attempts = cacheDto.Attempts.Select(a => a.ToFormDTO()).ToList() // delegate
             };
         }
@@ -51,7 +51,7 @@ namespace MESS.Services.DTOs.ProductionLogs.LogSteps.Cache
             return new LogStepCacheDTO
             {
                 WorkInstructionStepId = formDto.WorkInstructionStepId,
-                ProductionLogId = formDto.ProductionLogStepId ?? 0, // default to 0 if null
+                ProductionLogStepId = formDto.ProductionLogStepId ?? 0, // default to 0 if null
                 Attempts = formDto.Attempts.Select(a => a.ToCacheDTO()).ToList() // delegate
             };
         }

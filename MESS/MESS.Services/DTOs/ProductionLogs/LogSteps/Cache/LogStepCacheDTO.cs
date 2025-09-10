@@ -16,7 +16,7 @@ public class LogStepCacheDTO
     /// <summary>
     /// Gets or sets the ID of the production log.
     /// </summary>
-    public int ProductionLogId { get; init; }
+    public int ProductionLogStepId { get; init; }
 
     /// <summary>
     /// Gets or sets the collection of attempts for this step.
