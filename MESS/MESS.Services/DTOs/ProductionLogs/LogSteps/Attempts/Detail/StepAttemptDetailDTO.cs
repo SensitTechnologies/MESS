@@ -10,6 +10,22 @@ public class StepAttemptDetailDTO
     /// Unique identifier of this attempt.
     /// </summary>
     public int AttemptId { get; set; }
+    
+    /// <summary>
+    /// The ID of the ProductionLogStep associated with this attempt.
+    /// </summary>
+    /// <remarks>
+    /// This is here for the purposes of saving.
+    /// </remarks>
+    public int LogStepId { get; set; }
+    
+    /// <summary>
+    /// The ID of the work instruction step associated with this attempt.
+    /// </summary>
+    /// <remarks>
+    /// This is here for the purposes of saving attempts after they have been updated.
+    /// </remarks>
+    public int WorkInstructionStepId { get; set; }
 
     /// <summary>
     /// Name of the step associated with this attempt.
@@ -17,7 +33,7 @@ public class StepAttemptDetailDTO
     public string StepName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Date and time when this attempt was submitted (local time).
+    /// Date and time when this attempt was submitted.
     /// </summary>
     public DateTimeOffset SubmitTime { get; set; }
 
