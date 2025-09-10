@@ -1,0 +1,68 @@
+# This workflow will build a .NET project and Upload documentation to GitHub Pages using Docfx
+
+name: Deploy Documentation to Github Sites
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: # Only runs when a file ending in any of these markers is changed
+      - '**.md'
+      - '**.yml'
+      - '**/docfx.json'
+  
+  # Will be called by Deploy workflow if needed
+  workflow_call:
+
+  # Can be manually triggered from the github actions page: https://github.com/SensitTechnologies/MESS/actions/workflows
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  actions: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+  
+env:
+  DOTNET_VERSION: '9.0.200' # Current as of 4/16/2025
+  SOLUTION_PATH: './MESS/MESS.sln'
+  DOCFX_PATH: './docfx'
+
+jobs:
+  publish-docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # setup .Net enviornment
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      # run build command
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
+
+      # update and run docfx from docfx.json config file
+      - run: dotnet tool update -g docfx
+      - run: docfx ${{ env.DOCFX_PATH }}/docfx.json
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+            # Upload entire repository
+            path: '${{ env.DOCFX_PATH }}/_site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

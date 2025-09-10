@@ -149,7 +149,6 @@ jobs:
           path: ${{ env.LAST_DEPLOY_COMMIT }}.txt
           overwrite: true
 
-
   # There is a new version. Deploy it to Azure
   deploy:
     runs-on: ubuntu-latest
@@ -169,10 +168,10 @@ jobs:
         if: needs.compare-results.outputs.new-build == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.APP_ARTIFACT }}
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ needs.download-last-built.outputs.run-id }}
+          name: ${{ env.APP_ARTIFACT }}                             # env variable with artifact name
+          github-token: ${{ github.token }}                         # only need basic github token
+          repository: ${{ github.repository }}                      # use this repository
+          run-id: ${{ needs.download-last-built.outputs.run-id }}   # run id from previous step
 
       - name: Deploy to Azure Web App
         if: needs.compare-results.outputs.new-build == 'true'
@@ -183,3 +182,11 @@ jobs:
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
+
+
+  Call-Documentation:
+    needs:
+      - deploy
+      - compare-results
+    if: needs.compare-results.outputs.new-build == 'true'
+    uses: ./.github/workflows/deploy_documentation.yml
