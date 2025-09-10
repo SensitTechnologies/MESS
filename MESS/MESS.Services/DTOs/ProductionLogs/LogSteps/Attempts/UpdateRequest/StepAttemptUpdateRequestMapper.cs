@@ -1,12 +1,9 @@
 using MESS.Data.Models;
-using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Detail;
-using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Form;
 
 namespace MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.UpdateRequest;
 
 /// <summary>
-/// Provides mapping functionality for converting attempt-related DTOs
-/// into <see cref="StepAttemptUpdateRequest"/> objects and applying them to entities.
+/// Mapper for applying StepAttempt Update Requests to entities.
 /// <para>
 /// This mapper is the single point where both updates to existing attempts
 /// and creation of new attempts (triggered from the Production Log page UI)
@@ -15,44 +12,6 @@ namespace MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.UpdateRequest;
 /// </summary>
 public static class StepAttemptUpdateRequestMapper
 {
-    /// <summary>
-    /// Converts a <see cref="StepAttemptFormDTO"/> to a <see cref="StepAttemptUpdateRequest"/>.
-    /// <para>
-    /// If <see cref="StepAttemptFormDTO.AttemptId"/> is <c>null</c>, the request
-    /// represents a new attempt that was created in the Production Log UI
-    /// when an operator submitted a result.
-    /// </para>
-    /// </summary>
-    public static StepAttemptUpdateRequest ToUpdateRequest(this StepAttemptFormDTO dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        return new StepAttemptUpdateRequest
-        {
-            Id = dto.AttemptId ?? 0, // 0 = new attempt
-            IsSuccess = dto.IsSuccess,
-            FailureNote = dto.FailureNote,
-            SubmitTime = dto.SubmitTime
-        };
-    }
-
-    /// <summary>
-    /// Converts a <see cref="StepAttemptDetailDTO"/> to a <see cref="StepAttemptUpdateRequest"/>.
-    /// Used primarily when detail data is edited and then re-submitted.
-    /// </summary>
-    public static StepAttemptUpdateRequest ToUpdateRequest(this StepAttemptDetailDTO dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        return new StepAttemptUpdateRequest
-        {
-            Id = dto.AttemptId,
-            IsSuccess = dto.IsSuccess,
-            FailureNote = dto.FailureNote,
-            SubmitTime = dto.SubmitTime
-        };
-    }
-
     /// <summary>
     /// Converts a <see cref="StepAttemptUpdateRequest"/> to a <see cref="ProductionLogStepAttempt"/> entity.
     /// Used when creating a new attempt (Id == 0).

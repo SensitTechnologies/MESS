@@ -1,4 +1,4 @@
-using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.UpdateRequest;
+using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Detail;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.UpdateRequest;
 using MESS.Services.DTOs.ProductionLogs.UpdateRequest;
 
