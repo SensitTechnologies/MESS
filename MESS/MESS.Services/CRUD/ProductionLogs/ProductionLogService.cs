@@ -380,6 +380,40 @@ public class ProductionLogService : IProductionLogService
     }
     
     /// <inheritdoc />
+    public async Task<List<ProductionLogSummaryDTO>> GetSummariesByOperatorIdAsync(string operatorId)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.ProductionLogs
+                .Where(p => p.OperatorId == operatorId)
+                .OrderByDescending(p => p.CreatedOn)
+                .Select(p => new ProductionLogSummaryDTO
+                {
+                    Id = p.Id,
+                    ProductName = p.Product != null ? p.Product.Name : string.Empty,
+                    WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
+                    ProductSerialNumber = p.ProductSerialNumber,
+                    CreatedOn = p.CreatedOn,
+                    LastModifiedOn = p.LastModifiedOn,
+                    LastModifiedBy = p.LastModifiedBy,
+                    CreatedBy = p.CreatedBy
+                })
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown when attempting to GetProductionLogSummariesByOperatorIdAsync for OperatorId: {OperatorId} in ProductionLogService: {Exception}",
+                operatorId,
+                e.ToString()
+            );
+            return [];
+        }
+    }
+    
+    /// <inheritdoc />
     public async Task DeleteAttemptAsync(int id)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

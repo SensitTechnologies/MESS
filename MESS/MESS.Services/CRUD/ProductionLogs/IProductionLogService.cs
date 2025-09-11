@@ -127,6 +127,22 @@ public interface IProductionLogService
     Task<List<ProductionLog>?> GetProductionLogsByOperatorIdAsync(string operatorId);
 
     /// <summary>
+    /// Retrieves a list of production log summaries created by a specific operator.
+    /// </summary>
+    /// <param name="operatorId">The unique identifier of the operator whose logs are being requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a list of <see cref="ProductionLogSummaryDTO"/> objects, 
+    /// ordered by creation date in descending order. 
+    /// Returns an empty list if no logs are found.
+    /// </returns>
+    /// <remarks>
+    /// This method projects directly into summary DTOs for efficient querying, 
+    /// and does not load full related entities.
+    /// </remarks>
+    Task<List<ProductionLogSummaryDTO>> GetSummariesByOperatorIdAsync(string operatorId);
+
+    /// <summary>
     /// Deletes a <see cref="ProductionLogStepAttempt"/> from the database by its ID.
     /// </summary>
     /// <param name="id">The unique identifier of the attempt to delete.</param>
