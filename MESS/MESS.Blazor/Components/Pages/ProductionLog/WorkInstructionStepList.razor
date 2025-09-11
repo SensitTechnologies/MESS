@@ -2,7 +2,9 @@
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes
 @using PartNode = MESS.Data.Models.PartNode
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
-@using MESS.Services.ProductionLogServices
+@using MESS.Services.DTOs.ProductionLogs.Form
+@using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
+@using MESS.Services.UI.ProductionLogEvent
 @inject IProductionLogEventService ProductionLogEventService
 
 
@@ -16,18 +18,16 @@
             {
                 case Step instructionStep:
                     // Create or retrieve a list of log steps for all logs
-                    var logSteps = new List<ProductionLogStep>();
+                    var logSteps = new List<LogStepFormDTO>();
 
                     foreach (var log in ProductionLogs)
                     {
                         var step = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == instructionStep.Id);
                         if (step == null)
                         {
-                            step = new ProductionLogStep
+                            step = new LogStepFormDTO
                             {
-                                WorkInstructionStepId = instructionStep.Id,
-                                WorkInstructionStep = instructionStep,
-                                ProductionLogId = log.Id,
+                                WorkInstructionStepId = instructionStep.Id
                             };
                             log.LogSteps?.Add(step);
                         }
@@ -99,13 +99,13 @@
     /// <summary>
     /// The production logs associated with the current work instruction.
     /// </summary>
-    [Parameter] public required List<ProductionLog> ProductionLogs { get; set; }
+    [Parameter] public required List<ProductionLogFormDTO> ProductionLogs { get; set; }
 
     /// <summary>
     /// Event callback triggered when a step is completed.
     /// The tuple contains the production log step and an optional boolean indicating completion status.
     /// </summary>
-    [Parameter] public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
+    [Parameter] public EventCallback<(List<LogStepFormDTO>, bool?)> OnStepCompleted { get; set; }
 
     private string? SelectedButton { get; set; } = "";
 

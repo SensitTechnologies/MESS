@@ -1,5 +1,5 @@
-﻿@using MESS.Data.DTO
-@using MESS.Data.Models
+﻿@using MESS.Data.Models
+@using MESS.Services.DTOs
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 @inject IToastService ToastService
@@ -22,13 +22,13 @@
         </td>
         <td>
             <div class="btn-group" role="group">
-                <input type="checkbox" checked="@IsOperator" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
+                <input type="checkbox" checked="@IsOperator" disabled="@UserRoleDTO.IsNew" @onchange="@((e) => UpdateRoleAsync("Operator", (bool)e.Value!))" class="btn-check" id="operator@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="operator@(User.Id)">Operator</label>
 
-                <input type="checkbox" checked="@IsTechnician" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
+                <input type="checkbox" checked="@IsTechnician" disabled="@UserRoleDTO.IsNew" @onchange="@((e) => UpdateRoleAsync("Technician", (bool)e.Value!))" class="btn-check" id="technician@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="technician@(User.Id)">Technician</label>
 
-                <input type="checkbox" checked="@IsAdmin" disabled="@UserRoleDto.IsNew" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
+                <input type="checkbox" checked="@IsAdmin" disabled="@UserRoleDTO.IsNew" @onchange="@((e) => UpdateRoleAsync("Administrator", (bool)e.Value!))" class="btn-check" id="administrator@(User.Id)" autocomplete="off">
                 <label class="btn btn-checkbox" for="administrator@(User.Id)">Administrator</label>
             </div>
         </td>
@@ -73,7 +73,7 @@
     /// The UserRoleDto containing user and role information.
     /// </summary>
     [Parameter]
-    public required UserRoleDto UserRoleDto { get; set; }
+    public required UserRoleDTO UserRoleDTO { get; set; }
 
     /// <summary>
     /// Event callback to save changes made to the user.
@@ -95,9 +95,9 @@
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
-        User = UserRoleDto.User;
-        CurrentRoles = UserRoleDto.Roles;
-        IsLockedOut = UserRoleDto.IsLockedOut;
+        User = UserRoleDTO.User;
+        CurrentRoles = UserRoleDTO.Roles;
+        IsLockedOut = UserRoleDTO.IsLockedOut;
         
         if (CurrentRoles != null)
         {
@@ -110,7 +110,7 @@
         if (User != null)
         {
             var existingUser = await UserManager.FindByIdAsync(User.Id);
-            UserRoleDto.IsNew = existingUser == null;
+            UserRoleDTO.IsNew = existingUser == null;
         }
     }
 

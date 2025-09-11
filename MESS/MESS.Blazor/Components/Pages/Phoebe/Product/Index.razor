@@ -3,13 +3,13 @@
 @attribute [Authorize(Roles = "Technician, Administrator")]
 @using MESS.Blazor.Components.Layout
 @using MESS.Data.Models
-@using MESS.Services.Product
-@using MESS.Services.WorkInstruction
 @using Microsoft.AspNetCore.Authorization
 @using HorizontalAlignment = MudBlazor.HorizontalAlignment
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow.WorkInstructionAssociation
 @using MESS.Blazor.Components.Pages.Phoebe.Product.ProductTableRow
+@using MESS.Services.CRUD.WorkInstructions
+@using MESS.Services.CRUD.Products
 @inject IProductService ProductService
 @inject IWorkInstructionService WorkInstructionService
 @inject IToastService ToastService

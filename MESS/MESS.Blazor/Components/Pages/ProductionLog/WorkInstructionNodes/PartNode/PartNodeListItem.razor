@@ -1,5 +1,6 @@
 @using MESS.Data.Models
-@using MESS.Services.ProductionLogPartService
+@using MESS.Services.CRUD.ProductionLogParts
+@using MESS.Services.DTOs.ProductionLogs.Form
 @inject IProductionLogPartService ProductionLogPartService
 
 @if (_initialized)
@@ -50,7 +51,7 @@
     /// <summary>
     /// Gets or sets the list of <see cref="ProductionLog"/> instances referenced in this component.
     /// </summary>
-    [Parameter, EditorRequired] public required List<ProductionLog> ProductionLogs { get; set; }
+    [Parameter, EditorRequired] public required List<ProductionLogFormDTO> ProductionLogs { get; set; }
 
     private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
     private bool _initialized;

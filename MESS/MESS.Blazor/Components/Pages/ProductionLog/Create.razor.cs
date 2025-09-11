@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using MESS.Services.DTOs.ProductionLogs.Cache;
+using MESS.Services.DTOs.ProductionLogs.Form;
+using MESS.Services.DTOs.ProductionLogs.LogSteps.Form;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using QRCoder;
 using Serilog;
@@ -45,7 +48,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private IJSObjectReference? scrollToModule;
     private IJSObjectReference? qrModule;
     
-    private Func<List<ProductionLog>, Task>? _autoSaveHandler;
+    private Func<List<ProductionLogFormDTO>, Task>? _autoSaveHandler;
     
     private int BatchSize { get; set; }
     
@@ -62,7 +65,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
          // Load cached forms as a list of ProductionLog
         ProductionLogBatch.Logs = await LoadCachedFormsAsync();
 
-        bool cachedFormsLoaded = ProductionLogBatch.Logs != null && ProductionLogBatch.Logs.Count > 0;
+        bool cachedFormsLoaded = ProductionLogBatch.Logs.Count > 0;
 
         if (cachedFormsLoaded)
         {
@@ -72,15 +75,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         ProductionLogEventService.StartDbSaveTimer();
 
-        if (ProductionLogBatch.Logs != null)
-        {
-            await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
-        }
-        
+        await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
+
         // AutoSave Trigger
         _autoSaveHandler = async logs =>
         {
-            if (logs == null || logs.Count == 0)
+            if (logs.Count == 0)
             {
                 Log.Warning("Attempted to autosave an empty or null production log list.");
                 return;
@@ -103,16 +103,13 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         
         // Register periodic database save handler
-        ProductionLogEventService.DbSaveTriggered += async logs =>
-        {
-            await SaveLogsToDatabase();
-        };
+        ProductionLogEventService.DbSaveTriggered += SaveLogsToDatabaseHandler;
         
         ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
         
         ProductionLogPartService.CurrentProductNumberChanged += HandleProductNumberChanged;
         
-        if (ProductionLogBatch.Logs != null && ActiveWorkInstruction != null)
+        if (ActiveWorkInstruction != null)
         {
             var partNodes = ActiveWorkInstruction.Nodes.Where(node => node.NodeType == WorkInstructionNodeType.Part);
             
@@ -144,33 +141,22 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
     }
     
-    private async Task<List<ProductionLog>> LoadCachedFormsAsync()
+    private async Task<List<ProductionLogFormDTO>> LoadCachedFormsAsync()
     {
         var cachedFormsData = await LocalCacheManager.GetProductionLogBatchAsync();
 
-        if (cachedFormsData == null || cachedFormsData.Count == 0)
+        if (cachedFormsData.Count == 0)
         {
-            AddProductionLogs(BatchSize);
+            AddProductionLogs(BatchSize); // still initializes empty DTOs
             return ProductionLogBatch.Logs;
         }
 
-        var productionLogs = cachedFormsData.Select(cachedForm => new ProductionLog
-        {
-            Id = cachedForm.ProductionLogId,
-            LogSteps = cachedForm.LogSteps.Select(step => new ProductionLogStep
-            {
-                WorkInstructionStepId = step.WorkInstructionStepId,
-                ProductionLogId = step.ProductionLogId,
-                Attempts = step.Attempts.Select(a => new ProductionLogStepAttempt
-                {
-                    Success = a.Success,
-                    Notes = a.Notes ?? "",
-                    SubmitTime = a.SubmitTime
-                }).ToList()
-            }).ToList()
-        }).ToList();
+        // Map cache DTOs into form DTOs
+        var productionLogs = cachedFormsData
+            .Select(cachedForm => cachedForm.ToFormDTO())
+            .ToList();
 
-        // Setting status for each log or the whole batch
+        // Update status
         foreach (var log in productionLogs)
         {
             if (log.LogSteps.All(step => step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)))
@@ -207,7 +193,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             // Clear all related cached and in-memory data
             await LocalCacheManager.ClearProductionLogBatchAsync();
             ProductionLogBatch.Logs.Clear();
-            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+            await ProductionLogEventService.SetCurrentProductionLogs([]);
             ProductionLogPartService.ClearAllLogParts();
 
             // Set the new work instruction
@@ -234,7 +220,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
             await LocalCacheManager.ClearProductionLogBatchAsync();
             ProductionLogBatch.Logs.Clear();
-            await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+            await ProductionLogEventService.SetCurrentProductionLogs([]);
             ProductionLogPartService.ClearAllLogParts();
 
             await SetActiveWorkInstruction(-1);
@@ -249,7 +235,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         // Clear all related cached and in-memory data
         await LocalCacheManager.ClearProductionLogBatchAsync();
         ProductionLogBatch.Logs.Clear();
-        await ProductionLogEventService.SetCurrentProductionLogs(new List<ProductionLog>());
+        await ProductionLogEventService.SetCurrentProductionLogs([]);
         ProductionLogPartService.ClearAllLogParts();
 
         // Proceed with setting new state
@@ -420,36 +406,41 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         popupRef?.Close();
     }
+    
+    private async Task SaveLogsToDatabaseHandler(List<ProductionLogFormDTO> logs)
+    {
+        await SaveLogsToDatabase();
+    }
 
     private async Task SaveLogsToDatabase()
     {
-        var currentTime = DateTimeOffset.UtcNow;
         var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var userName = authState.User.Identity?.Name ?? "";
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        var userName = authState.User.Identity?.Name ?? string.Empty;
 
-        foreach (var productionLog in ProductionLogEventService.CurrentProductionLogs)
+        // Collect all current logs from the event service (already FormDTOs now)
+        var formDtos = ProductionLogEventService.CurrentProductionLogs;
+
+        if (ActiveProduct is null || ActiveWorkInstruction is null)
         {
-            // Update log
-            productionLog.CreatedOn = currentTime;
-            productionLog.LastModifiedOn = currentTime;
-            productionLog.WorkInstruction = ActiveWorkInstruction;
-            productionLog.Product = ActiveProduct;
-            productionLog.OperatorId = userId;
-            productionLog.CreatedBy = userName;
-            productionLog.LastModifiedBy = userName;
-            productionLog.FromBatchOf = BatchSize;
+            // Show error message, redirect, or just return
+            throw new InvalidOperationException("Product and work instruction must be selected before saving logs.");
+        }
+        
+        // Call the service — it now takes care of metadata and persistence
+        var result = await ProductionLogService.SaveOrUpdateBatchAsync(
+            formDtos,
+            createdBy: userName,
+            operatorId: userId,
+            productId: ActiveProduct.Id,
+            workInstructionId: ActiveWorkInstruction.Id
+        );
 
-            // If no log is created, it gets created now to utilize the id for the QR code
-            if (productionLog.Id <= 0)
-            {
-                var id = await ProductionLogService.CreateAsync(productionLog);
-                productionLog.Id = id;
-            }
-            else
-            {
-                await ProductionLogService.UpdateAsync(productionLog);
-            }
+        //update in-memory IDs for any newly created logs so the UI has them
+        foreach (var (formDto, createdId) in formDtos.Zip(result.CreatedIds))
+        {
+            if (formDto.Id == 0)
+                formDto.Id = createdId;
         }
     }
 
@@ -532,7 +523,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
     }
     
-    private async Task OnStepCompleted(List<ProductionLogStep> productionLogSteps, bool? success)
+    private async Task OnStepCompleted(List<LogStepFormDTO> productionLogSteps, bool? success)
     {
         if (ActiveWorkInstruction == null)
             return;
@@ -600,8 +591,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return await Task.Run(() =>
             {
                 // Check if every log's steps have attempts with valid submit times
-                return ProductionLogBatch.Logs != null && ProductionLogBatch.Logs.All(log =>
-                    log.LogSteps != null && log.LogSteps.All(step =>
+                return ProductionLogBatch.Logs.All(log =>
+                    log.LogSteps.All(step =>
                         step.Attempts.Any(a => a.SubmitTime != DateTimeOffset.MinValue)));
             });
         }
@@ -617,6 +608,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         ProductionLogPartService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
+        ProductionLogEventService.DbSaveTriggered -= SaveLogsToDatabaseHandler;
         await ProductionLogEventService.StopDbSaveTimerAsync();
         
         try
@@ -645,27 +637,25 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         for (var i = 0; i < count; i++)
         {
-            var emptyLog = new ProductionLog
+            var emptyLog = new ProductionLogFormDTO
             {
                 LogSteps = ActiveWorkInstruction?.Nodes
                     .Where(n => n.NodeType == WorkInstructionNodeType.Step)
-                    .Select(n => new ProductionLogStep
+                    .Select(n => new LogStepFormDTO
                     {
                         WorkInstructionStepId = n.Id,
-                        Attempts = new List<ProductionLogStepAttempt>() // empty initially
+                        Attempts = [] // empty initially
                     })
-                    .ToList() ?? new List<ProductionLogStep>()
+                    .ToList() ?? []
             };
 
             ProductionLogBatch.Logs.Add(emptyLog);
             
             // Create production log parts for new logs based on the part node
-            if (ActiveWorkInstruction != null)
+            if (ActiveWorkInstruction == null) continue;
+            foreach (var partNode in ActiveWorkInstruction.Nodes.OfType<PartNode>())
             {
-                foreach (var partNode in ActiveWorkInstruction.Nodes.OfType<PartNode>())
-                {
-                    ProductionLogPartService.EnsureRequiredPartsLogged(ProductionLogBatch.Logs.Count - 1, partNode.Id, partNode.Parts);
-                }
+                ProductionLogPartService.EnsureRequiredPartsLogged(ProductionLogBatch.Logs.Count - 1, partNode.Id, partNode.Parts);
             }
         }
 

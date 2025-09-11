@@ -1,4 +1,4 @@
-﻿using MESS.Services.ApplicationUser;
+﻿using MESS.Services.CRUD.ApplicationUser;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 

@@ -1,8 +1,8 @@
 ﻿@page "/log-archive"
-@using MESS.Data.Models
 @using MESS.Blazor.Components.Layout
-@using MESS.Services.ProductionLogServices
 @using MESS.Blazor.Components.Dialogs
+@using MESS.Services.CRUD.ProductionLogs
+@using MESS.Services.DTOs.ProductionLogs.Summary
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using SortDirection = MudBlazor.SortDirection
@@ -44,7 +44,7 @@
                     </div>
                     
                     <MudTable @ref="_table"
-                              T="ProductionLog"
+                              T="ProductionLogSummaryDTO"
                               ServerData="ServerReload"
                               Loading="@IsLoading"
                               Hover="true"
@@ -53,17 +53,17 @@
                               TableClass="table table-striped table-hover">
                   
                         <HeaderContent>
-                            <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLog, object>(x => x.Product?.Name ?? string.Empty)"><strong>Product</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLog, object>(x => x.WorkInstruction?.Title ?? string.Empty)"><strong>Work Instruction</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="serno_field" SortBy="new Func<ProductionLog, object>(x => x.ProductSerialNumber ?? string.Empty)"><strong>Product Serial Number</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLog, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLog, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLog, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.ProductName ?? string.Empty)"><strong>Product</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.WorkInstructionName ?? string.Empty)"><strong>Work Instruction</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="serno_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.ProductSerialNumber ?? string.Empty)"><strong>Product Serial Number</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
                             <MudTh><strong>Actions</strong></MudTh>
                         </HeaderContent>
                         <RowTemplate Context="productionLog">
-                            <MudTd DataLabel="Product">@(productionLog.Product?.Name ?? NoProduct)</MudTd>
-                            <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstruction?.Title ?? NoWorkInstruction)</MudTd>
+                            <MudTd DataLabel="Product">@(productionLog.ProductName ?? NoProduct)</MudTd>
+                            <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstructionName ?? NoWorkInstruction)</MudTd>
                             <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
                             <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
                             <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
@@ -99,15 +99,15 @@
 
 
 @code {
-    private List<ProductionLog> ProductionLogs { get; set; } = new();
-    private IEnumerable<ProductionLog> pagedData = new List<ProductionLog>();
+    private List<ProductionLogSummaryDTO> ProductionLogs { get; set; } = new();
+    private IEnumerable<ProductionLogSummaryDTO> pagedData = new List<ProductionLogSummaryDTO>();
     private bool IsLoading { get; set; } = true;
 
-    private MudTable<ProductionLog> _table = new MudTable<ProductionLog>();
+    private MudTable<ProductionLogSummaryDTO> _table = new MudTable<ProductionLogSummaryDTO>();
 
     private int totalItems;
     
-    private Dictionary<ProductionLog, int> SearchHits { get; } = [];
+    private Dictionary<ProductionLogSummaryDTO, int> SearchHits { get; } = [];
     private int MaxHits => SearchHits.Values.Max();
     
     
@@ -135,7 +135,7 @@
     private async Task GrabServerData()
     {
         IsLoading = true;
-        ProductionLogs = await ProductionLogService.GetAllAsync() ?? [];
+        ProductionLogs = await ProductionLogService.GetAllSummariesAsync() ?? [];
         foreach (var log in ProductionLogs)
         {
             SearchHits.Add(log, 0);
@@ -144,9 +144,9 @@
         IsLoading = false;
     }
 
-    private async Task<TableData<ProductionLog>> ServerReload(TableState state, CancellationToken token)
+    private async Task<TableData<ProductionLogSummaryDTO>> ServerReload(TableState state, CancellationToken token)
     {
-        IEnumerable<ProductionLog> data = ProductionLogs;
+        IEnumerable<ProductionLogSummaryDTO> data = ProductionLogs;
         await Task.Delay(20, token);
 
         foreach (var log in data)
@@ -162,10 +162,10 @@
         switch (state.SortLabel)
         {
             case "product_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.Product?.Name);
+                data = data.OrderByDirection(state.SortDirection, o => o.ProductName);
                 break;
             case "instruction_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.WorkInstruction?.Title);
+                data = data.OrderByDirection(state.SortDirection, o => o.WorkInstructionName);
                 break;
             case "serno_field":
                 data = data.OrderByDirection(state.SortDirection, o => o.ProductSerialNumber);
@@ -181,10 +181,10 @@
                 break;
         }
         pagedData = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
-        return new TableData<ProductionLog>() {TotalItems = totalItems, Items = pagedData};
+        return new TableData<ProductionLogSummaryDTO>() {TotalItems = totalItems, Items = pagedData};
     }
     
-    private int FilterHits(ProductionLog log, string search)
+    private int FilterHits(ProductionLogSummaryDTO log, string search)
     {
         var hits = 0;
         if (string.IsNullOrWhiteSpace(search))
@@ -192,10 +192,10 @@
         
         var searchPhrase = search.Trim();
         
-        if (SatisfiesFilter(log.Product?.Name, searchPhrase))
+        if (SatisfiesFilter(log.ProductName, searchPhrase))
             hits++;
         
-        if (SatisfiesFilter(log.WorkInstruction?.Title, searchPhrase))
+        if (SatisfiesFilter(log.WorkInstructionName, searchPhrase))
             hits++;
 
         if (SatisfiesFilter(log.ProductSerialNumber, searchPhrase))
@@ -241,19 +241,20 @@
 
     private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
     
-    private async Task OpenDialogAsync(ProductionLog log)
+    private async Task OpenDialogAsync(ProductionLogSummaryDTO log)
     {
-        // Create a new instance of Data
-        // to allow the user to cancel the update
-        var data = (log, true);
-        
+        var detail = await ProductionLogService.GetDetailByIdAsync(log.Id);
+        if (detail == null) return;
+
+        var data = (detail, false);
+
         await DialogService.ShowDialogAsync<LogOptionsDialog>(data, new DialogParameters()
-            {
-                Title = $"Log #{log.Id}",
-                OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
-                Width = "85%",
-                PreventScroll = true,
-            });
+        {
+            Title = $"Log #{log.Id}",
+            OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
+            Width = "85%",
+            PreventScroll = true,
+        });
     }
 
     private async Task HandleDialogAsync(DialogResult result)

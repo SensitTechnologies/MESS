@@ -1,154 +1,166 @@
 using MESS.Data.Context;
-using MESS.Services.ProductionLogServices;
+using MESS.Services.CRUD.ProductionLogs;
+using MESS.Services.DTOs.ProductionLogs.Form;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Moq;
+using MESS.Data.Models;
 
-namespace MESS.Tests.Services.ProductionLog;
-using Data.Models;
+namespace MESS.Tests.Services;
 
-public class ProductionLogServiceTests
+public class ProductionLogServiceTests : IDisposable
 {
-    private const string CONNECTION_STRING = "Data Source=ProductionLogServiceTestDatabase.db";
-    private static ProductionLogService MockProductionLogService ()
+    private static readonly SqliteConnection _connection = new SqliteConnection("DataSource=:memory:");
+    private readonly DbContextOptions<ApplicationContext> _options;
+
+    static ProductionLogServiceTests()
     {
-        // Configure DbContextOptions to use SQLite with a file-based database
-        var options = new DbContextOptionsBuilder<ApplicationContext>()
-            .UseSqlite(CONNECTION_STRING)
+        _connection.Open();
+    }
+
+    public ProductionLogServiceTests()
+    {
+        _options = new DbContextOptionsBuilder<ApplicationContext>()
+            .UseSqlite(_connection)
             .Options;
 
-        // Ensure the database is created before tests run
-        using (var context = new ApplicationContext(options))
-        {
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated();
-        }
+        // Ensure clean database for each test
+        using var context = new ApplicationContext(_options);
+        context.Database.EnsureDeleted();
+        context.Database.EnsureCreated();
+        context.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
+    }
 
-        // Set up the DbContextFactory to return a properly configured ApplicationContext instance
+    private ProductionLogService CreateService()
+    {
         var dbFactory = new Mock<IDbContextFactory<ApplicationContext>>();
         dbFactory.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new ApplicationContext(options)); // Create new instance on each call
+            .ReturnsAsync(() =>
+            {
+                var ctx = new ApplicationContext(_options);
+                ctx.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
+                return ctx;
+            });
 
-        
         return new ProductionLogService(dbFactory.Object);
     }
 
-    [Fact]
-    public async Task CreateLog_EmptyLog_SuccessfullyCreatesLog()
+    private static async Task<(int productId, int workInstructionId)> SeedProductAndWIAsync(string wiTitle, DbContextOptions<ApplicationContext> options)
     {
-        var productionLogToAdd = new ProductionLog();
+        await using var context = new ApplicationContext(options);
+        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys=ON;");
 
-        var productionLogToAddId = await MockProductionLogService().CreateAsync(productionLogToAdd);
-        
-        Assert.Equal(1,productionLogToAddId);
-    }
-    
-    [Fact]
-    public async Task CreateLog_WithProduct_SetsProductCorrectly()
-    {
-        // Arrange
-        var service = MockProductionLogService();
         var product = new Product { Name = "Test Product" };
+        var wi = new WorkInstruction { Title = wiTitle };
 
-        await using (var context = new ApplicationContext(
-                         new DbContextOptionsBuilder<ApplicationContext>()
-                             .UseSqlite(CONNECTION_STRING)
-                             .Options))
-        {
-            context.Products.Add(product);
-            await context.SaveChangesAsync();
-        }
-        
-        var productionLog = new ProductionLog { Product = product };
+        context.Products.Add(product);
+        context.WorkInstructions.Add(wi);
+        await context.SaveChangesAsync();
 
-        // Act
-        var createdId = await service.CreateAsync(productionLog);
-
-        // Assert
-        Assert.True(createdId > 0);
-    
-        // Verify the saved log
-        var savedLog = await service.GetByIdAsync(createdId);
-        Assert.NotNull(savedLog);
-        Assert.NotNull(savedLog.Product);
-        Assert.Equal(1, savedLog.Product.Id);
+        return (product.Id, wi.Id);
     }
-    
+
     [Fact]
-    public async Task CreateLog_WithWorkInstruction_SetsWorkInstructionCorrectly()
+    public async Task SaveOrUpdateBatchAsync_EmptyLog_CreatesLogWithoutSerial()
     {
-        // Arrange
-        var service = MockProductionLogService();
-    
-        // Create a WorkInstruction and insert it into the database first
-        var workInstruction = new WorkInstruction
+        var service = CreateService();
+        var (productId, workInstructionId) = await SeedProductAndWIAsync("Test WI", _options);
+
+        var formDtos = new List<ProductionLogFormDTO> { new() };
+        var result = await service.SaveOrUpdateBatchAsync(formDtos, "tester", "op-1", productId, workInstructionId);
+
+        Assert.Equal(1, result.CreatedCount);
+        Assert.Single(result.CreatedIds);
+
+        var log = await service.GetByIdAsync(result.CreatedIds.First());
+        Assert.NotNull(log);
+        Assert.Null(log.ProductSerialNumber);
+    }
+
+    [Fact]
+    public async Task SaveOrUpdateBatchAsync_WithWorkInstruction_AssignsCorrectWI()
+    {
+        var service = CreateService();
+        var (productId, workInstructionId) = await SeedProductAndWIAsync("WI-100", _options);
+
+        var formDtos = new List<ProductionLogFormDTO> { new() };
+        var result = await service.SaveOrUpdateBatchAsync(formDtos, "tester", "op-2", productId, workInstructionId);
+
+        Assert.Equal(1, result.CreatedCount);
+        var log = await service.GetByIdAsync(result.CreatedIds.First());
+        Assert.NotNull(log);
+        Assert.Equal(workInstructionId, log.WorkInstructionId);
+    }
+
+    [Fact]
+    public async Task SaveOrUpdateBatchAsync_FinalAssemblyLog_SetsSerialNumber()
+    {
+        var service = CreateService();
+        var (productId, workInstructionId) = await SeedProductAndWIAsync("Final Assembly WI", _options);
+
+        var formDtos = new List<ProductionLogFormDTO> { new() { ProductSerialNumber = "SN-FINAL-001" } };
+        var result = await service.SaveOrUpdateBatchAsync(formDtos, "tester", "op-3", productId, workInstructionId);
+
+        Assert.Equal(1, result.CreatedCount);
+        var log = await service.GetByIdAsync(result.CreatedIds.First());
+        Assert.NotNull(log);
+        Assert.Equal("SN-FINAL-001", log.ProductSerialNumber);
+    }
+
+    [Fact]
+    public async Task SaveOrUpdateBatchAsync_UpdatesExistingLog()
+    {
+        var service = CreateService();
+        var (productId, workInstructionId) = await SeedProductAndWIAsync("Update Test WI", _options);
+
+        var createForm = new ProductionLogFormDTO();
+        var createResult = await service.SaveOrUpdateBatchAsync(new[] { createForm }, "tester", "op-4", productId, workInstructionId);
+
+        var createdId = createResult.CreatedIds.First();
+        var updateForm = new ProductionLogFormDTO { Id = createdId, ProductSerialNumber = "SN-UPDATED-001" };
+
+        var updateResult = await service.SaveOrUpdateBatchAsync(new[] { updateForm }, "tester", "op-4", productId, workInstructionId);
+
+        Assert.Equal(1, updateResult.UpdatedCount);
+        var log = await service.GetByIdAsync(createdId);
+        Assert.NotNull(log);
+        Assert.Equal("SN-UPDATED-001", log.ProductSerialNumber);
+    }
+
+    [Fact]
+    public async Task SaveOrUpdateBatchAsync_MultipleLogs_AllFinalAssemblyOrNone()
+    {
+        var service = CreateService();
+        var (productId, workInstructionId) = await SeedProductAndWIAsync("Batch WI", _options);
+
+        // Subassembly batch
+        var subassemblyBatch = new List<ProductionLogFormDTO> { new(), new(), new() };
+        var subassemblyResult = await service.SaveOrUpdateBatchAsync(subassemblyBatch, "tester", "op-1", productId, workInstructionId);
+        Assert.Equal(3, subassemblyResult.CreatedCount);
+
+        // Final assembly batch
+        var finalAssemblyBatch = new List<ProductionLogFormDTO>
         {
-            Title = "Test Instruction",
-            Nodes = [new Step() { Name = "Test Node", Body = "Test Node" }]
+            new() { ProductSerialNumber = "FA-1001" },
+            new() { ProductSerialNumber = "FA-1002" },
+            new() { ProductSerialNumber = "FA-1003" }
         };
-    
-        // Adding the Work Instruction to the database since CreateAsync pulls from the DB
-        await using (var context = new ApplicationContext(
-                   new DbContextOptionsBuilder<ApplicationContext>()
-                       .UseSqlite(CONNECTION_STRING)
-                       .Options))
-        {
-            context.WorkInstructions.Add(workInstruction);
-            await context.SaveChangesAsync();
-        }
-    
-        var productionLog = new ProductionLog { WorkInstruction = workInstruction };
 
-        // Act
-        var createdId = await service.CreateAsync(productionLog);
+        var finalAssemblyResult = await service.SaveOrUpdateBatchAsync(finalAssemblyBatch, "tester", "op-1", productId, workInstructionId);
+        Assert.Equal(3, finalAssemblyResult.CreatedCount);
 
-        // Assert
-        Assert.True(createdId > 0);
+        // Verify all serials
+        await using var context = new ApplicationContext(_options);
+        var logsFinal = await context.ProductionLogs
+            .Where(l => finalAssemblyResult.CreatedIds.Contains(l.Id))
+            .ToListAsync();
 
-        var savedLog = await service.GetByIdAsync(createdId);
-        Assert.NotNull(savedLog);
-        Assert.NotNull(savedLog.WorkInstruction);
-        Assert.Equal(1, savedLog.WorkInstruction.Id);
+        Assert.Equal(new[] { "FA-1001", "FA-1002", "FA-1003" },
+            logsFinal.Select(l => l.ProductSerialNumber).ToArray());
     }
-    
-    [Fact]
-    public async Task CreateLog_SetsTimestamps()
+
+    public void Dispose()
     {
-        // Arrange
-        var service = MockProductionLogService();
-        var before = DateTimeOffset.UtcNow.AddSeconds(-1);
-        var productionLog = new ProductionLog();
-
-        // Act
-        var createdId = await service.CreateAsync(productionLog);
-        var after = DateTimeOffset.UtcNow.AddSeconds(1);
-
-        // Assert
-        var savedLog = await service.GetByIdAsync(createdId);
-        Assert.NotNull(savedLog);
-        Assert.True(savedLog.CreatedOn >= before && savedLog.CreatedOn <= after);
-        Assert.True(savedLog.LastModifiedOn >= before && savedLog.LastModifiedOn <= after);
+        // Do nothing; keep connection open for all tests
     }
-
-    [Fact]
-    public async Task CreateLog_DbContextException_ReturnsNegativeOne()
-    {
-        // Mock the factory to throw exception
-        var dbFactory = new Mock<IDbContextFactory<ApplicationContext>>();
-        dbFactory.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Test exception"));
-    
-        var service = new ProductionLogService(dbFactory.Object);
-        var productionLog = new ProductionLog();
-
-        // Act
-        var result = await service.CreateAsync(productionLog);
-
-        // Assert
-        Assert.Equal(-1, result);
-    }
-    
-    // TODO make a test where a step is clicked 'success' then unclicked to ensure it resets the time to default
-    // TODO make a test to ensure unclicked steps have default time
-
 }

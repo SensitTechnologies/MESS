@@ -18,7 +18,7 @@ public class ProductionLog : AuditableEntity
     /// </summary>
     public List<ProductionLogStep> LogSteps { get; set; } = [];
     
-    // Navigation Fields
+    // Foreign Keys + Navigation
 
     /// <summary>
     /// Gets or sets the identifier of the operator associated with the production log.
@@ -27,15 +27,25 @@ public class ProductionLog : AuditableEntity
     public string? OperatorId { get; set; }
 
     /// <summary>
+    /// Gets or sets the product ID associated with the production log.
+    /// </summary>
+    public int ProductId { get; set; }
+
+    /// <summary>
     /// Gets or sets the product associated with the production log.
     /// </summary>
     public Product? Product { get; set; }
 
     /// <summary>
+    /// Gets or sets the work instruction ID associated with the production log.
+    /// </summary>
+    public int WorkInstructionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the work instruction associated with the production log.
     /// </summary>
     public WorkInstruction? WorkInstruction { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the product serial number.
     /// </summary>

@@ -2,9 +2,9 @@
 @layout PhoebeLayout
 @attribute [Authorize(Roles = "Technician, Administrator")]
 @using MESS.Blazor.Components.Layout
-@using MESS.Data.DTO
 @using MESS.Data.Models
-@using MESS.Services.ApplicationUser
+@using MESS.Services.CRUD.ApplicationUser
+@using MESS.Services.DTOs
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
@@ -40,7 +40,7 @@
             {
                 @foreach (var (userDto, index) in ApplicationUserDtoList.Select((user, index) => (user, index)))
                 {
-                    <UserTableRow RowNumber="index" UserRoleDto="userDto" SaveChanges="SaveChanges" />
+                    <UserTableRow RowNumber="index" UserRoleDTO="userDto" SaveChanges="SaveChanges" />
                 }
             }
             </tbody>
@@ -55,7 +55,7 @@
 </div>
 
 @code {
-    private List<UserRoleDto> ApplicationUserDtoList { get; set; } = [];
+    private List<UserRoleDTO> ApplicationUserDtoList { get; set; } = [];
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -67,7 +67,7 @@
             var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
             var IsLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
 
-            var userDto = new UserRoleDto
+            var userDto = new UserRoleDTO
             {
                 User = user,
                 Roles = roles,
@@ -129,7 +129,7 @@
     private void CreateNewUser()
     {
         var newApplicationUser = new ApplicationUser();
-        var newUser = new UserRoleDto
+        var newUser = new UserRoleDTO
         {
             User = newApplicationUser,
             IsNew = true

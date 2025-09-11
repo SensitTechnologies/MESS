@@ -1,7 +1,9 @@
 @using System.Text.RegularExpressions
 @using MESS.Data.Models
-@using MESS.Services.ProductionLogServices
 @using MESS.Blazor.Components.Carousel
+@using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Form
+@using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
+@using MESS.Services.UI.ProductionLogEvent
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JsRuntime
 
@@ -34,7 +36,7 @@
                             StepName="@Step.Name"
                             @bind-FailureNotes="@_currentAttemptNotes"
                             AttemptTime="@_pendingFailureAttempt?.SubmitTime"
-                            AttemptId="@(_pendingFailureAttempt?.Id)"
+                            AttemptId="@(_pendingFailureAttempt?.AttemptId)"
                             OnCancel="OnCancelClicked"
                             OnSubmit="OnSubmitClicked" />
                     }
@@ -231,26 +233,26 @@
     /// with one WI step.
     /// </remarks>
     [Parameter]
-    public required List<ProductionLogStep> LogSteps { get; set; }
+    public required List<LogStepFormDTO> LogSteps { get; set; }
     
     /// <summary>
     /// Event callback triggered when the step is completed.
     /// The tuple contains the production log step and a nullable boolean indicating success or failure.
     /// </summary>
     [Parameter]
-    public EventCallback<(List<ProductionLogStep>, bool?)> OnStepCompleted { get; set; }
+    public EventCallback<(List<LogStepFormDTO>, bool?)> OnStepCompleted { get; set; }
 
     private FluentTextArea? _failureNoteTextArea;
     
     private string _currentAttemptNotes = "";
     
-    private ProductionLogStepAttempt? _pendingFailureAttempt;
+    private StepAttemptFormDTO? _pendingFailureAttempt;
     
     private bool IsStepSuccessful(ProductionLogStep step) =>
         step.LatestAttempt?.Success == true;
     
-    private bool? GetStepSuccessState(ProductionLogStep step) =>
-        step.LatestAttempt?.Success;
+    private bool? GetStepSuccessState(LogStepFormDTO step) =>
+        step.LatestAttempt()?.IsSuccess;
     
     private bool HasDetails =>
         !IsHtmlEmpty(Step.DetailedBody) || (Step.SecondaryMedia?.Count ?? 0) > 0;
@@ -308,7 +310,7 @@
     protected override void OnInitialized()
     {
         var states = LogSteps
-            .Select(ls => ls.LatestAttempt?.Success)
+            .Select(ls => ls.LatestAttempt()?.IsSuccess)
             .Distinct()
             .ToList();
 
@@ -335,7 +337,7 @@
     protected override void OnParametersSet()
     {
         var states = LogSteps
-            .Select(ls => ls.LatestAttempt?.Success)
+            .Select(ls => ls.LatestAttempt()?.IsSuccess)
             .Distinct()
             .ToList();
 
@@ -377,14 +379,12 @@
     private void SetOptionalNotes()
     {
         var attempt = LogSteps
-            .Select(ls => ls.LatestAttempt)
-            .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a?.Notes) || (a?.Success.HasValue == true && !a.Success.Value));
+            .Select(ls => ls.LatestAttempt())
+            .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a?.FailureNote) || (a?.IsSuccess.HasValue == true && !a.IsSuccess.Value));
 
-        if (attempt != null)
-        {
-            _currentAttemptNotes = attempt.Notes;
-            ShowOptionalNotesField = true;
-        }
+        if (attempt == null) return;
+        _currentAttemptNotes = attempt.FailureNote ?? "";
+        ShowOptionalNotesField = true;
     }
 
     private async Task HandleButtonPressAll(bool? result)
@@ -399,11 +399,11 @@
             // Clear failure note before creating new attempts
             _currentAttemptNotes = "";
 
-            var newFailureAttempt = new ProductionLogStepAttempt
+            var newFailureAttempt = new StepAttemptFormDTO
             {
-                Success = false,
+                IsSuccess = false,
                 SubmitTime = DateTimeOffset.UtcNow,
-                Notes = ""
+                FailureNote = ""
             };
 
             foreach (var step in LogSteps)
@@ -423,11 +423,11 @@
         {
             foreach (var step in LogSteps)
             {
-                step.Attempts.Add(new ProductionLogStepAttempt
+                step.Attempts.Add(new StepAttemptFormDTO
                 {
-                    Success = true,
+                    IsSuccess = true,
                     SubmitTime = DateTimeOffset.UtcNow,
-                    Notes = ""
+                    FailureNote = ""
                 });
             }
 
@@ -453,11 +453,11 @@
             _currentAttemptNotes = "";
         }
 
-        var attempt = new ProductionLogStepAttempt
+        var attempt = new StepAttemptFormDTO
         {
-            Success = isSuccess,
+            IsSuccess = isSuccess,
             SubmitTime = DateTimeOffset.UtcNow,
-            Notes = isSuccess ? "" : _currentAttemptNotes
+            FailureNote = isSuccess ? "" : _currentAttemptNotes
         };
 
         LogSteps[TargetIndex].Attempts.Add(attempt);
@@ -473,7 +473,7 @@
             }
         }
 
-        await OnStepCompleted.InvokeAsync((new List<ProductionLogStep> { LogSteps[TargetIndex] }, isSuccess));
+        await OnStepCompleted.InvokeAsync(([LogSteps[TargetIndex]], isSuccess));
         await ShowFloatMessage(isSuccess ? "indexed-success" : "indexed-failure");
     }
     
@@ -481,7 +481,7 @@
     {
         if (_pendingFailureAttempt != null)
         {
-            _pendingFailureAttempt.Notes = _currentAttemptNotes;
+            _pendingFailureAttempt.FailureNote = _currentAttemptNotes;
             await ProductionLogEventService.ChangeMadeToProductionLog();
             ProductionLogEventService.MarkDirty();
         }
@@ -539,11 +539,11 @@
     {
         if (_targetIndex >= 0 && _targetIndex < LogSteps.Count)
         {
-            var latest = LogSteps[_targetIndex].LatestAttempt;
+            var latest = LogSteps[_targetIndex].LatestAttempt();
 
-            if (latest is { Success: false, Notes: not null })
+            if (latest is { IsSuccess: false, FailureNote: not null })
             {
-                _currentAttemptNotes = latest.Notes;
+                _currentAttemptNotes = latest.FailureNote;
                 ShowOptionalNotesField = true;
             }
             else
@@ -567,15 +567,15 @@
         if (_pendingFailureAttempt is null)
         {
             _pendingFailureAttempt = LogSteps
-                .Select(ls => ls.LatestAttempt)
-                .FirstOrDefault(a => a?.Success == false);
+                .Select(ls => ls.LatestAttempt())
+                .FirstOrDefault(a => a?.IsSuccess == false);
 
             // And copy its notes so the textarea shows the correct text:
-            _currentAttemptNotes = _pendingFailureAttempt?.Notes ?? "";
+            _currentAttemptNotes = _pendingFailureAttempt?.FailureNote ?? "";
         }
         else
         {
-            if (_pendingFailureAttempt.Id <= 0)
+            if (_pendingFailureAttempt.AttemptId <= 0)
             {
                 var success = await ProductionLogEventService.TryTriggerDbSaveAsync();
                 if (!success)

@@ -1,7 +1,7 @@
 ﻿using Bunit;
 using MESS.Blazor.Components.Pages.ProductionLog;
 using MESS.Data.Models;
-using MESS.Services.ProductionLogServices;
+using MESS.Services.UI.ProductionLogEvent;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
