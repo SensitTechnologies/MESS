@@ -103,10 +103,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.AutoSaveTriggered += _autoSaveHandler;
         
         // Register periodic database save handler
-        ProductionLogEventService.DbSaveTriggered += async logs =>
-        {
-            await SaveLogsToDatabase();
-        };
+        ProductionLogEventService.DbSaveTriggered += SaveLogsToDatabaseHandler;
         
         ProductSerialNumber = ProductionLogPartService.CurrentProductNumber;
         
@@ -409,6 +406,11 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         popupRef?.Close();
     }
+    
+    private async Task SaveLogsToDatabaseHandler(List<ProductionLogFormDTO> logs)
+    {
+        await SaveLogsToDatabase();
+    }
 
     private async Task SaveLogsToDatabase()
     {
@@ -606,6 +608,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         ProductionLogPartService.CurrentProductNumberChanged -= HandleProductNumberChanged;
         ProductionLogEventService.AutoSaveTriggered -= _autoSaveHandler;
+        ProductionLogEventService.DbSaveTriggered -= SaveLogsToDatabaseHandler;
         await ProductionLogEventService.StopDbSaveTimerAsync();
         
         try
