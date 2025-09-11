@@ -18,7 +18,9 @@
 
 @* Body *@
 <FluentDialogBody>
-    <div class="d-flex mx-1" style="flex-direction: row">
+    @if (shownLog is not null)
+    {
+        <div class="d-flex mx-1" style="flex-direction: row">
         <div class="d-flex me-5" style="flex-direction: row">
             <p class="me-1">
                 Product:<br/>
@@ -43,10 +45,10 @@
                     @shownLog?.CreatedBy<br/>
                     @shownLog?.LastModifiedBy<br/>
                 </p>
-            </div>  
+            </div>
         }
-    
-        
+
+
         <div class="d-flex mx-5" style="flex-direction: row">
             <p class="me-1">
                 Created On:<br/>
@@ -57,61 +59,65 @@
                 @shownLog?.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")<br/>
             </p>
         </div>
-    </div>
-    
-    <MudTable @ref="table"
-              ServerData="ServerReload"
-              Height="250px"
-              Loading="@IsLoading"
-              Class="border rounded-3 pt-1"
-              TableClass="fixed-header-cell table table-striped">
-        <ColGroup>
-            <col style="width: 45%" />
-            <col />
-            <col />
-            <col style="width: 20%" />
-            <col />
-        </ColGroup>
-        <HeaderContent>
-            <MudTh>Step Name</MudTh>
-            <MudTh>Submit Time</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Failure Notes</MudTh>
-            <MudTh>Delete</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Step Name">@context.StepName</MudTd>
-            <MudTd DataLabel="Submit Time">@context.SubmitTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
-            <MudTd DataLabel="Status">
-                <button class="btn btn-sm @(context.IsSuccess ? "btn-success confirmed" : "btn-outline-success pending")"
-                        @onclick="() => UpdateStatus(context, true)">
-                    Success
-                </button>
-                <button class="btn btn-sm @(!context.IsSuccess ? "btn-danger failed" : "btn-outline-danger")"
-                        @onclick="() => UpdateStatus(context, false)">
-                    Failure
-                </button>
-            </MudTd>
-            <MudTd DataLabel="Failure Notes">
-                @if (!context.IsSuccess)  @* Show textarea only if not success *@
-                {
-                    <textarea class="form-control form-control-sm"
-                          rows="1"
-                          @bind="context.FailureNote"
-                          placeholder="Optional failure note" />
-                }
-            </MudTd>
-            <MudTd DataLabel="Delete">
-                <button class="btn btn-sm btn-danger" @onclick="@(() => HandleAttemptDeleted(context))">
-                    Delete
-                </button>
-            </MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager />
-        </PagerContent>
-    </MudTable>
+        </div>
 
+        <MudTable @ref="table"
+                  ServerData="ServerReload"
+                  Height="250px"
+                  Loading="@IsLoading"
+                  Class="border rounded-3 pt-1"
+                  TableClass="fixed-header-cell table table-striped">
+            <ColGroup>
+                <col style="width: 45%"/>
+                <col/>
+                <col/>
+                <col style="width: 20%"/>
+                <col/>
+            </ColGroup>
+            <HeaderContent>
+                <MudTh>Step Name</MudTh>
+                <MudTh>Submit Time</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Failure Notes</MudTh>
+                <MudTh>Delete</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Step Name">@context.StepName</MudTd>
+                <MudTd DataLabel="Submit Time">@context.SubmitTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd DataLabel="Status">
+                    <button class="btn btn-sm @(context.IsSuccess ? "btn-success confirmed" : "btn-outline-success pending")"
+                            @onclick="() => UpdateStatus(context, true)">
+                        Success
+                    </button>
+                    <button class="btn btn-sm @(!context.IsSuccess ? "btn-danger failed" : "btn-outline-danger")"
+                            @onclick="() => UpdateStatus(context, false)">
+                        Failure
+                    </button>
+                </MudTd>
+                <MudTd DataLabel="Failure Notes">
+                    @if (!context.IsSuccess) @* Show textarea only if not success *@
+                    {
+                        <textarea class="form-control form-control-sm"
+                              rows="1"
+                              @bind="context.FailureNote"
+                              placeholder="Optional failure note" />
+                    }
+                </MudTd>
+                <MudTd DataLabel="Delete">
+                    <button class="btn btn-sm btn-danger" @onclick="@(() => HandleAttemptDeleted(context))">
+                        Delete
+                    </button>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager/>
+            </PagerContent>
+        </MudTable>
+    }
+    else
+    {
+        <p><em>Loading log details...</em></p>
+    }
 </FluentDialogBody>
 
 @* Footer *@

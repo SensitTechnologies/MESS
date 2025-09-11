@@ -243,17 +243,18 @@
     
     private async Task OpenDialogAsync(ProductionLogSummaryDTO log)
     {
-        // Create a new instance of Data
-        // to allow the user to cancel the update
-        var data = (log, true);
-        
+        var detail = await ProductionLogService.GetDetailByIdAsync(log.Id);
+        if (detail == null) return;
+
+        var data = (detail, false);
+
         await DialogService.ShowDialogAsync<LogOptionsDialog>(data, new DialogParameters()
-            {
-                Title = $"Log #{log.Id}",
-                OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
-                Width = "85%",
-                PreventScroll = true,
-            });
+        {
+            Title = $"Log #{log.Id}",
+            OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
+            Width = "85%",
+            PreventScroll = true,
+        });
     }
 
     private async Task HandleDialogAsync(DialogResult result)
