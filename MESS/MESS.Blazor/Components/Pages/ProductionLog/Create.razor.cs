@@ -427,6 +427,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
             throw new InvalidOperationException("Product and work instruction must be selected before saving logs.");
         }
         
+        // Stamp batch size onto each form DTO before saving
+        foreach (var dto in formDtos)
+        {
+            dto.FromBatchOf = BatchSize;
+        }
+        
         // Call the service — it now takes care of metadata and persistence
         var result = await ProductionLogService.SaveOrUpdateBatchAsync(
             formDtos,
