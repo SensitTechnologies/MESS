@@ -3,14 +3,18 @@ set -e
 
 LOG_TAG="[MESS-UPDATE]"
 
-# Paths
+# Base paths
+DEPLOY_DIR="$HOME/MESS/deployment-resources/raspberry-pi"
 REPO_DIR="$HOME/MESS"
 PROJECT_DIR="$REPO_DIR/MESS"
-ENV_FILE="$PROJECT_DIR/.env"
+ENV_FILE="$DEPLOY_DIR/.env"
 CONTAINER_NAME="mess-blazor"
 OLD_CONTAINER_NAME="${CONTAINER_NAME}-old"
-PERSISTENT_IMAGES_DIR="$REPO_DIR/data/WorkInstructionImages"
-BACKUP_DIR="$REPO_DIR/backups"
+
+# Data + backup directories live inside deployment folder
+DATA_DIR="$DEPLOY_DIR/data"
+PERSISTENT_IMAGES_DIR="$DATA_DIR/WorkInstructionImages"
+BACKUP_DIR="$DATA_DIR/backups"
 
 mkdir -p "$PERSISTENT_IMAGES_DIR"
 mkdir -p "$BACKUP_DIR"
@@ -38,7 +42,7 @@ fi
 echo "$LOG_TAG [`date`] New commits found. Updating..."
 git reset --hard origin/main
 
-cd "$PROJECT_DIR"
+cd "$DEPLOY_DIR"
 
 # 1. Stop and rename existing container for rollback
 if [ "$(docker ps -aq -f name=^${CONTAINER_NAME}$)" ]; then
@@ -62,7 +66,7 @@ fi
 
 # 3. Build new Docker image
 echo "$LOG_TAG [`date`] Building Docker image..."
-if ! docker build -t "$CONTAINER_NAME:latest" .; then
+if ! docker build -t "$CONTAINER_NAME:latest" "$DEPLOY_DIR"; then
   echo "$LOG_TAG [`date`] Docker build failed! Rolling back old container..."
   if [ "$(docker ps -aq -f name=^${OLD_CONTAINER_NAME}$)" ]; then
     docker rename "$OLD_CONTAINER_NAME" "$CONTAINER_NAME"
@@ -94,5 +98,9 @@ if [ "$(docker ps -aq -f name=^${OLD_CONTAINER_NAME}$)" ]; then
   echo "$LOG_TAG [`date`] Removing old container..."
   docker rm "$OLD_CONTAINER_NAME"
 fi
+
+# 6. Clean up old images
+echo "$LOG_TAG [`date`] Cleaning up unused Docker images..."
+docker image prune -f
 
 echo "$LOG_TAG [`date`] Update complete!"
