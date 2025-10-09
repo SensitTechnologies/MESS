@@ -2,7 +2,7 @@ using MESS.Services.CRUD.WorkInstructions;
 using Serilog;
 
 namespace MESS.Services.UI.WorkInstructionEditor;
-using MESS.Data.Models;
+using Data.Models;
 using System.Threading.Tasks;
 
 /// <inheritdoc />

@@ -1,11 +1,10 @@
-@using System.Collections.Generic
 @using System.Diagnostics.CodeAnalysis
 
 @inject IJSRuntime JS
 
 @typeparam T
 
-<div id="@Id">
+<div id="@Id" @ref="containerRef">
     @foreach (var item in Items)
     {
         <div @key="item">
@@ -92,48 +91,63 @@
     public bool ForceFallback { get; set; } = true;
 
     private DotNetObjectReference<SortableList<T>>? selfReference;
+    private ElementReference containerRef;
+    private IJSObjectReference? moduleRef;
+    private bool initialized = false;
 
-    /// <summary>
-    /// Initializes the SortableJS integration after the component is rendered for the first time.
-    /// </summary>
-    /// <param name="firstRender">Indicates if this is the first render.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!initialized)
         {
-            selfReference = DotNetObjectReference.Create(this);
-            var module = await JS.InvokeAsync<IJSObjectReference>("import", "/SortableList.js");
-            await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference, ForceFallback);
+            try
+            {
+                selfReference = DotNetObjectReference.Create(this);
+                moduleRef = await JS.InvokeAsync<IJSObjectReference>("import", "/SortableList.js");
+
+                // Pass the ElementReference so JS receives the actual element (preferred).
+                await moduleRef.InvokeVoidAsync("init", containerRef, Group, Pull, Put, Sort, Handle, Filter, selfReference, ForceFallback);
+                initialized = true;
+            }
+            catch (JSException jsEx)
+            {
+                // defensive: log or handle and avoid crashing the circuit
+                Console.Error.WriteLine($"SortableList init failed: {jsEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"SortableList unexpected init error: {ex}");
+            }
         }
     }
 
-    /// <summary>
-    /// Called by JavaScript when an item is reordered within the list.
-    /// </summary>
-    /// <param name="oldIndex">The index the item was moved from.</param>
-    /// <param name="newIndex">The index the item was moved to.</param>
     [JSInvokable]
-    public void OnUpdateJS(int oldIndex, int newIndex)
-    {
-        // invoke the OnUpdate event passing in the oldIndex and the newIndex
-        OnUpdate.InvokeAsync((oldIndex, newIndex));
-    }
+    public Task OnUpdateJS(int oldIndex, int newIndex)
+        => OnUpdate.InvokeAsync((oldIndex, newIndex));
 
-    /// <summary>
-    /// Called by JavaScript when an item is removed from the list.
-    /// </summary>
-    /// <param name="oldIndex">The index the item was removed from.</param>
-    /// <param name="newIndex">The index it was moved to (typically -1).</param>
     [JSInvokable]
-    public void OnRemoveJS(int oldIndex, int newIndex)
-    {
-        // remove the item from the list
-        OnRemove.InvokeAsync((oldIndex, newIndex));
-    }
+    public Task OnRemoveJS(int oldIndex, int newIndex)
+        => OnRemove.InvokeAsync((oldIndex, newIndex));
 
-    /// <summary>
-    /// Disposes the DotNetObjectReference to avoid memory leaks.
-    /// </summary>
-    public void Dispose() => selfReference?.Dispose();
+    // Implement IAsyncDisposable to clean up the JS module and DotNetObjectReference.
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (moduleRef is not null)
+            {
+                // call destroy to remove Sortable instance on JS side
+                try { await moduleRef.InvokeVoidAsync("destroy", containerRef); } catch { /* ignore */ }
+                await moduleRef.DisposeAsync();
+            }
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"Error disposing SortableList module: {e}");
+        }
+        finally
+        {
+            selfReference?.Dispose();
+            selfReference = null;
+        }
+    }
 }
-

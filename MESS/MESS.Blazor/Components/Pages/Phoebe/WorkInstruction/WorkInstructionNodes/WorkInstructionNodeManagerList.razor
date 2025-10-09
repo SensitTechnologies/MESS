@@ -49,36 +49,36 @@
     private Dictionary<int, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
-    @<div id="node-@node.Position">
+        @<div id="node-@node.Position">
             <div class="d-flex mb-3 border rounded disable-highlight">
                 <div class="d-flex align-items-center drag-handle me-2">
-                    <i class="bi bi-grip-vertical h3" />
-                    <div class="vr me-2" />
+                    <i class="bi bi-grip-vertical h3"/>
+                    <div class="vr me-2"/>
                 </div>
                 <div class="flex-grow-1 my-1">
                     @switch (node)
                     {
-                    case PartNode partNode:
-                        <PartNodeView PartNode="partNode"
-                                      OnNodeAction="HandleNodeAction"
-                                      OnChanged="() => OnChanged.InvokeAsync(node)" />
-                        break;
+                        case PartNode partNode:
+                            <PartNodeView PartNode="partNode"
+                                          OnNodeAction="HandleNodeAction"
+                                          OnChanged="() => OnChanged.InvokeAsync(node)"/>
+                            break;
 
-                    case Step stepNode:
-                        <StepNodeView Step="stepNode"
-                                      EditorRefs="EditorRefs"
-                                      ActiveFields="ActiveFields"
-                                      OnAction="HandleNodeAction"
-                                      OnChanged="() => OnChanged.InvokeAsync(node)" />
-                        break;
+                        case Step stepNode:
+                            <StepNodeView Step="stepNode"
+                                          EditorRefs="EditorRefs"
+                                          ActiveFields="ActiveFields"
+                                          OnAction="HandleNodeAction"
+                                          OnChanged="() => OnChanged.InvokeAsync(node)"/>
+                            break;
 
-                    default:
-                        <div>Unknown node type: @node.NodeType</div>
-                        break;
+                        default:
+                            <div>Unknown node type: @node.NodeType</div>
+                            break;
                     }
-                </div>    
+                </div>
             </div>
-    </div>;
+        </div>;
 
     private async Task OnItemsChanged((int oldIndex, int newIndex) indices)
     {

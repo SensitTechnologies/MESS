@@ -1283,6 +1283,8 @@ public partial class WorkInstructionService : IWorkInstructionService
                 .ThenInclude(w => ((PartNode)w).Parts)
                 .FirstOrDefaultAsync(w => w.Id == id);
             
+            SortNodesByPosition(workInstruction);
+            
             return workInstruction;
         }
         catch (Exception e)
@@ -1290,6 +1292,19 @@ public partial class WorkInstructionService : IWorkInstructionService
             Log.Warning("Exception thrown when attempting to GetByIdAsync with ID: {id}, in WorkInstructionService. Exception: {Exception}", id, e.ToString());
             return null;
         }
+    }
+    
+    /// <summary>
+    /// Ensures that the WorkInstruction's Nodes are ordered by their Position property.
+    /// </summary>
+    private static void SortNodesByPosition(WorkInstruction? workInstruction)
+    {
+        if (workInstruction?.Nodes == null || workInstruction.Nodes.Count == 0)
+            return;
+
+        workInstruction.Nodes = workInstruction.Nodes
+            .OrderBy(n => n.Position)
+            .ToList();
     }
     
     /// <summary>
