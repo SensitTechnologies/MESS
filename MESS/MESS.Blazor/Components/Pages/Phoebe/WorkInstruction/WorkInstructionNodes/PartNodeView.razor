@@ -12,11 +12,11 @@
                     <div class="row g-2 align-items-center">
                         <div class="col-12 col-md-4">
                             <label class="form-label"><strong>Part Number</strong></label>
-                            <input type="text" class="form-control" value="@part.PartNumber" @oninput="e => OnPartChanged(e, part, nameof(Part.PartNumber))" />
+                            <input type="text" class="form-control" value="@part.Number" @oninput="e => OnPartChanged(e, part, nameof(PartDefinition.Number))" />
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label"><strong>Part Name</strong></label>
-                            <input type="text" class="form-control flex-shrink-1" value="@part.PartName" @oninput="e => OnPartChanged(e, part, nameof(Part.PartName))" />
+                            <input type="text" class="form-control flex-shrink-1" value="@part.Name" @oninput="e => OnPartChanged(e, part, nameof(PartDefinition.Name))" />
                         </div>
                         <div class="col-12 col-md-2 d-grid">
                             <NodeActionMenu OnAction="(action) => HandlePartAction(part, action)" />
@@ -78,39 +78,39 @@ else
         await NotifyChangedAsync();
     }
 
-    private async Task HandlePartAction(Part part, string action)
+    private async Task HandlePartAction(PartDefinition partDefinition, string action)
     {
         if (PartNode?.Parts == null) return;
 
-        var index = PartNode.Parts.IndexOf(part);
+        var index = PartNode.Parts.IndexOf(partDefinition);
         if (index == -1) return;
 
-        PartNode.Parts.Remove(part);
+        PartNode.Parts.Remove(partDefinition);
 
         switch (action)
         {
             case "up":
-                PartNode.Parts.Insert(Math.Max(0, index - 1), part);
+                PartNode.Parts.Insert(Math.Max(0, index - 1), partDefinition);
                 break;
             case "down":
-                PartNode.Parts.Insert(Math.Min(PartNode.Parts.Count, index + 1), part);
+                PartNode.Parts.Insert(Math.Min(PartNode.Parts.Count, index + 1), partDefinition);
                 break;
             case "top":
-                PartNode.Parts.Insert(0, part);
+                PartNode.Parts.Insert(0, partDefinition);
                 break;
             case "bottom":
-                PartNode.Parts.Add(part);
+                PartNode.Parts.Add(partDefinition);
                 break;
             case "remove":
                 // Already removed above, nothing to do
                 break;
             case "insertBefore":
-                PartNode.Parts.Insert(index, part);
-                PartNode.Parts.Insert(index, new Part { PartNumber = "", PartName = "" });
+                PartNode.Parts.Insert(index, partDefinition);
+                PartNode.Parts.Insert(index, new PartDefinition { PartNumber = "", PartName = "" });
                 break;
             case "insertAfter":
-                PartNode.Parts.Insert(index, part);
-                PartNode.Parts.Insert(index + 1, new Part { PartNumber = "", PartName = "" });
+                PartNode.Parts.Insert(index, partDefinition);
+                PartNode.Parts.Insert(index + 1, new PartDefinition { PartNumber = "", PartName = "" });
                 break;
 
         }
@@ -118,14 +118,14 @@ else
         await NotifyChangedAsync();
     }
 
-    private async Task OnPartChanged(ChangeEventArgs e, Part part, string propertyName)
+    private async Task OnPartChanged(ChangeEventArgs e, PartDefinition partDefinition, string propertyName)
     {
         var newValue = e.Value?.ToString() ?? "";
 
-        if (propertyName == nameof(Part.PartNumber))
-            part.PartNumber = newValue;
-        else if (propertyName == nameof(Part.PartName))
-            part.PartName = newValue;
+        if (propertyName == nameof(PartDefinition.Number))
+            partDefinition.Number = newValue;
+        else if (propertyName == nameof(PartDefinition.Name))
+            partDefinition.Name = newValue;
 
         await NotifyChangedAsync();
     }

@@ -4,12 +4,12 @@
     <InputText
         id="productionLogPart"
         class="form-control tall-input text-lightweight"
-        placeholder="@ActiveProductionLogPart.Part?.PartNumber"
+        placeholder="@ActiveProductionLogPart.Part?.Number"
         @bind-Value="@ActiveProductionLogPart.PartSerialNumber"
         @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveProductionLogPart))" />
 
     <label for="productionLogPart" class="form-label subtle-label">
-        @ActiveProductionLogPart.Part?.PartName
+        @ActiveProductionLogPart.Part?.Name
     </label>
 </div>
 

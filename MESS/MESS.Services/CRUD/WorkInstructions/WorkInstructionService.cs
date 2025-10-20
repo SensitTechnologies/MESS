@@ -135,7 +135,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 if (node is PartNode partNode)
                 {
                     // Write parts string to column A (PART_COLUMN)
-                    var partStrings = partNode.Parts.Select(p => $"({p.PartNumber}, {p.PartName})");
+                    var partStrings = partNode.Parts.Select(p => $"({p.Number}, {p.Name})");
                     worksheet.Cell(currentRow, PART_COLUMN).Value = string.Join(", ", partStrings);
 
                     // Leave other columns blank automatically
@@ -1076,7 +1076,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// Uses regex to parse the parts list string and either retrieve existing parts
     /// from the database or create new ones as needed.
     /// </remarks>
-    private async Task<List<Part>?> GetPartsListFromString(string partsListString)
+    private async Task<List<PartDefinition>?> GetPartsListFromString(string partsListString)
     {
         try
         {
@@ -1085,7 +1085,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 return null;
             }
 
-            var parts = new List<Part>();
+            var parts = new List<PartDefinition>();
             var regexFilter = PartsListRegex();
             var partStringMatches = regexFilter.Matches(partsListString);
 
@@ -1093,7 +1093,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 if (match.Groups.Count >= 3)
                 {
-                    var partToAdd = new Part
+                    var partToAdd = new PartDefinition
                     {
                         PartNumber = match.Groups[1].Value.Trim(),
                         PartName = match.Groups[2].Value.Trim()
@@ -1126,16 +1126,16 @@ public partial class WorkInstructionService : IWorkInstructionService
     /// <summary>
     /// Retrieves an existing part from the database or creates a new one if it doesn't exist.
     /// </summary>
-    /// <param name="partToAdd">The part to retrieve or create.</param>
+    /// <param name="partDefinitionToAdd">The part to retrieve or create.</param>
     /// <returns>The persisted part from the database, or null if an error occurs.</returns>
-    private async Task<Part?> GetOrAddPart(Part partToAdd)
+    private async Task<PartDefinition?> GetOrAddPart(PartDefinition partDefinitionToAdd)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var existingPart = await context.Parts.FirstOrDefaultAsync(p =>
-                p.PartName == partToAdd.PartName &&
-                p.PartNumber == partToAdd.PartNumber);
+            var existingPart = await context.PartDefinitions.FirstOrDefaultAsync(p =>
+                p.Name == partDefinitionToAdd.Name &&
+                p.Number == partDefinitionToAdd.Number);
 
 
             if (existingPart != null)
@@ -1148,10 +1148,10 @@ public partial class WorkInstructionService : IWorkInstructionService
             
             // If a part does not exist in the database create it here
             // and return with database generated ID
-            await context.Parts.AddAsync(partToAdd);
+            await context.PartDefinitions.AddAsync(partDefinitionToAdd);
             await context.SaveChangesAsync();
-            Log.Information("Successfully created a new Part with Name: {PartName}, and Number: {PartNumber}", partToAdd.PartName, partToAdd.PartNumber);
-            return partToAdd;
+            Log.Information("Successfully created a new Part with Name: {PartName}, and Number: {PartNumber}", partDefinitionToAdd.Name, partDefinitionToAdd.Number);
+            return partDefinitionToAdd;
         }
         catch (Exception e)
         {
@@ -1749,7 +1749,7 @@ public partial class WorkInstructionService : IWorkInstructionService
 
         context.Entry(existing).CurrentValues.SetValues(updated);
 
-        var newParts = new List<Part>();
+        var newParts = new List<PartDefinition>();
 
         if (updated.Parts != null)
         {
@@ -1757,12 +1757,12 @@ public partial class WorkInstructionService : IWorkInstructionService
             {
                 if (incoming.Id == 0)
                 {
-                    context.Parts.Add(incoming);
+                    context.PartDefinitions.Add(incoming);
                     newParts.Add(incoming);
                 }
                 else
                 {
-                    var existingPart = await context.Parts.FindAsync(incoming.Id);
+                    var existingPart = await context.PartDefinitions.FindAsync(incoming.Id);
                     if (existingPart != null)
                     {
                         context.Entry(existingPart).CurrentValues.SetValues(incoming);

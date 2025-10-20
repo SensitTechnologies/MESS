@@ -46,22 +46,22 @@ public static class SeedWorkInstructions
                     {
                         NodeType = WorkInstructionNodeType.Part,
                         Position = 1,
-                        Parts = new List<Part>
+                        Parts = new List<PartDefinition>
                         {
-                            new Part
+                            new PartDefinition
                             {
-                                PartName = "Primary Circuit Board",
-                                PartNumber = "1234-G321"
+                                Name = "Primary Circuit Board",
+                                Number = "1234-G321"
                             },
-                            new Part
+                            new PartDefinition
                             {
-                                PartName = "Display Board",
-                                PartNumber = "5512-G221"
+                                Name = "Display Board",
+                                Number = "5512-G221"
                             },
-                            new Part
+                            new PartDefinition
                             {
-                                PartName = "Humidity Sensor",
-                                PartNumber = "1132-H341"
+                                Name = "Humidity Sensor",
+                                Number = "1132-H341"
                             }
                         }
                     },

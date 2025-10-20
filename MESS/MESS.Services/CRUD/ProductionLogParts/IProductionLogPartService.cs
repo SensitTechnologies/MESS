@@ -98,14 +98,14 @@ public interface IProductionLogPartService
     public void RequestPartsReload();
 
     /// <summary>
-    /// Ensures that a <see cref="ProductionLogPart"/> exists for each required <see cref="Part"/>
+    /// Ensures that a <see cref="ProductionLogPart"/> exists for each required <see cref="PartDefinition"/>
     /// within the specified log index and part node.
     /// Any missing parts will result in new <see cref="ProductionLogPart"/> entries being added.
     /// </summary>
     /// <param name="logIndex">The index of the production log.</param>
     /// <param name="partNodeId">The ID of the <see cref="PartNode"/> to associate the parts with.</param>
-    /// <param name="requiredParts">The list of required <see cref="Part"/> entities.</param>
-    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<Part> requiredParts);
+    /// <param name="requiredParts">The list of required <see cref="PartDefinition"/> entities.</param>
+    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<PartDefinition> requiredParts);
 
     /// <summary>
     /// Clears all in-memory <see cref="ProductionLogPart"/> entries across all production log indexes and part nodes.

@@ -243,10 +243,10 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             {
                 NodeType = WorkInstructionNodeType.Part,
                 Parts = partNode.Parts
-                    .Select(p => new Part
+                    .Select(p => new PartDefinition
                     {
-                        PartName = p.PartName,
-                        PartNumber = p.PartNumber
+                        PartName = p.Name,
+                        PartNumber = p.Number
                     })
                     .ToList()
             };

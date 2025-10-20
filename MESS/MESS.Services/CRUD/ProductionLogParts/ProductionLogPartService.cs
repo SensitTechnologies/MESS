@@ -251,7 +251,7 @@ public class ProductionLogPartService : IProductionLogPartService
     }
     
     /// <inheritdoc />
-    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<Part> requiredParts)
+    public void EnsureRequiredPartsLogged(int logIndex, int partNodeId, List<PartDefinition> requiredParts)
     {
         var existingParts = GetPartsForNode(logIndex, partNodeId);
 

@@ -59,7 +59,7 @@ public class ApplicationContext : DbContext
     /// <summary>
     /// DbSet for Parts.
     /// </summary>
-    public virtual DbSet<Part> Parts { get; set; } = null!;
+    public virtual DbSet<PartDefinition> PartDefinitions { get; set; } = null!;
     
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
