@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20251016150004_AddSerializablePart")]
+    partial class AddSerializablePart
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,7 +25,7 @@ namespace MESS.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("MESS.Data.Models.PartDefinition", b =>
+            modelBuilder.Entity("MESS.Data.Models.Part", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -30,17 +33,17 @@ namespace MESS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Name")
+                    b.Property<string>("PartName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Number")
+                    b.Property<string>("PartNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("PartDefinitions");
+                    b.ToTable("Parts");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Product", b =>
@@ -377,7 +380,7 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogPart", b =>
                 {
-                    b.HasOne("MESS.Data.Models.PartDefinition", "Part")
+                    b.HasOne("MESS.Data.Models.Part", "Part")
                         .WithMany()
                         .HasForeignKey("PartId");
 
@@ -426,7 +429,7 @@ namespace MESS.Data.Migrations
                         .WithMany("Children")
                         .HasForeignKey("ParentId");
 
-                    b.HasOne("MESS.Data.Models.PartDefinition", "Part")
+                    b.HasOne("MESS.Data.Models.Part", "Part")
                         .WithMany()
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -461,7 +464,7 @@ namespace MESS.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MESS.Data.Models.PartDefinition", null)
+                    b.HasOne("MESS.Data.Models.Part", null)
                         .WithMany()
                         .HasForeignKey("PartsId")
                         .OnDelete(DeleteBehavior.Cascade)

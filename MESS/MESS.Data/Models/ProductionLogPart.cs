@@ -28,5 +28,17 @@ public class ProductionLogPart
     /// <summary>
     /// Gets or sets the associated part entity.
     /// </summary>
-    public Part? Part { get; set; }
+    public PartDefinition? Part { get; set; }
+    
+    // NEW (nullable) - will be backfilled in later migration
+    // These are nullable for backfilling
+    /// <summary>
+    /// The ID of the serializable associated with this production log part.
+    /// </summary>
+    public int? SerializablePartId { get; set; }
+    
+    /// <summary>
+    /// The serializable part associated with this production log part.
+    /// </summary>
+    public SerializablePart? SerializablePart { get; set; }
 }
