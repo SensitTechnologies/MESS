@@ -83,6 +83,21 @@ public class ApplicationContext : DbContext
             .WithMany()
             .HasForeignKey("WorkInstructionId")
             .IsRequired(false);
+        
+        modelBuilder.Entity<ProductionLogPart>()
+            .HasKey(plp => new { plp.ProductionLogId, plp.SerializablePartId, plp.OperationType });
+        
+        modelBuilder.Entity<ProductionLogPart>()
+            .HasOne(plp => plp.SerializablePart)
+            .WithMany(sp => sp.ProductionLogParts)
+            .HasForeignKey(plp => plp.SerializablePartId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ProductionLogPart>()
+            .HasOne(plp => plp.ParentPart)
+            .WithMany()
+            .HasForeignKey(plp => plp.ParentPartId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
     
     /// <inheritdoc />
