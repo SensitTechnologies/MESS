@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20251021143443_RemoveSerializablePartParent")]
+    partial class RemoveSerializablePartParent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -191,7 +194,7 @@ namespace MESS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("PartDefinitionId")
+                    b.Property<int>("PartId")
                         .HasColumnType("int");
 
                     b.Property<string>("SerialNumber")
@@ -199,7 +202,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PartDefinitionId");
+                    b.HasIndex("PartId");
 
                     b.ToTable("SerializableParts");
                 });
@@ -419,13 +422,13 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.SerializablePart", b =>
                 {
-                    b.HasOne("MESS.Data.Models.PartDefinition", "PartDefinition")
+                    b.HasOne("MESS.Data.Models.PartDefinition", "Part")
                         .WithMany()
-                        .HasForeignKey("PartDefinitionId")
+                        .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("PartDefinition");
+                    b.Navigation("Part");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
