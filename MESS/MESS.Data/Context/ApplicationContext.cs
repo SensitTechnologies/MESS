@@ -60,6 +60,10 @@ public class ApplicationContext : DbContext
     /// DbSet for Parts.
     /// </summary>
     public virtual DbSet<PartDefinition> PartDefinitions { get; set; } = null!;
+    /// <summary>
+    /// DbSet for SerializableParts.
+    /// </summary>
+    public virtual DbSet<SerializablePart> SerializableParts { get; set; } = null!;
     
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
