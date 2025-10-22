@@ -54,9 +54,20 @@ public class WorkInstruction : AuditableEntity
     public bool ShouldGenerateQrCode { get; set; }
     
     /// <summary>
-    /// Gets or sets a value indicating whether this work instruction collects a product serial number.
+    /// Indicates whether the part produced by this work instruction is serialized.
     /// </summary>
-    public bool CollectsProductSerialNumber { get; set; }
+    public bool PartProducedIsSerialized { get; set; }
+    
+    /// <summary>
+    /// Foreign key for the part produced by this work instruction.
+    /// </summary>
+    public int? PartProducedId { get; set; }
+    
+    /// <summary>
+    /// The part produced by this work instruction.
+    /// </summary>
+    [ForeignKey(nameof(PartProducedId))]
+    public PartDefinition? PartProduced { get; set; }
 
     /// <summary>
     /// Gets or sets the list of nodes associated with the work instruction.
