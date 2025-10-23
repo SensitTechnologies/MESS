@@ -69,6 +69,12 @@ public class ApplicationContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.PartDefinition)
+            .WithOne() // One-to-one for now; can be changed to .WithMany() later.
+            .HasForeignKey<Product>(p => p.PartDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<WorkInstructionNode>()
             .UseTptMappingStrategy();

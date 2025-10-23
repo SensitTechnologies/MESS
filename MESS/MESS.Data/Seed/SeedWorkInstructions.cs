@@ -20,8 +20,12 @@ public static class SeedWorkInstructions
         {
             var product = new Product
             {
-                Name = "ABC Controller",
-                IsActive = true,
+                PartDefinition = new PartDefinition
+                {
+                    Number = "ABC-001",
+                    Name = "ABC Controller"
+                },
+                IsActive = true
             };
 
             context.Products.Add(product);
