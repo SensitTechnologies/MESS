@@ -75,9 +75,10 @@ public class ApplicationContext : DbContext
 
         modelBuilder.Entity<PartNode>()
             .ToTable("PartNodes")
-            .HasMany(p => p.Parts)
+            .HasOne(p => p.PartDefinition)
             .WithMany()
-            .UsingEntity("PartNodeParts");
+            .HasForeignKey(p => p.PartDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
