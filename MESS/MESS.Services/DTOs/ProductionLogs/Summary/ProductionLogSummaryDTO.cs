@@ -23,11 +23,6 @@ public class ProductionLogSummaryDTO
     public string WorkInstructionName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the serial number of the product, if applicable.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
-
-    /// <summary>
     /// Gets or sets the date and time when the production log was created.
     /// </summary>
     public DateTimeOffset CreatedOn { get; set; }

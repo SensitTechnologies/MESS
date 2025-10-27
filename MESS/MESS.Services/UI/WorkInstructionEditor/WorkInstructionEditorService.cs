@@ -98,7 +98,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsActive = false,
             IsLatest = true,
             ShouldGenerateQrCode = false,
-            CollectsProductSerialNumber = false,
+            PartProducedIsSerialized = false,
             Products = products ?? new List<Product>(),
             Nodes = new List<WorkInstructionNode>()
         };
@@ -121,7 +121,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsActive = false,
             IsLatest = true,
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
-            CollectsProductSerialNumber = Current.CollectsProductSerialNumber,
+            PartProducedIsSerialized = Current.PartProducedIsSerialized,
             Products = products ?? Current.Products?.ToList() ?? new List<Product>(),
             Nodes = await CloneNodesAsync(Current.Nodes)
         };
@@ -213,7 +213,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsActive = false,
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
-            CollectsProductSerialNumber = template.CollectsProductSerialNumber,
+            PartProducedIsSerialized = template.PartProducedIsSerialized,
             Products = template.Products?.ToList() ?? new List<Product>(),
             Nodes = await CloneNodesAsync(template.Nodes)
         };

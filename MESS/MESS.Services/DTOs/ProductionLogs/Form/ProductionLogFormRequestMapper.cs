@@ -24,7 +24,6 @@ public static class ProductionLogFormRequestMapper
         {
             ProductId = productId,
             WorkInstructionId = workInstructionId,
-            ProductSerialNumber = dto.ProductSerialNumber,
             FromBatchOf = dto.FromBatchOf,
             OperatorId = operatorId,
             CreatedBy = createdBy,
@@ -44,7 +43,6 @@ public static class ProductionLogFormRequestMapper
         return new ProductionLogUpdateRequest
         {
             Id = dto.Id,
-            ProductSerialNumber = dto.ProductSerialNumber,
             FromBatchOf = dto.FromBatchOf,
             LogSteps = dto.LogSteps
                 .Select(step => step.ToUpdateRequest()) // DTO → UpdateRequest

@@ -20,9 +20,8 @@ public static class ProductionLogSummaryMapper
         return new ProductionLogSummaryDTO
         {
             Id = entity.Id,
-            ProductName = entity.Product?.Name ?? string.Empty,
+            ProductName = entity.Product?.PartDefinition.Name ?? string.Empty,
             WorkInstructionName = entity.WorkInstruction?.Title ?? string.Empty,
-            ProductSerialNumber = entity.ProductSerialNumber,
             CreatedOn = entity.CreatedOn,
             CreatedBy = entity.CreatedBy,
             LastModifiedOn = entity.LastModifiedOn,

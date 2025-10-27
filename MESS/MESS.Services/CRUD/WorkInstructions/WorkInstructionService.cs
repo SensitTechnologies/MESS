@@ -29,7 +29,7 @@ public partial class WorkInstructionService : IWorkInstructionService
     private const string INSTRUCTION_TITLE_CELL = "B2";
     private const string VERSION_CELL = "B3";
     private const string SHOULD_GENERATE_QR_CODE_CELL = "B4";
-    private const string COLLECTS_PRODUCT_SERIAL_NUMBER_CELL = "B5";
+    private const string PART_PRODUCED_IS_SERIALIZED = "B5";
     private const string ORIGINAL_ID_CELL = "B6";
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
@@ -76,13 +76,13 @@ public partial class WorkInstructionService : IWorkInstructionService
             worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
             worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).Value = workInstructionToExport.ShouldGenerateQrCode;
-            worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).Value = workInstructionToExport.CollectsProductSerialNumber;
+            worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).Value = workInstructionToExport.PartProducedIsSerialized;
             worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId ?? workInstructionToExport.Id;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
             if (workInstructionToExport.Products.Count > 0)
             {
-                var productNames = string.Join(", ", workInstructionToExport.Products.Select(p => p.Name));
+                var productNames = string.Join(", ", workInstructionToExport.Products.Select(p => p.PartDefinition.Name));
                 worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
             }
             
@@ -622,7 +622,7 @@ public partial class WorkInstructionService : IWorkInstructionService
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
             
             var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
-            var collectsProductSerialNumber = worksheet.Cell(COLLECTS_PRODUCT_SERIAL_NUMBER_CELL).GetValue<bool>();
+            var partProducedIsSerialized = worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).GetValue<bool>();
             
             // Retrieve Product and assign relationship
             var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
@@ -675,7 +675,7 @@ public partial class WorkInstructionService : IWorkInstructionService
                 Products = [],
                 Nodes = [],
                 ShouldGenerateQrCode = shouldGenerateQrCode,
-                CollectsProductSerialNumber = collectsProductSerialNumber,
+                PartProducedIsSerialized = partProducedIsSerialized,
                 IsLatest = true
             };
             

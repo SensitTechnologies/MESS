@@ -22,7 +22,6 @@ public static class ProductionLogUpdateRequestMapper
         ArgumentNullException.ThrowIfNull(dto);
 
         // Update scalar properties
-        entity.ProductSerialNumber = dto.ProductSerialNumber;
         entity.FromBatchOf = dto.FromBatchOf;
 
         // Update audit info

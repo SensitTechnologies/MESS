@@ -23,11 +23,6 @@ public class ProductionLogDetailDTO
     public string WorkInstructionName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the serial number of the product, if applicable.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
-
-    /// <summary>
     /// Gets or sets the batch size from which this production log was created.
     /// A value of 1 indicates a single-piece flow.
     /// </summary>

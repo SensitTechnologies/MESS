@@ -58,9 +58,8 @@ public class ProductionLogService : IProductionLogService
                 .Select(p => new ProductionLogSummaryDTO
                 {
                     Id = p.Id,
-                    ProductName = p.Product != null ? p.Product.Name : string.Empty,
+                    ProductName = p.Product != null ? p.Product.PartDefinition.Name : string.Empty,
                     WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
-                    ProductSerialNumber = p.ProductSerialNumber,
                     CreatedOn = p.CreatedOn,
                     CreatedBy = p.CreatedBy,
                     LastModifiedOn = p.LastModifiedOn,
@@ -392,9 +391,8 @@ public class ProductionLogService : IProductionLogService
                 .Select(p => new ProductionLogSummaryDTO
                 {
                     Id = p.Id,
-                    ProductName = p.Product != null ? p.Product.Name : string.Empty,
+                    ProductName = p.Product != null ? p.Product.PartDefinition.Name : string.Empty,
                     WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
-                    ProductSerialNumber = p.ProductSerialNumber,
                     CreatedOn = p.CreatedOn,
                     LastModifiedOn = p.LastModifiedOn,
                     LastModifiedBy = p.LastModifiedBy,

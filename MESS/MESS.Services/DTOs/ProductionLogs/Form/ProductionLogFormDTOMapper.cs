@@ -26,7 +26,6 @@ public static class ProductionLogFormDTOMapper
         return new ProductionLogFormDTO
         {
             Id = log.Id,
-            ProductSerialNumber = log.ProductSerialNumber,
             FromBatchOf = log.FromBatchOf,
             LogSteps = log.LogSteps.ToFormDTOList()
         };
@@ -48,7 +47,6 @@ public static class ProductionLogFormDTOMapper
         return new ProductionLog
         {
             Id = dto.Id,
-            ProductSerialNumber = dto.ProductSerialNumber,
             FromBatchOf = dto.FromBatchOf,
             LogSteps = dto.LogSteps.ToEntityList()
         };
