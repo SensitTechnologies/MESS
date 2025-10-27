@@ -6,9 +6,9 @@
         <option value="-1">All Products</option>
         @foreach (var product in Products
                       .Where(p => p.IsActive && p.WorkInstructions?.Any() == true)
-                      .OrderBy(p => p.Name ?? string.Empty))
+                      .OrderBy(p => p.PartDefinition.Name ?? string.Empty))
         {
-            <option value="@product.Id">@product.Name</option>
+            <option value="@product.Id">@product.PartDefinition.Name</option>
         }
     </select>
 }

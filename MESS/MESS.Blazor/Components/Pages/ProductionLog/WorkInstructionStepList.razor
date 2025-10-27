@@ -55,7 +55,7 @@
                     break;
             }
         }
-        @if (ActiveWorkInstruction.CollectsProductSerialNumber)
+        @if (ActiveWorkInstruction.PartProducedIsSerialized)
         {
             <div class="card card-body">
                 <div class="mb-2">
@@ -73,7 +73,8 @@
                             <InputText
                                 id=@($"productSerialNumber-{i}")
                                 class="form-control tall-input text-lightweight"
-                                @bind-Value="log.ProductSerialNumber"
+                                @* TODO
+                                @bind-Value="log.ProductSerialNumber" *@
                                 @onchange="() => ProductionLogEventService.MarkDirty()" />
                             @if (ProductionLogs.Count > 1)
                             {

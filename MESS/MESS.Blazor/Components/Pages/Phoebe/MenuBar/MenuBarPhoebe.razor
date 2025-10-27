@@ -39,7 +39,7 @@
         <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem Checked="@(CurrentInstruction?.ShouldGenerateQrCode ?? false)"
                             OnClick="ToggleQrCode" Disabled="@(!HasInstruction)">Generates QR Code</FluentMenuItem>
-            <FluentMenuItem Checked="@(CurrentInstruction?.CollectsProductSerialNumber ?? false)" 
+            <FluentMenuItem Checked="@(CurrentInstruction?.PartProducedIsSerialized ?? false)" 
                             OnClick="ToggleSerial" Disabled="@(!HasInstruction)">Collects Product Serial Number</FluentMenuItem>
             <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" 
                             OnClick="ToggleActive" Disabled="@(!HasInstruction)">Active</FluentMenuItem>
@@ -329,7 +329,7 @@
     private void ToggleSerial()
     {
         if (CurrentInstruction == null) return;
-        CurrentInstruction.CollectsProductSerialNumber = !CurrentInstruction.CollectsProductSerialNumber;
+        CurrentInstruction.PartProducedIsSerialized = !CurrentInstruction.PartProducedIsSerialized;
         MarkDirty();
     }
 

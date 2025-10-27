@@ -241,7 +241,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         // Proceed with setting new state
         ActiveProduct = product;
         ActiveProductWorkInstructionList = product.WorkInstructions.Where(w => w.IsActive).ToList();
-        ProductionLogEventService.SetCurrentProductName(product.Name);
+        ProductionLogEventService.SetCurrentProductName(product.PartDefinition.Name);
         ProductionLogEventService.MarkClean();
         
         await SetActiveWorkInstruction(-1);
@@ -251,7 +251,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private async Task GetCachedActiveProductAsync()
     {
         var result = await LocalCacheManager.GetActiveProductAsync();
-        ActiveProduct = Products?.FirstOrDefault(p => p.Name == result.Name);
+        ActiveProduct = Products?.FirstOrDefault(p => p.PartDefinition.Name == result.Name);
 
         if (ActiveProduct == null) 
         {
@@ -262,7 +262,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             .Where(w => w.IsActive)
             .ToList() ?? new List<WorkInstruction>();
         
-        ProductionLogEventService.SetCurrentProductName(ActiveProduct.Name);
+        ProductionLogEventService.SetCurrentProductName(ActiveProduct.PartDefinition.Name);
     }
     
     private async Task OnBatchSizeChanged(int newSize)

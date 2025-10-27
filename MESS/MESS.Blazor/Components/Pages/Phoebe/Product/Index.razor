@@ -39,7 +39,7 @@ else
               CellClass="align-top">
         
         <HeaderContent>
-            <MudTh><MudTableSortLabel SortLabel="name_field" SortBy="new Func<Product, object>(x => x.Name)"><strong>Name</strong></MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortLabel="name_field" SortBy="new Func<Product, object>(x => x.PartDefinition.Name)"><strong>Name</strong></MudTableSortLabel></MudTh>
             <MudTh><strong>Active</strong></MudTh>
             <MudTh><strong>Work Instruction</strong></MudTh>
             <MudTh><strong>Actions</strong></MudTh>
@@ -83,7 +83,15 @@ else
 
 @code {
     private List<Product> Products { get; set; } = new();
-    private Product _newProduct = new() { Name = "", IsActive = true };
+    private Product _newProduct = new()
+    {
+        IsActive = true,
+        PartDefinition = new PartDefinition
+        {
+            Name = "",
+            Number = ""
+        }
+    };
     private List<WorkInstruction>? _allInstructions;
     private Dictionary<int, List<int>> SelectedInstructionMap { get; set; } = new();
     private readonly Dictionary<int, EventCallback<List<int>>> _selectedIdsChangedCallbacks = new();
@@ -135,14 +143,14 @@ else
         
         
         data = data.Where(product => 
-            SatisfiesFilter(product.Name, SearchString)
+            SatisfiesFilter(product.PartDefinition.Name, SearchString)
         ).ToArray();
         totalItems = data.Count();
 
         switch (state.SortLabel)
         {
             case "name_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.Name);
+                data = data.OrderByDirection(state.SortDirection, o => o.PartDefinition.Name);
                 break;
         }
 
@@ -178,7 +186,15 @@ else
 
     private async Task LoadProducts()
     {
-        _newProduct = new Product() { Name = "", IsActive = true };
+        _newProduct = new Product
+        {
+            IsActive = true,
+            PartDefinition = new PartDefinition
+            {
+                Name = "",
+                Number = ""
+            }
+        };
         Products = (await ProductService.GetAllAsync()).ToList();
     }
 
@@ -186,27 +202,27 @@ else
     {
         try
         {
-            Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+            Log.Information("Submitting product: {ProductName} (ID: {ProductId})", product.PartDefinition.Name, product.Id);
 
             if (product.Id == 0)
             {
                 await ProductService.CreateAsync(product);
-                ToastService.ShowSuccess($"Product '{product.Name}' created successfully!");
+                ToastService.ShowSuccess($"Product '{product.PartDefinition.Name}' created successfully!");
             }
             else
             {
                 await ProductService.UpdateProductAsync(product);
-                ToastService.ShowSuccess($"Product '{product.Name}' updated successfully!");
+                ToastService.ShowSuccess($"Product '{product.PartDefinition.Name}' updated successfully!");
             }
             await GrabServerData();
             await _table.ReloadServerData();
 
-            Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.Name, product.Id);
+            Log.Information("Product submitted successfully: {ProductName} (ID: {ProductId})", product.PartDefinition.Name, product.Id);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error occurred while submitting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
-            ToastService.ShowError($"Error submitting product '{product.Name}'. Please try again.");
+            Log.Error(ex, "Error occurred while submitting product: {ProductName} (ID: {ProductId})", product.PartDefinition.Name, product.Id);
+            ToastService.ShowError($"Error submitting product '{product.PartDefinition.Name}'. Please try again.");
         }
     }
     
@@ -325,15 +341,15 @@ else
             SelectedInstructionMap.Remove(product.Id);
             _selectedIdsChangedCallbacks.Remove(product.Id);
             
-            ToastService.ShowSuccess($"Product '{product.Name}' was deleted.");
+            ToastService.ShowSuccess($"Product '{product.PartDefinition.Name}' was deleted.");
             await GrabServerData();
             await _table.ReloadServerData();
 
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error deleting product: {ProductName} (ID: {ProductId})", product.Name, product.Id);
-            ToastService.ShowError($"Failed to delete '{product.Name}'.");
+            Log.Error(ex, "Error deleting product: {ProductName} (ID: {ProductId})", product.PartDefinition.Name, product.Id);
+            ToastService.ShowError($"Failed to delete '{product.PartDefinition.Name}'.");
         }
     }
 }

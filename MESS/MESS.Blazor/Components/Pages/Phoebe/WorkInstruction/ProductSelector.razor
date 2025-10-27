@@ -21,20 +21,20 @@
                 @if (product.Id == 0)
                 {
                     <input class="form-control"
-                           value="@product.Name"
+                           value="@product.PartDefinition.Name"
                            @onchange="@((ChangeEventArgs e) => UpdateProductName(product, e.Value?.ToString()))"
                            placeholder="Product name" />
                 }
                 else
                 {
-                    <span>@product.Name</span>
+                    <span>@product.PartDefinition.Name</span>
                 }
             </div>
         }
         @foreach (var product in UnsavedProducts)
         {
             <input class="form-control"
-                   value="@product.Name"
+                   value="@product.PartDefinition.Name"
                    @onchange="(e => UpdateProductName(product, e.Value?.ToString()))"
                    placeholder="Product name"
                    @onblur="@(() => SaveNewProductAsync(product))" />
@@ -98,7 +98,7 @@
     /// <returns>A task that completes when the selection change is processed.</returns>
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
-        Console.WriteLine($"Toggle: {product.Name} - Checked: {isChecked}");
+        Console.WriteLine($"Toggle: {product.PartDefinition.Name} - Checked: {isChecked}");
 
         var updatedSelection = SelectedProducts.ToList();
 
@@ -123,23 +123,31 @@
     /// <returns>A task that completes when the update operation finishes.</returns>
     private async Task UpdateProductName(Product product, string? newName)
     {
-        if (string.IsNullOrWhiteSpace(newName) || newName == product.Name)
+        if (string.IsNullOrWhiteSpace(newName) || newName == product.PartDefinition.Name)
             return;
 
-        product.Name = newName;
+        product.PartDefinition.Name = newName;
         
         await ProductService.UpdateProductAsync(product);
     }
     
     private void AddNewProduct()
     {
-        var newProduct = new Product { Name = "" , IsActive = true};
+        var newProduct = new Product
+        {
+            IsActive = true,
+            PartDefinition = new PartDefinition
+            {
+                Name = "",
+                Number = ""
+            }
+        };
         UnsavedProducts.Add(newProduct);
     }
     
     private async Task SaveNewProductAsync(Product product)
     {
-        if (!string.IsNullOrWhiteSpace(product.Name))
+        if (!string.IsNullOrWhiteSpace(product.PartDefinition.Name))
         {
             await ProductService.CreateAsync(product);
             AllProducts.Add(product);
