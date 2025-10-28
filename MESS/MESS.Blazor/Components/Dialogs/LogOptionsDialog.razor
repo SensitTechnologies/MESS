@@ -82,7 +82,7 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Step Name">@context.StepName</MudTd>
-                <MudTd DataLabel="Submit Time">@context.SubmitTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd DataLabel="Submit Time">@context.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                 <MudTd DataLabel="Status">
                     <button class="btn btn-sm @(context.IsSuccess ? "btn-success confirmed" : "btn-outline-success pending")"
                             @onclick="() => UpdateStatus(context, true)">
