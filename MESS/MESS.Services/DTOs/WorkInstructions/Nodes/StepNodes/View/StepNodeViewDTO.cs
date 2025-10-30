@@ -1,9 +1,11 @@
-namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes;
+using MESS.Services.DTOs.WorkInstructions.Nodes.View;
+
+namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.View;
 
 /// <summary>
 /// Represents a read-only step node within a work instruction.
 /// </summary>
-public class StepNodeDTO : WorkInstructionNodeDTO
+public class StepNodeViewDTO : WorkInstructionNodeViewDTO
 {
     /// <summary>
     /// Gets or sets the name of the step.

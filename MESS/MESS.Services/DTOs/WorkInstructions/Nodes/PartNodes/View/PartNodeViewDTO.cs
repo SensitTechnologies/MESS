@@ -1,9 +1,11 @@
-namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes;
+using MESS.Services.DTOs.WorkInstructions.Nodes.View;
+
+namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.View;
 
 /// <summary>
 /// Represents a read-only node that references a part within a work instruction.
 /// </summary>
-public class PartNodeDTO : WorkInstructionNodeDTO
+public class PartNodeViewDTO : WorkInstructionNodeViewDTO
 {
     /// <summary>
     /// Gets or sets the identifier of the associated part definition.

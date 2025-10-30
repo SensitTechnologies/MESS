@@ -1,27 +1,25 @@
-using MESS.Data.Models;
+namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.View;
 
-namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes;
-
-using MESS.Data.Models;
+using Data.Models;
 
 /// <summary>
 /// Provides extension methods for mapping between <see cref="PartNode"/> entities
-/// and <see cref="PartNodeDTO"/> objects.
+/// and <see cref="PartNodeViewDTO"/> objects.
 /// </summary>
-public static class PartNodeDTOMapper
+public static class PartNodeViewDTOMapper
 {
     /// <summary>
-    /// Converts a <see cref="PartNode"/> entity to its corresponding <see cref="PartNodeDTO"/>.
+    /// Converts a <see cref="PartNode"/> entity to its corresponding <see cref="PartNodeViewDTO"/>.
     /// </summary>
     /// <param name="entity">The <see cref="PartNode"/> entity to map.</param>
-    /// <returns>A mapped <see cref="PartNodeDTO"/>.</returns>
+    /// <returns>A mapped <see cref="PartNodeViewDTO"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="entity"/> is null.</exception>
-    public static PartNodeDTO ToDTO(this PartNode entity)
+    public static PartNodeViewDTO ToDTO(this PartNode entity)
     {
         if (entity is null)
             throw new ArgumentNullException(nameof(entity));
 
-        return new PartNodeDTO
+        return new PartNodeViewDTO
         {
             Id = entity.Id,
             Position = entity.Position,
@@ -33,29 +31,29 @@ public static class PartNodeDTOMapper
     }
 
     /// <summary>
-    /// Converts a <see cref="PartNodeDTO"/> to its corresponding <see cref="PartNode"/> entity.
+    /// Converts a <see cref="PartNodeViewDTO"/> to its corresponding <see cref="PartNode"/> entity.
     /// </summary>
-    /// <param name="dto">The <see cref="PartNodeDTO"/> to map.</param>
+    /// <param name="viewDTO">The <see cref="PartNodeViewDTO"/> to map.</param>
     /// <returns>A mapped <see cref="PartNode"/> entity.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="dto"/> is null.</exception>
-    public static PartNode ToEntity(this PartNodeDTO dto)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="viewDTO"/> is null.</exception>
+    public static PartNode ToEntity(this PartNodeViewDTO viewDTO)
     {
-        if (dto is null)
-            throw new ArgumentNullException(nameof(dto));
+        if (viewDTO is null)
+            throw new ArgumentNullException(nameof(viewDTO));
 
         return new PartNode
         {
-            Id = dto.Id,
-            Position = dto.Position,
-            NodeType = dto.NodeType,
-            PartDefinitionId = dto.PartDefinitionId,
+            Id = viewDTO.Id,
+            Position = viewDTO.Position,
+            NodeType = viewDTO.NodeType,
+            PartDefinitionId = viewDTO.PartDefinitionId,
             // The PartDefinition is created here as a placeholder;
             // services should attach an existing tracked entity when available.
             PartDefinition = new PartDefinition
             {
-                Id = dto.PartDefinitionId,
-                Name = dto.PartName,
-                Number = dto.PartNumber
+                Id = viewDTO.PartDefinitionId,
+                Name = viewDTO.PartName,
+                Number = viewDTO.PartNumber
             }
         };
     }
@@ -64,15 +62,15 @@ public static class PartNodeDTOMapper
     /// Converts a collection of <see cref="PartNode"/> entities to DTOs.
     /// </summary>
     /// <param name="entities">The collection of entities to map.</param>
-    /// <returns>A list of <see cref="PartNodeDTO"/> objects.</returns>
-    public static List<PartNodeDTO> ToDTOList(this IEnumerable<PartNode> entities)
+    /// <returns>A list of <see cref="PartNodeViewDTO"/> objects.</returns>
+    public static List<PartNodeViewDTO> ToDTOList(this IEnumerable<PartNode> entities)
         => entities?.Select(e => e.ToDTO()).ToList() ?? [];
 
     /// <summary>
-    /// Converts a collection of <see cref="PartNodeDTO"/> objects to entities.
+    /// Converts a collection of <see cref="PartNodeViewDTO"/> objects to entities.
     /// </summary>
     /// <param name="dtos">The collection of DTOs to map.</param>
     /// <returns>A list of <see cref="PartNode"/> entities.</returns>
-    public static List<PartNode> ToEntityList(this IEnumerable<PartNodeDTO> dtos)
+    public static List<PartNode> ToEntityList(this IEnumerable<PartNodeViewDTO> dtos)
         => dtos?.Select(d => d.ToEntity()).ToList() ?? [];
 }
