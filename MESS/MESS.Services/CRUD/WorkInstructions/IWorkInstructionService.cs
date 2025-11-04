@@ -12,24 +12,6 @@ using Data.Models;
 public interface IWorkInstructionService
 {
     /// <summary>
-    /// Exports a work instruction to an Excel (XLSX) file in the same format as import.
-    /// </summary>
-    /// <param name="workInstructionToExport">The work instruction to be exported to Excel.</param>
-    /// <returns>
-    /// The file path of the generated Excel file as a string if successful; otherwise, null.
-    /// </returns>
-    /// <remarks>
-    /// The Excel file will include:
-    /// - Work instruction title and version in the header
-    /// - Product information
-    /// - Parts list information
-    /// - A table of steps with their titles, descriptions, and references to media files
-    /// 
-    /// The file will be saved with a filename based on the work instruction title and a timestamp.
-    /// </remarks>
-    public string? ExportToXlsx(WorkInstruction workInstructionToExport);
-    
-    /// <summary>
     /// Determines whether the specified work instruction is editable.
     /// A work instruction is considered non-editable if it has associated production logs.
     /// </summary>
@@ -39,29 +21,7 @@ public interface IWorkInstructionService
     /// True if editable (i.e., no production logs exist for it); otherwise, false.
     /// </returns>
     public Task<bool> IsEditable(WorkInstruction workInstruction);
-    /// <summary>
-    /// Imports work instructions from an Excel file.
-    /// </summary>
-    /// <param name="file">The Excel workbook to be imported.</param>
-    /// <returns>
-    /// A <see cref="WorkInstructionImportResult"/> object containing:
-    /// - Success status
-    /// - Imported work instruction (if successful)
-    /// - Error details (if failed)
-    /// - The names of processed files
-    /// </returns>
-    /// <remarks>
-    /// The Excel file must follow a specific format with cells containing:
-    /// - B1: Work instruction title
-    /// - D1: Version and QR code requirement
-    /// - B2: Product name
-    /// - B3: Parts list (format: "(PART_NAME, PART_NUMBER), ...")
-    /// - Rows from 7 onwards: Steps with title, description, and media
-    /// 
-    /// Images found in the Excel file are extracted and saved to the web root directory.
-    /// </remarks>
-    public Task<WorkInstructionImportResult> ImportFromXlsx(IBrowserFile file);
-
+    
     /// <summary>
     /// Determines whether a given WorkInstruction is unique based on its properties and contents.
     /// </summary>
@@ -138,44 +98,7 @@ public interface IWorkInstructionService
     /// A task that represents the asynchronous operation. The task result is <c>true</c> if the update succeeded; otherwise, <c>false</c>.
     /// </returns>
     Task<bool> MarkAllVersionsNotLatestAsync(int originalId);
-    /// <summary>
-    /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
-    /// </summary>
-    /// <param name="file">The uploaded browser file.</param>
-    /// <returns>
-    /// A task representing the asynchronous operation. The task result is the relative path
-    /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
-    /// </returns>
-    Task<string> SaveImageFileAsync(IBrowserFile file);
-
-    /// <summary>
-    /// Saves an uploaded image file for a work instruction and returns its relative path for database storage.
-    /// </summary>
-    /// <param name="file">The uploaded file string</param>
-    /// <returns>
-    /// A task representing the asynchronous operation. The task result is the relative path
-    /// (e.g., "WorkInstructionImages/guid-filename.png") to the saved image.
-    /// </returns>
-    Task<string> SaveImageFileAsync(string file);
-
-    /// <summary>
-    /// Removes an Image File from the server
-    /// </summary>
-    /// <param name="FileName">The File to be deleted</param>
-    /// <returns>
-    /// A task representing the synchronous operation.
-    /// </returns>
-    Task DeleteImageFile(string FileName);
     
-    /// <summary>
-    /// Removes all Image Files related to a Work Instruction from the server
-    /// </summary>
-    /// <param name="instruction">The Work Instruction to delete all images from</param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
-    Task DeleteImagesByWorkInstructionAsync(WorkInstruction instruction);
-
     /// <summary>
     /// Sets IsActive = false for all other versions in this version chain.
     /// </summary>
