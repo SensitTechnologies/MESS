@@ -120,7 +120,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
                 {
                     if (node is PartNode partNode)
                     {
-                        ProductionLogPartService.EnsureRequiredPartsLogged(i, partNode.Id, partNode.Parts);
+                        ProductionLogPartService.EnsureRequiredPartsLogged(i, partNode.Id, [partNode.PartDefinition]);
                     }
                 }
             }
@@ -379,7 +379,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
             // Cast to PartNode to access its Parts collection
             if (node is PartNode partNode)
             {
-                totalPartsNeeded += partNode.Parts.Count;
+                totalPartsNeeded++;
             }
         }
         
@@ -661,7 +661,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             if (ActiveWorkInstruction == null) continue;
             foreach (var partNode in ActiveWorkInstruction.Nodes.OfType<PartNode>())
             {
-                ProductionLogPartService.EnsureRequiredPartsLogged(ProductionLogBatch.Logs.Count - 1, partNode.Id, partNode.Parts);
+                ProductionLogPartService.EnsureRequiredPartsLogged(ProductionLogBatch.Logs.Count - 1, partNode.Id,
+                    [partNode.PartDefinition]);
             }
         }
 
