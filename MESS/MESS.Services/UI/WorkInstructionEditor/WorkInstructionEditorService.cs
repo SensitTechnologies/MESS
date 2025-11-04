@@ -1,4 +1,5 @@
 using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.Media.WorkInstructions;
 using Serilog;
 
 namespace MESS.Services.UI.WorkInstructionEditor;
@@ -9,6 +10,8 @@ using System.Threading.Tasks;
 public class WorkInstructionEditorService : IWorkInstructionEditorService
 {
     private readonly IWorkInstructionService _workInstructionService;
+    private readonly IWorkInstructionImageService _workInstructionImageService;
+    
     /// <inheritdoc />
     public WorkInstruction? Current { get; private set; }
     
@@ -71,9 +74,13 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// The service used to retrieve, create, update, and clone <see cref="WorkInstruction"/> 
     /// entities during the editing process.
     /// </param>
-    public WorkInstructionEditorService(IWorkInstructionService workInstructionService)
+    /// <param name="workInstructionImageService">
+    /// The service used to manipulate work instruction images.
+    /// </param>
+    public WorkInstructionEditorService(IWorkInstructionService workInstructionService, IWorkInstructionImageService workInstructionImageService)
     {
         _workInstructionService = workInstructionService;
+        _workInstructionImageService = workInstructionImageService;
     }
 
     private void NotifyChanged()
@@ -242,13 +249,14 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             return new PartNode
             {
                 NodeType = WorkInstructionNodeType.Part,
-                Parts = partNode.Parts
-                    .Select(p => new PartDefinition
-                    {
-                        PartName = p.Name,
-                        PartNumber = p.Number
-                    })
-                    .ToList()
+                // Clone the single PartDefinition associated with this node
+                PartDefinition = new PartDefinition
+                {
+                    Id = partNode.PartDefinition.Id, // Preserving the Database ID for the PartDefinition
+                    Name = partNode.PartDefinition.Name,
+                    Number = partNode.PartDefinition.Number
+                },
+                PartDefinitionId = partNode.PartDefinitionId
             };
         }
         else if (node is Step stepNode)
@@ -279,7 +287,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         var clone = new List<string>();
         foreach (var image in Images) 
         {
-            clone.Add( await _workInstructionService.SaveImageFileAsync(image));
+            clone.Add( await _workInstructionImageService.SaveImageFileAsync(image));
         }
 
 
@@ -385,7 +393,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public void QueueNodeForDeletion(WorkInstructionNode node)
     {
-        if (node == null) return;
         if (!_nodesQueuedForDeletion.Contains(node))
         {
             _nodesQueuedForDeletion.Add(node);
