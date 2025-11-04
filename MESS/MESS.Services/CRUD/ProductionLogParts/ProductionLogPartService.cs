@@ -62,13 +62,20 @@ public class ProductionLogPartService : IProductionLogPartService
 
             var productionLogId = savedLogs[group.LogIndex].Id;
 
+            // Get all parts for this log and filter out entries without a SerializablePart or SerialNumber
             var allParts = group.GetAllParts()
-                .Where(p => !string.IsNullOrWhiteSpace(p.PartSerialNumber))
+                .Where(p => p.SerializablePart != null && !string.IsNullOrWhiteSpace(p.SerializablePart.SerialNumber))
                 .ToList();
 
             foreach (var part in allParts)
             {
                 part.ProductionLogId = productionLogId;
+
+                // Ensure SerializablePart is attached to the DbContext
+                if (part.SerializablePart != null)
+                {
+                    // context attachment will happen in CreateRangeAsync
+                }
             }
 
             if (allParts.Count == 0)
@@ -100,7 +107,8 @@ public class ProductionLogPartService : IProductionLogPartService
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var logList = await context.ProductionLogParts
-                .Include(l => l.Part)
+                .Include(l => l.SerializablePart!)
+                .ThenInclude(sp => sp.PartDefinition)
                 .ToListAsync();
 
             return logList;
@@ -140,15 +148,15 @@ public class ProductionLogPartService : IProductionLogPartService
                 Log.Warning("Attempted to add range of productionLogParts with {LogCount} logs", productionLogParts.Count);
                 return false;
             }
+
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            foreach (var serialNumberLog in productionLogParts)
+            foreach (var logPart in productionLogParts)
             {
-                if (serialNumberLog.Part is not null)
-                {
-                    context.Attach(serialNumberLog.Part);
-                    context.Entry(serialNumberLog.Part).State = EntityState.Unchanged;
-                }
+                if (logPart.SerializablePart is null) continue;
+                // Attach the SerializablePart to avoid EF trying to insert it again
+                context.Attach(logPart.SerializablePart);
+                context.Entry(logPart.SerializablePart).State = EntityState.Unchanged;
             }
 
             await context.ProductionLogParts.AddRangeAsync(productionLogParts);
@@ -158,7 +166,7 @@ public class ProductionLogPartService : IProductionLogPartService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to Create a Range of ProductionLogParts with Exception Message: {ExceptionMessage}",  e.Message);
+            Log.Warning("Exception caught while attempting to Create a Range of ProductionLogParts with Exception Message: {ExceptionMessage}", e.Message);
             return false;
         }
     }
@@ -176,7 +184,7 @@ public class ProductionLogPartService : IProductionLogPartService
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while attempting to update ProductionLogPart with ID: {ID} with Exception Message: {ExceptionMessage}", productionLogPart.Id, e.Message);
+            Log.Warning("Exception caught while attempting to update ProductionLogPart with Exception Message: {ExceptionMessage}", e.Message);
             return false;
         }
     }
@@ -255,9 +263,18 @@ public class ProductionLogPartService : IProductionLogPartService
     {
         var existingParts = GetPartsForNode(logIndex, partNodeId);
 
+        // Find required parts that are not already logged
         var missingParts = requiredParts
-            .Where(required => existingParts.All(existing => existing.Part?.Id != required.Id))
-            .Select(p => new ProductionLogPart { Part = p })
+            .Where(required => existingParts.All(existing => existing.SerializablePart?.PartDefinitionId != required.Id))
+            .Select(p => new ProductionLogPart
+            {
+                SerializablePart = new SerializablePart
+                {
+                    PartDefinitionId = p.Id,
+                    SerialNumber = null // or generate a serial number if needed
+                },
+                OperationType = PartOperationType.Produced // default operation; adjust if necessary
+            })
             .ToList();
 
         if (missingParts.Count > 0)
