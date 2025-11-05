@@ -55,7 +55,7 @@
 
     private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
     private bool _initialized;
-    private int SelectedLogIndex;
+    private int _selectedLogIndex;
 
     /// <summary>
     /// Gets or sets the selected log number (1-based UI value).
@@ -63,13 +63,13 @@
     /// </summary>
     private int SelectedLogNumber
     {
-        get => SelectedLogIndex + 1;
+        get => _selectedLogIndex + 1;
         set
         {
             var newIndex = Math.Clamp(value - 1, 0, ProductionLogs.Count - 1);
-            if (newIndex != SelectedLogIndex)
+            if (newIndex != _selectedLogIndex)
             {
-                SelectedLogIndex = newIndex;
+                _selectedLogIndex = newIndex;
                 LoadPartsForSelectedIndex();
             }
         }
@@ -108,12 +108,10 @@
     /// <param name="firstRender">Whether this is the first render of the component.</param>
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
-        {
-            _initialized = true;
-            LoadPartsForSelectedIndex();
-            StateHasChanged();
-        }
+        if (!firstRender) return;
+        _initialized = true;
+        LoadPartsForSelectedIndex();
+        StateHasChanged();
     }
 
     /// <summary>
@@ -121,7 +119,7 @@
     /// </summary>
     private void OnPartsReloadRequested()
     {
-        for (int i = 0; i < ProductionLogs.Count; i++)
+        for (var i = 0; i < ProductionLogs.Count; i++)
         {
             ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, [PartNode.PartDefinition]);
         }
@@ -135,7 +133,7 @@
     /// </summary>
     private void LoadPartsForSelectedIndex()
     {
-        ProductionLogParts = ProductionLogPartService.GetPartsForNode(SelectedLogIndex, PartNode.Id);
+        ProductionLogParts = ProductionLogPartService.GetPartsForNode(_selectedLogIndex, PartNode.Id);
     }
 
     /// <summary>
@@ -151,7 +149,7 @@
         if (index != -1)
             ProductionLogParts[index] = updatedPart;
 
-        ProductionLogPartService.SetPartsForNode(SelectedLogIndex, PartNode.Id, ProductionLogParts);
+        ProductionLogPartService.SetPartsForNode(_selectedLogIndex, PartNode.Id, ProductionLogParts);
     }
 
     private void IncrementLogIndex()
