@@ -3,6 +3,7 @@ using MESS.Data.Models;
 using MESS.Services.CRUD.Products;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.Media.WorkInstructions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -35,12 +36,11 @@ public class WorkInstructionServiceTests
         dbFactory.Setup(f => f.CreateDbContext())
             .Returns(() => new ApplicationContext(options)); // Create new instance on each call
         
-        var productMock = new Mock<IProductService>();
         var logMock = new Mock<IProductionLogService>();
+        var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
-        var webHostMock = new Mock<IWebHostEnvironment>();
         
-        return new WorkInstructionService(productMock.Object, logMock.Object, memoryCacheMock.Object, webHostMock.Object, dbFactory.Object);
+        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, dbFactory.Object);
     }
     
     [Fact]
@@ -51,13 +51,11 @@ public class WorkInstructionServiceTests
         dbFactory.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Test exception"));
     
-        var productMock = new Mock<IProductService>();
         var logMock = new Mock<IProductionLogService>();
+        var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
-        var webHostMock = new Mock<IWebHostEnvironment>();
     
-        var service = new WorkInstructionService(productMock.Object, logMock.Object, memoryCacheMock.Object, 
-            webHostMock.Object, dbFactory.Object);
+        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, dbFactory.Object);
 
         // Act
         var result = service.GetByTitle("Test Title");

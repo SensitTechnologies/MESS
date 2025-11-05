@@ -1,5 +1,6 @@
 using MESS.Data.Models;
 using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.Media.WorkInstructions;
 using MESS.Services.UI.WorkInstructionEditor;
 using Moq;
 
@@ -7,13 +8,15 @@ namespace MESS.Tests.Services;
 
 public class WorkInstructionEditorServiceTests
 {
-    private readonly Mock<IWorkInstructionService> _mockService;
+    private readonly Mock<IWorkInstructionService> _mockWorkInstructionService;
+    private readonly Mock<IWorkInstructionImageService> _mockImageService;
     private readonly WorkInstructionEditorService _sut;
 
     public WorkInstructionEditorServiceTests()
     {
-        _mockService = new Mock<IWorkInstructionService>();
-        _sut = new WorkInstructionEditorService(_mockService.Object);
+        _mockWorkInstructionService = new Mock<IWorkInstructionService>();
+        _mockImageService = new Mock<IWorkInstructionImageService>();
+        _sut = new WorkInstructionEditorService(_mockWorkInstructionService.Object, _mockImageService.Object);
     }
 
     [Fact]
@@ -42,7 +45,7 @@ public class WorkInstructionEditorServiceTests
             Body = "Body 1"
         });
 
-        _mockService.Setup(s => s.SaveImageFileAsync(It.IsAny<string>()))
+        _mockImageService.Setup(s => s.SaveImageFileAsync(It.IsAny<string>()))
             .ReturnsAsync("cloned.png");
 
         // Act
@@ -60,7 +63,7 @@ public class WorkInstructionEditorServiceTests
     {
         // Arrange
         var wi = new WorkInstruction { Id = 42, Title = "Existing" };
-        _mockService.Setup(s => s.GetByIdAsync(42)).ReturnsAsync(wi);
+        _mockWorkInstructionService.Setup(s => s.GetByIdAsync(42)).ReturnsAsync(wi);
 
         // Act
         await _sut.LoadForEditAsync(42);
@@ -74,7 +77,7 @@ public class WorkInstructionEditorServiceTests
     [Fact]
     public async Task LoadForEditAsync_NotFound_ShouldThrow()
     {
-        _mockService.Setup(s => s.GetByIdAsync(99)).ReturnsAsync((WorkInstruction?)null);
+        _mockWorkInstructionService.Setup(s => s.GetByIdAsync(99)).ReturnsAsync((WorkInstruction?)null);
 
         await Assert.ThrowsAsync<Exception>(() => _sut.LoadForEditAsync(99));
     }
@@ -84,7 +87,7 @@ public class WorkInstructionEditorServiceTests
     {
         // Arrange
         _sut.StartNew("New WI");
-        _mockService.Setup(s => s.Create(It.IsAny<WorkInstruction>()))
+        _mockWorkInstructionService.Setup(s => s.Create(It.IsAny<WorkInstruction>()))
             .ReturnsAsync(true);
 
         // Act
@@ -94,7 +97,7 @@ public class WorkInstructionEditorServiceTests
         Assert.True(result);
         Assert.False(_sut.IsDirty);
         Assert.Equal(EditorMode.EditExisting, _sut.Mode);
-        _mockService.Verify(s => s.Create(It.IsAny<WorkInstruction>()), Times.Once);
+        _mockWorkInstructionService.Verify(s => s.Create(It.IsAny<WorkInstruction>()), Times.Once);
     }
 
     [Fact]
@@ -102,8 +105,8 @@ public class WorkInstructionEditorServiceTests
     {
         // Arrange
         var wi = new WorkInstruction { Id = 5, Title = "Existing" };
-        _mockService.Setup(s => s.GetByIdAsync(5)).ReturnsAsync(wi);
-        _mockService.Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstruction>()))
+        _mockWorkInstructionService.Setup(s => s.GetByIdAsync(5)).ReturnsAsync(wi);
+        _mockWorkInstructionService.Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstruction>()))
             .ReturnsAsync(true);
 
         // put service into EditExisting state properly
@@ -114,7 +117,7 @@ public class WorkInstructionEditorServiceTests
 
         // Assert
         Assert.True(result);
-        _mockService.Verify(s => s.UpdateWorkInstructionAsync(It.Is<WorkInstruction>(w => w.Id == 5)), Times.Once);
+        _mockWorkInstructionService.Verify(s => s.UpdateWorkInstructionAsync(It.Is<WorkInstruction>(w => w.Id == 5)), Times.Once);
     }
 
     [Fact]
@@ -150,7 +153,7 @@ public class WorkInstructionEditorServiceTests
         Assert.False(_sut.CurrentHasParts());
         Assert.False(_sut.CurrentHasSteps());
 
-        _sut.Current!.Nodes.Add(new PartNode());
+        _sut.Current!.Nodes.Add(new PartNode{ PartDefinition = new PartDefinition { Name = "Some Part", Number = "Some Number"}});
         _sut.Current!.Nodes.Add(new Step { Name = "Some name", Body = "Some body" });
 
         Assert.True(_sut.CurrentHasParts());
