@@ -4,12 +4,12 @@
     <InputText
         id="productionLogPart"
         class="form-control tall-input text-lightweight"
-        placeholder="@ActiveProductionLogPart.Part?.Number"
-        @bind-Value="@ActiveProductionLogPart.PartSerialNumber"
+        placeholder="@ActiveProductionLogPart.SerializablePart?.PartDefinition?.Number"
+        @bind-Value="@SerialNumber"
         @bind-Value:after="@(() => AfterSerialNumberInput.InvokeAsync(ActiveProductionLogPart))" />
 
     <label for="productionLogPart" class="form-label subtle-label">
-        @ActiveProductionLogPart.Part?.Name
+        @ActiveProductionLogPart.SerializablePart?.PartDefinition?.Name
     </label>
 </div>
 
@@ -27,4 +27,16 @@
     /// </summary>
     [Parameter]
     public required EventCallback<ProductionLogPart> AfterSerialNumberInput { get; set; }
+    
+    private string SerialNumber
+    {
+        get => ActiveProductionLogPart.SerializablePart?.SerialNumber ?? string.Empty;
+        set
+        {
+            if (ActiveProductionLogPart.SerializablePart is not null)
+            {
+                ActiveProductionLogPart.SerializablePart.SerialNumber = value;
+            }
+        }
+    }
 }
