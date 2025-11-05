@@ -8,7 +8,7 @@
 @inject IProductionLogEventService ProductionLogEventService
 
 
-@if (ActiveWorkInstruction != null && ProductionLogs?.Any() == true)
+@if (ProductionLogs.Any())
 {
     <ul class="step">
         @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
@@ -107,35 +107,4 @@
     /// The tuple contains the production log step and an optional boolean indicating completion status.
     /// </summary>
     [Parameter] public EventCallback<(List<LogStepFormDTO>, bool?)> OnStepCompleted { get; set; }
-
-    private string? SelectedButton { get; set; } = "";
-
-    private void SetSelectedButton(string buttonName)
-    {
-        if (SelectedButton == buttonName)
-        {
-            SelectedButton = null;
-        }
-        else
-        {
-            SelectedButton = buttonName;
-        }
-    }
-
-    private void ClearSelectedButton()
-    {
-        SelectedButton = null;
-    }
-
-    private string GetButtonClass(string buttonName)
-    {
-        string baseClass = "btn";
-
-        if (buttonName == "Clear")
-        {
-            return string.IsNullOrEmpty(SelectedButton) ? $"{baseClass} btn-secondary" : $"{baseClass} btn-warning";
-        }
-
-        return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
-    }
 }
