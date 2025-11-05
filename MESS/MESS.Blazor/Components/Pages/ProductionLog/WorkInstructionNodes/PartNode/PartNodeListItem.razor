@@ -98,7 +98,7 @@
     {
         for (int i = 0; i < ProductionLogs.Count; i++)
         {
-            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, PartNode.Parts);
+            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, [PartNode.PartDefinition]);
         }
     }
 
@@ -123,7 +123,7 @@
     {
         for (int i = 0; i < ProductionLogs.Count; i++)
         {
-            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, PartNode.Parts);
+            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, [PartNode.PartDefinition]);
         }
 
         LoadPartsForSelectedIndex();
@@ -145,9 +145,9 @@
     /// <param name="updatedPart">The part that was updated with serial number input.</param>
     private void AfterSerialNumberInput(ProductionLogPart updatedPart)
     {
-        updatedPart.SubmitTimeQc = DateTimeOffset.UtcNow;
+        updatedPart.OperationType = PartOperationType.Installed;
 
-        var index = ProductionLogParts.FindIndex(p => p.Part?.Id == updatedPart.Part?.Id);
+        var index = ProductionLogParts.FindIndex(p => p.SerializablePart?.Id == updatedPart.SerializablePart?.Id);
         if (index != -1)
             ProductionLogParts[index] = updatedPart;
 
