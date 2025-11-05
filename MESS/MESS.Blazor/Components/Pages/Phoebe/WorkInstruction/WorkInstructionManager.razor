@@ -389,7 +389,7 @@
         switch (args.nodeType)
         {
             case part:
-                newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, Parts = [new PartDefinition { PartName = "", PartNumber = "" }] };
+                newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, PartDefinition = new PartDefinition { Name = "", Number = "" } };
                 break;
 
             default:
