@@ -304,6 +304,9 @@ namespace MESS.Data.Migrations
                 {
                     b.HasBaseType("MESS.Data.Models.WorkInstructionNode");
 
+                    b.Property<int>("InputType")
+                        .HasColumnType("int");
+
                     b.Property<int>("PartDefinitionId")
                         .HasColumnType("int");
 
