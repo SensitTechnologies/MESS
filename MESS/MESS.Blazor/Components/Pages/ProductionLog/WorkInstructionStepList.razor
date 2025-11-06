@@ -7,54 +7,44 @@
 @using MESS.Services.UI.ProductionLogEvent
 @inject IProductionLogEventService ProductionLogEventService
 
-
 @if (ProductionLogs.Any())
 {
     <ul class="step">
-        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
+        @foreach (var block in NodeBlocks)
         {
-            // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
-            switch (workInstructionNode)
+            switch (block)
             {
-                case Step instructionStep:
-                    // Create or retrieve a list of log steps for all logs
+                case Step step:
                     var logSteps = new List<LogStepFormDTO>();
-
                     foreach (var log in ProductionLogs)
                     {
-                        var step = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == instructionStep.Id);
-                        if (step == null)
+                        var existing = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+                        if (existing == null)
                         {
-                            step = new LogStepFormDTO
-                            {
-                                WorkInstructionStepId = instructionStep.Id
-                            };
-                            log.LogSteps?.Add(step);
+                            existing = new LogStepFormDTO { WorkInstructionStepId = step.Id };
+                            log.LogSteps?.Add(existing);
                         }
-                        logSteps.Add(step);
+                        logSteps.Add(existing);
                     }
 
                     <li class="mb-3">
-                        <div id="step-@instructionStep.Position">
-                            <StepNodeListItem 
-                                Step="instructionStep" 
+                        <div id="step-@step.Position">
+                            <StepNodeListItem
+                                Step="step"
                                 LogSteps="logSteps"
                                 OnStepCompleted="OnStepCompleted" />
                         </div>
                     </li>
                     break;
 
-                case PartNode instructionPart:
+                case List<PartNode> partGroup:
                     <li class="mb-3">
-                        <PartNodeListItem PartNode="instructionPart" ProductionLogs="ProductionLogs" />
+                        <PartNodeGroup PartNodes="partGroup" ProductionLogs="ProductionLogs" />
                     </li>
-                    break;
-
-                default:
-                    <div>Unknown Instruction type</div>
                     break;
             }
         }
+
         @if (ActiveWorkInstruction.PartProducedIsSerialized)
         {
             <div class="card card-body">
@@ -68,14 +58,7 @@
                     @for (var i = 0; i < ProductionLogs.Count; i++)
                     {
                         var log = ProductionLogs[i];
-
                         <div class="form-floating flex-grow-1" style="min-width: 220px;">
-                            <InputText
-                                id=@($"productSerialNumber-{i}")
-                                class="form-control tall-input text-lightweight"
-                                @* TODO
-                                @bind-Value="log.ProductSerialNumber" *@
-                                @onchange="() => ProductionLogEventService.MarkDirty()" />
                             @if (ProductionLogs.Count > 1)
                             {
                                 <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
@@ -86,7 +69,6 @@
                     }
                 </div>
             </div>
-
         }
     </ul>
 }
@@ -107,4 +89,46 @@
     /// The tuple contains the production log step and an optional boolean indicating completion status.
     /// </summary>
     [Parameter] public EventCallback<(List<LogStepFormDTO>, bool?)> OnStepCompleted { get; set; }
+    
+    /// <summary>
+    /// A processed list of "blocks" — each block is either a Step node or a group of Part nodes.
+    /// </summary>
+    private List<object> NodeBlocks { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        NodeBlocks = GroupNodes(ActiveWorkInstruction.Nodes.OrderBy(n => n.Position).ToList());
+    }
+
+    private static List<object> GroupNodes(List<WorkInstructionNode> nodes)
+    {
+        var result = new List<object>();
+        List<PartNode>? currentGroup = null;
+
+        foreach (var node in nodes)
+        {
+            if (node is PartNode partNode)
+            {
+                currentGroup ??= [];
+                currentGroup.Add(partNode);
+            }
+            else
+            {
+                if (currentGroup is not null)
+                {
+                    result.Add(currentGroup);
+                    currentGroup = null;
+                }
+
+                if (node is Step step)
+                    result.Add(step);
+            }
+        }
+
+        // Add the final group if the list ended with part nodes
+        if (currentGroup is not null)
+            result.Add(currentGroup);
+
+        return result;
+    }
 }
