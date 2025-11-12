@@ -103,12 +103,6 @@ public class ApplicationContext : DbContext
             .WithMany(sp => sp.ProductionLogParts)
             .HasForeignKey(plp => plp.SerializablePartId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<ProductionLogPart>()
-            .HasOne(plp => plp.ParentPart)
-            .WithMany()
-            .HasForeignKey(plp => plp.ParentPartId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
     
     /// <inheritdoc />

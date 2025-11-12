@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace MESS.Data.Models;
 
 /// <summary>
@@ -9,8 +7,6 @@ namespace MESS.Data.Models;
 /// <remarks>
 /// This table captures the full lifecycle history of serialized parts. Each record reflects
 /// a single event (Produced, Installed, or Removed) during a production log entry.
-/// The <see cref="ParentPartId"/> value represents the assembly relationship of the part
-/// at the time of that event, allowing reconstruction of the full assembly history over time.
 /// </remarks>
 public class ProductionLogPart
 {
@@ -38,15 +34,6 @@ public class ProductionLogPart
     public PartOperationType OperationType { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the parent part at the time of this event, if applicable.
-    /// </summary>
-    /// <remarks>
-    /// This value represents the hierarchical relationship between parts at the time of the log event.
-    /// It is <c>null</c> for root parts or for parts that are produced but not yet installed.
-    /// </remarks>
-    public int? ParentPartId { get; set; }
-
-    /// <summary>
     /// Navigation property for the associated production log.
     /// </summary>
     public ProductionLog? ProductionLog { get; set; }
@@ -55,13 +42,6 @@ public class ProductionLogPart
     /// Navigation property for the serialized part involved in this event.
     /// </summary>
     public SerializablePart? SerializablePart { get; set; }
-
-    /// <summary>
-    /// Navigation property for the parent part, representing the assembly the part was in
-    /// at the time of this event.
-    /// </summary>
-    [ForeignKey(nameof(ParentPartId))]
-    public SerializablePart? ParentPart { get; set; }
 }
 
 /// <summary>
