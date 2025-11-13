@@ -4,8 +4,6 @@
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
 @using MESS.Services.DTOs.ProductionLogs.Form
 @using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
-@using MESS.Services.UI.ProductionLogEvent
-@inject IProductionLogEventService ProductionLogEventService
 
 @if (ProductionLogs.Any())
 {
@@ -50,7 +48,7 @@
             <div class="card card-body">
                 <div class="mb-2">
                     <div class="form-label">
-                        @(ProductionLogs.Count == 1 ? "Product Serial Number" : "Product Serial Numbers")
+                        @(ProductionLogs.Count == 1 ? "Produced Serial Number" : "Produced Serial Numbers")
                     </div>
                 </div>
 
@@ -93,7 +91,7 @@
     /// <summary>
     /// A processed list of "blocks" — each block is either a Step node or a group of Part nodes.
     /// </summary>
-    private List<object> NodeBlocks { get; set; } = new();
+    private List<object> NodeBlocks { get; set; } = [];
 
     protected override void OnParametersSet()
     {

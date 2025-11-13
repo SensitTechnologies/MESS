@@ -1,170 +1,77 @@
 @using MESS.Data.Models
-@using MESS.Services.CRUD.ProductionLogParts
-@using MESS.Services.DTOs.ProductionLogs.Form
-@inject IProductionLogPartService ProductionLogPartService
 
-@if (_initialized)
-{
-    <div class="card p-0 mb-3">
-        <div class="card-body">
-            <div class="d-flex align-items-start w-100 gap-2">
-                @if (ProductionLogs.Count > 1)
-                {
-                    <div class="col-auto d-flex flex-column align-items-center" style="user-select: none;">
-                        <button type="button" @onclick="IncrementLogIndex" class="btn btn-primary btn-sm w-100" style="height: 35px;">
-                            <i class="bi bi-caret-up" style="font-size: 1.0rem;"></i>
-                        </button>
+<div class="form-floating flex-grow-1">
+    @if (PartNode.InputType == PartInputType.SerialNumber)
+    {
+        <InputText
+            id="serialInput"
+            class="form-control tall-input text-lightweight"
+            placeholder="@PartNode.PartDefinition.Number"
+            @bind-Value="_serialNumber"
+            @bind-Value:after="OnInputChanged" />
 
-                        <div class="form-floating mb-0 w-100" style="height: 100%;">
-                            <input type="number"
-                                   id="logIndexInput"
-                                   class="form-control text-center"
-                                   style="width: 100%; min-width: 85px;"
-                                   min="1"
-                                   max="@ProductionLogs.Count"
-                                   @bind="SelectedLogNumber"
-                                   @bind:event="oninput"
-                                   onfocus="this.select()" />
-                            <label for="logIndexInput">Which One?</label>
-                        </div>
+        <label for="serialInput" class="form-label subtle-label">
+            @PartNode.PartDefinition.Name ?? "Part Serial Number"
+        </label>
+    }
+    else if (PartNode.InputType == PartInputType.ProductionLogId)
+    {
+        <InputNumber TValue="int?" 
+                     id="logInput"
+                     class="form-control tall-input text-lightweight"
+                     placeholder="@PartNode.PartDefinition.Number"
+                     @bind-Value="_productionLogId"
+                     @bind-Value:after="OnInputChanged" />
 
-                        <button type="button" @onclick="DecrementLogIndex" class="btn btn-primary btn-sm w-100" style="height: 35px;">
-                            <i class="bi bi-caret-down" style="font-size: 1.0rem;"></i>
-                        </button>
-                    </div>
-                }
-
-                <div class="col">
-                    <RequiredPartsList ProductionLogParts="ProductionLogParts" AfterSerialNumberInput="@AfterSerialNumberInput" />
-                </div>
-            </div>
-        </div>
-    </div>
-}
+        <label for="logInput" class="form-label subtle-label">
+            @PartNode.PartDefinition.Name ?? "Linked Log ID"
+        </label>
+    }
+</div>
 
 @code {
     /// <summary>
-    /// Gets or sets the <see cref="PartNode"/> associated with this component.
+    /// Determines which type of input should be rendered: serial number or production log ID.
     /// </summary>
-    [Parameter, EditorRequired] public required PartNode PartNode { get; set; }
-    
-    /// <summary>
-    /// Gets or sets the list of <see cref="ProductionLog"/> instances referenced in this component.
-    /// </summary>
-    [Parameter, EditorRequired] public required List<ProductionLogFormDTO> ProductionLogs { get; set; }
-
-    private List<ProductionLogPart> ProductionLogParts { get; set; } = [];
-    private bool _initialized;
-    private int _selectedLogIndex;
+    [Parameter, EditorRequired]
+    public required PartNode PartNode { get; set; }
 
     /// <summary>
-    /// Gets or sets the selected log number (1-based UI value).
-    /// When set, this property clamps the value and updates the selected log index accordingly.
+    /// The serializable part being edited. Only used for serial number input.
     /// </summary>
-    private int SelectedLogNumber
-    {
-        get => _selectedLogIndex + 1;
-        set
-        {
-            var newIndex = Math.Clamp(value - 1, 0, ProductionLogs.Count - 1);
-            if (newIndex != _selectedLogIndex)
-            {
-                _selectedLogIndex = newIndex;
-                LoadPartsForSelectedIndex();
-            }
-        }
-    }
+    [Parameter]
+    public SerializablePart? SerializablePart { get; set; }
 
     /// <summary>
-    /// Subscribes to the <see cref="IProductionLogPartService.PartsReloadRequested"/> event on initialization.
+    /// Raised when the user changes the input.
+    /// Returns a tuple of (<see cref="PartNode"/>, updated value)
     /// </summary>
-    protected override void OnInitialized()
-    {
-        ProductionLogPartService.PartsReloadRequested += OnPartsReloadRequested;
-    }
+    [Parameter]
+    public EventCallback<(PartNode node, object value)> AfterInputChanged { get; set; }
 
-    /// <summary>
-    /// Unsubscribes from the <see cref="IProductionLogPartService.PartsReloadRequested"/> event when the component is disposed.
-    /// </summary>
-    public void Dispose()
-    {
-        ProductionLogPartService.PartsReloadRequested -= OnPartsReloadRequested;
-    }
+    private string? _serialNumber;
+    private int? _productionLogId;
 
-    /// <summary>
-    /// Ensures required parts are logged for each <see cref="ProductionLog"/> when parameters are set.
-    /// </summary>
     protected override void OnParametersSet()
     {
-        for (int i = 0; i < ProductionLogs.Count; i++)
+        if (PartNode.InputType == PartInputType.SerialNumber)
+            _serialNumber = SerializablePart?.SerialNumber;
+        else
+            _productionLogId = null; // nothing pre-filled for production log ID
+    }
+
+    private async Task OnInputChanged()
+    {
+        object updatedValue = PartNode.InputType switch
         {
-            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, [PartNode.PartDefinition]);
-        }
-    }
+            PartInputType.SerialNumber => SerializablePart is not null 
+                ? (SerializablePart.SerialNumber = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber, SerializablePart)! 
+                : null!,
+            PartInputType.ProductionLogId => _productionLogId!,
+            _ => throw new InvalidOperationException("Unknown PartNode input type.")
+        };
 
-    /// <summary>
-    /// Marks the component as initialized and loads part data after first render.
-    /// </summary>
-    /// <param name="firstRender">Whether this is the first render of the component.</param>
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (!firstRender) return;
-        _initialized = true;
-        LoadPartsForSelectedIndex();
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Handles external requests to reload part data from the <see cref="IProductionLogPartService"/>.
-    /// </summary>
-    private void OnPartsReloadRequested()
-    {
-        for (var i = 0; i < ProductionLogs.Count; i++)
-        {
-            ProductionLogPartService.EnsureRequiredPartsLogged(i, PartNode.Id, [PartNode.PartDefinition]);
-        }
-
-        LoadPartsForSelectedIndex();
-        InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Loads part data for the currently selected log index from the <see cref="IProductionLogPartService"/>.
-    /// </summary>
-    private void LoadPartsForSelectedIndex()
-    {
-        ProductionLogParts = ProductionLogPartService.GetPartsForNode(_selectedLogIndex, PartNode.Id);
-    }
-
-    /// <summary>
-    /// Updates a <see cref="ProductionLogPart"/> with its serial number input and submit time,
-    /// and stores the updated parts via the <see cref="IProductionLogPartService"/>.
-    /// </summary>
-    /// <param name="updatedPart">The part that was updated with serial number input.</param>
-    private void AfterSerialNumberInput(ProductionLogPart updatedPart)
-    {
-        updatedPart.OperationType = PartOperationType.Installed;
-
-        var index = ProductionLogParts.FindIndex(p => p.SerializablePart?.Id == updatedPart.SerializablePart?.Id);
-        if (index != -1)
-            ProductionLogParts[index] = updatedPart;
-
-        ProductionLogPartService.SetPartsForNode(_selectedLogIndex, PartNode.Id, ProductionLogParts);
-    }
-
-    private void IncrementLogIndex()
-    {
-        if (SelectedLogNumber < ProductionLogs.Count)
-        {
-            SelectedLogNumber++;
-        }
-    }
-
-    private void DecrementLogIndex()
-    {
-        if (SelectedLogNumber > 1)
-        {
-            SelectedLogNumber--;
-        }
+        if (AfterInputChanged.HasDelegate)
+            await AfterInputChanged.InvokeAsync((PartNode, updatedValue));
     }
 }
