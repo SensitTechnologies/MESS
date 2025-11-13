@@ -68,4 +68,57 @@ public class PartTraceabilityService : IPartTraceabilityService
     /// </summary>
     public IReadOnlyCollection<PartEntryGroup> GetAllGroups() 
         => _entryGroups.Values.ToList().AsReadOnly();
+    
+    /// <summary>
+    /// Gets the total number of serializable parts that have a populated serial number
+    /// across all production logs. This reflects parts that were installed or created
+    /// and tracked in memory.
+    /// </summary>
+    /// <returns>The count of logged serializable parts.</returns>
+    public int GetTotalPartsLogged()
+    {
+        return _entryGroups.Values
+            .SelectMany(group => group.GetAllInputs().OfType<SerializablePart>())
+            .Count(part => !string.IsNullOrWhiteSpace(part.SerialNumber));
+    }
+    
+    /// <summary>
+    /// Outputs a human-readable representation of all tracked part entries in memory.
+    /// Useful for debugging to inspect which serializable parts are logged,
+    /// their serial numbers, part names, part numbers, and linked production logs if applicable.
+    /// </summary>
+    /// <returns>A string containing the formatted representation of all entries.</returns>
+    public string DumpPartTraceability()
+    {
+        if (_entryGroups.Count == 0)
+            return "No part traceability data available.";
+
+        var sb = new System.Text.StringBuilder();
+
+        foreach (var group in _entryGroups.Values.OrderBy(g => g.LogIndex))
+        {
+            sb.AppendLine($"--- Log Index: {group.LogIndex} ---");
+
+            foreach (var input in group.GetAllInputs())
+            {
+                switch (input)
+                {
+                    case SerializablePart part:
+                        sb.AppendLine($"Serial: {part.SerialNumber ?? "N/A"}, " +
+                                      $"Name: {part.PartDefinition?.Name ?? "N/A"}, " +
+                                      $"Number: {part.PartDefinition?.Number ?? "N/A"}");
+                        break;
+                    case ProductionLog log:
+                        sb.AppendLine($"Linked Production Log ID: {log.Id}, Product: {log.Product?.PartDefinition.Name ?? "N/A"}");
+                        break;
+                    default:
+                        sb.AppendLine($"Unknown input type: {input.GetType().Name}");
+                        break;
+                }
+            }
+        }
+
+        return sb.ToString();
+    }
+
 }

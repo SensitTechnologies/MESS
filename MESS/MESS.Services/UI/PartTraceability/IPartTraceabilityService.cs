@@ -75,4 +75,12 @@ public interface IPartTraceabilityService
     /// Optional: returns all <see cref="PartEntryGroup"/> instances for inspection or iteration.
     /// </summary>
     IReadOnlyCollection<PartEntryGroup> GetAllGroups();
+    
+    /// <summary>
+    /// Gets the total number of serializable parts that have been logged across all production logs.
+    /// Only parts that have a populated <see cref="SerializablePart.SerialNumber"/> are counted.
+    /// This reflects parts that were either previously produced and installed or newly created and installed.
+    /// </summary>
+    /// <returns>The total count of logged serializable parts.</returns>
+    int GetTotalPartsLogged();
 }
