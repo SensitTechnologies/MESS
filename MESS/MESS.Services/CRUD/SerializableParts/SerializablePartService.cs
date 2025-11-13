@@ -240,6 +240,51 @@ public class SerializablePartService : ISerializablePartService
     }
     
     /// <summary>
+    /// Retrieves the first installed <see cref="SerializablePart"/> for a specific <see cref="ProductionLog"/>.
+    /// </summary>
+    /// <param name="productionLogId">
+    /// The ID of the production log for which to retrieve the produced part.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The result is the first <see cref="SerializablePart"/>
+    /// installed in the specified production log, or <c>null</c> if none exist.
+    /// </returns>
+    public async Task<SerializablePart?> GetProducedForProductionLogAsync(int productionLogId)
+    {
+        if (productionLogId <= 0)
+        {
+            Log.Warning("GetProducedForProductionLogAsync called with invalid ProductionLogId: {ProductionLogId}.", productionLogId);
+            return null;
+        }
+
+        try
+        {
+            // Reuse the existing method that fetches all installed parts for the log
+            var installedParts = await GetInstalledForProductionLogAsync(productionLogId);
+
+            // Return the first one, or null if the list is empty
+            var producedPart = installedParts.FirstOrDefault();
+
+            if (producedPart is null)
+            {
+                Log.Information("No produced SerializablePart found for ProductionLogId {ProductionLogId}.", productionLogId);
+            }
+            else
+            {
+                Log.Information("Found produced SerializablePart with ID {Id} for ProductionLogId {ProductionLogId}.", producedPart.Id, productionLogId);
+            }
+
+            return producedPart;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving produced SerializablePart for ProductionLogId {ProductionLogId}.", productionLogId);
+            return null;
+        }
+    }
+
+    
+    /// <summary>
     /// Updates the serial number of an existing <see cref="SerializablePart"/>.
     /// </summary>
     /// <param name="serializablePartId">

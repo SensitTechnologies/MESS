@@ -58,6 +58,16 @@ public interface ISerializablePartService
     /// <see cref="SerializablePart"/> entities. Returns an empty list if none exist.
     /// </returns>
     Task<List<SerializablePart>> GetInstalledForProductionLogAsync(int productionLogId);
+    
+    /// <summary>
+    /// Retrieves the first installed <see cref="SerializablePart"/> for a specific <see cref="ProductionLog"/>.
+    /// </summary>
+    /// <param name="productionLogId">The ID of the production log for which to retrieve the produced part.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The result is the first <see cref="SerializablePart"/>
+    /// installed in the specified production log, or <c>null</c> if none exist.
+    /// </returns>
+    Task<SerializablePart?> GetProducedForProductionLogAsync(int productionLogId);
 
     /// <summary>
     /// Updates the serial number of an existing <see cref="SerializablePart"/>.
