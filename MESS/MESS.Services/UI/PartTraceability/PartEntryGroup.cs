@@ -38,7 +38,35 @@ public class PartEntryGroup
         PartNodeEntries.Add(entry);
         return entry;
     }
-
+    
+    /// <summary>
+    /// Returns the <see cref="SerializablePart"/> for a given node, if it exists.
+    /// </summary>
+    public SerializablePart? GetSerializablePart(PartNode node)
+    {
+        var entry = PartNodeEntries.FirstOrDefault(e => e.PartNodeId == node.Id);
+        return entry?.SerializablePart;
+    }
+    
+    /// <summary>
+    /// Gets the serializable part for a node, creating a new placeholder if none exists.
+    /// </summary>
+    public SerializablePart GetOrCreateSerializablePart(PartNode node)
+    {
+        var entry = GetOrCreateEntry(node);
+        if (entry.SerializablePart == null)
+        {
+            entry.SerializablePart = new SerializablePart
+            {
+                PartDefinitionId = node.PartDefinitionId,
+                PartDefinition = node.PartDefinition,
+                SerialNumber = null
+            };
+            entry.LinkedProductionLog = null;
+        }
+        return entry.SerializablePart;
+    }
+    
     /// <summary>
     /// Assigns a serializable part to a node whose input type expects a serial number.
     /// </summary>

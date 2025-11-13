@@ -20,8 +20,8 @@ public interface IPartTraceabilityService
     event Action? PartsReloadRequested;
 
     /// <summary>
-    /// Requests a reload of all parts across tracked log groups, typically used to
-    /// notify UI components that they should re-fetch data or refresh bindings.
+    /// Requests a reload of all parts across tracked log groups.
+    /// Typically used to notify UI components to re-fetch or refresh bindings.
     /// </summary>
     void RequestPartsReload();
 
@@ -29,32 +29,23 @@ public interface IPartTraceabilityService
     /// Assigns a <see cref="SerializablePart"/> to the specified <see cref="PartNode"/>
     /// within a given production log group.
     /// </summary>
-    /// <param name="logIndex">The index of the production log group.</param>
-    /// <param name="node">The part node associated with the part input.</param>
-    /// <param name="part">The serializable part entered by the user or system.</param>
     void SetSerializablePart(int logIndex, PartNode node, SerializablePart part);
 
     /// <summary>
     /// Assigns a <see cref="ProductionLog"/> reference to the specified <see cref="PartNode"/>
-    /// within a given production log group. This is typically used when the part input
-    /// type is <see cref="PartInputType.ProductionLogId"/>.
+    /// within a given production log group.
     /// </summary>
-    /// <param name="logIndex">The index of the production log group.</param>
-    /// <param name="node">The part node associated with the linked log.</param>
-    /// <param name="log">The production log that provides the linked part data.</param>
     void SetLinkedProductionLog(int logIndex, PartNode node, ProductionLog log);
 
     /// <summary>
     /// Clears any existing part or linked production log entry for a given node
     /// within a specific production log group.
     /// </summary>
-    /// <param name="logIndex">The index of the production log group.</param>
-    /// <param name="node">The part node whose entry should be cleared.</param>
     void ClearEntry(int logIndex, PartNode node);
 
     /// <summary>
     /// Removes all tracked part and log entries across all production log groups,
-    /// and raises a <see cref="PartsReloadRequested"/> event to refresh dependent UI components.
+    /// and raises <see cref="PartsReloadRequested"/> to refresh dependent UI components.
     /// </summary>
     void ClearAll();
 
@@ -62,8 +53,26 @@ public interface IPartTraceabilityService
     /// Retrieves all part-related inputs (either <see cref="SerializablePart"/> or
     /// <see cref="ProductionLog"/> objects) across all tracked log groups.
     /// </summary>
-    /// <returns>
-    /// An enumerable collection of all current part or log inputs across all groups.
-    /// </returns>
     IEnumerable<object> GetAllInputs();
+
+    /// <summary>
+    /// Returns all part-related inputs (serializable parts and linked logs) for a specific log index.
+    /// </summary>
+    IEnumerable<object> GetInputsForLog(int logIndex);
+
+    /// <summary>
+    /// Returns only serializable parts for a specific log index.
+    /// </summary>
+    IEnumerable<SerializablePart> GetAllSerializablePartsForLog(int logIndex);
+
+    /// <summary>
+    /// Gets the <see cref="SerializablePart"/> for a given log index and node.
+    /// Creates a new placeholder if none exists.
+    /// </summary>
+    SerializablePart GetSerializablePart(int logIndex, PartNode node);
+
+    /// <summary>
+    /// Optional: returns all <see cref="PartEntryGroup"/> instances for inspection or iteration.
+    /// </summary>
+    IReadOnlyCollection<PartEntryGroup> GetAllGroups();
 }
