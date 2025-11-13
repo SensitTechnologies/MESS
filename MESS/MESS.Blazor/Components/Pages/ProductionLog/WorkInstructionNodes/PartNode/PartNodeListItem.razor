@@ -11,7 +11,7 @@
             @bind-Value:after="OnInputChanged" />
 
         <label for="serialInput" class="form-label subtle-label">
-            @PartNode.PartDefinition.Name ?? "Part Serial Number"
+            @(PartNode.PartDefinition.Name ?? "Part Serial Number")
         </label>
     }
     else if (PartNode.InputType == PartInputType.ProductionLogId)
@@ -24,7 +24,7 @@
                      @bind-Value:after="OnInputChanged" />
 
         <label for="logInput" class="form-label subtle-label">
-            @PartNode.PartDefinition.Name ?? "Linked Log ID"
+            @(PartNode.PartDefinition.Name ?? "Linked Log ID")
         </label>
     }
 </div>
