@@ -467,6 +467,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
         
         //await ProductionLogPartService.SaveAllLogPartsAsync(ProductionLogBatch.Logs);
+        var dump = PartTraceabilityService.DumpPartTraceability();
+        Console.WriteLine(dump);
 
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();

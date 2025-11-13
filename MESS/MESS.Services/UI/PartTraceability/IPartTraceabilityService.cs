@@ -83,4 +83,12 @@ public interface IPartTraceabilityService
     /// </summary>
     /// <returns>The total count of logged serializable parts.</returns>
     int GetTotalPartsLogged();
+    
+    /// <summary>
+    /// Generates a human-readable string representing all currently tracked part entries
+    /// in memory, including serial numbers, part names, and any linked production logs.
+    /// Useful for debugging the state of the in-memory part traceability data structure.
+    /// </summary>
+    /// <returns>A formatted string containing all part traceability entries for inspection.</returns>
+    string DumpPartTraceability();
 }
