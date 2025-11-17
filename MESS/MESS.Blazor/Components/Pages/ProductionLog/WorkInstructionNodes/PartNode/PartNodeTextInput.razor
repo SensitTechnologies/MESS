@@ -1,31 +1,34 @@
 @using MESS.Data.Models
 
 <div class="form-floating flex-grow-1">
-    @if (PartNode.InputType == PartInputType.SerialNumber)
+    @switch (PartNode.InputType)
     {
-        <InputText
-            id="serialInput"
-            class="form-control tall-input text-lightweight"
-            placeholder="@PartNode.PartDefinition.Number"
-            @bind-Value="_serialNumber"
-            @bind-Value:after="OnInputChanged" />
+        case PartInputType.SerialNumber:
+            <InputText
+                id="serialInput"
+                class="form-control tall-input text-lightweight"
+                placeholder="@PartNode.PartDefinition.Number"
+                @bind-Value="_serialNumber"
+                @bind-Value:after="OnInputChanged" />
 
-        <label for="serialInput" class="form-label subtle-label">
-            @(PartNode.PartDefinition.Name ?? "Part Serial Number")
-        </label>
-    }
-    else if (PartNode.InputType == PartInputType.ProductionLogId)
-    {
-        <InputNumber TValue="int?" 
-                     id="logInput"
-                     class="form-control tall-input text-lightweight"
-                     placeholder="@PartNode.PartDefinition.Number"
-                     @bind-Value="_productionLogId"
-                     @bind-Value:after="OnInputChanged" />
+            <label for="serialInput" class="form-label subtle-label">
+                @(PartNode.PartDefinition.Name ?? "Part Serial Number")
+            </label>
+            break;
+        case PartInputType.ProductionLogId:
+            <InputNumber TValue="int?" 
+                         id="logInput"
+                         class="form-control tall-input text-lightweight"
+                         placeholder="@PartNode.PartDefinition.Number"
+                         @bind-Value="_productionLogId"
+                         @bind-Value:after="OnInputChanged" />
 
-        <label for="logInput" class="form-label subtle-label">
-            @(PartNode.PartDefinition.Name ?? "Linked Log ID")
-        </label>
+            <label for="logInput" class="form-label subtle-label">
+                @(PartNode.PartDefinition.Name ?? "Linked Log ID")
+            </label>
+            break;
+        default:
+            throw new ArgumentOutOfRangeException();
     }
 </div>
 

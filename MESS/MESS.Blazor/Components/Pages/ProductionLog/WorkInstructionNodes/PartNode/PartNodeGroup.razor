@@ -44,7 +44,7 @@
                     {
                         var serializablePart = GetSerializablePartForNode(partNode);
 
-                        <PartNodeListItem
+                        <PartNodeTextInput
                             PartNode="partNode"
                             SerializablePart="serializablePart"
                             AfterInputChanged="OnPartNodeInputChanged" />
@@ -109,7 +109,7 @@
     }
 
     /// <summary>
-    /// Handles updates from PartNodeListItem (either serial number or production log ID input).
+    /// Handles updates from PartNodeTextInput (either serial number or production log ID input).
     /// </summary>
     private async Task OnPartNodeInputChanged((PartNode node, object value) input)
     {
