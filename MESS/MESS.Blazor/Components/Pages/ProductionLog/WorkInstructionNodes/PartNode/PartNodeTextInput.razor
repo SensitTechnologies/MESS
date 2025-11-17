@@ -12,7 +12,7 @@
                 @bind-Value:after="OnInputChanged" />
 
             <label for="serialInput" class="form-label subtle-label">
-                @(PartNode.PartDefinition.Name ?? "Part Serial Number")
+                @(PartNode.PartDefinition.Name)
             </label>
             break;
         case PartInputType.ProductionLogId:
@@ -24,7 +24,7 @@
                          @bind-Value:after="OnInputChanged" />
 
             <label for="logInput" class="form-label subtle-label">
-                @(PartNode.PartDefinition.Name ?? "Linked Log ID")
+                @(PartNode.PartDefinition.Name)
             </label>
             break;
         default:
@@ -55,6 +55,19 @@
     private string? _serialNumber;
     private int? _productionLogId;
 
+    /// <summary>
+    /// Synchronizes the component's internal input fields with the latest parameter values.
+    /// <para>
+    /// If the <see cref="PartNode"/> requires a serial number, this method initializes the
+    /// backing field (<c>_serialNumber</c>) from the provided <see cref="SerializablePart"/>.
+    /// For <see cref="PartInputType.ProductionLogId"/>, no initial value is populated and the
+    /// input starts empty.
+    /// </para>
+    /// <remarks>
+    /// This method runs each time incoming parameters change, ensuring the displayed input
+    /// reflects the correct state when the component is updated or re-rendered by its parent.
+    /// </remarks>
+    /// </summary>
     protected override void OnParametersSet()
     {
         if (PartNode.InputType == PartInputType.SerialNumber)
@@ -68,7 +81,7 @@
         object updatedValue = PartNode.InputType switch
         {
             PartInputType.SerialNumber => SerializablePart is not null 
-                ? (SerializablePart.SerialNumber = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber, SerializablePart)! 
+                ? (SerializablePart.SerialNumber = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber, SerializablePart) 
                 : null!,
             PartInputType.ProductionLogId => _productionLogId!,
             _ => throw new InvalidOperationException("Unknown PartNode input type.")
