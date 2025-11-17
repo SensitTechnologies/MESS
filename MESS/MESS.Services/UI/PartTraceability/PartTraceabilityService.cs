@@ -121,4 +121,22 @@ public class PartTraceabilityService : IPartTraceabilityService
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Removes all traceability data associated with the specified production log index.
+    /// This is used when the production log batch size decreases and a log is removed,
+    /// ensuring no stale serializable part data remains in memory.
+    /// </summary>
+    /// <param name="logIndex">The log index to remove.</param>
+    public void RemoveLogIndex(int logIndex)
+    {
+        if (_entryGroups.Remove(logIndex))
+        {
+            Log.Information("Removed part traceability data for log index {LogIndex}.", logIndex);
+            RequestPartsReload();
+        }
+        else
+        {
+            Log.Debug("Attempted to remove part traceability for log index {LogIndex}, but no entry existed.", logIndex);
+        }
+    }
 }

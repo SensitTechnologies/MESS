@@ -91,4 +91,12 @@ public interface IPartTraceabilityService
     /// </summary>
     /// <returns>A formatted string containing all part traceability entries for inspection.</returns>
     string DumpPartTraceability();
+    
+    /// <summary>
+    /// Removes all part traceability entries belonging to the specified production log index.
+    /// Call this when the batch size is reduced and a log at this index no longer exists.
+    /// </summary>
+    /// <param name="logIndex">The log index whose data should be removed.</param>
+    void RemoveLogIndex(int logIndex);
+
 }

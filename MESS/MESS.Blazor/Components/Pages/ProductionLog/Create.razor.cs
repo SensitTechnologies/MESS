@@ -270,18 +270,28 @@ public partial class Create : ComponentBase, IAsyncDisposable
         BatchSize = newSize;
         await LocalCacheManager.SetBatchSizeAsync(BatchSize);
 
-        int currentCount = ProductionLogBatch.Logs.Count;
+        var currentCount = ProductionLogBatch.Logs.Count;
 
         if (newSize > currentCount)
         {
             // Add new logs
-            int logsToAdd = newSize - currentCount;
+            var logsToAdd = newSize - currentCount;
             AddProductionLogs(logsToAdd);
         }
         else if (newSize < currentCount)
         {
             // Remove excess logs
-            ProductionLogBatch.Logs.RemoveRange(newSize, currentCount - newSize);
+            var removedCount = currentCount - newSize;
+
+            // Remove logs from the batch
+            ProductionLogBatch.Logs.RemoveRange(newSize, removedCount);
+
+            // Remove matching traceability entries
+            for (var index = newSize; index < currentCount; index++)
+            {
+                PartTraceabilityService.RemoveLogIndex(index);
+            }
+
             await ProductionLogEventService.SetCurrentProductionLogs(ProductionLogBatch.Logs);
         }
     }
@@ -370,7 +380,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         
         var partNodes = ActiveWorkInstruction.Nodes.Where(node => node.NodeType == WorkInstructionNodeType.Part);
 
-        int totalPartsNeeded = 0;
+        var totalPartsNeeded = 0;
         foreach (var node in partNodes)
         {
             // Cast to PartNode to access its Parts collection
@@ -509,6 +519,9 @@ public partial class Create : ComponentBase, IAsyncDisposable
 
     private async Task ResetFormState()
     {
+        // Clear the in-memory part tracking
+        PartTraceabilityService.ClearAll();
+        
         // Reset the ProductionLogBatch Object
         ProductionLogBatch = new ProductionLogBatch();
         
