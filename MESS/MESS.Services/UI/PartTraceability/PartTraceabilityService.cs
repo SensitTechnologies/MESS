@@ -1,4 +1,7 @@
 using MESS.Data.Models;
+using MESS.Services.CRUD.ProductionLogParts;
+using MESS.Services.CRUD.SerializableParts;
+using MESS.Services.DTOs.ProductionLogs.Form;
 using Serilog;
 
 namespace MESS.Services.UI.PartTraceability;
@@ -14,6 +17,34 @@ public class PartTraceabilityService : IPartTraceabilityService
 
     private readonly Dictionary<int, PartEntryGroup> _entryGroups = new();
 
+    private readonly ISerializablePartService _serializablePartService;
+    private readonly IProductionLogPartService _productionLogPartService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PartTraceabilityService"/> class.
+    /// </summary>
+    /// <param name="serializablePartService">
+    /// Service used to retrieve, create, and manage <see cref="SerializablePart"/> entities
+    /// during persistence of part traceability data.
+    /// </param>
+    /// <param name="productionLogPartService">
+    /// Service responsible for creating and managing <see cref="ProductionLogPart"/> records
+    /// in the database.
+    /// </param>
+    /// <remarks>
+    /// This constructor wires the service into the persistence layer by injecting the
+    /// necessary CRUD services. The <see cref="ISerializablePartService"/> is used to resolve
+    /// or create serialized part records, while the <see cref="IProductionLogPartService"/>
+    /// handles database persistence of <see cref="ProductionLogPart"/> entries.
+    /// </remarks>
+    public PartTraceabilityService(
+        ISerializablePartService serializablePartService,
+        IProductionLogPartService productionLogPartService)
+    {
+        _serializablePartService = serializablePartService;
+        _productionLogPartService = productionLogPartService;
+    }
+    
     /// <inheritdoc />
     public void RequestPartsReload() => PartsReloadRequested?.Invoke();
 
@@ -137,6 +168,141 @@ public class PartTraceabilityService : IPartTraceabilityService
         else
         {
             Log.Debug("Attempted to remove part traceability for log index {LogIndex}, but no entry existed.", logIndex);
+        }
+    }
+    
+    /// <summary>
+    /// Persists in-memory part traceability entries into the database.
+    /// For each group (logIndex) the corresponding savedLogs[logIndex].Id is used
+    /// as the ProductionLogId for created ProductionLogPart records.
+    /// OperationType is currently always <see cref="PartOperationType.Installed"/>.
+    /// </summary>
+    public async Task<bool> PersistAsync(List<ProductionLogFormDTO> savedLogs)
+    {
+        if (savedLogs == null) throw new ArgumentNullException(nameof(savedLogs));
+
+        var partsToCreate = new List<ProductionLogPart>();
+
+        foreach (var group in _entryGroups.Values)
+        {
+            var logIndex = group.LogIndex;
+
+            // If there is no corresponding saved log, skip (caller should pass matching savedLogs)
+            if (logIndex < 0 || logIndex >= savedLogs.Count)
+            {
+                Log.Warning("No saved production log for log index {LogIndex}; skipping group.", logIndex);
+                continue;
+            }
+
+            var savedLogId = savedLogs[logIndex].Id;
+            if (savedLogId <= 0)
+            {
+                Log.Warning("Saved production log at index {LogIndex} has invalid Id {Id}; skipping group.", logIndex, savedLogId);
+                continue;
+            }
+
+            // iterate entries inside this group
+            foreach (var entry in group.PartNodeEntries)
+            {
+                SerializablePart? resolvedPart = null;
+
+                // prefer linked production log (if present)
+                if (entry.LinkedProductionLog is not null)
+                {
+                    try
+                    {
+                        var linkedLogId = entry.LinkedProductionLog.Id;
+                        var produced = await _serializablePartService.GetProducedForProductionLogAsync(linkedLogId);
+                        if (produced != null)
+                        {
+                            resolvedPart = produced;
+                        }
+                        else
+                        {
+                            Log.Warning("No produced serializable part found for linked production log id {LinkedLogId}.", linkedLogId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Error fetching produced part for linked production log id {LinkedLogId}.", entry.LinkedProductionLog.Id);
+                    }
+                }
+
+                // fallback to explicit serial number entry
+                if (resolvedPart == null && entry.SerializablePart is not null && !string.IsNullOrWhiteSpace(entry.SerializablePart.SerialNumber))
+                {
+                    var serial = entry.SerializablePart.SerialNumber!;
+                    var defId = entry.SerializablePart.PartDefinitionId;
+
+                    try
+                    {
+                        // if exists, fetch existing record; otherwise create a new serializable part record
+                        var exists = await _serializablePartService.ExistsAsync(defId, serial);
+                        if (exists)
+                        {
+                            var existing = await _serializablePartService.GetBySerialNumberAsync(serial);
+                            if (existing != null)
+                                resolvedPart = existing;
+                            else
+                                Log.Warning("ExistsAsync returned true but GetBySerialNumberAsync returned null for serial {Serial}.", serial);
+                        }
+                        else
+                        {
+                            // create new
+                            var created = await _serializablePartService.CreateAsync(entry.SerializablePart.PartDefinition!, serial);
+                            if (created != null)
+                                resolvedPart = created;
+                            else
+                                Log.Warning("Failed to create SerializablePart for part definition {DefId} serial '{Serial}'.", defId, serial);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Error resolving/creating SerializablePart for serial '{Serial}' (PartDefinitionId {DefId}).", serial, defId);
+                    }
+                }
+
+                if (resolvedPart == null)
+                {
+                    Log.Debug("Skipping part entry for PartNodeId {PartNodeId} in log index {LogIndex} because no serializable part was resolved.", entry.PartNodeId, logIndex);
+                    continue;
+                }
+
+                // Build ProductionLogPart (Installed)
+                var plp = new ProductionLogPart
+                {
+                    ProductionLogId = savedLogId,
+                    SerializablePartId = resolvedPart.Id,
+                    SerializablePart = resolvedPart,
+                    OperationType = PartOperationType.Installed
+                };
+
+                partsToCreate.Add(plp);
+            }
+        }
+
+        if (partsToCreate.Count == 0)
+        {
+            Log.Information("No ProductionLogPart records to persist.");
+            return true;
+        }
+
+        try
+        {
+            var created = await _productionLogPartService.CreateRangeAsync(partsToCreate);
+            if (!created)
+            {
+                Log.Warning("ProductionLogPartService.CreateRangeAsync returned false.");
+                return false;
+            }
+
+            Log.Information("Persisted {Count} ProductionLogPart records.", partsToCreate.Count);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error while persisting ProductionLogPart records.");
+            return false;
         }
     }
 }

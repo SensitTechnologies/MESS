@@ -1,4 +1,7 @@
 using MESS.Data.Models;
+using MESS.Services.CRUD.ProductionLogParts;
+using MESS.Services.CRUD.SerializableParts;
+using MESS.Services.DTOs.ProductionLogs.Form;
 
 namespace MESS.Services.UI.PartTraceability;
 
@@ -98,5 +101,22 @@ public interface IPartTraceabilityService
     /// </summary>
     /// <param name="logIndex">The log index whose data should be removed.</param>
     void RemoveLogIndex(int logIndex);
+    
+    /// <summary>
+    /// Persists the in-memory part traceability entries to the database using the provided
+    /// saved production logs to determine the final <see cref="ProductionLog"/> IDs.
+    /// </summary>
+    /// <param name="savedLogs">
+    /// A list of <see cref="ProductionLogFormDTO"/> instances that have already been
+    /// persisted and whose <see cref="ProductionLogFormDTO.Id"/> values are the database IDs
+    /// for the corresponding log indices (index -> savedLogs[index]).
+    /// </param>
+    /// <returns>
+    /// A task that returns <c>true</c> when persistence succeeds (ProductionLogPart records created),
+    /// otherwise <c>false</c>. The method will attempt to create any missing <see cref="SerializablePart"/>
+    /// records as needed (using <see cref="ISerializablePartService"/>), and then create the
+    /// corresponding <see cref="ProductionLogPart"/> entries (using <see cref="IProductionLogPartService"/>).
+    /// </returns>
+    Task<bool> PersistAsync(List<ProductionLogFormDTO> savedLogs);
 
 }
