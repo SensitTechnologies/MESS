@@ -69,6 +69,23 @@ public class PartTraceabilityService : IPartTraceabilityService
             SerialNumber = null // UI will fill this in OR auto-generate on save
         };
     }
+    
+    /// <inheritdoc />
+    public void SetProducedPartSerialNumber(int logIndex, string? serialNumber)
+    {
+        var group = GetOrCreateGroup(logIndex);
+
+        if (group.ProducedPart == null)
+        {
+            // There MUST be a produced part definition already selected
+            Log.Warning("Attempted to set serial number before produced part was created for log index {LogIndex}.", logIndex);
+            return;
+        }
+
+        group.ProducedPart.SerialNumber = string.IsNullOrWhiteSpace(serialNumber)
+            ? null
+            : serialNumber.Trim();
+    }
 
     /// <inheritdoc />
     public void SetLinkedProductionLog(int logIndex, PartNode node, ProductionLog log)

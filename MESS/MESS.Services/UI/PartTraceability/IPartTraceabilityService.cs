@@ -49,6 +49,25 @@ public interface IPartTraceabilityService
     /// The definition of the part that the work instruction produces.
     /// </param>
     void SetProducedPart(int logIndex, PartDefinition partDefinition);
+    
+    /// <summary>
+    /// Records a produced serialized part for the specified production log index.
+    /// </summary>
+    /// <param name="logIndex">
+    /// The zero-based index of the production log within the active batch for which
+    /// the part was produced.
+    /// </param>
+    /// <param name="serialNumber">
+    /// The serial number of the part that was produced. This value is stored
+    /// immediately in the traceability service's in-memory structure.
+    /// </param>
+    /// <remarks>
+    /// This method should be called as soon as the user enters a produced part
+    /// serial number in the UI. It does not write to the database directly; instead,
+    /// the value is captured in memory and later persisted when <see cref="PersistAsync"/>
+    /// is executed.
+    /// </remarks>
+    void SetProducedPartSerialNumber(int logIndex, string? serialNumber);
 
     /// <summary>
     /// Assigns a <see cref="SerializablePart"/> to the specified <see cref="PartNode"/>

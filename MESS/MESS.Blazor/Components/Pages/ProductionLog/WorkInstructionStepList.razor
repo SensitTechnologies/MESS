@@ -4,6 +4,8 @@
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
 @using MESS.Services.DTOs.ProductionLogs.Form
 @using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
+@using MESS.Services.UI.PartTraceability
+@inject IPartTraceabilityService PartTraceabilityService;
 
 @if (ProductionLogs.Any())
 {
@@ -43,7 +45,7 @@
             }
         }
 
-        @if (ActiveWorkInstruction.PartProducedIsSerialized)
+        @if (ActiveWorkInstruction is { PartProducedIsSerialized: true, PartProduced: not null })
         {
             <div class="card card-body">
                 <div class="mb-2">
@@ -57,9 +59,14 @@
                     {
                         var log = ProductionLogs[i];
                         <div class="form-floating flex-grow-1" style="min-width: 220px;">
+                            <input
+                                id=@($"producedSerialNumber-{i}")
+                                class="form-control tall-input text-lightweight"
+                                @oninput="(e => OnProducedSerialInput(i, e.Value?.ToString()))" />
+                            
                             @if (ProductionLogs.Count > 1)
                             {
-                                <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
+                                <label for=@($"producedSerialNumber-{i}") class="form-label subtle-label">
                                     #@(i + 1)
                                 </label>
                             }
@@ -128,5 +135,12 @@
             result.Add(currentGroup);
 
         return result;
+    }
+    
+    private void OnProducedSerialInput(int logIndex, string? value)
+    {
+        // Input cleared → keep the produced part, but remove the serial number
+        //Under normal circumstances, add the produced part serial number.
+        PartTraceabilityService.SetProducedPartSerialNumber(logIndex, !string.IsNullOrWhiteSpace(value) ? value : null);
     }
 }
