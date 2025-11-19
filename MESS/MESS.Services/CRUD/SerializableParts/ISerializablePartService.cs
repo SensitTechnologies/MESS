@@ -8,20 +8,36 @@ namespace MESS.Services.CRUD.SerializableParts;
 public interface ISerializablePartService
 {
     /// <summary>
-    /// Creates a new <see cref="SerializablePart"/> record for the specified <see cref="PartDefinition"/>
-    /// and serial number.
+    /// Creates a new <see cref="SerializablePart"/> record for the specified 
+    /// <see cref="PartDefinition"/>, using an optional serial number.
     /// </summary>
     /// <param name="definition">
     /// The <see cref="PartDefinition"/> associated with the serialized part.
     /// </param>
     /// <param name="serialNumber">
-    /// The unique serial number identifying this specific part instance.
+    /// The serial number identifying this specific part instance, or <c>null</c>
+    /// /empty if the part does not have a serial number.
     /// </param>
     /// <returns>
-    /// A task representing the asynchronous operation. The task result contains the newly created
-    /// <see cref="SerializablePart"/> entity, or <see langword="null"/> if creation failed.
+    /// A task representing the asynchronous operation.  
+    /// The task result contains the newly created <see cref="SerializablePart"/>,
+    /// or <c>null</c> if creation failed.
     /// </returns>
-    Task<SerializablePart?> CreateAsync(PartDefinition definition, string serialNumber);
+    /// <remarks>
+    /// <para>
+    /// Serial numbers are optional. Produced parts or early-stage parts may not
+    /// yet have a serial number, and passing <c>null</c> or empty values is valid.
+    /// </para>
+    /// <para>
+    /// If a non-null serial number is provided and a duplicate exists for the same
+    /// <see cref="PartDefinition"/>, the duplicate is allowed; a warning may be logged,
+    /// but the new record will still be created.
+    /// </para>
+    /// <para>
+    /// The returned entity is detached from tracking after the context is disposed.
+    /// </para>
+    /// </remarks>
+    Task<SerializablePart?> CreateAsync(PartDefinition definition, string? serialNumber);
 
     /// <summary>
     /// Retrieves a <see cref="SerializablePart"/> entity that matches the specified serial number.

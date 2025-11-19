@@ -24,68 +24,81 @@ public class SerializablePartService : ISerializablePartService
         _contextFactory = contextFactory;
     }
     
-     /// <summary>
-    /// Creates a new <see cref="SerializablePart"/> record for the specified <see cref="PartDefinition"/>
-    /// and serial number.
+    /// <summary>
+    /// Creates a new <see cref="SerializablePart"/> record for the specified 
+    /// <see cref="PartDefinition"/> and optional serial number.
     /// </summary>
     /// <param name="definition">
     /// The <see cref="PartDefinition"/> associated with the serialized part.
     /// </param>
     /// <param name="serialNumber">
-    /// The unique serial number identifying this specific part instance.
+    /// The serial number identifying this specific part instance, or <c>null</c>
+    /// /empty if the part has no serial number.
     /// </param>
     /// <returns>
-    /// A task representing the asynchronous operation. The task result contains the newly created
-    /// <see cref="SerializablePart"/> entity.
+    /// A task representing the asynchronous operation.
+    /// The task result contains the newly created <see cref="SerializablePart"/> entity,
+    /// or <c>null</c> if creation failed.
     /// </returns>
     /// <remarks>
-    /// This method does not prevent duplicate serial numbers for the same <see cref="PartDefinition"/>.
-    /// Duplicate entries will be logged as warnings but are still permitted.  
-    /// The returned entity is not tracked after the context is disposed.
+    /// - Serial numbers are optional and may be <c>null</c> or empty.
+    /// - Duplicate serial numbers are allowed; duplicates trigger warnings when a non-null
+    ///   serial number is provided.
+    /// - The returned entity is not tracked once the context is disposed.
     /// </remarks>
-    public async Task<SerializablePart?> CreateAsync(PartDefinition definition, string serialNumber)
+    public async Task<SerializablePart?> CreateAsync(PartDefinition definition, string? serialNumber)
     {
-        if (string.IsNullOrWhiteSpace(serialNumber))
-        {
-            Log.Warning("CreateAsync called with null or empty serial number for PartDefinition ID {PartDefinitionId}.",
-                definition.Id);
-            return null;
-        }
-
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            // Optional: log if there’s already a part with this serial number
-            var existing = await context.SerializableParts
-                .AsNoTracking()
-                .FirstOrDefaultAsync(sp => sp.PartDefinitionId == definition.Id && sp.SerialNumber == serialNumber);
-
-            if (existing != null)
+            // Only check duplicates when a serial number is supplied
+            if (!string.IsNullOrWhiteSpace(serialNumber))
             {
-                Log.Warning("A SerializablePart with serial number {SerialNumber} already exists for PartDefinition ID {PartDefinitionId}. A new record will still be created.",
-                    serialNumber, definition.Id);
+                var existing = await context.SerializableParts
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(sp =>
+                        sp.PartDefinitionId == definition.Id &&
+                        sp.SerialNumber == serialNumber);
+
+                if (existing != null)
+                {
+                    Log.Warning(
+                        "A SerializablePart with serial number {SerialNumber} already exists " +
+                        "for PartDefinition ID {PartDefinitionId}. A new record will still be created.",
+                        serialNumber, definition.Id);
+                }
+            }
+            else
+            {
+                Log.Information(
+                    "Creating SerializablePart for PartDefinition ID {PartDefinitionId} with no serial number.",
+                    definition.Id);
             }
 
             var newPart = new SerializablePart
             {
                 PartDefinitionId = definition.Id,
-                SerialNumber = serialNumber,
-                PartDefinition = null // avoid EF tracking conflicts
+                SerialNumber = serialNumber, // may be null or empty
+                PartDefinition = null        // avoid EF tracking conflicts
             };
 
             await context.SerializableParts.AddAsync(newPart);
             await context.SaveChangesAsync();
 
-            Log.Information("Created new SerializablePart (ID: {Id}) for PartDefinition ID {PartDefinitionId} with SerialNumber {SerialNumber}.",
+            Log.Information(
+                "Created new SerializablePart (ID: {Id}) for PartDefinition ID {PartDefinitionId} with SerialNumber {SerialNumber}.",
                 newPart.Id, definition.Id, serialNumber);
 
             return newPart;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error creating SerializablePart for PartDefinition ID {PartDefinitionId} with SerialNumber {SerialNumber}.",
+            Log.Error(
+                ex,
+                "Error creating SerializablePart for PartDefinition ID {PartDefinitionId} with SerialNumber {SerialNumber}.",
                 definition.Id, serialNumber);
+
             return null;
         }
     }
