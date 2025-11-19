@@ -29,6 +29,28 @@ public interface IPartTraceabilityService
     void RequestPartsReload();
 
     /// <summary>
+    /// Registers the part produced by the work instruction for the specified
+    /// production log index.  
+    /// </summary>
+    /// <remarks>
+    /// Many work instructions optionally define a <see cref="PartDefinition"/> that
+    /// represents a new serialized part created during execution of the production log.
+    /// This method prepares the produced part in the in-memory traceability structure so
+    /// that it can be assigned a serial number (or no serial number)
+    /// and persisted during <c>PersistAsync</c>.
+    ///
+    /// This applies to the *produced* part for the log as a whole, not to parts
+    /// installed via <see cref="PartNode"/> entries.
+    /// </remarks>
+    /// <param name="logIndex">
+    /// The index of the production log within the current batch.
+    /// </param>
+    /// <param name="partDefinition">
+    /// The definition of the part that the work instruction produces.
+    /// </param>
+    void SetProducedPart(int logIndex, PartDefinition partDefinition);
+
+    /// <summary>
     /// Assigns a <see cref="SerializablePart"/> to the specified <see cref="PartNode"/>
     /// within a given production log group.
     /// </summary>
@@ -118,5 +140,4 @@ public interface IPartTraceabilityService
     /// corresponding <see cref="ProductionLogPart"/> entries (using <see cref="IProductionLogPartService"/>).
     /// </returns>
     Task<bool> PersistAsync(List<ProductionLogFormDTO> savedLogs);
-
 }

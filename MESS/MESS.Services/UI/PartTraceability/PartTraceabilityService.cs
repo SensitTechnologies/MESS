@@ -56,6 +56,19 @@ public class PartTraceabilityService : IPartTraceabilityService
     /// <inheritdoc />
     public void SetSerializablePart(int logIndex, PartNode node, SerializablePart part)
         => GetOrCreateGroup(logIndex).SetSerializablePart(node, part);
+    
+    /// <inheritdoc />
+    public void SetProducedPart(int logIndex, PartDefinition partDefinition)
+    {
+        var group = GetOrCreateGroup(logIndex);
+
+        group.ProducedPart = new SerializablePart
+        {
+            PartDefinition = partDefinition,
+            PartDefinitionId = partDefinition.Id,
+            SerialNumber = null // UI will fill this in OR auto-generate on save
+        };
+    }
 
     /// <inheritdoc />
     public void SetLinkedProductionLog(int logIndex, PartNode node, ProductionLog log)
@@ -84,7 +97,7 @@ public class PartTraceabilityService : IPartTraceabilityService
     public IEnumerable<object> GetInputsForLog(int logIndex)
         => _entryGroups.TryGetValue(logIndex, out var group) 
             ? group.GetAllInputs() 
-            : Enumerable.Empty<object>();
+            : [];
 
     /// <inheritdoc />
     public IEnumerable<SerializablePart> GetAllSerializablePartsForLog(int logIndex)
@@ -278,6 +291,28 @@ public class PartTraceabilityService : IPartTraceabilityService
                 };
 
                 partsToCreate.Add(plp);
+            }
+            
+            // Handle produced part
+            if (group.ProducedPart == null) continue;
+            {
+                var p = group.ProducedPart;
+
+                // Create the produced part record exactly as provided, even if the
+                // serial number is null or empty.
+                var created = await _serializablePartService.CreateAsync(
+                    p.PartDefinition!, p.SerialNumber);
+
+                if (created != null)
+                {
+                    partsToCreate.Add(new ProductionLogPart
+                    {
+                        ProductionLogId = savedLogId,
+                        SerializablePartId = created.Id,
+                        SerializablePart = created,
+                        OperationType = PartOperationType.Produced
+                    });
+                }
             }
         }
 

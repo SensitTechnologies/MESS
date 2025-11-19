@@ -120,6 +120,12 @@ public partial class Create : ComponentBase, IAsyncDisposable
                     // This will ensure a SerializablePart exists in memory for this log and node
                     PartTraceabilityService.GetSerializablePart(i, partNode);
                 }
+                
+                //Setting Produced Parts for each production log.
+                if (ActiveWorkInstruction?.PartProduced is {} produced)
+                {
+                    PartTraceabilityService.SetProducedPart(i, produced);
+                }
             }
         }
         
@@ -476,7 +482,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
         
-        //await ProductionLogPartService.SaveAllLogPartsAsync(ProductionLogBatch.Logs);
         var dump = PartTraceabilityService.DumpPartTraceability();
         Console.WriteLine(dump);
 

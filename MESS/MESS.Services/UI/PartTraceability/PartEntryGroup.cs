@@ -17,6 +17,12 @@ public class PartEntryGroup
     /// Gets or sets the collection of part node entries within this group.
     /// </summary>
     public List<PartEntry> PartNodeEntries { get; set; } = [];
+    
+    /// <summary>
+    /// If the associated WorkInstruction produces a part, this holds the
+    /// serializable instance created in memory before saving.
+    /// </summary>
+    public SerializablePart? ProducedPart { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PartEntryGroup"/> class with the specified production log index.
