@@ -359,30 +359,30 @@ public class PartTraceabilityService : IPartTraceabilityService
     }
     
     /// <inheritdoc />
-    public async Task LoadInstalledPartsIntoMemoryAsync(
-        List<int> priorProductionLogIds,
-        List<PartNode> currentPartNodes)
+    public async Task LoadInstalledPartsIntoMemoryAsync(List<int> priorProductionLogIds)
     {
         _entryGroups.Clear();
         RequestPartsReload();
 
-        if (priorProductionLogIds.Count == 0 || currentPartNodes.Count == 0)
+        if (priorProductionLogIds.Count == 0)
             return;
 
-        // Map: ProductionLogId → LogIndex based on dialog order
+        // Map: ProductionLogId → LogIndex (dialog row order)
         var logIndexMap = priorProductionLogIds
             .Select((id, index) => new { id, index })
             .ToDictionary(x => x.id, x => x.index);
 
-        var expectedPartDefinitions = currentPartNodes
-            .Select(n => n.PartDefinitionId)
+        // Compute expected part definition IDs from groups already in memory
+        var expectedPartDefinitionIds = _entryGroups.Values
+            .SelectMany(g => g.PartNodeEntries)
+            .Select(e => e.PartNode.PartDefinitionId)
             .ToHashSet();
 
-        // Fetch parts with ProductionLogId included
+        // Fetch installed parts for prior logs filtered by expected part definitions
         var installedParts = await _serializablePartService
             .GetInstalledForProductionLogsAsync(
                 priorProductionLogIds,
-                expectedPartDefinitions);
+                expectedPartDefinitionIds);
 
         // Group: ProductionLogId → (PartDefinitionId → List<SerializablePart>)
         var groupedByLog = installedParts
@@ -390,19 +390,21 @@ public class PartTraceabilityService : IPartTraceabilityService
             .ToDictionary(
                 g => g.Key,
                 g => g.GroupBy(r => r.Part.PartDefinitionId)
-                    .ToDictionary(gg => gg.Key, gg => gg.Select(x => x.Part).ToList())
+                      .ToDictionary(gg => gg.Key, gg => gg.Select(x => x.Part).ToList())
             );
 
         // Assign parts to the correct memory group based on dialog row order
         foreach (var productionLogId in priorProductionLogIds)
         {
-            var logIndex = logIndexMap[productionLogId];
+            if (!logIndexMap.TryGetValue(productionLogId, out var logIndex))
+                continue;
+
             var group = GetOrCreateGroup(logIndex);
 
             if (!groupedByLog.TryGetValue(productionLogId, out var defs))
                 continue;
 
-            foreach (var node in currentPartNodes.OrderBy(n => n.Id))
+            foreach (var node in group.PartNodeEntries.Select(e => e.PartNode).OrderBy(n => n.Id))
             {
                 if (!defs.TryGetValue(node.PartDefinitionId, out var list) || list.Count == 0)
                     continue;

@@ -161,29 +161,25 @@ public interface IPartTraceabilityService
     Task<bool> PersistAsync(List<ProductionLogFormDTO> savedLogs);
     
     /// <summary>
-    /// Loads previously installed serializable parts from a set of prior production logs
-    /// into the service's in-memory part tracking structure for the current work instruction batch.
+    /// Loads installed serializable parts from the specified prior production logs into memory.
     /// </summary>
     /// <param name="priorProductionLogIds">
-    /// A list of production log IDs representing previously completed logs whose installed parts should be loaded.
-    /// The order of this list determines the mapping to the new in-memory log indices (e.g., dialog row order).
+    /// A list of production log IDs representing previously saved logs for which installed parts
+    /// should be retrieved and mapped into in-memory <see cref="PartEntryGroup"/> instances.
     /// </param>
-    /// <param name="currentPartNodes">
-    /// The collection of part nodes for the current work instruction. Only parts whose part definitions
-    /// match these nodes will be loaded into memory.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation. Upon completion, the relevant serializable parts
-    /// are stored in memory in the correct log index and associated with their corresponding part nodes.
-    /// </returns>
     /// <remarks>
-    /// This method clears any existing in-memory part tracking data before loading the new set of parts.
-    /// Each prior production log ID is mapped to a log index based on its position in <paramref name="priorProductionLogIds"/>.
-    /// Only parts that match the part definition of the current part nodes are loaded, ensuring that the loaded
-    /// parts correspond to the current work instruction structure.
+    /// This method clears any existing part traceability groups in memory before loading.
+    /// 
+    /// The method automatically determines the expected <see cref="PartDefinition"/> IDs based
+    /// on the <see cref="PartNode"/> entries already present in the in-memory groups. It then
+    /// fetches installed parts corresponding to those part definitions and assigns them to the
+    /// correct part nodes within each production log group.
+    ///
+    /// This eliminates the need to pass in part nodes explicitly, simplifying the API.
+    /// 
+    /// The order of <paramref name="priorProductionLogIds"/> is used to determine the log index
+    /// mapping in memory (e.g., row order in the dialog or UI).
     /// </remarks>
-    Task LoadInstalledPartsIntoMemoryAsync(
-        List<int> priorProductionLogIds,
-        List<PartNode> currentPartNodes);
-
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task LoadInstalledPartsIntoMemoryAsync(List<int> priorProductionLogIds);
 }
