@@ -252,6 +252,30 @@ public class SerializablePartService : ISerializablePartService
         }
     }
     
+    /// <inheritdoc />
+    public async Task<List<SerializablePart>> GetInstalledForProductionLogsAsync(
+        List<int> productionLogIds,
+        HashSet<int> partDefinitionIds)
+    {
+        if (productionLogIds.Count == 0 || partDefinitionIds.Count == 0)
+            return [];
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var installedParts = await context.ProductionLogParts
+            .AsNoTracking()
+            .Where(plp =>
+                productionLogIds.Contains(plp.ProductionLogId) &&
+                plp.OperationType == PartOperationType.Installed &&
+                plp.SerializablePart != null &&
+                partDefinitionIds.Contains(plp.SerializablePart.PartDefinitionId))
+            .Select(plp => plp.SerializablePart!)
+            .Include(sp => sp.PartDefinition)
+            .ToListAsync();
+
+        return installedParts;
+    }
+    
     /// <summary>
     /// Retrieves the first installed <see cref="SerializablePart"/> for a specific <see cref="ProductionLog"/>.
     /// </summary>

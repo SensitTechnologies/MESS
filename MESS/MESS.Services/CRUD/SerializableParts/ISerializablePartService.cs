@@ -76,6 +76,37 @@ public interface ISerializablePartService
     Task<List<SerializablePart>> GetInstalledForProductionLogAsync(int productionLogId);
     
     /// <summary>
+    /// Retrieves all <see cref="SerializablePart"/> entities that were installed in any of the
+    /// specified <see cref="ProductionLog"/> records and whose <see cref="PartDefinition.Id"/>
+    /// matches one of the provided part definition IDs.
+    /// </summary>
+    /// <param name="productionLogIds">
+    /// A list of production log identifiers to search for installed parts.  
+    /// Only <see cref="ProductionLogPart"/> entries where
+    /// <see cref="ProductionLogPart.OperationType"/> is <see cref="PartOperationType.Installed"/>
+    /// are considered.
+    /// </param>
+    /// <param name="partDefinitionIds">
+    /// A set of <see cref="PartDefinition"/> identifiers representing the parts expected by
+    /// the *current* work instruction. Only installed serializable parts whose
+    /// <see cref="SerializablePart.PartDefinitionId"/> is included in this set will be returned.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of
+    /// <see cref="SerializablePart"/> instances matching the requested production logs and
+    /// part definitions.  
+    /// If no matching entries are found, an empty list is returned.
+    /// </returns>
+    /// <remarks>
+    /// This method is used to support part traceability across production logs. It efficiently
+    /// filters historical installed parts to only those relevant to the current work instruction,
+    /// allowing the UI to preload available serial numbers into memory.
+    /// </remarks>
+    Task<List<SerializablePart>> GetInstalledForProductionLogsAsync(
+        List<int> productionLogIds,
+        HashSet<int> partDefinitionIds);
+    
+    /// <summary>
     /// Retrieves the first installed <see cref="SerializablePart"/> for a specific <see cref="ProductionLog"/>.
     /// </summary>
     /// <param name="productionLogId">The ID of the production log for which to retrieve the produced part.</param>
