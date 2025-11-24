@@ -159,4 +159,31 @@ public interface IPartTraceabilityService
     /// corresponding <see cref="ProductionLogPart"/> entries (using <see cref="IProductionLogPartService"/>).
     /// </returns>
     Task<bool> PersistAsync(List<ProductionLogFormDTO> savedLogs);
+    
+    /// <summary>
+    /// Loads previously installed serializable parts from a set of prior production logs
+    /// into the service's in-memory part tracking structure for the current work instruction batch.
+    /// </summary>
+    /// <param name="priorProductionLogIds">
+    /// A list of production log IDs representing previously completed logs whose installed parts should be loaded.
+    /// The order of this list determines the mapping to the new in-memory log indices (e.g., dialog row order).
+    /// </param>
+    /// <param name="currentPartNodes">
+    /// The collection of part nodes for the current work instruction. Only parts whose part definitions
+    /// match these nodes will be loaded into memory.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Upon completion, the relevant serializable parts
+    /// are stored in memory in the correct log index and associated with their corresponding part nodes.
+    /// </returns>
+    /// <remarks>
+    /// This method clears any existing in-memory part tracking data before loading the new set of parts.
+    /// Each prior production log ID is mapped to a log index based on its position in <paramref name="priorProductionLogIds"/>.
+    /// Only parts that match the part definition of the current part nodes are loaded, ensuring that the loaded
+    /// parts correspond to the current work instruction structure.
+    /// </remarks>
+    Task LoadInstalledPartsIntoMemoryAsync(
+        List<int> priorProductionLogIds,
+        List<PartNode> currentPartNodes);
+
 }

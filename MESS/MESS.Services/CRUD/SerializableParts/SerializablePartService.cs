@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -253,27 +254,31 @@ public class SerializablePartService : ISerializablePartService
     }
     
     /// <inheritdoc />
-    public async Task<List<SerializablePart>> GetInstalledForProductionLogsAsync(
+    public async Task<List<InstalledPartResult>> GetInstalledForProductionLogsAsync(
         List<int> productionLogIds,
-        HashSet<int> partDefinitionIds)
+        HashSet<int> expectedPartDefinitionIds)
     {
-        if (productionLogIds.Count == 0 || partDefinitionIds.Count == 0)
+        if (productionLogIds.Count == 0)
             return [];
 
         await using var context = await _contextFactory.CreateDbContextAsync();
 
-        var installedParts = await context.ProductionLogParts
-            .AsNoTracking()
-            .Where(plp =>
-                productionLogIds.Contains(plp.ProductionLogId) &&
-                plp.OperationType == PartOperationType.Installed &&
-                plp.SerializablePart != null &&
-                partDefinitionIds.Contains(plp.SerializablePart.PartDefinitionId))
-            .Select(plp => plp.SerializablePart!)
-            .Include(sp => sp.PartDefinition)
+        var query =
+            from plp in context.ProductionLogParts.AsNoTracking()
+            where productionLogIds.Contains(plp.ProductionLogId)
+                  && plp.OperationType == PartOperationType.Installed
+                  && plp.SerializablePart != null
+                  && expectedPartDefinitionIds.Contains(plp.SerializablePart.PartDefinitionId)
+            select new InstalledPartResult(
+                plp.ProductionLogId,
+                plp.SerializablePart!
+            );
+
+        var results = await query
+            .Include(r => r.Part.PartDefinition)
             .ToListAsync();
 
-        return installedParts;
+        return results;
     }
     
     /// <summary>

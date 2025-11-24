@@ -357,4 +357,65 @@ public class PartTraceabilityService : IPartTraceabilityService
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public async Task LoadInstalledPartsIntoMemoryAsync(
+        List<int> priorProductionLogIds,
+        List<PartNode> currentPartNodes)
+    {
+        _entryGroups.Clear();
+        RequestPartsReload();
+
+        if (priorProductionLogIds.Count == 0 || currentPartNodes.Count == 0)
+            return;
+
+        // Map: ProductionLogId → LogIndex based on dialog order
+        var logIndexMap = priorProductionLogIds
+            .Select((id, index) => new { id, index })
+            .ToDictionary(x => x.id, x => x.index);
+
+        var expectedPartDefinitions = currentPartNodes
+            .Select(n => n.PartDefinitionId)
+            .ToHashSet();
+
+        // Fetch parts with ProductionLogId included
+        var installedParts = await _serializablePartService
+            .GetInstalledForProductionLogsAsync(
+                priorProductionLogIds,
+                expectedPartDefinitions);
+
+        // Group: ProductionLogId → (PartDefinitionId → List<SerializablePart>)
+        var groupedByLog = installedParts
+            .GroupBy(r => r.ProductionLogId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(r => r.Part.PartDefinitionId)
+                    .ToDictionary(gg => gg.Key, gg => gg.Select(x => x.Part).ToList())
+            );
+
+        // Assign parts to the correct memory group based on dialog row order
+        foreach (var productionLogId in priorProductionLogIds)
+        {
+            var logIndex = logIndexMap[productionLogId];
+            var group = GetOrCreateGroup(logIndex);
+
+            if (!groupedByLog.TryGetValue(productionLogId, out var defs))
+                continue;
+
+            foreach (var node in currentPartNodes.OrderBy(n => n.Id))
+            {
+                if (!defs.TryGetValue(node.PartDefinitionId, out var list) || list.Count == 0)
+                    continue;
+
+                var part = list[0];
+                list.RemoveAt(0);
+
+                group.SetSerializablePart(node, part);
+            }
+        }
+
+        Log.Information(
+            "Loaded {Count} serializable parts into traceability groups for prior logs {@Ids}.",
+            installedParts.Count, priorProductionLogIds);
+    }
 }
