@@ -16,6 +16,7 @@ public class PartTraceabilityService : IPartTraceabilityService
     public event Action? PartsReloadRequested;
 
     private readonly Dictionary<int, PartEntryGroup> _entryGroups = new();
+    private Dictionary<int, PartEntryGroup> _snapshotGroups = new();
 
     private readonly ISerializablePartService _serializablePartService;
     private readonly IProductionLogPartService _productionLogPartService;
@@ -102,6 +103,7 @@ public class PartTraceabilityService : IPartTraceabilityService
     public void ClearAll()
     {
         _entryGroups.Clear();
+        _snapshotGroups.Clear();
         Log.Information("Cleared all part traceability groups.");
         RequestPartsReload();
     }
@@ -419,5 +421,13 @@ public class PartTraceabilityService : IPartTraceabilityService
         Log.Information(
             "Loaded {Count} serializable parts into traceability groups for prior logs {@Ids}.",
             installedParts.Count, priorProductionLogIds);
+    }
+    
+    private void CreateSnapshot()
+    {
+        _snapshotGroups = _entryGroups.ToDictionary(
+            x => x.Key,
+            x => x.Value.Clone()
+        );
     }
 }

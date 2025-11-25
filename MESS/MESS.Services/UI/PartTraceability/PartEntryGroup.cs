@@ -118,4 +118,38 @@ public class PartEntryGroup
     {
         PartNodeEntries.RemoveAll(e => e.PartNodeId == node.Id);
     }
+    
+    /// <summary>
+    /// Creates a deep copy of this <see cref="PartEntryGroup"/> instance,
+    /// including a cloned copy of each contained <see cref="PartEntry"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method performs a deep clone of the group by creating a new list
+    /// and cloning each contained <see cref="PartEntry"/> via its
+    /// <see cref="PartEntry.Clone"/> method. The returned group can be safely
+    /// mutated without affecting the original.
+    /// </remarks>
+    /// <returns>
+    /// A new <see cref="PartEntryGroup"/> instance containing cloned part
+    /// entries and copied group metadata.
+    /// </returns>
+    public PartEntryGroup Clone()
+    {
+        var clone = new PartEntryGroup(LogIndex)
+        {
+            ProducedPart = ProducedPart == null ? null : new SerializablePart
+            {
+                Id = ProducedPart.Id,
+                PartDefinitionId = ProducedPart.PartDefinitionId,
+                PartDefinition = ProducedPart.PartDefinition,
+                SerialNumber = ProducedPart.SerialNumber
+            }
+        };
+
+        clone.PartNodeEntries = PartNodeEntries
+            .Select(e => e.Clone())
+            .ToList();
+
+        return clone;
+    }
 }

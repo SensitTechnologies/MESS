@@ -37,4 +37,35 @@ public class PartEntry
         PartNode = node;
         PartNodeId = node.Id;
     }
+    
+    /// <summary>
+    /// Creates a deep copy of this <see cref="PartEntry"/> instance.
+    /// </summary>
+    /// <remarks>
+    /// This method copies all scalar properties. Complex reference properties
+    /// (such as <see cref="PartDefinition"/>) are copied by reference unless they
+    /// implement their own cloning logic. This method is primarily intended
+    /// for creating snapshot copies that can be safely modified without
+    /// affecting the original <see cref="PartEntry"/>.
+    /// </remarks>
+    /// <returns>
+    /// A new <see cref="PartEntry"/> containing the copied values from the
+    /// current instance.
+    /// </returns>
+    public PartEntry Clone()
+    {
+        return new PartEntry(PartNode)
+        {
+            PartNodeId = PartNodeId,
+            SerializablePart = SerializablePart == null ? null : new SerializablePart
+            {
+                Id = SerializablePart.Id,
+                PartDefinitionId = SerializablePart.PartDefinitionId,
+                PartDefinition = SerializablePart.PartDefinition,
+                SerialNumber = SerializablePart.SerialNumber
+            },
+            LinkedProductionLog = LinkedProductionLog // NOT cloned — this is a reference to an existing log
+        };
+    }
+
 }
