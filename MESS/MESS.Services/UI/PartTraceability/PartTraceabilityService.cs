@@ -367,7 +367,11 @@ public class PartTraceabilityService : IPartTraceabilityService
         RequestPartsReload();
 
         if (priorProductionLogIds.Count == 0)
+        {
+            // No logs loaded → NO snapshot should exist
+            _snapshotGroups.Clear();
             return;
+        }
 
         // Map: ProductionLogId → LogIndex (dialog row order)
         var logIndexMap = priorProductionLogIds
@@ -392,7 +396,9 @@ public class PartTraceabilityService : IPartTraceabilityService
             .ToDictionary(
                 g => g.Key,
                 g => g.GroupBy(r => r.Part.PartDefinitionId)
-                      .ToDictionary(gg => gg.Key, gg => gg.Select(x => x.Part).ToList())
+                      .ToDictionary(
+                          gg => gg.Key, 
+                          gg => gg.Select(x => x.Part).ToList())
             );
 
         // Assign parts to the correct memory group based on dialog row order
@@ -406,6 +412,7 @@ public class PartTraceabilityService : IPartTraceabilityService
             if (!groupedByLog.TryGetValue(productionLogId, out var defs))
                 continue;
 
+            // Match parts to nodes in this group
             foreach (var node in group.PartNodeEntries.Select(e => e.PartNode).OrderBy(n => n.Id))
             {
                 if (!defs.TryGetValue(node.PartDefinitionId, out var list) || list.Count == 0)
@@ -417,6 +424,8 @@ public class PartTraceabilityService : IPartTraceabilityService
                 group.SetSerializablePart(node, part);
             }
         }
+        
+        CreateSnapshot();
 
         Log.Information(
             "Loaded {Count} serializable parts into traceability groups for prior logs {@Ids}.",
