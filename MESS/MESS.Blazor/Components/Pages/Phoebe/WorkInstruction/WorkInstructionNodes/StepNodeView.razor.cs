@@ -45,7 +45,7 @@ public partial class StepNodeView : IDisposable
     /// It must be provided by the parent component.
     /// </remarks>
     [Parameter, EditorRequired]
-    public required Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; }
+    public required Dictionary<Guid, BlazoredTextEditor> EditorRefs { get; set; }
 
     /// <summary>
     /// Gets or sets the dictionary of currently active fields being edited, keyed by Step ID.
@@ -54,7 +54,7 @@ public partial class StepNodeView : IDisposable
     /// This tracks which field (e.g., Name or Body) is currently active for editing per step.
     /// </remarks>
     [Parameter, EditorRequired]
-    public required Dictionary<int, string> ActiveFields { get; set; }
+    public required Dictionary<Guid, string> ActiveFields { get; set; }
     
     /// <summary>
     /// Event callback to handle a node action like move, insert, or delete.
@@ -114,13 +114,13 @@ public partial class StepNodeView : IDisposable
     {
         get
         {
-            if (ActiveFields.TryGetValue(Step.Id, out var field))
+            if (ActiveFields.TryGetValue(Step.ClientId, out var field))
                 return field == "Body";
 
-            ActiveFields[Step.Id] = "Name";  // default to Name
+            ActiveFields[Step.ClientId] = "Name";  // default to Name
             return false;                    // false = show Name
         }
-        set => ActiveFields[Step.Id] = value ? "Body" : "Name";
+        set => ActiveFields[Step.ClientId] = value ? "Body" : "Name";
     }
     
     private BlazoredTextEditor? _editorRef;
@@ -129,7 +129,7 @@ public partial class StepNodeView : IDisposable
     {
         get
         {
-            if (EditorRefs.TryGetValue(Step.Id, out var editor))
+            if (EditorRefs.TryGetValue(Step.ClientId, out var editor))
             {
                 return editor;
             }
@@ -140,7 +140,7 @@ public partial class StepNodeView : IDisposable
         {
             if (value != null)
             {
-                EditorRefs[Step.Id] = value;
+                EditorRefs[Step.ClientId] = value;
                 _editorRef = value;
             }
         }
@@ -216,19 +216,19 @@ public partial class StepNodeView : IDisposable
                     if (objRef == null)
                         objRef = DotNetObjectReference.Create(this);
 
-                    string containerId = $"step-editor-{Step.Id}";
+                    string containerId = $"step-editor-{Step.ClientId}";
 
                     await JS.InvokeVoidAsync("quillInterop.attachChangeHandler", containerId, objRef);
                 }
                 else
                 {
-                    Log.Warning("Failed to load editor content after multiple attempts for Step {StepId}", Step.Id);
+                    Log.Warning("Failed to load editor content after multiple attempts for Step {StepClientId}", Step.ClientId);
                 }
             }
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error loading HTML content for field in step {StepId}", Step.Id);
+            Log.Error(ex, "Error loading HTML content for field in step {StepClientId}", Step.ClientId);
         }
     }
 
