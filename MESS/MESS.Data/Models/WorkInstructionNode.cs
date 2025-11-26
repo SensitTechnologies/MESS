@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MESS.Data.Models;
 
 /// <summary>
@@ -20,6 +22,13 @@ public abstract class WorkInstructionNode
     /// Gets or sets the type of the work instruction node.
     /// </summary>
     public WorkInstructionNodeType NodeType { get; set; }
+    
+    /// <summary>
+    /// A client-generated unique identifier for unsaved nodes.
+    /// Not persisted in the database.
+    /// </summary>
+    [NotMapped]
+    public Guid ClientId { get; set; } = Guid.NewGuid();
 }
 
 /// <summary>
