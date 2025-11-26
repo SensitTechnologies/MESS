@@ -481,11 +481,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
             // Add the new log to the session
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
-        
-        var dump = PartTraceabilityService.DumpPartTraceability();
-        Console.WriteLine(dump);
 
-       await PartTraceabilityService.PersistAsync(ProductionLogBatch.Logs);
+        await PartTraceabilityService.PersistAsync(ProductionLogBatch.Logs);
 
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();
