@@ -6,10 +6,10 @@
     <div class="d-flex align-items-start justify-content-between flex-wrap">
         <div class="row flex-grow-1 g-2">
             <div class="col-auto">
-                <div class="part-node border rounded ps-2 py-2 h-100 d-flex align-items-center gap-2">
+                <div class="border rounded ps-2 py-2 h-100 d-flex align-items-center gap-2 shadow-sm">
                     <!-- Part Number -->
                     <div class="d-flex flex-column">
-                        <label class="form-label mb-1"><strong>Part Number</strong></label>
+                        <label class="form-label mb-1">Part Number</label>
                         <input type="text"
                                class="form-control form-control-sm"
                                value="@PartNode.PartDefinition.Number"
@@ -18,7 +18,7 @@
 
                     <!-- Part Name -->
                     <div class="d-flex flex-column">
-                        <label class="form-label mb-1"><strong>Part Name</strong></label>
+                        <label class="form-label mb-1">Part Name</label>
                         <input type="text"
                                class="form-control form-control-sm"
                                value="@PartNode.PartDefinition.Name"
@@ -27,7 +27,7 @@
 
                     <!-- InputType Toggle -->
                     <div class="d-flex flex-column align-items-start ms-3 me-3">
-                        <label class="form-label mb-1"><strong>Input Type</strong></label>
+                        <label class="form-label mb-1">Input Type</label>
                         <div class="form-check form-switch">
                             <input class="form-check-input toggle-switch" type="checkbox"
                                    role="switch"
