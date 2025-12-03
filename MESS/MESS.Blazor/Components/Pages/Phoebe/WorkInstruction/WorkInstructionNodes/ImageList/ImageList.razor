@@ -1,25 +1,28 @@
 ﻿@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes.SortableList
 @using MESS.Services.Media.WorkInstructions
+
 @inject IWorkInstructionImageService WorkInstructionImageService
 
-@if (ActiveImages == null || ActiveImages.Count == 0)
-{
-    <p>No images in @ActiveLabel. Add some below.</p>
-}
-else
-{
-
-    <div class="panel panel-primary">
-        <label class="form-label">Images:</label>
-        <div class="border rounded px-2">
+<div class="card shadow-sm">
+    <div class="card-header">
+        <strong>@ActiveLabel Images</strong>
+    </div>
+    
+    <div class="card-body">
+        @if (ActiveImages == null || ActiveImages.Count == 0)
+        {
+            <p>No images in @ActiveLabel. Add some below.</p>
+        }
+        else
+        {
             <SortableList T="string"
                           Items="@(ActiveImages)"
                           OnUpdate="@SortList"
                           Context="image"
-                          >
+            >
 
                 <SortableItemTemplate>
-                    <div class="d-flex align-items-start justify-content-between border rounded my-2 ">
+                    <div class="d-flex align-items-start justify-content-between border rounded my-2 shadow-sm">
                         <div class="d-flex flex-grow-1 align-items-center ">
                             <i class="bi bi-grip-vertical h3" />
                             <div class="vr me-1" />
@@ -32,13 +35,22 @@ else
                     </div>
                 </SortableItemTemplate>
             </SortableList>
+            
+        }
+    </div>
+    
+    <div class="card-footer">
+        <div class="upload-area my-1">
+            <!-- Hidden file input -->
+            <InputFile id="fileUpload" OnChange="HandleUpload" multiple accept="image/*"
+                       class="d-none" />
+
+            <!-- Styled button that triggers the file picker -->
+            <label for="fileUpload" class="btn btn-sm btn-primary">
+                <i class="bi bi-upload"></i> Upload New @ActiveLabel Image(s)
+            </label>
         </div>
     </div>
-}
-
-<div class="upload-area my-1">
-    <label class="form-label">Upload New @ActiveLabel Image(s)</label>
-    <InputFile OnChange="HandleUpload" multiple accept="image/*" />
 </div>
 
 @code {
