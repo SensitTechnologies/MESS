@@ -10,7 +10,6 @@
 @using MESS.Services.UI.DarkMode
 @using MESS.Services.UI.WorkInstructionEditor
 @inject AuthenticationStateProvider AuthProvider
-@inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
 @inject IWorkInstructionEditorService EditorService
 @inject IWorkInstructionService WorkInstructionService
@@ -66,6 +65,14 @@
             placeholder="Version..."
             value="@CurrentInstruction?.Version"
             @oninput="OnVersionChanged"
+            disabled="@(!HasInstruction)" />
+        
+        <input
+            type="text"
+            class="menu-input-secondary"
+            placeholder="Produces..."
+            value="@PartProducedName"
+            @oninput="OnPartProducedChanged"
             disabled="@(!HasInstruction)" />
     </div>
 
@@ -280,6 +287,8 @@
 
     // ** Version History Sidebar Open State **
     private bool isVersionHistoryOpen = false;
+    
+    private string? PartProducedName { get; set; }
 
     /// <summary>
     /// Called when the component is initialized.
@@ -304,6 +313,12 @@
     public override async Task SetParametersAsync(ParameterView parameters)
     {
         await base.SetParametersAsync(parameters);
+        
+        // Refresh the produced-part name when the instruction changes
+        if (CurrentInstruction?.PartProduced != null)
+            PartProducedName = CurrentInstruction.PartProduced.Name;
+        else
+            PartProducedName = "";
     }
 
 
@@ -539,6 +554,26 @@
     {
         DialogSelectedProducts = products;
         return Task.CompletedTask;
+    }
+    
+    private async Task OnPartProducedChanged(ChangeEventArgs e)
+    {
+        PartProducedName = e.Value?.ToString() ?? "";
+
+        if (!string.IsNullOrWhiteSpace(PartProducedName) && CurrentInstruction != null)
+        {
+            try
+            {
+                await EditorService.SetProducedPartByNameAsync(PartProducedName);
+                CurrentInstruction.PartProduced = EditorService.Current?.PartProduced;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to set produced part.");
+            }
+        }
+        
+        await InvokeAsync(StateHasChanged);
     }
 
     private void Dispose()

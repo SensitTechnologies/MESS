@@ -79,6 +79,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <param name="workInstructionImageService">
     /// The service used to manipulate work instruction images.
     /// </param>
+    /// <param name ="partDefinitionService">
+    /// The service used to manage part definitions.
+    /// </param>
     public WorkInstructionEditorService(IWorkInstructionService workInstructionService, 
         IWorkInstructionImageService workInstructionImageService,
         IPartDefinitionService partDefinitionService)
@@ -404,6 +407,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         }
     }
     
+    /// <inheritdoc />
     public async Task SetProducedPartByNameAsync(string name)
     {
         if (Current == null)
