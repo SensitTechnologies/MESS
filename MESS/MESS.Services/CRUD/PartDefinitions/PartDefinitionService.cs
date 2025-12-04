@@ -355,4 +355,31 @@ public class PartDefinitionService : IPartDefinitionService
             return [];
         }
     }
+    
+    ///  <inheritdoc/>
+    public async Task<bool> ExistsAsync(string name, string? number = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Log.Warning("ExistsAsync called with empty name.");
+            return false;
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var query = context.PartDefinitions.AsNoTracking().Where(p => p.Name.ToLower() == name.ToLower());
+
+            if (!string.IsNullOrWhiteSpace(number))
+                query = query.Where(p => (p.Number ?? "").Equals(number, StringComparison.OrdinalIgnoreCase));
+
+            return await query.AnyAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error checking existence of PartDefinition '{Name}'", name);
+            return false;
+        }
+    }
 }
