@@ -114,6 +114,7 @@ public class WorkInstructionService : IWorkInstructionService
             var workInstructions = await context.WorkInstructions
                 .Include(w => w.Products)
                 .Include(w => w.Nodes)
+                .Include(w => w.PartProduced)
                 .ToListAsync();
             
             // Load PartDefinition for all PartNodes (derived entities)
@@ -161,6 +162,7 @@ public class WorkInstructionService : IWorkInstructionService
                 .Where(w => w.IsLatest)
                 .Include(w => w.Products)
                 .Include(w => w.Nodes)
+                .Include(w => w.PartProduced)
                 .ToListAsync();
 
             // Explicitly load PartDefinition for derived PartNodes
@@ -224,6 +226,7 @@ public class WorkInstructionService : IWorkInstructionService
                 .Include(w => w.Products)
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).PartDefinition)
+                .Include(w => w.PartProduced)
                 .FirstOrDefaultAsync(w => w.Id == id);
             
             SortNodesByPosition(workInstruction);
@@ -350,6 +353,12 @@ public class WorkInstructionService : IWorkInstructionService
             if (!validationResult.IsValid)
             {
                 return false;
+            }
+            
+            if (workInstruction.PartProduced != null && workInstruction.PartProduced.Id > 0)
+            {
+                context.Attach(workInstruction.PartProduced);
+                context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
             }
 
             // Having to refetch data since we are using DbContextFactory and the change-tracker is reset on each instantiation
