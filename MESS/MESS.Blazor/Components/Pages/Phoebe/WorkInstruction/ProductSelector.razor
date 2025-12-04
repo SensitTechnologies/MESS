@@ -98,8 +98,6 @@
     /// <returns>A task that completes when the selection change is processed.</returns>
     private async Task ToggleProductSelection(Product product, bool isChecked)
     {
-        Console.WriteLine($"Toggle: {product.PartDefinition.Name} - Checked: {isChecked}");
-
         var updatedSelection = SelectedProducts.ToList();
 
         if (isChecked)
