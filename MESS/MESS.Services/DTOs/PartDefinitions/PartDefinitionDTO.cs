@@ -13,7 +13,7 @@ public class PartDefinitionDTO
     /// <summary>
     /// Gets or sets the part number associated with this definition.
     /// </summary>
-    public required string Number { get; set; }
+    public string? Number { get; set; }
 
     /// <summary>
     /// Gets or sets the descriptive name of the part.

@@ -62,6 +62,52 @@ public class PartDefinitionService : IPartDefinitionService
         }
     }
     
+    public async Task<PartDefinition?> GetOrCreateByNameAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Log.Warning("GetOrCreateByNameAsync called with empty name.");
+            return null;
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Case-insensitive match on Name
+            var existing = await context.PartDefinitions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Name.ToLower() == name.ToLower());
+
+            if (existing != null)
+            {
+                Log.Information("Found existing PartDefinition '{Name}' (ID {Id})", name, existing.Id);
+                return existing;
+            }
+
+            // Create a new PartDefinition with only the Name
+            var newPart = new PartDefinition
+            {
+                Name = name,
+                Number = null
+            };
+
+            context.PartDefinitions.Add(newPart);
+            await context.SaveChangesAsync();
+
+            Log.Information("Created new PartDefinition '{Name}' (ID {Id})", name, newPart.Id);
+
+            // Return a clean, detached instance
+            context.Entry(newPart).State = EntityState.Detached;
+            return newPart;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in GetOrCreateByNameAsync for name '{Name}'", name);
+            return null;
+        }
+    }
+    
     /// <summary>
     /// Retrieves a list of <see cref="PartDefinition"/> entities that are
     /// common between two specified <see cref="WorkInstruction"/> objects.
@@ -198,7 +244,7 @@ public class PartDefinitionService : IPartDefinitionService
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var part = await context.PartDefinitions
-                .FirstOrDefaultAsync(p => p.Number.ToLower() == number.ToLower());
+                .FirstOrDefaultAsync(p => (p.Number ?? "").Equals(number, StringComparison.CurrentCultureIgnoreCase));
 
             if (part is null)
             {
