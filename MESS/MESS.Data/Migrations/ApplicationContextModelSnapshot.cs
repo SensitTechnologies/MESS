@@ -35,7 +35,6 @@ namespace MESS.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Number")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
