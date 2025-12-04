@@ -26,6 +26,35 @@ public interface IPartDefinitionService
     /// the existing or newly created <see cref="PartDefinition"/> entity.
     /// </returns>
     Task<PartDefinition?> GetOrAddPartAsync(PartDefinition partDefinitionToAdd);
+    
+    /// <summary>
+    /// Retrieves an existing <see cref="PartDefinition"/> by name, or creates a new one if no match exists.
+    /// </summary>
+    /// <param name="name">
+    /// The name of the <see cref="PartDefinition"/> to retrieve or create. 
+    /// The comparison is case-insensitive.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains:
+    /// <list type="bullet">
+    ///   <item><description>
+    ///   The existing <see cref="PartDefinition"/> if a match is found.
+    ///   </description></item>
+    ///   <item><description>
+    ///   A newly created <see cref="PartDefinition"/> with the specified name (and a <c>null</c> part number)
+    ///   if no existing entry is found.
+    ///   </description></item>
+    ///   <item><description>
+    ///   <c>null</c> if the provided name is invalid or an error occurs.
+    ///   </description></item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method performs a case-insensitive search on <see cref="PartDefinition.Name"/>.  
+    /// If a new entity is created, its <see cref="PartDefinition.Number"/> property will be set to <c>null</c>.
+    /// </remarks>
+    Task<PartDefinition?> GetOrCreateByNameAsync(string name);
+
 
     /// <summary>
     /// Retrieves all <see cref="PartDefinition"/> entities that are referenced
