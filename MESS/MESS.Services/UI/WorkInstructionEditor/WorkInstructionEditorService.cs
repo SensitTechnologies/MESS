@@ -1,3 +1,4 @@
+using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.Media.WorkInstructions;
 using Serilog;
@@ -11,6 +12,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 {
     private readonly IWorkInstructionService _workInstructionService;
     private readonly IWorkInstructionImageService _workInstructionImageService;
+    private readonly IPartDefinitionService _partDefinitionService;
     
     /// <inheritdoc />
     public WorkInstruction? Current { get; private set; }
@@ -77,10 +79,13 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <param name="workInstructionImageService">
     /// The service used to manipulate work instruction images.
     /// </param>
-    public WorkInstructionEditorService(IWorkInstructionService workInstructionService, IWorkInstructionImageService workInstructionImageService)
+    public WorkInstructionEditorService(IWorkInstructionService workInstructionService, 
+        IWorkInstructionImageService workInstructionImageService,
+        IPartDefinitionService partDefinitionService)
     {
         _workInstructionService = workInstructionService;
         _workInstructionImageService = workInstructionImageService;
+        _partDefinitionService = partDefinitionService;
     }
 
     private void NotifyChanged()
@@ -398,4 +403,21 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             _nodesQueuedForDeletion.Add(node);
         }
     }
+    
+    public async Task SetProducedPartByNameAsync(string name)
+    {
+        if (Current == null)
+            throw new InvalidOperationException("Cannot assign produced part when Current is null.");
+
+        var part = await _partDefinitionService.GetOrCreateByNameAsync(name);
+
+        if (part == null)
+            return;
+
+        Current.PartProduced = part;
+        Current.PartProducedId = part.Id;
+
+        MarkDirty();
+    }
+
 }

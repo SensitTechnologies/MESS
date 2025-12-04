@@ -195,5 +195,27 @@ public interface IWorkInstructionEditorService
     /// The queued nodes will be removed from the database when <see cref="SaveAsync"/> is called.
     /// </remarks>
     public void QueueNodeForDeletion(WorkInstructionNode node);
+    
+    /// <summary>
+    /// Sets the <see cref="PartDefinition"/> produced by the currently edited work instruction,
+    /// creating the part definition if it does not already exist.
+    /// </summary>
+    /// <param name="name">
+    /// The name of the part to assign as the produced part.  
+    /// A case-insensitive lookup is performed, and a new <see cref="PartDefinition"/> is created
+    /// if no existing one is found.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no work instruction is currently being edited (i.e., <c>Current</c> is <c>null</c>).
+    /// </exception>
+    /// <remarks>
+    /// This method updates both <c>PartProduced</c> and <c>PartProducedId</c> on the currently
+    /// edited work instruction and marks the editor state as dirty.  
+    /// If the provided name is invalid or the part cannot be created, the method returns without modifying state.
+    /// </remarks>
+    Task SetProducedPartByNameAsync(string name);
 }
 
