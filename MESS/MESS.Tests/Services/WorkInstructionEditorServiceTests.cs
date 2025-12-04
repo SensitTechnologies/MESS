@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.Media.WorkInstructions;
 using MESS.Services.UI.WorkInstructionEditor;
@@ -10,13 +11,15 @@ public class WorkInstructionEditorServiceTests
 {
     private readonly Mock<IWorkInstructionService> _mockWorkInstructionService;
     private readonly Mock<IWorkInstructionImageService> _mockImageService;
+    private readonly Mock<IPartDefinitionService> _mockPartDefinitionService;
     private readonly WorkInstructionEditorService _sut;
 
     public WorkInstructionEditorServiceTests()
     {
         _mockWorkInstructionService = new Mock<IWorkInstructionService>();
         _mockImageService = new Mock<IWorkInstructionImageService>();
-        _sut = new WorkInstructionEditorService(_mockWorkInstructionService.Object, _mockImageService.Object);
+        _mockPartDefinitionService = new Mock<IPartDefinitionService>();
+        _sut = new WorkInstructionEditorService(_mockWorkInstructionService.Object, _mockImageService.Object, _mockPartDefinitionService.Object);
     }
 
     [Fact]
