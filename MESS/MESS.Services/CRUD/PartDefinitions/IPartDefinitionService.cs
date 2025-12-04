@@ -139,4 +139,16 @@ public interface IPartDefinitionService
     /// for performance optimization. Duplicate or invalid IDs are automatically ignored.
     /// </remarks>
     Task<List<PartDefinition>> GetByIdsAsync(IEnumerable<int> ids);
+
+    /// <summary>
+    /// Checks whether a <see cref="PartDefinition"/> already exists in the database
+    /// for the specified part name (optionally number) without creating it.
+    /// </summary>
+    /// <param name="name">The name of the part to check.</param>
+    /// <param name="number">Optional part number to also match.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The result is <c>true</c> if a matching
+    /// part exists; otherwise, <c>false</c>.
+    /// </returns>
+    Task<bool> ExistsAsync(string name, string? number = null);
 }
