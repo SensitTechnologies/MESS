@@ -17,6 +17,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public WorkInstruction? Current { get; private set; }
     
+    private string? _pendingProducedPartName;
+    
     private readonly List<WorkInstructionNode> _nodesQueuedForDeletion = [];
     
     /// <summary>
@@ -171,7 +173,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
           NotifyChanged();          
         }
     }
-
     
     /// <inheritdoc />
     public async Task LoadForNewVersionAsync(int originalId)
@@ -322,6 +323,19 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         if (Current == null)
             return false;
 
+        // Resolve the PartDefinition
+        if (!string.IsNullOrWhiteSpace(_pendingProducedPartName))
+        {
+            var part = await _partDefinitionService.GetOrCreateByNameAsync(_pendingProducedPartName);
+            if (part != null)
+            {
+                Current.PartProduced = part;
+                Current.PartProducedId = part.Id;
+            }
+
+            _pendingProducedPartName = null; // reset after save
+        }
+        
         bool success = false;
 
         switch (Mode)
@@ -408,19 +422,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
     
     /// <inheritdoc />
-    public async Task SetProducedPartByNameAsync(string name)
+    public void SetProducedPartName(string? name)
     {
-        if (Current == null)
-            throw new InvalidOperationException("Cannot assign produced part when Current is null.");
-
-        var part = await _partDefinitionService.GetOrCreateByNameAsync(name);
-
-        if (part == null)
-            return;
-
-        Current.PartProduced = part;
-        Current.PartProducedId = part.Id;
-
+        _pendingProducedPartName = name;
         MarkDirty();
     }
 

@@ -556,24 +556,10 @@
         return Task.CompletedTask;
     }
     
-    private async Task OnPartProducedChanged(ChangeEventArgs e)
+    private void OnPartProducedChanged(ChangeEventArgs e)
     {
         PartProducedName = e.Value?.ToString() ?? "";
-
-        if (!string.IsNullOrWhiteSpace(PartProducedName) && CurrentInstruction != null)
-        {
-            try
-            {
-                await EditorService.SetProducedPartByNameAsync(PartProducedName);
-                CurrentInstruction.PartProduced = EditorService.Current?.PartProduced;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to set produced part.");
-            }
-        }
-        
-        await InvokeAsync(StateHasChanged);
+        EditorService.SetProducedPartName(PartProducedName);
     }
 
     private void Dispose()
