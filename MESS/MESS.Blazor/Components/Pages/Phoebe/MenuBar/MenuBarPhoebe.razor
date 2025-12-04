@@ -6,6 +6,7 @@
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
+@using MESS.Services.CRUD.PartDefinitions
 @using MESS.Services.CRUD.WorkInstructions
 @using MESS.Services.UI.DarkMode
 @using MESS.Services.UI.WorkInstructionEditor
@@ -13,6 +14,7 @@
 @inject IJSRuntime JS
 @inject IWorkInstructionEditorService EditorService
 @inject IWorkInstructionService WorkInstructionService
+@inject IPartDefinitionService PartDefinitionService
 @inject DarkModeInstance DarkModeInstance
 
 <div class="menu-bar-card">
@@ -73,9 +75,23 @@
             type="text"
             class="menu-input-secondary"
             placeholder="Produces..."
-            value="@PartProducedName"
-            @oninput="OnPartProducedChanged"
+            @bind="PartProducedName"
+            @bind:event="oninput"
             disabled="@(!HasInstruction)" />
+        
+        @if (!string.IsNullOrWhiteSpace(PartProducedName))
+        {
+            <span class="part-status-icon" title="@PartStatusTooltip">
+                @if (WillCreateNewPart)
+                {
+                    <i class="bi bi-plus-circle text-success"></i>
+                }
+                else
+                {
+                    <i class="bi bi-check-circle text-secondary"></i>
+                }
+            </span>
+        }
     </div>
 
     
@@ -290,7 +306,33 @@
     // ** Version History Sidebar Open State **
     private bool isVersionHistoryOpen = false;
     
-    private string? PartProducedName { get; set; }
+    private string _partProducedName = "";
+    private string PartProducedName
+    {
+        get => _partProducedName;
+        set
+        {
+            if (_partProducedName != value)
+            {
+                _partProducedName = value;
+                _ = OnPartProducedChangedDebounced();
+            }
+        }
+    }
+
+
+    // called only from the input field
+    private async Task OnPartProducedInput(ChangeEventArgs e)
+    {
+        PartProducedName = CurrentInstruction?.PartProduced?.Name ?? "";
+        await OnPartProducedChangedDebounced();
+    }
+    
+    private bool WillCreateNewPart { get; set; } = false;
+    private string PartStatusTooltip => WillCreateNewPart ? "New part will be created" : "Part already exists";
+    private CancellationTokenSource? _debounceCts;
+    
+    private WorkInstruction? _previousInstruction;
 
     /// <summary>
     /// Called when the component is initialized.
@@ -311,19 +353,20 @@
         }
     }
     
-    /// <inheritdoc />
-    public override async Task SetParametersAsync(ParameterView parameters)
+    protected override void OnParametersSet()
     {
-        await base.SetParametersAsync(parameters);
+        if (_previousInstruction != CurrentInstruction)
+        {
+            _previousInstruction = CurrentInstruction;
         
-        // Refresh the produced-part name when the instruction changes
-        if (CurrentInstruction?.PartProduced != null)
-            PartProducedName = CurrentInstruction.PartProduced.Name;
-        else
-            PartProducedName = "";
+            // Update text field without triggering debounce
+            PartProducedName = CurrentInstruction?.PartProduced?.Name ?? "";
+            WillCreateNewPart = false;
+
+            StateHasChanged();
+        }
     }
-
-
+    
     private void ToggleFileMenu()
     {
         open = !open;
@@ -558,11 +601,34 @@
         return Task.CompletedTask;
     }
     
-    private void OnPartProducedChanged(ChangeEventArgs e)
+    private async Task OnPartProducedChangedDebounced()
     {
-        PartProducedName = e.Value?.ToString() ?? "";
         EditorService.SetProducedPartName(PartProducedName);
+
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        try
+        {
+            await Task.Delay(300, token);
+
+            if (string.IsNullOrWhiteSpace(PartProducedName))
+            {
+                WillCreateNewPart = false; // No icon for empty input
+            }
+            else
+            {
+                // If it doesn't exist yet OR it's different from the currently assigned part
+                WillCreateNewPart = !await PartDefinitionService.ExistsAsync(PartProducedName, null);
+            }
+
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
+
 
     private void Dispose()
     {
