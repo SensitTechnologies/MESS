@@ -11,9 +11,9 @@ public class PartDefinition
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the part number. This field is required.
+    /// Gets or sets the part number. This field is optional.
     /// </summary>
-    public required string Number { get; set; }
+    public string? Number { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the part. This field is required.
