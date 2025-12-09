@@ -75,7 +75,7 @@ public class PartTraceabilityService : IPartTraceabilityService
     public void SetProducedPartSerialNumber(int logIndex, string? serialNumber)
     {
         var group = GetOrCreateGroup(logIndex);
-
+        
         if (group.ProducedPart == null)
         {
             // There MUST be a produced part definition already selected
@@ -161,6 +161,19 @@ public class PartTraceabilityService : IPartTraceabilityService
         foreach (var group in _entryGroups.Values.OrderBy(g => g.LogIndex))
         {
             sb.AppendLine($"--- Log Index: {group.LogIndex} ---");
+
+            if (group.ProducedPart != null)
+            {
+                sb.AppendLine(
+                    $"Produced Part → Serial: {group.ProducedPart.SerialNumber ?? "N/A"}, " +
+                    $"Name: {group.ProducedPart.PartDefinition?.Name ?? "N/A"}, " +
+                    $"Number: {group.ProducedPart.PartDefinition?.Number ?? "N/A"}"
+                );
+            }
+            else
+            {
+                sb.AppendLine("Produced Part → None");
+            }
 
             foreach (var input in group.GetAllInputs())
             {
