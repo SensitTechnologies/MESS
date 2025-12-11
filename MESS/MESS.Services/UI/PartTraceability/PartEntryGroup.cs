@@ -79,8 +79,6 @@ public class PartEntryGroup
     public void SetSerializablePart(PartNode node, SerializablePart part)
     {
         var entry = GetOrCreateEntry(node);
-        if (node.InputType != PartInputType.SerialNumber)
-            throw new InvalidOperationException($"Node {node.Id} does not accept serial number input.");
         entry.SerializablePart = part;
         entry.LinkedProductionLog = null;
     }
