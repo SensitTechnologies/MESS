@@ -651,6 +651,51 @@ public class PartTraceabilityService : IPartTraceabilityService
                     };
                 }
             } // foreach entry
+            
+            // Requirement: scenario 2 must re-produce the same serializable part
+            if (snapshotGroup?.ProducedPart != null)
+            {
+                // Force the current produced part to be the snapshot’s produced part
+                group.ProducedPart = snapshotGroup.ProducedPart;
+            }
+            
+            // Handle ProducedPart for this log
+            if (group.ProducedPart != null)
+            {
+                var produced = group.ProducedPart;
+
+                SerializablePart persisted;
+
+                // Create or get serializable part
+                if (produced.Id > 0)
+                {
+                    persisted = produced;
+                }
+                else
+                {
+                    if (produced.PartDefinition == null)
+                    {
+                        Log.Warning("Produced part for log {LogIndex} has no PartDefinition; skipping.", logIndex);
+                        continue;
+                    }
+
+                    persisted = await _serializablePartService.CreateAsync(
+                        produced.PartDefinition, 
+                        produced.SerialNumber
+                    ) ?? throw new Exception("Failed to create produced part.");
+                }
+
+                // Create Installed PLP entry for this produced part
+                partsToCreate.Add(new ProductionLogPart
+                {
+                    ProductionLogId = savedLogId,
+                    SerializablePartId = persisted.Id,
+                    OperationType = PartOperationType.Produced,
+                });
+
+                Log.Information("Persisted produced part for log {LogIndex}, serial {Serial}.",
+                    logIndex, persisted.SerialNumber);
+            }
         } // foreach group
 
         if (partsToCreate.Count == 0)
