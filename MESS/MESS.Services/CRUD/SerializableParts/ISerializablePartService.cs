@@ -102,13 +102,30 @@ public interface ISerializablePartService
         HashSet<int> expectedPartDefinitionIds);
     
     /// <summary>
-    /// Retrieves the first installed <see cref="SerializablePart"/> for a specific <see cref="ProductionLog"/>.
+    /// Retrieves the <see cref="SerializablePart"/> that was <b>produced</b> during
+    /// the specified <see cref="ProductionLog"/>.
     /// </summary>
-    /// <param name="productionLogId">The ID of the production log for which to retrieve the produced part.</param>
+    /// <param name="productionLogId">
+    /// The unique identifier of the <see cref="ProductionLog"/> whose produced part should be retrieved.
+    /// </param>
     /// <returns>
-    /// A task representing the asynchronous operation. The result is the first <see cref="SerializablePart"/>
-    /// installed in the specified production log, or <c>null</c> if none exist.
+    /// A task that represents the asynchronous operation. The task result contains:
+    /// <list type="bullet">
+    /// <item>
+    /// The <see cref="SerializablePart"/> that was produced in the specified production log,
+    /// including its associated <see cref="PartDefinition"/>, if one exists.
+    /// </item>
+    /// <item>
+    /// <c>null</c> if the production log did not produce a part or if no such record exists.
+    /// </item>
+    /// </list>
     /// </returns>
+    /// <remarks>
+    /// This method looks up entries in <see cref="ProductionLogPart"/> where
+    /// <see cref="PartOperationType.Produced"/> is recorded for the given production log ID.
+    /// Only one produced part is expected per production log; therefore, the first matching
+    /// record is returned.
+    /// </remarks>
     Task<SerializablePart?> GetProducedForProductionLogAsync(int productionLogId);
 
     /// <summary>

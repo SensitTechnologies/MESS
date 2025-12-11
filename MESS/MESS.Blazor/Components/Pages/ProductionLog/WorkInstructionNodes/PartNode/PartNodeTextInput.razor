@@ -45,12 +45,8 @@
     [Parameter]
     public SerializablePart? SerializablePart { get; set; }
 
-    /// <summary>
-    /// Raised when the user changes the input.
-    /// Returns a tuple of (<see cref="PartNode"/>, updated value)
-    /// </summary>
     [Parameter]
-    public EventCallback<(PartNode node, object value)> AfterInputChanged { get; set; }
+    public EventCallback<(PartNode node, object? value)> AfterInputChanged { get; set; }
 
     private string? _serialNumber;
     private int? _productionLogId;
@@ -71,23 +67,32 @@
     protected override void OnParametersSet()
     {
         if (PartNode.InputType == PartInputType.SerialNumber)
+        { 
             _serialNumber = SerializablePart?.SerialNumber;
-        else
-            _productionLogId = null; // nothing pre-filled for production log ID
+        }
     }
 
     private async Task OnInputChanged()
     {
-        object updatedValue = PartNode.InputType switch
+        object? updatedValue = PartNode.InputType switch
         {
-            PartInputType.SerialNumber => SerializablePart is not null 
-                ? (SerializablePart.SerialNumber = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber, SerializablePart) 
-                : null!,
-            PartInputType.ProductionLogId => _productionLogId!,
+            PartInputType.SerialNumber => UpdateSerialNumber(),
+            PartInputType.ProductionLogId => _productionLogId,
             _ => throw new InvalidOperationException("Unknown PartNode input type.")
         };
 
         if (AfterInputChanged.HasDelegate)
             await AfterInputChanged.InvokeAsync((PartNode, updatedValue));
+    }
+
+    private string? UpdateSerialNumber()
+    {
+        if (SerializablePart is null)
+            return null;
+
+        SerializablePart.SerialNumber =
+            string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber;
+
+        return SerializablePart.SerialNumber;
     }
 }

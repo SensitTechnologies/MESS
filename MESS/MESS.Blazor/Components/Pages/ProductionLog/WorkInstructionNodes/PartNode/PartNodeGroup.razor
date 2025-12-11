@@ -111,7 +111,7 @@
     /// <summary>
     /// Handles updates from PartNodeTextInput (either serial number or production log ID input).
     /// </summary>
-    private async Task OnPartNodeInputChanged((PartNode node, object value) input)
+    private async Task OnPartNodeInputChanged((PartNode node, object? value) input)
     {
         var (partNode, updatedValue) = input;
         var logIndex = _selectedLogIndex;
@@ -131,6 +131,7 @@
                 break;
         }
     }
+
     
     /// <summary>
     /// Increments the selected log number when multiple production logs are present.

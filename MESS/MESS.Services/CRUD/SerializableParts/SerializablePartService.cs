@@ -235,10 +235,12 @@ public class SerializablePartService : ISerializablePartService
             var installedParts = await context.ProductionLogParts
                 .AsNoTracking()
                 .Where(plp => plp.ProductionLogId == productionLogId &&
-                              plp.OperationType == PartOperationType.Installed &&
-                              plp.SerializablePart != null)
-                .Select(plp => plp.SerializablePart!)
-                .Include(sp => sp.PartDefinition)
+                              plp.OperationType == PartOperationType.Installed)
+                .Include(plp => plp.SerializablePart)              
+                .ThenInclude(sp => sp!.PartDefinition)          
+                .Select(plp => plp.SerializablePart)
+                .Where(sp => sp != null)
+                .Cast<SerializablePart>()                  
                 .ToListAsync();
 
             Log.Information("Retrieved {Count} installed SerializableParts for ProductionLogId {ProductionLogId}.",
@@ -252,6 +254,7 @@ public class SerializablePartService : ISerializablePartService
             return [];
         }
     }
+
     
     /// <inheritdoc />
     public async Task<List<InstalledPartResult>> GetInstalledForProductionLogsAsync(
@@ -281,16 +284,7 @@ public class SerializablePartService : ISerializablePartService
         return results;
     }
     
-    /// <summary>
-    /// Retrieves the first installed <see cref="SerializablePart"/> for a specific <see cref="ProductionLog"/>.
-    /// </summary>
-    /// <param name="productionLogId">
-    /// The ID of the production log for which to retrieve the produced part.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation. The result is the first <see cref="SerializablePart"/>
-    /// installed in the specified production log, or <c>null</c> if none exist.
-    /// </returns>
+    /// <inheritdoc/>
     public async Task<SerializablePart?> GetProducedForProductionLogAsync(int productionLogId)
     {
         if (productionLogId <= 0)
@@ -301,11 +295,18 @@ public class SerializablePartService : ISerializablePartService
 
         try
         {
-            // Reuse the existing method that fetches all installed parts for the log
-            var installedParts = await GetInstalledForProductionLogAsync(productionLogId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            // Return the first one, or null if the list is empty
-            var producedPart = installedParts.FirstOrDefault();
+            // Look for the produced part for this log
+            var producedPart = await context.ProductionLogParts
+                .AsNoTracking()
+                .Where(plp =>
+                    plp.ProductionLogId == productionLogId &&
+                    plp.OperationType == PartOperationType.Produced)
+                .Include(plp => plp.SerializablePart)
+                .ThenInclude(sp => sp!.PartDefinition)
+                .Select(plp => plp.SerializablePart) 
+                .FirstOrDefaultAsync();
 
             if (producedPart is null)
             {
@@ -313,7 +314,9 @@ public class SerializablePartService : ISerializablePartService
             }
             else
             {
-                Log.Information("Found produced SerializablePart with ID {Id} for ProductionLogId {ProductionLogId}.", producedPart.Id, productionLogId);
+                Log.Information(
+                    "Found produced SerializablePart with ID {Id} for ProductionLogId {ProductionLogId}.",
+                    producedPart.Id, productionLogId);
             }
 
             return producedPart;
@@ -324,7 +327,6 @@ public class SerializablePartService : ISerializablePartService
             return null;
         }
     }
-
     
     /// <summary>
     /// Updates the serial number of an existing <see cref="SerializablePart"/>.
