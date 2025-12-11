@@ -1,0 +1,153 @@
+@using MESS.Data.Models
+@using MESS.Services.CRUD.SerializableParts
+@using MESS.Services.DTOs.ProductionLogs.Form
+@using MESS.Services.UI.PartTraceability
+@inject IPartTraceabilityService PartTraceabilityService
+@inject ISerializablePartService SerializablePartService
+
+@if (_initialized)
+{
+    <div class="card p-0 mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-start w-100 gap-2">
+
+                @* Multi-log selector (shown only when more than one log exists) *@
+                @if (ProductionLogs.Count > 1)
+                {
+                    <div class="col-auto d-flex flex-column align-items-center" style="user-select: none;">
+                        <button type="button" @onclick="IncrementLogIndex" class="btn btn-primary btn-sm w-100" style="height: 35px;">
+                            <i class="bi bi-caret-up" style="font-size: 1.0rem;"></i>
+                        </button>
+
+                        <div class="form-floating mb-0 w-100" style="height: 100%;">
+                            <input type="number"
+                                   id="logIndexInput"
+                                   class="form-control text-center"
+                                   style="width: 100%; min-width: 85px;"
+                                   min="1"
+                                   max="@ProductionLogs.Count"
+                                   @bind="SelectedLogNumber"
+                                   @bind:event="oninput"
+                                   onfocus="this.select()" />
+                            <label for="logIndexInput">Which One?</label>
+                        </div>
+
+                        <button type="button" @onclick="DecrementLogIndex" class="btn btn-primary btn-sm w-100" style="height: 35px;">
+                            <i class="bi bi-caret-down" style="font-size: 1.0rem;"></i>
+                        </button>
+                    </div>
+                }
+
+                @* Renders all part inputs for this group *@
+                <div class="d-flex flex-wrap gap-2 justify-content-around align-content-center">
+                    @foreach (var partNode in PartNodes)
+                    {
+                        var serializablePart = GetSerializablePartForNode(partNode);
+
+                        <PartNodeTextInput
+                            PartNode="partNode"
+                            SerializablePart="serializablePart"
+                            AfterInputChanged="OnPartNodeInputChanged" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// The collection of <see cref="PartNode"/>s that belong to this group.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required List<PartNode> PartNodes { get; set; }
+
+    /// <summary>
+    /// The list of <see cref="ProductionLogFormDTO"/> instances this group belongs to.
+    /// Each log represents a separate item in a batch run.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required List<ProductionLogFormDTO> ProductionLogs { get; set; }
+
+    private bool _initialized;
+    private int _selectedLogIndex;
+
+    /// <summary>
+    /// Gets or sets the selected log number (1-based for user-facing display).
+    /// Updates the internal zero-based <see cref="_selectedLogIndex"/> when changed.
+    /// </summary>
+    private int SelectedLogNumber
+    {
+        get => _selectedLogIndex + 1;
+        set
+        {
+            var newIndex = Math.Clamp(value - 1, 0, ProductionLogs.Count - 1);
+            if (newIndex == _selectedLogIndex) return;
+            _selectedLogIndex = newIndex;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Called after the component is rendered for the first time.
+    /// Marks initialization complete so the UI can render.
+    /// </summary>
+    /// <param name="firstRender">Whether this render is the first time the component has rendered.</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        _initialized = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Retrieves or creates the <see cref="SerializablePart"/> for the current <see cref="_selectedLogIndex"/> and given <see cref="PartNode"/>.
+    /// </summary>
+    private SerializablePart GetSerializablePartForNode(PartNode partNode)
+    {
+        return PartTraceabilityService.GetSerializablePart(_selectedLogIndex, partNode);
+    }
+
+    /// <summary>
+    /// Handles updates from PartNodeTextInput (either serial number or production log ID input).
+    /// </summary>
+    private async Task OnPartNodeInputChanged((PartNode node, object? value) input)
+    {
+        var (partNode, updatedValue) = input;
+        var logIndex = _selectedLogIndex;
+
+        switch (updatedValue)
+        {
+            case SerializablePart part:
+                PartTraceabilityService.SetSerializablePart(logIndex, partNode, part);
+                break;
+
+            case int productionLogId:
+                var producedPart = await SerializablePartService.GetProducedForProductionLogAsync(productionLogId);
+                if (producedPart != null)
+                {
+                    PartTraceabilityService.SetSerializablePart(logIndex, partNode, producedPart);
+                }
+                break;
+        }
+    }
+
+    
+    /// <summary>
+    /// Increments the selected log number when multiple production logs are present.
+    /// </summary>
+    private void IncrementLogIndex()
+    {
+        if (SelectedLogNumber < ProductionLogs.Count)
+            SelectedLogNumber++;
+    }
+
+    /// <summary>
+    /// Decrements the selected log number when multiple production logs are present.
+    /// </summary>
+    private void DecrementLogIndex()
+    {
+        if (SelectedLogNumber > 1)
+            SelectedLogNumber--;
+    }
+}

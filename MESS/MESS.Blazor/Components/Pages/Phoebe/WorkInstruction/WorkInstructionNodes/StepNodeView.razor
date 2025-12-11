@@ -13,7 +13,7 @@
                     @oninput="OnNameChanged"
                     placeholder="Enter step name" />
             </div>
-            <div id="step-editor-@Step.Id" class="editor-wrapper" style="width: 100%; max-width: 100%; overflow: auto;">
+            <div id="step-editor-@Step.ClientId" class="editor-wrapper" style="width: 100%; max-width: 100%; overflow: auto;">
                 <BlazoredTextEditor @ref="_editorRef">
                     <ToolbarContent>
                         @((MarkupString)DefaultToolbarHtml)
@@ -27,20 +27,11 @@
         </div>
 
         <div class="w-50 p-2">
-            
             <ImageList
                 PrimaryMedia="@Step.PrimaryMedia"
                 SecondaryMedia="@Step.SecondaryMedia"
                 ShowBody="@ShowBody"
                 OnMediaChanged="HandleImageMediaChanged" />
-
-            <!--
-                <WorkInstructionImageManager
-                PrimaryMedia="@Step.PrimaryMedia"
-                SecondaryMedia="@Step.SecondaryMedia"
-                ShowBody="@ShowBody"
-                OnMediaChanged="HandleImageMediaChanged" />
-            -->
         </div>
         <NodeActionMenu OnAction="HandleMoveAction" />
     </div>

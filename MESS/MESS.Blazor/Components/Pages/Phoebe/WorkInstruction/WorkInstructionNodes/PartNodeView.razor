@@ -1,31 +1,48 @@
 @using MESS.Data.Models
 @inherits ComponentBase
 
-@if (PartNode?.Parts is not null)
+@if (PartNode?.PartDefinition is not null)
 {
-    <div class="d-flex align-items-start justify-content-between">    
-        <div class="row">
-        @foreach (var part in PartNode.Parts)
-        {
-            <div class="align-items-baseline my-2 @(PartNode.Parts.Count < 3 ? (PartNode.Parts.Count < 2 ? "col-sm-12" : "col-md-6") : "col-sm-4")">
-                <div class="part-node border rounded ps-2 py-2 h-100">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label"><strong>Part Number</strong></label>
-                            <input type="text" class="form-control" value="@part.PartNumber" @oninput="e => OnPartChanged(e, part, nameof(Part.PartNumber))" />
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label"><strong>Part Name</strong></label>
-                            <input type="text" class="form-control flex-shrink-1" value="@part.PartName" @oninput="e => OnPartChanged(e, part, nameof(Part.PartName))" />
-                        </div>
-                        <div class="col-12 col-md-2 d-grid">
-                            <NodeActionMenu OnAction="(action) => HandlePartAction(part, action)" />
+    <div class="d-flex align-items-start justify-content-between flex-wrap">
+        <div class="row flex-grow-1 g-2">
+            <div class="col-auto">
+                <div class="border rounded ps-2 py-2 h-100 d-flex align-items-center gap-2 shadow-sm">
+                    <!-- Part Number -->
+                    <div class="d-flex flex-column">
+                        <label class="form-label mb-1">Part Number</label>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="@PartNode.PartDefinition.Number"
+                               @oninput="e => OnPartChanged(e, nameof(PartDefinition.Number))" />
+                    </div>
+
+                    <!-- Part Name -->
+                    <div class="d-flex flex-column">
+                        <label class="form-label mb-1">Part Name</label>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="@PartNode.PartDefinition.Name"
+                               @oninput="e => OnPartChanged(e, nameof(PartDefinition.Name))" />
+                    </div>
+
+                    <!-- InputType Toggle -->
+                    <div class="d-flex flex-column align-items-start ms-3 me-3">
+                        <label class="form-label mb-1">Input Type</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input toggle-switch" type="checkbox"
+                                   role="switch"
+                                   id="inputTypeSwitch_@PartNode.Id"
+                                   checked="@(PartNode.InputType == PartInputType.ProductionLogId)"
+                                   @onclick="ToggleInputType" />
+                            <label class="form-check-label toggle-label" for="inputTypeSwitch_@PartNode.Id">
+                                @((PartNode.InputType == PartInputType.SerialNumber) ? "Serial" : "Production Log")
+                            </label>
                         </div>
                     </div>
                 </div>
             </div>
-        }
         </div>
+
         <NodeActionMenu OnAction="HandleNodeAction" />
     </div>
 }
@@ -36,105 +53,56 @@ else
 
 @code {
 
-    /// <summary>
-    /// An event callback that is triggered when an action is performed on the entire <see cref="PartNode"/>.
-    /// </summary>
-    /// <remarks>
-    /// This allows the parent component to handle actions such as moving or deleting the entire PartNode,
-    /// similar to the top-level move/insert/remove controls for a step node.
-    /// The callback receives a tuple containing the <see cref="PartNode"/> itself and the action string.
-    /// </remarks>
     [Parameter]
     public EventCallback<(WorkInstructionNode node, string action)> OnNodeAction { get; set; }
 
-    /// <summary>
-    /// Event callback that is invoked whenever any data within the <see cref="PartNode"/> or its parts
-    /// has been modified by the user.
-    /// </summary>
-    /// <remarks>
-    /// This callback should be used by the parent component to mark the editor state as dirty,
-    /// enable save actions, or perform other UI updates in response to changes.
-    /// It is triggered on changes to part properties as well as when parts are reordered,
-    /// added, or removed.
-    /// </remarks>
     [Parameter]
     public EventCallback OnChanged { get; set; }
 
-    /// <summary>
-    /// The <see cref="PartNode"/> containing one or more parts to render and edit.
-    /// </summary>
     [Parameter, EditorRequired]
     public PartNode? PartNode { get; set; }
 
     private async Task HandleNodeAction(string action)
     {
-        if (PartNode is null) return;
+        if (PartNode is null)
+            return;
 
         if (OnNodeAction.HasDelegate)
-        {
             await OnNodeAction.InvokeAsync((PartNode, action));
-        }
 
         await NotifyChangedAsync();
     }
 
-    private async Task HandlePartAction(Part part, string action)
+    private async Task OnPartChanged(ChangeEventArgs e, string propertyName)
     {
-        if (PartNode?.Parts == null) return;
+        if (PartNode?.PartDefinition is null)
+            return;
 
-        var index = PartNode.Parts.IndexOf(part);
-        if (index == -1) return;
+        var newValue = e.Value?.ToString() ?? string.Empty;
 
-        PartNode.Parts.Remove(part);
-
-        switch (action)
-        {
-            case "up":
-                PartNode.Parts.Insert(Math.Max(0, index - 1), part);
-                break;
-            case "down":
-                PartNode.Parts.Insert(Math.Min(PartNode.Parts.Count, index + 1), part);
-                break;
-            case "top":
-                PartNode.Parts.Insert(0, part);
-                break;
-            case "bottom":
-                PartNode.Parts.Add(part);
-                break;
-            case "remove":
-                // Already removed above, nothing to do
-                break;
-            case "insertBefore":
-                PartNode.Parts.Insert(index, part);
-                PartNode.Parts.Insert(index, new Part { PartNumber = "", PartName = "" });
-                break;
-            case "insertAfter":
-                PartNode.Parts.Insert(index, part);
-                PartNode.Parts.Insert(index + 1, new Part { PartNumber = "", PartName = "" });
-                break;
-
-        }
+        if (propertyName == nameof(PartDefinition.Number))
+            PartNode.PartDefinition.Number = newValue;
+        else if (propertyName == nameof(PartDefinition.Name))
+            PartNode.PartDefinition.Name = newValue;
 
         await NotifyChangedAsync();
     }
 
-    private async Task OnPartChanged(ChangeEventArgs e, Part part, string propertyName)
-    {
-        var newValue = e.Value?.ToString() ?? "";
-
-        if (propertyName == nameof(Part.PartNumber))
-            part.PartNumber = newValue;
-        else if (propertyName == nameof(Part.PartName))
-            part.PartName = newValue;
-
-        await NotifyChangedAsync();
-    }
-    
     private async Task NotifyChangedAsync()
     {
         if (OnChanged.HasDelegate)
-        {
             await OnChanged.InvokeAsync();
-        }
+    }
+    
+    private async Task ToggleInputType()
+    {
+        if (PartNode is null)
+            return;
+
+        PartNode.InputType = PartNode.InputType == PartInputType.SerialNumber
+            ? PartInputType.ProductionLogId
+            : PartInputType.SerialNumber;
+
+        await NotifyChangedAsync();
     }
 }

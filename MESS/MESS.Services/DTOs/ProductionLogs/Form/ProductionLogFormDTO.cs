@@ -18,11 +18,6 @@ public class ProductionLogFormDTO
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the serial number of the product, if applicable.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
-
-    /// <summary>
     /// Gets or sets the size of the batch this production log is being created for.
     /// A value of 1 indicates a single-piece flow.
     /// </summary>

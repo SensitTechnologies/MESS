@@ -1,7 +1,7 @@
 @using MESS.Data.Models
-@using MESS.Services.CRUD.WorkInstructions
 @using MESS.Services.DTOs
-@inject IWorkInstructionService WorkInstructionService
+@using MESS.Services.Files.WorkInstructions
+@inject IWorkInstructionFileService WorkInstructionFileService
 @inject IToastService ToastService
 
 <FluentCard Width="400" Class="m-0 w-100">
@@ -59,7 +59,7 @@
             return;
         }
         
-        var importResult = await WorkInstructionService.ImportFromXlsx(File);
+        var importResult = await WorkInstructionFileService.ImportFromXlsx(File);
 
         FileStatus = importResult.Status;
         if (importResult is { Status: ImportStatus.Error, ImportError: not null })

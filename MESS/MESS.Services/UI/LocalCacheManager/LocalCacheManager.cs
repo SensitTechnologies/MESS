@@ -124,7 +124,7 @@ public class LocalCacheManager : ILocalCacheManager
             var productDto = new CacheDTO
             {
                 Id = product.Id.ToString(),
-                Name = product.Name
+                Name = product.PartDefinition.Name,
             };
             
             Log.Information("Successfully SetActiveProductAsync with ID: {ProductID}", product.Id);

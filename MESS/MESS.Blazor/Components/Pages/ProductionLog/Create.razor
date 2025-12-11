@@ -1,12 +1,12 @@
 @page "/production-log"
 @attribute [Authorize(Roles = "Admin, Technician, Operator")]
-@using MESS.Services.CRUD.ApplicationUser
 @using MESS.Services.CRUD.Products
 @using MESS.Services.CRUD.ProductionLogs
 @using MESS.Services.CRUD.WorkInstructions
 @using MESS.Services.CRUD.ProductionLogParts
 @using MESS.Services.UI.SessionManager
 @using MESS.Services.UI.LocalCacheManager
+@using MESS.Services.UI.PartTraceability
 @using MESS.Services.UI.ProductionLogEvent
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
@@ -18,6 +18,7 @@
 @inject ISessionManager SessionManager
 @inject AuthenticationStateProvider AuthProvider
 @inject IProductionLogPartService ProductionLogPartService
+@inject IPartTraceabilityService PartTraceabilityService
 @inject IJSRuntime JSRuntime
 @inject IToastService ToastService
 @implements IAsyncDisposable

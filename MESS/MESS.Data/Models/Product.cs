@@ -1,8 +1,8 @@
 namespace MESS.Data.Models;
 
 /// <summary>
-/// Represents a product entity with properties for identification, name, 
-/// active status, and associated work instructions.
+/// Represents a product entity that references a part definition,
+/// determines whether it is active, and associates related work instructions.
 /// </summary>
 public class Product
 {
@@ -12,15 +12,20 @@ public class Product
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the product. This field is required.
+    /// Gets or sets the foreign key to the associated part definition.
     /// </summary>
-    public required string Name { get; set; }
+    public int PartDefinitionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the part definition associated with this product.
+    /// </summary>
+    public required PartDefinition PartDefinition { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the product is active.
     /// </summary>
     public bool IsActive { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the list of work instructions associated with the product.
     /// </summary>

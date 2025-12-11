@@ -15,11 +15,6 @@ public class ProductionLogUpdateRequest
     public int Id { get; set; }
     
     /// <summary>
-    /// Gets or sets the product serial number.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
-    
-    /// <summary>
     /// Gets or sets the size of the batch from which this production log was created.
     /// </summary>
     public int FromBatchOf { get; set; }

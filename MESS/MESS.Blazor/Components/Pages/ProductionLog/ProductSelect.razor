@@ -12,8 +12,8 @@
             
             @foreach (var product in Products
                           .Where(p=> p.IsActive && p.WorkInstructions != null) // Filtering inactive products
-                          .OrderBy(p => ExtractNamePrefix(p.Name)) // Alphabetical by prefix
-                          .ThenBy(p => ExtractNameNumber(p.Name))  // Numeric portion
+                          .OrderBy(p => ExtractNamePrefix(p.PartDefinition.Name)) // Alphabetical by prefix
+                          .ThenBy(p => ExtractNameNumber(p.PartDefinition.Name))  // Numeric portion
                           .ThenBy(p => p.Id))                      // Fallback by ID
             {
                 @if (product.WorkInstructions == null)
@@ -22,9 +22,9 @@
                 }
 
                 var selectedProductName = ProductionLogEventService.CurrentProductName;
-                var isSelected = product.Name == selectedProductName;
+                var isSelected = product.PartDefinition.Name == selectedProductName;
 
-                <option selected="@isSelected" value="@product.Id">@product.Name</option>
+                <option selected="@isSelected" value="@product.Id">@product.PartDefinition.Name</option>
             }
         </select>
     }

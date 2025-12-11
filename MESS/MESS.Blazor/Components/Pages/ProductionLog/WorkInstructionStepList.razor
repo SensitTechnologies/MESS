@@ -4,88 +4,77 @@
 @using MESS.Blazor.Components.Pages.ProductionLog.WorkInstructionNodes.PartNode
 @using MESS.Services.DTOs.ProductionLogs.Form
 @using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
-@using MESS.Services.UI.ProductionLogEvent
-@inject IProductionLogEventService ProductionLogEventService
+@using MESS.Services.UI.PartTraceability
+@inject IPartTraceabilityService PartTraceabilityService;
 
-
-@if (ActiveWorkInstruction != null && ProductionLogs?.Any() == true)
+@if (ProductionLogs.Any())
 {
     <ul class="step">
-        @foreach (var workInstructionNode in ActiveWorkInstruction.Nodes.OrderBy(wn => wn.Position))
+        @foreach (var block in NodeBlocks)
         {
-            // If workInstructionNode is of PartNode type it will not need to be added to a logStep. Only the StepNode will need to be added
-            switch (workInstructionNode)
+            switch (block)
             {
-                case Step instructionStep:
-                    // Create or retrieve a list of log steps for all logs
+                case Step step:
                     var logSteps = new List<LogStepFormDTO>();
-
                     foreach (var log in ProductionLogs)
                     {
-                        var step = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == instructionStep.Id);
-                        if (step == null)
+                        var existing = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+                        if (existing == null)
                         {
-                            step = new LogStepFormDTO
-                            {
-                                WorkInstructionStepId = instructionStep.Id
-                            };
-                            log.LogSteps?.Add(step);
+                            existing = new LogStepFormDTO { WorkInstructionStepId = step.Id };
+                            log.LogSteps?.Add(existing);
                         }
-                        logSteps.Add(step);
+                        logSteps.Add(existing);
                     }
 
                     <li class="mb-3">
-                        <div id="step-@instructionStep.Position">
-                            <StepNodeListItem 
-                                Step="instructionStep" 
+                        <div id="step-@step.Position">
+                            <StepNodeListItem
+                                Step="step"
                                 LogSteps="logSteps"
                                 OnStepCompleted="OnStepCompleted" />
                         </div>
                     </li>
                     break;
 
-                case PartNode instructionPart:
+                case List<PartNode> partGroup:
                     <li class="mb-3">
-                        <PartNodeListItem PartNode="instructionPart" ProductionLogs="ProductionLogs" />
+                        <PartNodeGroup PartNodes="partGroup" ProductionLogs="ProductionLogs" />
                     </li>
-                    break;
-
-                default:
-                    <div>Unknown Instruction type</div>
                     break;
             }
         }
-        @if (ActiveWorkInstruction.CollectsProductSerialNumber)
+
+        @if (ActiveWorkInstruction is { PartProducedIsSerialized: true, PartProduced: not null })
         {
             <div class="card card-body">
                 <div class="mb-2">
                     <div class="form-label">
-                        @(ProductionLogs.Count == 1 ? "Product Serial Number" : "Product Serial Numbers")
+                        @(ProductionLogs.Count == 1 ? "Produced Serial Number" : "Produced Serial Numbers")
                     </div>
                 </div>
 
                 <div class="d-flex flex-wrap gap-2 justify-content-around align-content-center">
                     @for (var i = 0; i < ProductionLogs.Count; i++)
                     {
-                        var log = ProductionLogs[i];
+                        var index = i;
 
                         <div class="form-floating flex-grow-1" style="min-width: 220px;">
-                            <InputText
-                                id=@($"productSerialNumber-{i}")
+                            <input
+                                id=@($"producedSerialNumber-{index}")
                                 class="form-control tall-input text-lightweight"
-                                @bind-Value="log.ProductSerialNumber"
-                                @onchange="() => ProductionLogEventService.MarkDirty()" />
+                                @oninput="(e => OnProducedSerialInput(index, e.Value?.ToString()))" />
+
                             @if (ProductionLogs.Count > 1)
                             {
-                                <label for=@($"productSerialNumber-{i}") class="form-label subtle-label">
-                                    #@(i + 1)
+                                <label for=@($"producedSerialNumber-{index}") class="form-label subtle-label">
+                                    #@(index + 1)
                                 </label>
                             }
                         </div>
                     }
                 </div>
             </div>
-
         }
     </ul>
 }
@@ -106,35 +95,53 @@
     /// The tuple contains the production log step and an optional boolean indicating completion status.
     /// </summary>
     [Parameter] public EventCallback<(List<LogStepFormDTO>, bool?)> OnStepCompleted { get; set; }
+    
+    /// <summary>
+    /// A processed list of "blocks" — each block is either a Step node or a group of Part nodes.
+    /// </summary>
+    private List<object> NodeBlocks { get; set; } = [];
 
-    private string? SelectedButton { get; set; } = "";
-
-    private void SetSelectedButton(string buttonName)
+    protected override void OnParametersSet()
     {
-        if (SelectedButton == buttonName)
-        {
-            SelectedButton = null;
-        }
-        else
-        {
-            SelectedButton = buttonName;
-        }
+        NodeBlocks = GroupNodes(ActiveWorkInstruction.Nodes.OrderBy(n => n.Position).ToList());
     }
 
-    private void ClearSelectedButton()
+    private static List<object> GroupNodes(List<WorkInstructionNode> nodes)
     {
-        SelectedButton = null;
-    }
+        var result = new List<object>();
+        List<PartNode>? currentGroup = null;
 
-    private string GetButtonClass(string buttonName)
-    {
-        string baseClass = "btn";
-
-        if (buttonName == "Clear")
+        foreach (var node in nodes)
         {
-            return string.IsNullOrEmpty(SelectedButton) ? $"{baseClass} btn-secondary" : $"{baseClass} btn-warning";
+            if (node is PartNode partNode)
+            {
+                currentGroup ??= [];
+                currentGroup.Add(partNode);
+            }
+            else
+            {
+                if (currentGroup is not null)
+                {
+                    result.Add(currentGroup);
+                    currentGroup = null;
+                }
+
+                if (node is Step step)
+                    result.Add(step);
+            }
         }
 
-        return SelectedButton == buttonName ? $"{baseClass} btn-primary" : $"{baseClass} btn-success";
+        // Add the final group if the list ended with part nodes
+        if (currentGroup is not null)
+            result.Add(currentGroup);
+
+        return result;
+    }
+    
+    private void OnProducedSerialInput(int logIndex, string? value)
+    {
+        // Input cleared → keep the produced part, but remove the serial number
+        //Under normal circumstances, add the produced part serial number.
+        PartTraceabilityService.SetProducedPartSerialNumber(logIndex, !string.IsNullOrWhiteSpace(value) ? value : null);
     }
 }

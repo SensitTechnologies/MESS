@@ -195,5 +195,21 @@ public interface IWorkInstructionEditorService
     /// The queued nodes will be removed from the database when <see cref="SaveAsync"/> is called.
     /// </remarks>
     public void QueueNodeForDeletion(WorkInstructionNode node);
+    
+    /// <summary>
+    /// Sets the name of the part produced by the current work instruction in the editor.
+    /// <para>
+    /// This does not immediately create or fetch a <see cref="PartDefinition"/> from the database.
+    /// The pending part name will be applied to <see cref="Current"/> when <see cref="SaveAsync"/> is called.
+    /// </para>
+    /// </summary>
+    /// <param name="name">
+    /// The name of the part to assign to the current work instruction.
+    /// If null or empty, the current produced part will not be changed on save.
+    /// </param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if there is no current work instruction loaded in the editor.
+    /// </exception>
+    void SetProducedPartName(string? name);
 }
 

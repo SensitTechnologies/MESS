@@ -55,7 +55,6 @@
                         <HeaderContent>
                             <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.ProductName ?? string.Empty)"><strong>Product</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.WorkInstructionName ?? string.Empty)"><strong>Work Instruction</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="serno_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.ProductSerialNumber ?? string.Empty)"><strong>Product Serial Number</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
                             <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
@@ -64,7 +63,6 @@
                         <RowTemplate Context="productionLog">
                             <MudTd DataLabel="Product">@(productionLog.ProductName ?? NoProduct)</MudTd>
                             <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstructionName ?? NoWorkInstruction)</MudTd>
-                            <MudTd DataLabel="Product Serial Number">@productionLog.ProductSerialNumber</MudTd>
                             <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
                             <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                             <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
@@ -167,9 +165,6 @@
             case "instruction_field":
                 data = data.OrderByDirection(state.SortDirection, o => o.WorkInstructionName);
                 break;
-            case "serno_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.ProductSerialNumber);
-                break;
             case "worker_field":
                 data = data.OrderByDirection(state.SortDirection, o => o.CreatedBy);
                 break;
@@ -196,9 +191,6 @@
             hits++;
         
         if (SatisfiesFilter(log.WorkInstructionName, searchPhrase))
-            hits++;
-
-        if (SatisfiesFilter(log.ProductSerialNumber, searchPhrase))
             hits++;
         
         if (SatisfiesFilter(log.CreatedBy, searchPhrase))

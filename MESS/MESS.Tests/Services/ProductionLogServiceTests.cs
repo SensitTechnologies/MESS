@@ -10,18 +10,18 @@ namespace MESS.Tests.Services;
 
 public class ProductionLogServiceTests : IDisposable
 {
-    private static readonly SqliteConnection _connection = new SqliteConnection("DataSource=:memory:");
+    private static readonly SqliteConnection Connection = new SqliteConnection("DataSource=:memory:");
     private readonly DbContextOptions<ApplicationContext> _options;
 
     static ProductionLogServiceTests()
     {
-        _connection.Open();
+        Connection.Open();
     }
 
     public ProductionLogServiceTests()
     {
         _options = new DbContextOptionsBuilder<ApplicationContext>()
-            .UseSqlite(_connection)
+            .UseSqlite(Connection)
             .Options;
 
         // Ensure clean database for each test
@@ -50,7 +50,7 @@ public class ProductionLogServiceTests : IDisposable
         await using var context = new ApplicationContext(options);
         await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys=ON;");
 
-        var product = new Product { Name = "Test Product" };
+        var product = new Product { PartDefinition = new PartDefinition { Name = "Test Product", Number = "TEST-1" } };
         var wi = new WorkInstruction { Title = wiTitle };
 
         context.Products.Add(product);
@@ -61,7 +61,7 @@ public class ProductionLogServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveOrUpdateBatchAsync_EmptyLog_CreatesLogWithoutSerial()
+    public async Task SaveOrUpdateBatchAsync_EmptyLog_CreatesLog()
     {
         var service = CreateService();
         var (productId, workInstructionId) = await SeedProductAndWIAsync("Test WI", _options);
@@ -74,7 +74,8 @@ public class ProductionLogServiceTests : IDisposable
 
         var log = await service.GetByIdAsync(result.CreatedIds.First());
         Assert.NotNull(log);
-        Assert.Null(log.ProductSerialNumber);
+        Assert.Equal(productId, log!.ProductId);
+        Assert.Equal(workInstructionId, log.WorkInstructionId);
     }
 
     [Fact]
@@ -89,22 +90,7 @@ public class ProductionLogServiceTests : IDisposable
         Assert.Equal(1, result.CreatedCount);
         var log = await service.GetByIdAsync(result.CreatedIds.First());
         Assert.NotNull(log);
-        Assert.Equal(workInstructionId, log.WorkInstructionId);
-    }
-
-    [Fact]
-    public async Task SaveOrUpdateBatchAsync_FinalAssemblyLog_SetsSerialNumber()
-    {
-        var service = CreateService();
-        var (productId, workInstructionId) = await SeedProductAndWIAsync("Final Assembly WI", _options);
-
-        var formDtos = new List<ProductionLogFormDTO> { new() { ProductSerialNumber = "SN-FINAL-001" } };
-        var result = await service.SaveOrUpdateBatchAsync(formDtos, "tester", "op-3", productId, workInstructionId);
-
-        Assert.Equal(1, result.CreatedCount);
-        var log = await service.GetByIdAsync(result.CreatedIds.First());
-        Assert.NotNull(log);
-        Assert.Equal("SN-FINAL-001", log.ProductSerialNumber);
+        Assert.Equal(workInstructionId, log!.WorkInstructionId);
     }
 
     [Fact]
@@ -113,54 +99,51 @@ public class ProductionLogServiceTests : IDisposable
         var service = CreateService();
         var (productId, workInstructionId) = await SeedProductAndWIAsync("Update Test WI", _options);
 
+        // Create
         var createForm = new ProductionLogFormDTO();
         var createResult = await service.SaveOrUpdateBatchAsync(new[] { createForm }, "tester", "op-4", productId, workInstructionId);
-
         var createdId = createResult.CreatedIds.First();
-        var updateForm = new ProductionLogFormDTO { Id = createdId, ProductSerialNumber = "SN-UPDATED-001" };
 
+        // Update
+        var updateForm = new ProductionLogFormDTO { Id = createdId };
         var updateResult = await service.SaveOrUpdateBatchAsync(new[] { updateForm }, "tester", "op-4", productId, workInstructionId);
 
         Assert.Equal(1, updateResult.UpdatedCount);
         var log = await service.GetByIdAsync(createdId);
         Assert.NotNull(log);
-        Assert.Equal("SN-UPDATED-001", log.ProductSerialNumber);
+        Assert.Equal(productId, log!.ProductId);
+        Assert.Equal(workInstructionId, log.WorkInstructionId);
     }
 
     [Fact]
-    public async Task SaveOrUpdateBatchAsync_MultipleLogs_AllFinalAssemblyOrNone()
+    public async Task SaveOrUpdateBatchAsync_MultipleLogs_CreatesAllSuccessfully()
     {
         var service = CreateService();
         var (productId, workInstructionId) = await SeedProductAndWIAsync("Batch WI", _options);
 
-        // Subassembly batch
-        var subassemblyBatch = new List<ProductionLogFormDTO> { new(), new(), new() };
-        var subassemblyResult = await service.SaveOrUpdateBatchAsync(subassemblyBatch, "tester", "op-1", productId, workInstructionId);
-        Assert.Equal(3, subassemblyResult.CreatedCount);
-
-        // Final assembly batch
-        var finalAssemblyBatch = new List<ProductionLogFormDTO>
+        var batch = new List<ProductionLogFormDTO>
         {
-            new() { ProductSerialNumber = "FA-1001" },
-            new() { ProductSerialNumber = "FA-1002" },
-            new() { ProductSerialNumber = "FA-1003" }
+            new(),
+            new(),
+            new()
         };
 
-        var finalAssemblyResult = await service.SaveOrUpdateBatchAsync(finalAssemblyBatch, "tester", "op-1", productId, workInstructionId);
-        Assert.Equal(3, finalAssemblyResult.CreatedCount);
+        var result = await service.SaveOrUpdateBatchAsync(batch, "tester", "op-1", productId, workInstructionId);
 
-        // Verify all serials
+        Assert.Equal(3, result.CreatedCount);
+        Assert.Equal(3, result.CreatedIds.Count);
+
         await using var context = new ApplicationContext(_options);
-        var logsFinal = await context.ProductionLogs
-            .Where(l => finalAssemblyResult.CreatedIds.Contains(l.Id))
+        var logs = await context.ProductionLogs
+            .Where(l => result.CreatedIds.Contains(l.Id))
             .ToListAsync();
 
-        Assert.Equal(new[] { "FA-1001", "FA-1002", "FA-1003" },
-            logsFinal.Select(l => l.ProductSerialNumber).ToArray());
+        Assert.Equal(3, logs.Count);
+        Assert.All(logs, l => Assert.Equal(workInstructionId, l.WorkInstructionId));
     }
 
     public void Dispose()
     {
-        // Do nothing; keep connection open for all tests
+        // Keep the in-memory connection open for all tests
     }
 }

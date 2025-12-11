@@ -1,0 +1,12 @@
+/* 1. Change switch color */
+.toggle-switch:checked {
+    background-color: #ffd502;
+    border-color: #ffd502;
+}
+
+/* 2. Fix label width so text change does not resize box */
+.toggle-label {
+    display: inline-block;
+    width: 100px; /* fixed width enough for "Production Log" */
+    text-align: center;
+}

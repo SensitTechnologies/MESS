@@ -50,7 +50,6 @@ public static class ProductionLogDetailRequestMapper
         return new ProductionLogUpdateRequest
         {
             Id = dto.Id,
-            ProductSerialNumber = dto.ProductSerialNumber,
             FromBatchOf = dto.FromBatchOf,
             LogSteps = logSteps
         };

@@ -33,39 +33,62 @@ public class ProductService : IProductService
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
+            // Load the full product with its PartDefinition and WorkInstructions
+            var existingProduct = await context.Products
+                .Include(p => p.PartDefinition)
+                .Include(p => p.WorkInstructions)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == productToDuplicate.Id);
+
+            if (existingProduct == null)
+            {
+                Log.Warning("Product with ID {ProductId} not found for duplication.", productToDuplicate.Id);
+                return;
+            }
+
+            // Create a new PartDefinition with distinct Number and Name
+            var newPartDefinition = new PartDefinition
+            {
+                Number = existingProduct.PartDefinition.Number + "-COPY",
+                Name = existingProduct.PartDefinition.Name + " (Copy)"
+            };
+
+            // Create a new Product referencing the new PartDefinition
             var newProduct = new Product
             {
-                Name = productToDuplicate.Name,
-                IsActive = productToDuplicate.IsActive,
+                PartDefinition = newPartDefinition,
+                IsActive = existingProduct.IsActive,
                 WorkInstructions = new List<WorkInstruction>()
             };
 
             await context.Products.AddAsync(newProduct);
             await context.SaveChangesAsync();
 
-            if (productToDuplicate.WorkInstructions != null)
+            // Reuse existing WorkInstructions (not duplicated)
+            if (existingProduct.WorkInstructions != null && existingProduct.WorkInstructions.Any())
             {
-                foreach (var workInstruction in productToDuplicate.WorkInstructions)
+                foreach (var wi in existingProduct.WorkInstructions)
                 {
-                    var associatedWorkInstruction = await context.WorkInstructions
+                    var existingWI = await context.WorkInstructions
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(wi => wi.Id == workInstruction.Id);
-                    if (associatedWorkInstruction != null)
+                        .FirstOrDefaultAsync(w => w.Id == wi.Id);
+
+                    if (existingWI != null)
                     {
-                        newProduct.WorkInstructions.Add(associatedWorkInstruction);
-                        associatedWorkInstruction.Products.Add(newProduct);
+                        newProduct.WorkInstructions!.Add(existingWI);
                     }
-                    
                 }
             }
-            
+
             await context.SaveChangesAsync();
-            
-            Log.Information("Product: {ProductName} Duplicated Successfully", newProduct.Name);
+
+            Log.Information(
+                "Product (ID: {OldId}) duplicated successfully as new Product (ID: {NewId}) with PartDefinition (Number: {NewNumber})",
+                existingProduct.Id, newProduct.Id, newPartDefinition.Number);
         }
         catch (Exception e)
         {
-            Log.Warning("Exception caught while trying to duplicate Product: {ExceptionType}", e.GetType());
+            Log.Warning("Exception caught while duplicating Product: {ExceptionType} - {Message}", e.GetType(), e.Message);
         }
     }
 
@@ -95,11 +118,16 @@ public class ProductService : IProductService
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var product = await context.Products
+                .Include(p => p.PartDefinition)
                 .Include(p => p.WorkInstructions)
                 .FirstOrDefaultAsync(p => p.Id == id);
-            
-            Log.Information("Product found. ID: {ProductId}", product?.Id);
-            
+
+            if (product != null)
+                Log.Information("Product found. ID: {ProductId}, PartDefinition: {PartNumber} - {PartName}",
+                    product.Id, product.PartDefinition.Number, product.PartDefinition.Name);
+            else
+                Log.Warning("No product found for ID: {ProductId}", id);
+
             return product;
         }
         catch (Exception e)
@@ -109,17 +137,24 @@ public class ProductService : IProductService
         }
     }
     
-    /// <inheritdoc />
+    /// <inheritdoc /> 
     public async Task<Product?> GetByTitleAsync(string title)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
+
             var product = await context.Products
-                .FirstOrDefaultAsync(p => p.Name == title);
-            
-            Log.Information("Product found. Title: {ProductTitle}", product?.Name);
-            
+                .Include(p => p.PartDefinition) // include PartDefinition for the name
+                .Include(p => p.WorkInstructions) // optional if you also want instructions
+                .FirstOrDefaultAsync(p => p.PartDefinition.Name == title);
+
+            if (product != null)
+                Log.Information("Product found. Title: {ProductTitle}, PartNumber: {PartNumber}",
+                    product.PartDefinition.Name, product.PartDefinition.Number);
+            else
+                Log.Warning("No product found for Title: {ProductTitle}", title);
+
             return product;
         }
         catch (Exception e)
@@ -136,6 +171,7 @@ public class ProductService : IProductService
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Products
+                .Include(p => p.PartDefinition)
                 .Include(p => p.WorkInstructions)
                 .ToListAsync();
         }
@@ -147,49 +183,62 @@ public class ProductService : IProductService
     }
 
     /// <inheritdoc />
-    public async Task UpdateProductAsync(Product product)
+public async Task UpdateProductAsync(Product product)
+{
+    try
     {
-        try
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Load the existing product with PartDefinition and WorkInstructions
+        var existingProduct = await context.Products
+            .Include(p => p.PartDefinition)
+            .Include(p => p.WorkInstructions)
+            .FirstOrDefaultAsync(p => p.Id == product.Id);
+
+        if (existingProduct is null)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            Log.Warning("Product with ID {ProductId} not found during modification.", product.Id);
+            return;
+        }
 
-            var existingProduct = await context.Products
-                .Include(p => p.WorkInstructions)
-                .FirstOrDefaultAsync(p => p.Id == product.Id);
+        // Update the IsActive flag
+        existingProduct.IsActive = product.IsActive;
 
-            if (existingProduct is null)
+        // Update PartDefinition fields
+        // Load the tracked PartDefinition
+        var existingPartDef = await context.PartDefinitions.FindAsync(existingProduct.PartDefinition.Id);
+        if (existingPartDef != null)
+        {
+            existingPartDef.Name = product.PartDefinition.Name;
+            existingPartDef.Number = product.PartDefinition.Number;
+        }
+        
+
+        // Update WorkInstructions
+        existingProduct.WorkInstructions ??= new List<WorkInstruction>();
+        existingProduct.WorkInstructions.Clear();
+
+        if (product.WorkInstructions != null)
+        {
+            foreach (var wi in product.WorkInstructions)
             {
-                Log.Warning("Product with ID {inputId} not found during modification.", product.Id);
-                return;
-            }
-
-            // Update scalar properties
-            existingProduct.Name = product.Name;
-            existingProduct.IsActive = product.IsActive;
-
-            // Defensive: ensure list is initialized
-            existingProduct.WorkInstructions ??= new List<WorkInstruction>();
-            existingProduct.WorkInstructions.Clear();
-
-            if (product.WorkInstructions != null)
-            {
-                foreach (var wi in product.WorkInstructions)
+                var trackedWi = await context.WorkInstructions.FindAsync(wi.Id);
+                if (trackedWi != null)
                 {
-                    var trackedWi = await context.WorkInstructions.FindAsync(wi.Id);
-                    if (trackedWi != null)
-                    {
-                        existingProduct.WorkInstructions.Add(trackedWi);
-                    }
+                    existingProduct.WorkInstructions.Add(trackedWi);
                 }
             }
+        }
 
-            await context.SaveChangesAsync();
-        }
-        catch (Exception e)
-        {
-            Log.Warning(e, "Exception occurred while modifying product. Product ID: {inputId}", product.Id);
-        }
+        await context.SaveChangesAsync();
+
+        Log.Information("Product (ID: {ProductId}) updated successfully.", product.Id);
     }
+    catch (Exception e)
+    {
+        Log.Warning(e, "Exception occurred while modifying product. Product ID: {ProductId}", product.Id);
+    }
+}
 
     /// <inheritdoc />
     public async Task DeleteByIdAsync(int id)

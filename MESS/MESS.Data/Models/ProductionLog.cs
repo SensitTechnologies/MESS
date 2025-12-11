@@ -45,11 +45,6 @@ public class ProductionLog : AuditableEntity
     /// Gets or sets the work instruction associated with the production log.
     /// </summary>
     public WorkInstruction? WorkInstruction { get; set; }
-
-    /// <summary>
-    /// Gets or sets the product serial number.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
     
     /// <summary>
     /// Gets or sets an unsigned integer value specifying the size of the batch this production log was made from.

@@ -45,12 +45,12 @@
     [Parameter]
     public EventCallback<(string, int)> OnNewNodeAt { get; set; }
 
-    private Dictionary<int, BlazoredTextEditor> EditorRefs { get; set; } = new();
-    private Dictionary<int, string> ActiveFields { get; set; } = new();
+    private Dictionary<Guid, BlazoredTextEditor> EditorRefs { get; set; } = new();
+    private Dictionary<Guid, string> ActiveFields { get; set; } = new();
 
     private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
         @<div id="node-@node.Position">
-            <div class="d-flex mb-3 border rounded disable-highlight">
+            <div class="d-flex mb-3 border rounded disable-highlight shadow-sm">
                 <div class="d-flex align-items-center drag-handle me-2">
                     <i class="bi bi-grip-vertical h3"/>
                     <div class="vr me-2"/>
@@ -176,17 +176,16 @@
     {
         foreach (var kvp in EditorRefs)
         {
-            var stepId = kvp.Key;
+            var stepClientId = kvp.Key;
             var editor = kvp.Value;
-            if (editor == null) continue;
 
             var currentHtml = await editor.GetHTML();
 
-            // Find the node, check if Step (only steps have editable content)
-            var node = WorkInstructionNodes.FirstOrDefault(n => n.Id == stepId);
+            // Find the node by ClientId
+            var node = WorkInstructionNodes.FirstOrDefault(n => n is Step s && s.ClientId == stepClientId);
             if (node is Step step)
             {
-                if (ActiveFields.TryGetValue(stepId, out var field) && field == "Body")
+                if (ActiveFields.TryGetValue(stepClientId, out var field) && field == "Body")
                     step.DetailedBody = currentHtml;
                 else
                     step.Body = currentHtml;

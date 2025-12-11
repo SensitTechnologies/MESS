@@ -12,6 +12,7 @@ using MESS.Services.CRUD.ProductionLogParts;
 using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.UI.SessionManager;
 using MESS.Services.UI.LocalCacheManager;
+using MESS.Services.UI.PartTraceability;
 using MESS.Services.UI.ProductionLogEvent;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -33,15 +34,18 @@ public class ProductionLogCreationTests : TestContext
     private readonly Mock<IWorkInstructionService> _workInstructionServiceMock;
     private readonly Mock<IProductService> _productServiceMock;
     private readonly Mock<IApplicationUserService> _userServiceMock;
+    private readonly Mock<IDialogService> _dialogServiceMock;
 
     private readonly Mock<ILocalCacheManager> _localCacheManagerMock;
     private readonly Mock<IProductionLogPartService> _serializationServiceMock;
+    private readonly Mock<IPartTraceabilityService> _partTraceabilityServiceMock;
     private readonly Mock<IProductionLogEventService> _productionLogEventServiceMock;
     private readonly Mock<AuthenticationStateProvider> _authProviderMock;
     private readonly Mock<ISessionManager> _sessionManagerMock;
     private readonly Mock<IJSRuntime> _jsRuntimeMock;
     private readonly Mock<IJSObjectReference> _jsModuleMock;
     private readonly Mock<IToastService> _toastServiceMock;
+    
 
     public ProductionLogCreationTests(ITestOutputHelper testOutputHelper)
     {
@@ -52,7 +56,9 @@ public class ProductionLogCreationTests : TestContext
         _userServiceMock = new Mock<IApplicationUserService>();
         _localCacheManagerMock = new Mock<ILocalCacheManager>();
         _serializationServiceMock = new Mock<IProductionLogPartService>();
+        _partTraceabilityServiceMock = new Mock<IPartTraceabilityService>();
         _productionLogEventServiceMock = new Mock<IProductionLogEventService>();
+        _dialogServiceMock = new Mock<IDialogService>();
         _authProviderMock = new Mock<AuthenticationStateProvider>();
         _sessionManagerMock = new Mock<ISessionManager>();
         _jsRuntimeMock = new Mock<IJSRuntime>();
@@ -60,12 +66,14 @@ public class ProductionLogCreationTests : TestContext
         _toastServiceMock = new Mock<IToastService>();
             
         Services.AddSingleton(_productionLogServiceMock.Object);
+        Services.AddSingleton(_partTraceabilityServiceMock.Object);
         Services.AddSingleton(_workInstructionServiceMock.Object);
         Services.AddSingleton(_productServiceMock.Object);
         Services.AddSingleton(_userServiceMock.Object);
         Services.AddSingleton(_localCacheManagerMock.Object);
         Services.AddSingleton(_serializationServiceMock.Object);
         Services.AddSingleton(_productionLogEventServiceMock.Object);
+        Services.AddSingleton(_dialogServiceMock.Object);
         Services.AddSingleton<AuthenticationStateProvider>(_authProviderMock.Object);
         Services.AddSingleton(_sessionManagerMock.Object);
         Services.AddSingleton(_jsRuntimeMock.Object);

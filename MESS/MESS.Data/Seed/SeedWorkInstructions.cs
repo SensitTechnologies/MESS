@@ -20,8 +20,12 @@ public static class SeedWorkInstructions
         {
             var product = new Product
             {
-                Name = "ABC Controller",
-                IsActive = true,
+                PartDefinition = new PartDefinition
+                {
+                    Number = "ABC-001",
+                    Name = "ABC Controller"
+                },
+                IsActive = true
             };
 
             context.Products.Add(product);
@@ -31,7 +35,7 @@ public static class SeedWorkInstructions
             {
                 Title = "ABC Subassembly",
                 IsActive = true,
-                Version = "1.2",
+                Version = "2.0",
                 Nodes = new List<WorkInstructionNode>
                 {
                     new Step
@@ -46,28 +50,35 @@ public static class SeedWorkInstructions
                     {
                         NodeType = WorkInstructionNodeType.Part,
                         Position = 1,
-                        Parts = new List<Part>
-                        {
-                            new Part
+                        PartDefinition = new PartDefinition
                             {
-                                PartName = "Primary Circuit Board",
-                                PartNumber = "1234-G321"
-                            },
-                            new Part
-                            {
-                                PartName = "Display Board",
-                                PartNumber = "5512-G221"
-                            },
-                            new Part
-                            {
-                                PartName = "Humidity Sensor",
-                                PartNumber = "1132-H341"
+                                Name = "Primary Circuit Board",
+                                Number = "1234-G321"
                             }
+                    }, 
+                    new PartNode
+                    {
+                        NodeType = WorkInstructionNodeType.Part,
+                        Position = 2,
+                        PartDefinition = new PartDefinition
+                        {
+                            Name = "Display Board",
+                            Number = "5512-G221"
                         }
-                    },
+                    }, 
+                    new PartNode
+                    {
+                        NodeType = WorkInstructionNodeType.Part,
+                        Position = 3,
+                        PartDefinition = new PartDefinition
+                        {
+                            Name = "Humidity Sensor",
+                            Number = "1132-H341"
+                        }
+                    }, 
                     new Step
                     {
-                        Position = 2,
+                        Position = 4,
                         NodeType = WorkInstructionNodeType.Step,
                         Name = "Attach the Display Board tp the Primary Circuit Board",
                         Body = "Attach the Display Board to the Primary Circuit Board.",

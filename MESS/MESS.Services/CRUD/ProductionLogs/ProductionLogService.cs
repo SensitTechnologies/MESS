@@ -58,9 +58,8 @@ public class ProductionLogService : IProductionLogService
                 .Select(p => new ProductionLogSummaryDTO
                 {
                     Id = p.Id,
-                    ProductName = p.Product != null ? p.Product.Name : string.Empty,
+                    ProductName = p.Product != null ? p.Product.PartDefinition.Name : string.Empty,
                     WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
-                    ProductSerialNumber = p.ProductSerialNumber,
                     CreatedOn = p.CreatedOn,
                     CreatedBy = p.CreatedBy,
                     LastModifiedOn = p.LastModifiedOn,
@@ -155,6 +154,13 @@ public class ProductionLogService : IProductionLogService
                 await context.ProductionLogs.AddRangeAsync(logsToCreate);
                 Log.Information("Queued {CreatedCount} new ProductionLogs for creation", logsToCreate.Count);
             }
+            
+            // CLEAN UP: remove steps with zero attempts
+            foreach (var existing in existingLogsDict.Values)
+                RemoveEmptySteps(existing, context);
+
+            foreach (var newLog in logsToCreate)
+                RemoveEmptySteps(newLog, context);
 
             // EF Core tracks changes to existing logs, so updates are auto-detected
 
@@ -186,6 +192,35 @@ public class ProductionLogService : IProductionLogService
                 "Exception thrown in SaveOrUpdateBatchAsync for ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}, CreatedBy={CreatedBy}",
                 productId, workInstructionId, operatorId, createdBy);
             throw; // rethrow to preserve stack trace
+        }
+    }
+    
+    /// <summary>
+    /// Removes any ProductionLogStep that contains zero attempts.
+    /// For existing logs, steps are deleted from the DbContext.
+    /// For new logs, steps are removed from the navigation collection before saving.
+    /// </summary>
+    private static void RemoveEmptySteps(ProductionLog log, ApplicationContext context)
+    {
+        if (log.LogSteps.Count == 0)
+            return;
+
+        // Steps with no attempts
+        var emptySteps = log.LogSteps
+            .Where(s => s.Attempts.Count == 0)
+            .ToList();
+
+        if (emptySteps.Count == 0)
+            return;
+
+        foreach (var step in emptySteps)
+        {
+            // Remove from parent collection (works for both new and existing)
+            log.LogSteps.Remove(step);
+
+            // If the step already exists in the DB, remove it
+            if (step.Id > 0)
+                context.ProductionLogSteps.Remove(step);
         }
     }
     
@@ -265,6 +300,7 @@ public class ProductionLogService : IProductionLogService
             // Load log with its steps and attempts, tracked by EF
             var log = await context.ProductionLogs
                 .Include(p => p.Product)
+                .ThenInclude(prod => prod!.PartDefinition)
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
@@ -392,9 +428,8 @@ public class ProductionLogService : IProductionLogService
                 .Select(p => new ProductionLogSummaryDTO
                 {
                     Id = p.Id,
-                    ProductName = p.Product != null ? p.Product.Name : string.Empty,
+                    ProductName = p.Product != null ? p.Product.PartDefinition.Name : string.Empty,
                     WorkInstructionName = p.WorkInstruction != null ? p.WorkInstruction.Title : string.Empty,
-                    ProductSerialNumber = p.ProductSerialNumber,
                     CreatedOn = p.CreatedOn,
                     LastModifiedOn = p.LastModifiedOn,
                     LastModifiedBy = p.LastModifiedBy,

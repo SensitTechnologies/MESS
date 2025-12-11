@@ -59,21 +59,32 @@ public class ApplicationContext : DbContext
     /// <summary>
     /// DbSet for Parts.
     /// </summary>
-    public virtual DbSet<Part> Parts { get; set; } = null!;
+    public virtual DbSet<PartDefinition> PartDefinitions { get; set; } = null!;
+    /// <summary>
+    /// DbSet for SerializableParts.
+    /// </summary>
+    public virtual DbSet<SerializablePart> SerializableParts { get; set; } = null!;
     
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.PartDefinition)
+            .WithOne() // One-to-one for now; can be changed to .WithMany() later.
+            .HasForeignKey<Product>(p => p.PartDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<WorkInstructionNode>()
             .UseTptMappingStrategy();
 
         modelBuilder.Entity<PartNode>()
             .ToTable("PartNodes")
-            .HasMany(p => p.Parts)
+            .HasOne(p => p.PartDefinition)
             .WithMany()
-            .UsingEntity("PartNodeParts");
+            .HasForeignKey(p => p.PartDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
@@ -83,6 +94,15 @@ public class ApplicationContext : DbContext
             .WithMany()
             .HasForeignKey("WorkInstructionId")
             .IsRequired(false);
+        
+        modelBuilder.Entity<ProductionLogPart>()
+            .HasKey(plp => new { plp.ProductionLogId, plp.SerializablePartId, plp.OperationType });
+        
+        modelBuilder.Entity<ProductionLogPart>()
+            .HasOne(plp => plp.SerializablePart)
+            .WithMany(sp => sp.ProductionLogParts)
+            .HasForeignKey(plp => plp.SerializablePartId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
     
     /// <inheritdoc />

@@ -6,14 +6,15 @@
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
+@using MESS.Services.CRUD.PartDefinitions
 @using MESS.Services.CRUD.WorkInstructions
 @using MESS.Services.UI.DarkMode
 @using MESS.Services.UI.WorkInstructionEditor
 @inject AuthenticationStateProvider AuthProvider
-@inject ILogger<MenuBarPhoebe> DemoLogger
 @inject IJSRuntime JS
 @inject IWorkInstructionEditorService EditorService
 @inject IWorkInstructionService WorkInstructionService
+@inject IPartDefinitionService PartDefinitionService
 @inject DarkModeInstance DarkModeInstance
 
 <div class="menu-bar-card">
@@ -39,7 +40,7 @@
         <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem Checked="@(CurrentInstruction?.ShouldGenerateQrCode ?? false)"
                             OnClick="ToggleQrCode" Disabled="@(!HasInstruction)">Generates QR Code</FluentMenuItem>
-            <FluentMenuItem Checked="@(CurrentInstruction?.CollectsProductSerialNumber ?? false)" 
+            <FluentMenuItem Checked="@(CurrentInstruction?.PartProducedIsSerialized ?? false)" 
                             OnClick="ToggleSerial" Disabled="@(!HasInstruction)">Collects Product Serial Number</FluentMenuItem>
             <FluentMenuItem Checked="@(CurrentInstruction?.IsActive ?? false)" 
                             OnClick="ToggleActive" Disabled="@(!HasInstruction)">Active</FluentMenuItem>
@@ -67,6 +68,30 @@
             value="@CurrentInstruction?.Version"
             @oninput="OnVersionChanged"
             disabled="@(!HasInstruction)" />
+        
+        <i class="bi bi-arrow-right"></i>
+        
+        <input
+            type="text"
+            class="menu-input-secondary"
+            placeholder="Produces..."
+            @bind="PartProducedName"
+            @bind:event="oninput"
+            disabled="@(!HasInstruction)" />
+        
+        @if (!string.IsNullOrWhiteSpace(PartProducedName))
+        {
+            <span class="part-status-icon" title="@PartStatusTooltip">
+                @if (WillCreateNewPart)
+                {
+                    <i class="bi bi-plus-circle text-success"></i>
+                }
+                else
+                {
+                    <i class="bi bi-check-circle text-secondary"></i>
+                }
+            </span>
+        }
     </div>
 
     
@@ -280,6 +305,34 @@
 
     // ** Version History Sidebar Open State **
     private bool isVersionHistoryOpen = false;
+    
+    private string _partProducedName = "";
+    private string PartProducedName
+    {
+        get => _partProducedName;
+        set
+        {
+            if (_partProducedName != value)
+            {
+                _partProducedName = value;
+                _ = OnPartProducedChangedDebounced();
+            }
+        }
+    }
+
+
+    // called only from the input field
+    private async Task OnPartProducedInput(ChangeEventArgs e)
+    {
+        PartProducedName = CurrentInstruction?.PartProduced?.Name ?? "";
+        await OnPartProducedChangedDebounced();
+    }
+    
+    private bool WillCreateNewPart { get; set; } = false;
+    private string PartStatusTooltip => WillCreateNewPart ? "New part will be created" : "Part already exists";
+    private CancellationTokenSource? _debounceCts;
+    
+    private WorkInstruction? _previousInstruction;
 
     /// <summary>
     /// Called when the component is initialized.
@@ -300,13 +353,20 @@
         }
     }
     
-    /// <inheritdoc />
-    public override async Task SetParametersAsync(ParameterView parameters)
+    protected override void OnParametersSet()
     {
-        await base.SetParametersAsync(parameters);
+        if (_previousInstruction != CurrentInstruction)
+        {
+            _previousInstruction = CurrentInstruction;
+        
+            // Update text field without triggering debounce
+            PartProducedName = CurrentInstruction?.PartProduced?.Name ?? "";
+            WillCreateNewPart = false;
+
+            StateHasChanged();
+        }
     }
-
-
+    
     private void ToggleFileMenu()
     {
         open = !open;
@@ -329,7 +389,7 @@
     private void ToggleSerial()
     {
         if (CurrentInstruction == null) return;
-        CurrentInstruction.CollectsProductSerialNumber = !CurrentInstruction.CollectsProductSerialNumber;
+        CurrentInstruction.PartProducedIsSerialized = !CurrentInstruction.PartProducedIsSerialized;
         MarkDirty();
     }
 
@@ -540,6 +600,35 @@
         DialogSelectedProducts = products;
         return Task.CompletedTask;
     }
+    
+    private async Task OnPartProducedChangedDebounced()
+    {
+        EditorService.SetProducedPartName(PartProducedName);
+
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        try
+        {
+            await Task.Delay(300, token);
+
+            if (string.IsNullOrWhiteSpace(PartProducedName))
+            {
+                WillCreateNewPart = false; // No icon for empty input
+            }
+            else
+            {
+                // If it doesn't exist yet OR it's different from the currently assigned part
+                WillCreateNewPart = !await PartDefinitionService.ExistsAsync(PartProducedName, null);
+            }
+
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
+
 
     private void Dispose()
     {

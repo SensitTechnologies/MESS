@@ -19,11 +19,6 @@ public class ProductionLogCreateRequest
     public int WorkInstructionId { get; set; }
 
     /// <summary>
-    /// Gets or sets the serial number of the product, if applicable.
-    /// </summary>
-    public string? ProductSerialNumber { get; set; }
-
-    /// <summary>
     /// Gets or sets the size of the batch from which this production log was generated.
     /// A value of 1 indicates a single-piece flow.
     /// </summary>

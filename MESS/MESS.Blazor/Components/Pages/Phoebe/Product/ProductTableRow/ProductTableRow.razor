@@ -5,7 +5,7 @@
 @inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
 
 <MudTd DataLabel="Name">
-    <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Enter product name" @oninput="OnInputChanged"/>
+    <InputText id="name" @bind-Value="Product.PartDefinition.Name" class="form-control" placeholder="Enter product name" @oninput="OnInputChanged"/>
 </MudTd>
 <MudTd DataLabel="Active">
     <InputCheckbox id="isActive"
@@ -122,7 +122,7 @@
     private async Task ShowDeleteConfirmation()
     {
         var data = (
-            bodyMessage: $"Are you sure you want to delete '{Product.Name}'?", 
+            bodyMessage: $"Are you sure you want to delete '{Product.PartDefinition.Name}'?", 
             callback: EventCallback.Factory.Create(this, RaiseDeleteEvent)
         );
         

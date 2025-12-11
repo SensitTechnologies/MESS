@@ -42,7 +42,6 @@ public static class ProductionLogCreateRequestMapper
         return new ProductionLog
         {
             OperatorId = dto.OperatorId,
-            ProductSerialNumber = dto.ProductSerialNumber,
             FromBatchOf = dto.FromBatchOf,
             CreatedBy = createdBy,
             CreatedOn = now,

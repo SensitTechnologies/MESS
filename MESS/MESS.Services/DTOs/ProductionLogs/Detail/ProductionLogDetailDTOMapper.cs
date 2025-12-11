@@ -25,9 +25,8 @@ public static class ProductionLogDetailDTOMapper
         return new ProductionLogDetailDTO
         {
             Id = log.Id,
-            ProductName = log.Product?.Name ?? string.Empty,
+            ProductName = log.Product?.PartDefinition.Name ?? string.Empty,
             WorkInstructionName = log.WorkInstruction?.Title ?? string.Empty,
-            ProductSerialNumber = log.ProductSerialNumber,
             FromBatchOf = log.FromBatchOf,
             CreatedOn = log.CreatedOn,
             CreatedBy = log.CreatedBy,
