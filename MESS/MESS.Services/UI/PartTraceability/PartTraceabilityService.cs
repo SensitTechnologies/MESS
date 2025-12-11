@@ -146,56 +146,67 @@ public class PartTraceabilityService : IPartTraceabilityService
     }
     
     /// <summary>
-    /// Outputs a human-readable representation of all tracked part entries in memory.
-    /// Useful for debugging to inspect which serializable parts are logged,
-    /// their serial numbers, part names, part numbers, and linked production logs if applicable.
-    /// </summary>
-    /// <returns>A string containing the formatted representation of all entries.</returns>
-    public string DumpPartTraceability()
+/// Outputs a detailed, human-readable representation of all tracked part entries in memory,
+/// including produced parts, installed serializable parts, linked production logs, and IDs.
+/// Useful for debugging to verify that all parts made it into the data structure.
+/// </summary>
+/// <returns>A formatted string with all part traceability information.</returns>
+public string DumpPartTraceability()
+{
+    if (_entryGroups.Count == 0)
+        return "No part traceability data available.";
+
+    var sb = new System.Text.StringBuilder();
+
+    foreach (var group in _entryGroups.Values.OrderBy(g => g.LogIndex))
     {
-        if (_entryGroups.Count == 0)
-            return "No part traceability data available.";
+        sb.AppendLine($"--- Log Index: {group.LogIndex} ---");
 
-        var sb = new System.Text.StringBuilder();
-
-        foreach (var group in _entryGroups.Values.OrderBy(g => g.LogIndex))
+        // Produced part (if any)
+        if (group.ProducedPart != null)
         {
-            sb.AppendLine($"--- Log Index: {group.LogIndex} ---");
+            sb.AppendLine(
+                $"[Produced Part] ID: {group.ProducedPart.Id}, Serial: {group.ProducedPart.SerialNumber ?? "N/A"}, " +
+                $"DefID: {group.ProducedPart.PartDefinitionId}, Name: {group.ProducedPart.PartDefinition?.Name ?? "N/A"}, " +
+                $"Number: {group.ProducedPart.PartDefinition?.Number ?? "N/A"}"
+            );
+        }
+        else
+        {
+            sb.AppendLine("[Produced Part] None");
+        }
 
-            if (group.ProducedPart != null)
+        // PartNode entries
+        foreach (var entry in group.PartNodeEntries.OrderBy(e => e.PartNode.Id))
+        {
+            var node = entry.PartNode;
+
+            if (entry.SerializablePart != null)
             {
+                var part = entry.SerializablePart;
                 sb.AppendLine(
-                    $"Produced Part → Serial: {group.ProducedPart.SerialNumber ?? "N/A"}, " +
-                    $"Name: {group.ProducedPart.PartDefinition?.Name ?? "N/A"}, " +
-                    $"Number: {group.ProducedPart.PartDefinition?.Number ?? "N/A"}"
+                    $"[Node Part] NodeID: {node.Id}, PartNodeName: {node.PartDefinition?.Name ?? "N/A"}, " +
+                    $"PartID: {part.Id}, Serial: {part.SerialNumber ?? "N/A"}, " +
+                    $"DefID: {part.PartDefinitionId}, Name: {part.PartDefinition?.Name ?? "N/A"}, " +
+                    $"Number: {part.PartDefinition?.Number ?? "N/A"}"
+                );
+            }
+            else if (entry.LinkedProductionLog != null)
+            {
+                var log = entry.LinkedProductionLog;
+                sb.AppendLine(
+                    $"[Node Linked Log] NodeID: {node.Id}, LinkedLogID: {log.Id}, Product: {log.Product?.PartDefinition.Name ?? "N/A"}"
                 );
             }
             else
             {
-                sb.AppendLine("Produced Part → None");
-            }
-
-            foreach (var input in group.GetAllInputs())
-            {
-                switch (input)
-                {
-                    case SerializablePart part:
-                        sb.AppendLine($"Serial: {part.SerialNumber ?? "N/A"}, " +
-                                      $"Name: {part.PartDefinition?.Name ?? "N/A"}, " +
-                                      $"Number: {part.PartDefinition?.Number ?? "N/A"}");
-                        break;
-                    case ProductionLog log:
-                        sb.AppendLine($"Linked Production Log ID: {log.Id}, Product: {log.Product?.PartDefinition.Name ?? "N/A"}");
-                        break;
-                    default:
-                        sb.AppendLine($"Unknown input type: {input.GetType().Name}");
-                        break;
-                }
+                sb.AppendLine($"[Node Empty] NodeID: {node.Id}, NodeName: {node.PartDefinition?.Name ?? "N/A"} has no serial or linked log.");
             }
         }
-
-        return sb.ToString();
     }
+
+    return sb.ToString();
+}
 
     /// <summary>
     /// Removes all traceability data associated with the specified production log index.
@@ -474,62 +485,59 @@ public class PartTraceabilityService : IPartTraceabilityService
                         }
                     }
 
-                    // If current has a serial, per Scenario 1 we create a new SerializablePart and Installed PLP (no dedupe)
-                    if (currentSerial != null)
+                    SerializablePart? partToInstall = null;
+
+                    // 1) Try current serial first
+                    if (currentSerial != null && !string.IsNullOrWhiteSpace(currentSerial.SerialNumber))
                     {
-                        if (currentSerial.SerialNumber is null)
-                        {
-                            Log.Warning(
-                                "Scenario1: cannot create SerializablePart for node {NodeId} because SerialNumber is null.",
-                                entry.PartNodeId
-                            );
-                            continue; // skip this node entirely
-                        }
-
-                        if (currentSerial.PartDefinition == null)
-                        {
-                            Log.Warning(
-                                "Scenario1: cannot create SerializablePart for node {NodeId} because PartDefinition is null.",
-                                entry.PartNodeId
-                            );
-                            continue; // skip this node entirely
-                        }
-                        // ----------------------------------------
-
                         try
                         {
-                            // Create new serializable part (Scenario 1: no dedupe)
-                            var created = await _serializablePartService.CreateAsync(
-                                currentSerial.PartDefinition,
-                                currentSerial.SerialNumber // now guaranteed non-null
-                            );
+                            var serialStr = currentSerial.SerialNumber!;
+                            var defId = currentSerial.PartDefinitionId;
 
-                            if (created != null)
+                            if (currentSerial.PartDefinition == null)
                             {
-                                partsToCreate.Add(BuildInstalledPart(savedLogId, created));
-                                Log.Information(
-                                    "Scenario1: created new SerializablePart and Installed PLP for node {NodeId}, serial '{Serial}'.",
-                                    entry.PartNodeId,
-                                    created.SerialNumber
-                                );
+                                Log.Warning("Scenario1: currentSerial.PartDefinition is null for node {NodeId}", entry.PartNodeId);
                             }
                             else
                             {
-                                Log.Warning(
-                                    "Scenario1: failed to create SerializablePart for node {NodeId}.",
-                                    entry.PartNodeId
-                                );
+                                var exists = await _serializablePartService.ExistsAsync(defId, serialStr);
+                                if (exists)
+                                {
+                                    var existing = await _serializablePartService.GetBySerialNumberAsync(serialStr);
+                                    partToInstall = existing ?? await _serializablePartService.CreateAsync(currentSerial.PartDefinition, serialStr);
+                                }
+                                else
+                                {
+                                    partToInstall = await _serializablePartService.CreateAsync(currentSerial.PartDefinition, serialStr);
+                                }
                             }
                         }
                         catch (Exception ex)
                         {
-                            Log.Warning(
-                                ex,
-                                "Scenario1: exception creating serializable part for node {NodeId}.",
-                                entry.PartNodeId
-                            );
+                            Log.Warning(ex, "Scenario1: error resolving/creating serial for node {NodeId}", entry.PartNodeId);
                         }
                     }
+
+                    // 2) If no serial, try linked production log
+                    if (partToInstall == null && currentLinkedLog != null)
+                    {
+                        partToInstall = await _serializablePartService.GetProducedForProductionLogAsync(currentLinkedLog.Id);
+                    }
+
+                    // 3) If we found something, add Installed PLP
+                    if (partToInstall != null)
+                    {
+                        partsToCreate.Add(BuildInstalledPart(savedLogId, partToInstall));
+                        Log.Information("Scenario1: installed part for node {NodeId} using {Source}",
+                            entry.PartNodeId,
+                            partToInstall.Id == currentSerial?.Id ? "current serial" : "linked log");
+                    }
+                    else
+                    {
+                        Log.Warning("Scenario1: cannot create Installed PLP for node {NodeId}: no serial or linked produced part found.", entry.PartNodeId);
+                    }
+                    
                 }
                 else
                 {
