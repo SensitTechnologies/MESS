@@ -300,6 +300,7 @@ public class ProductionLogService : IProductionLogService
             // Load log with its steps and attempts, tracked by EF
             var log = await context.ProductionLogs
                 .Include(p => p.Product)
+                .ThenInclude(prod => prod!.PartDefinition)
                 .Include(p => p.WorkInstruction)
                 .ThenInclude(w => w!.Nodes)
                 .Include(p => p.LogSteps)
