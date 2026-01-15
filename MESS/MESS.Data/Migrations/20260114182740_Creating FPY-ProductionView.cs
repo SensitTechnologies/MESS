@@ -11,7 +11,7 @@ namespace MESS.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
-                CREATE VIEW dbo.vFirstAttemptProductionLogSteps AS
+                CREATE VIEW dbo.FPYAttemptsView AS
                 WITH FirstAttempts AS (
                     SELECT
                         pla.Id,
@@ -61,7 +61,7 @@ namespace MESS.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("DROP VIEW IF EXISTS dbo.vFirstAttemptProductionLogSteps;");
+            migrationBuilder.Sql("DROP VIEW IF EXISTS dbo.FPYAttemptsView;");
         }
     }
 }
