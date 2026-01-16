@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: false
   
 env:
-  DOTNET_VERSION: '9.0.200' # Current as of 4/16/2025
+  DOTNET_VERSION: '10' # Current as of 1/16/2026
   SOLUTION_PATH: './MESS/MESS.sln'
   DOCFX_PATH: './docfx'
 
@@ -47,7 +47,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: '10.0'
 
       # run build command
       - name: Build

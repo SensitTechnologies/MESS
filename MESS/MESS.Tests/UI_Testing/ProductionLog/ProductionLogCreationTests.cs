@@ -27,7 +27,7 @@ using Xunit.Abstractions;
 namespace MESS.Tests.UI_Testing.ProductionLog;
 using Data.Models;
 
-public class ProductionLogCreationTests : TestContext
+public class ProductionLogCreationTests : BunitContext
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Mock<IProductionLogService> _productionLogServiceMock;
@@ -122,7 +122,7 @@ public class ProductionLogCreationTests : TestContext
     public async Task Create_OnlyWorkInstructionSelected_DoesNotCreateLog()
     {
         // Arrange
-        var authContext = this.AddTestAuthorization();
+        var authContext = this.AddAuthorization();
         authContext.SetAuthorized("TechnicianUser");
         authContext.SetRoles("Technician");
 
@@ -137,7 +137,7 @@ public class ProductionLogCreationTests : TestContext
             });
 
         // Render the component
-        var cut = RenderComponent<Create>();
+        var cut = Render<Create>();
 
         // Find the EditForm component
         var editForm = cut.FindComponent<EditForm>();
