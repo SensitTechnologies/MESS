@@ -23,7 +23,7 @@ on:
 
     
 env:
-  DOTNET_VERSION: '9.0.200' # Current as of 4/19/2025
+  DOTNET_VERSION: '10.0.2' # Current as of 1/16/2026
   SOLUTION_PATH: './MESS/MESS.sln'
 
 jobs:
@@ -60,7 +60,7 @@ jobs:
       run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore
       
     - name: Ensure Playwright browsers are installed
-      run: ./MESS/MESS.Tests/bin/Debug/net9.0/playwright.ps1 install --with-deps
+      run: ./MESS/MESS.Tests/bin/Debug/net10.0/playwright.ps1 install --with-deps
           
     - name: Apply migrations
       run: |
