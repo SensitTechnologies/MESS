@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace MESS.Tests.UI_Testing;
 
-public class ProductionLogViewTests : TestContext
+public class ProductionLogViewTests : BunitContext
 {
     
 

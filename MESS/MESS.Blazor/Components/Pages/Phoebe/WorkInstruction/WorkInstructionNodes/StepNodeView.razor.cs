@@ -114,8 +114,8 @@ public partial class StepNodeView : IDisposable
     {
         get
         {
-            if (ActiveFields.TryGetValue(Step.ClientId, out var field))
-                return field == "Body";
+            if (ActiveFields.TryGetValue(Step.ClientId, out var @field))
+                return @field == "Body";
 
             ActiveFields[Step.ClientId] = "Name";  // default to Name
             return false;                    // false = show Name

@@ -8,7 +8,7 @@ using Moq;
 
 namespace MESS.Tests.UI_Testing.ProductionLog;
 
-public class ProductSelectTests : TestContext
+public class ProductSelectTests : BunitContext
 {
     private readonly Mock<IProductionLogEventService> _mockProductionLogEventService;
 
@@ -23,7 +23,7 @@ public class ProductSelectTests : TestContext
     {
         // Arrange
         var selectedProductId = 0;
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.OnProductSelected, EventCallback.Factory.Create<int>(this, id => selectedProductId = id))
             .Add(p => p.Products, new List<Product>
             {
@@ -65,7 +65,7 @@ public class ProductSelectTests : TestContext
     public void ProductSelectComponentRendersWithOnlyHoverProduct()
     {
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, new List<Product>()));
 
         // Assert
@@ -77,7 +77,7 @@ public class ProductSelectTests : TestContext
     public void ProductSelectComponentRendersDisabled()
     {
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, new List<Product>())
             .Add(p => p.Disabled, true));
 
@@ -109,7 +109,7 @@ public class ProductSelectTests : TestContext
         };
 
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, products));
 
         // Assert
@@ -135,7 +135,7 @@ public class ProductSelectTests : TestContext
         };
 
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, products));
 
         // Assert
@@ -161,7 +161,7 @@ public class ProductSelectTests : TestContext
         };
 
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, products));
 
         // Assert
@@ -193,7 +193,7 @@ public class ProductSelectTests : TestContext
         };
 
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, products));
 
         // Assert
@@ -218,7 +218,7 @@ public class ProductSelectTests : TestContext
             .ToList();
 
         // Act
-        var cut = RenderComponent<ProductSelect>(parameters => parameters
+        var cut = Render<ProductSelect>(parameters => parameters
             .Add(p => p.Products, products));
 
         // Assert
