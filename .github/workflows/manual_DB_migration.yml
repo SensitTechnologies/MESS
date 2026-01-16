@@ -3,7 +3,7 @@
 name: Manually Apply Database Updates
 
 env: 
-  DOTNET_VERSION: '10.0.2' # Current as of 1/16/2026
+  DOTNET_VERSION: '10' # Current as of 1/16/2026
 
 on: # runs manually for now. will be automated to run after a certain time
   workflow_dispatch:
