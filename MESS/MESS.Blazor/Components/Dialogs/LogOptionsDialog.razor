@@ -25,12 +25,12 @@
             <p class="me-1">
                 Product:<br/>
                 Instruction:<br/>
-                @* Product SN:<br/> *@
+                Part Produced:<br/>
             </p>
             <p class="ms-1">
                 @shownLog.ProductName<br/>
                 @shownLog.WorkInstructionName<br/>
-                @* The Part Produced from the Log? *@ 
+                @shownLog.ProducedPartName<br/>
             </p>
         </div>
 
@@ -53,10 +53,12 @@
             <p class="me-1">
                 Created On:<br/>
                 Last Modified On:<br/>
+                Produced Part SN:<br/>
             </p>
             <p class="ms-1">
                 @shownLog?.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")<br/>
                 @shownLog?.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")<br/>
+                @shownLog?.ProducedPartSerialNumber<br/>
             </p>
         </div>
         </div>

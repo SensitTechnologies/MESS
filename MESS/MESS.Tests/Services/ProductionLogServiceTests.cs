@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using MESS.Data.Models;
+using MESS.Services.CRUD.SerializableParts;
 
 namespace MESS.Tests.Services;
 
@@ -34,6 +35,8 @@ public class ProductionLogServiceTests : IDisposable
     private ProductionLogService CreateService()
     {
         var dbFactory = new Mock<IDbContextFactory<ApplicationContext>>();
+        var mockSerializablePartService = new Mock<ISerializablePartService>();
+        
         dbFactory.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
@@ -42,7 +45,7 @@ public class ProductionLogServiceTests : IDisposable
                 return ctx;
             });
 
-        return new ProductionLogService(dbFactory.Object);
+        return new ProductionLogService(dbFactory.Object, mockSerializablePartService.Object);
     }
 
     private static async Task<(int productId, int workInstructionId)> SeedProductAndWIAsync(string wiTitle, DbContextOptions<ApplicationContext> options)
