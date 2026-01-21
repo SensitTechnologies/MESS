@@ -266,7 +266,7 @@ public class SerializablePartService : ISerializablePartService
 
         await using var context = await _contextFactory.CreateDbContextAsync();
 
-        var query =
+        var results = await (
             from plp in context.ProductionLogParts.AsNoTracking()
             where productionLogIds.Contains(plp.ProductionLogId)
                   && plp.OperationType == PartOperationType.Installed
@@ -275,11 +275,8 @@ public class SerializablePartService : ISerializablePartService
             select new InstalledPartResult(
                 plp.ProductionLogId,
                 plp.SerializablePart!
-            );
-
-        var results = await query
-            .Include(r => r.Part.PartDefinition)
-            .ToListAsync();
+            )
+        ).ToListAsync();
 
         return results;
     }
