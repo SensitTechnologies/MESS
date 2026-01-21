@@ -1,3 +1,4 @@
+using MESS.Data.Models;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Detail;
 
 namespace MESS.Services.DTOs.ProductionLogs.Detail;
@@ -66,4 +67,9 @@ public class ProductionLogDetailDTO
     /// This collection is flattened for display and editing purposes.
     /// </summary>
     public List<StepAttemptDetailDTO> Attempts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets all installed parts from a production log. This collection is flattened for display and editing purposes.
+    /// </summary>
+    public List<SerializablePart> InstalledParts { get; set; } = [];
 }

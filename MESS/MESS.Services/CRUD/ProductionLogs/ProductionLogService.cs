@@ -327,9 +327,13 @@ public class ProductionLogService : IProductionLogService
             // Load produced part separately (NO tracking)
             var producedPart = await _serializablePartService
                 .GetProducedForProductionLogAsync(log.Id);
+            
+            var installedParts = await _serializablePartService
+                .GetInstalledForProductionLogAsync(log.Id);
 
             dto.ProducedPartName = producedPart?.PartDefinition?.Name;
             dto.ProducedPartSerialNumber = producedPart?.SerialNumber;
+            dto.InstalledParts = installedParts;
 
             return dto;
         }
