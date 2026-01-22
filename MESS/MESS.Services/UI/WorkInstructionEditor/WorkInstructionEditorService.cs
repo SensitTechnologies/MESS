@@ -356,22 +356,16 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 if (Current.OriginalId == null)
                     throw new InvalidOperationException("OriginalId is required for versioning.");
 
-                await _workInstructionService.MarkAllVersionsNotLatestAsync(Current.OriginalId.Value);
-                Current.IsLatest = true;
+                // First, create the new work instruction (it will initially be inactive and not latest)
                 success = await _workInstructionService.Create(Current);
+                if (!success)
+                    break;
+
+                // Now promote the newly created version to be the latest (and optionally active)
+                success = await _workInstructionService.PromoteVersionAsync(Current.Id);
                 break;
         }
-        if (Current != null)
-        {
-            if (success && Current.IsActive)
-            {
-                await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
-            }
-        }
-        else
-        {
-            Log.Warning("Current Work Instruction in editor is null.");
-        }
+        
         if (success)
         {
             IsDirty = false;

@@ -85,30 +85,32 @@ public interface IWorkInstructionService
     /// <param name="workInstruction">A WorkInstruction instance.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
-    /// <summary>
-    /// Marks all versions of a WorkInstruction within a version chain as not the latest.
-    /// This is typically used before creating a new version to ensure only one is flagged as the latest.
-    /// </summary>
-    /// <param name="originalId">
-    /// The ID of the original WorkInstruction representing the root of the version chain.
-    /// All WorkInstructions with this OriginalId, or with an Id equal to this value,
-    /// will have their <c>IsLatest</c> flag set to <c>false</c>.
-    /// </param>
-    /// <returns>
-    /// A task that represents the asynchronous operation. The task result is <c>true</c> if the update succeeded; otherwise, <c>false</c>.
-    /// </returns>
-    Task<bool> MarkAllVersionsNotLatestAsync(int originalId);
-    
-    /// <summary>
-    /// Sets IsActive = false for all other versions in this version chain.
-    /// </summary>
-    /// <param name="workInstructionId"></param>
-    /// <returns></returns>
-    Task MarkOtherVersionsInactiveAsync(int workInstructionId);
 
     /// <summary>
     /// Deletes images and other media files associated with the specified <paramref name="nodes"/>.
     /// </summary>
     /// <param name="nodes">The collection of <see cref="WorkInstructionNode"/> entities whose images should be deleted.</param>
     public Task<bool> DeleteNodesAsync(IEnumerable<WorkInstructionNode> nodes);
+    
+    /// <summary>
+    /// Promotes a specific work instruction to be the <c>Active</c> and <c>Latest</c> version within its version chain.
+    /// </summary>
+    /// <param name="workInstructionId">
+    /// The ID of the work instruction to promote. This instruction will become both <c>Active</c> and <c>Latest</c>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous operation, containing <c>true</c> if the promotion 
+    /// succeeded, or <c>false</c> if the work instruction could not be promoted (for example, if it does not exist).
+    /// </returns>
+    /// <remarks>
+    /// When a work instruction is promoted:
+    /// <list type="bullet">
+    ///   <item>All other work instructions in the same chain (having the same <c>OriginalId</c>) will be marked inactive and not latest.</item>
+    ///   <item>The promoted instruction will have <c>IsActive</c> and <c>IsLatest</c> set to <c>true</c>.</item>
+    ///   <item>This method ensures database constraints, such as <c>CK_WorkInstructions_ActiveRequiresLatest</c>, are not violated.</item>
+    /// </list>
+    /// Use this method instead of manually setting <c>IsActive</c> or <c>IsLatest</c> to maintain chain integrity.
+    /// </remarks>
+    Task<bool> PromoteVersionAsync(int workInstructionId);
+
 }

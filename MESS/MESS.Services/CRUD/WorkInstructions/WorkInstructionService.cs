@@ -294,45 +294,6 @@ public class WorkInstructionService : IWorkInstructionService
         }
     }
     
-    /// <inheritdoc />
-    public async Task<bool> MarkAllVersionsNotLatestAsync(int originalId)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        var versions = await context.WorkInstructions
-            .Where(w => w.OriginalId == originalId || w.Id == originalId)
-            .ToListAsync();
-
-        foreach (var wi in versions)
-        {
-            wi.IsLatest = false;
-        }
-
-        await context.SaveChangesAsync();
-        return true;
-    }
-    
-    /// <inheritdoc />
-    public async Task MarkOtherVersionsInactiveAsync(int workInstructionId)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-
-        var target = await context.WorkInstructions.FindAsync(workInstructionId);
-        if (target == null) return;
-
-        int rootId = target.OriginalId ?? target.Id;
-
-        var chain = await context.WorkInstructions
-            .Where(w => (w.Id == rootId || w.OriginalId == rootId) && w.Id != workInstructionId)
-            .ToListAsync();
-
-        foreach (var wi in chain)
-        {
-            wi.IsActive = false;
-        }
-
-        await context.SaveChangesAsync();
-    }
-    
     /// <summary>
     /// Creates a new work instruction in the database.
     /// </summary>
@@ -723,5 +684,36 @@ public class WorkInstructionService : IWorkInstructionService
             existing.Id,
             existing.PartDefinition.Id
         );
+    }
+    
+    /// <inheritdoc/>
+    public async Task<bool> PromoteVersionAsync(int workInstructionId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var target = await context.WorkInstructions.FindAsync(workInstructionId);
+        if (target == null)
+            return false; // not found, promotion failed
+
+        int rootId = target.OriginalId ?? target.Id;
+
+        var chain = await context.WorkInstructions
+            .Where(w => w.Id == rootId || w.OriginalId == rootId)
+            .ToListAsync();
+
+        foreach (var wi in chain)
+        {
+            wi.IsActive = false;
+            wi.IsLatest = false;
+        }
+
+        target.IsActive = true;
+        target.IsLatest = true;
+
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return true; // promotion succeeded
     }
 }
