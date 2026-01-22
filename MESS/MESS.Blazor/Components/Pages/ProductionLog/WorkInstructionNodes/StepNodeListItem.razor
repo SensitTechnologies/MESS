@@ -386,61 +386,67 @@
         _currentAttemptNotes = attempt.FailureNote ?? "";
         ShowOptionalNotesField = true;
     }
-
+    
     private async Task HandleButtonPressAll(bool? result)
     {
-        if (!result.HasValue)
+        if (result is null)
             return;
+
+        var isSuccess = result.Value;
+        var now = DateTimeOffset.UtcNow;
 
         _pendingFailureAttempt = null;
 
-        if (!result.Value) // failure
+        if (!isSuccess)
         {
-            // Clear failure note before creating new attempts
             _currentAttemptNotes = "";
 
-            var newFailureAttempt = new StepAttemptFormDTO
+            var failureAttempt = new StepAttemptFormDTO
             {
                 IsSuccess = false,
-                SubmitTime = DateTimeOffset.UtcNow,
+                SubmitTime = now,
                 FailureNote = ""
             };
 
-            foreach (var step in LogSteps)
-            {
-                step.Attempts.Add(newFailureAttempt);
-            }
+            AddAttemptToAllSteps(failureAttempt);
 
-            _pendingFailureAttempt = newFailureAttempt; // Track the failure attempt for note editing
+            _pendingFailureAttempt = failureAttempt;
             ShowOptionalNotesField = true;
 
-            if (_failureNoteTextArea?.Element != null)
-            {
-                await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
-            }
+            await FocusFailureNotesAsync();
         }
-        else // success
+        else
         {
-            foreach (var step in LogSteps)
+            AddAttemptToAllSteps(new StepAttemptFormDTO
             {
-                step.Attempts.Add(new StepAttemptFormDTO
-                {
-                    IsSuccess = true,
-                    SubmitTime = DateTimeOffset.UtcNow,
-                    FailureNote = ""
-                });
-            }
+                IsSuccess = true,
+                SubmitTime = now,
+                FailureNote = ""
+            });
 
             ShowOptionalNotesField = false;
             _currentAttemptNotes = "";
         }
 
-        SetSelectedButton(result.Value ? "Success" : "Failure");
+        SetSelectedButton(isSuccess ? "Success" : "Failure");
 
-        await OnStepCompleted.InvokeAsync((LogSteps, result.Value));
-        await ShowFloatMessage(result.Value ? "all-success" : "all-failure");
+        await OnStepCompleted.InvokeAsync((LogSteps, isSuccess));
+        await ShowFloatMessage(isSuccess ? "all-success" : "all-failure");
     }
 
+    private void AddAttemptToAllSteps(StepAttemptFormDTO attempt)
+    {
+        foreach (var step in LogSteps)
+        step.Attempts.Add(attempt);
+    }
+
+    private async Task FocusFailureNotesAsync()
+    {
+        if (_failureNoteTextArea?.Element is null)
+        return;
+
+        await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
+    }
     
     private async Task HandleButtonPressIndexed(bool isSuccess)
     {
