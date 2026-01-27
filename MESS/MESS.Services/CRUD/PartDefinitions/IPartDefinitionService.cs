@@ -73,6 +73,20 @@ public interface IPartDefinitionService
     /// It does <b>not</b> include the part defined in <see cref="WorkInstruction.PartProduced"/>.
     /// </remarks>
     Task<List<PartDefinition>> GetByWorkInstructionIdAsync(int workInstructionId);
+    
+    /// <summary>
+    /// Retrieves all <see cref="PartDefinition"/> entities from the database.
+    /// </summary>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result contains
+    /// a list of all <see cref="PartDefinition"/> objects currently stored in the database.
+    /// </returns>
+    /// <remarks>
+    /// This method returns all parts in a detached state (using <c>AsNoTracking</c>),
+    /// which means the returned entities are not tracked by the EF Core change tracker.
+    /// This is suitable for read-only operations, such as displaying in tables or dropdowns.
+    /// </remarks>
+    Task<List<PartDefinition>> GetAllAsync();
 
     /// <summary>
     /// Retrieves a list of <see cref="PartDefinition"/> entities that are

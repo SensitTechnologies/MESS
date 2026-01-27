@@ -169,6 +169,33 @@ public class PartDefinitionService : IPartDefinitionService
     }
     
     /// <summary>
+    /// Retrieves all <see cref="PartDefinition"/> entities in the database.
+    /// </summary>
+    /// <returns>A task that returns a list of all <see cref="PartDefinition"/> objects.</returns>
+    public async Task<List<PartDefinition>> GetAllAsync()
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Use AsNoTracking for performance since we don't intend to update these
+            var parts = await context.PartDefinitions
+                .AsNoTracking()
+                .OrderBy(p => p.Name) // optional: sort by Name by default
+                .ToListAsync();
+
+            Log.Information("Retrieved {Count} PartDefinitions from the database.", parts.Count);
+
+            return parts;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving all PartDefinitions.");
+            return [];
+        }
+    }
+    
+    /// <summary>
     /// Retrieves all <see cref="PartDefinition"/> entities that are referenced
     /// by <see cref="PartNode"/> elements within a specified <see cref="WorkInstruction"/>.
     /// </summary>
