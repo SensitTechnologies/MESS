@@ -1,0 +1,95 @@
+@using MESS.Data.Models
+@using MESS.Blazor.Components.Dialogs
+@inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+
+<MudTd DataLabel="Name">
+    <InputText id="name" @bind-Value="PartDefinition.Name" class="form-control" placeholder="Enter part name" @oninput="OnInputChanged"/>
+</MudTd>
+<MudTd DataLabel="Number">
+    <InputText id="number" @bind-Value="PartDefinition.Number" class="form-control" placeholder="Enter part number (optional)" @oninput="OnInputChanged"/>
+</MudTd>
+<MudTd DataLabel="Actions">
+    @if (!IsNewPart)
+    {
+        <div class="save-button-container">
+            <button class="btn btn-sm btn-success" @onclick="HandleSubmit" disabled="@isSaving" title="Save">
+                <i class="bi bi-floppy"></i>
+                @if (IsDirty)
+                {
+                    <span class="red-dot"></span>
+                }
+            </button>
+        </div>
+        <button class="btn btn-sm btn-danger ms-2" @onclick="ShowDeleteConfirmation">
+            <i class="bi bi-trash" />
+        </button>
+    }
+    else
+    {
+        <button class="btn btn-sm btn-primary" @onclick="HandleSubmit" disabled="@isSaving">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    }
+</MudTd>
+
+@code {
+    /// <summary>
+    /// The part definition associated with this row.
+    /// </summary>
+    [Parameter]
+    public required PartDefinition PartDefinition { get; set; }
+
+    /// <summary>
+    /// Callback to notify the parent that this part should be deleted.
+    /// </summary>
+    [Parameter]
+    public EventCallback<PartDefinition> OnDeleteRequested { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when saving/creating the part.
+    /// </summary>
+    [Parameter]
+    public EventCallback<PartDefinition> OnSubmit { get; set; }
+
+    private bool IsNewPart => PartDefinition.Id == 0;
+    private bool isSaving = false;
+    private bool IsDirty { get; set; } = false;
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        IsDirty = true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!IsDirty)
+            return;
+
+        isSaving = true;
+        await OnSubmit.InvokeAsync(PartDefinition);
+        isSaving = false;
+        IsDirty = false;
+    }
+
+    private async Task ShowDeleteConfirmation()
+    {
+        var data = (
+            bodyMessage: $"Are you sure you want to delete '{PartDefinition.Name}'?", 
+            callback: EventCallback.Factory.Create(this, RaiseDeleteEvent)
+        );
+        
+        var dialog =  await DialogService.ShowDialogAsync<ConfirmationDialog>(data, new Microsoft.FluentUI.AspNetCore.Components.DialogParameters()
+        {
+            Title = $"Delete Part",
+            PreventScroll = true,
+            PreventDismissOnOverlayClick = true,
+        });
+
+        await dialog.Result;
+    }
+
+    private async Task RaiseDeleteEvent()
+    {
+        await OnDeleteRequested.InvokeAsync(PartDefinition);
+    }
+}
