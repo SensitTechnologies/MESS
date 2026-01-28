@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Services.CRUD.PartDefinitions;
 
@@ -165,4 +166,20 @@ public interface IPartDefinitionService
     /// part exists; otherwise, <c>false</c>.
     /// </returns>
     Task<bool> ExistsAsync(string name, string? number = null);
+    
+    /// <summary>
+    /// Attempts to delete the specified <see cref="PartDefinition"/>.
+    /// </summary>
+    /// <param name="partDefinition">
+    /// The part definition to delete.
+    /// </param>
+    /// <returns>
+    /// A <see cref="DeletePartDefinitionResult"/> indicating the outcome of the delete operation.
+    /// </returns>
+    /// <remarks>
+    /// This method performs validation to ensure the part definition can be safely deleted.
+    /// If the part definition is referenced by other entities (for example, part nodes),
+    /// the delete operation will fail and return <see cref="DeletePartDefinitionResult.InUse"/>.
+    /// </remarks>
+    Task<DeletePartDefinitionResult> DeleteAsync(PartDefinition partDefinition);
 }

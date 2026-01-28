@@ -409,4 +409,53 @@ public class PartDefinitionService : IPartDefinitionService
             return false;
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<DeletePartDefinitionResult> DeleteAsync(PartDefinition partDefinition)
+    {
+        if (partDefinition.Id <= 0)
+            return DeletePartDefinitionResult.NotFound;
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            bool isInUse = await context.PartNodes
+                .AnyAsync(pn => pn.PartDefinitionId == partDefinition.Id);
+
+            if (isInUse)
+            {
+                Log.Warning(
+                    "Cannot delete PartDefinition '{Name}' (ID {Id}) because it is referenced by PartNodes.",
+                    partDefinition.Name,
+                    partDefinition.Id);
+
+                return DeletePartDefinitionResult.InUse;
+            }
+
+            var entity = await context.PartDefinitions.FindAsync(partDefinition.Id);
+            if (entity is null)
+                return DeletePartDefinitionResult.NotFound;
+
+            context.PartDefinitions.Remove(entity);
+            await context.SaveChangesAsync();
+
+            Log.Information(
+                "Deleted PartDefinition '{Name}' (ID {Id})",
+                entity.Name,
+                entity.Id);
+
+            return DeletePartDefinitionResult.Success;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(
+                ex,
+                "Error deleting PartDefinition '{Name}' (ID {Id})",
+                partDefinition.Name,
+                partDefinition.Id);
+
+            return DeletePartDefinitionResult.Error;
+        }
+    }
 }
