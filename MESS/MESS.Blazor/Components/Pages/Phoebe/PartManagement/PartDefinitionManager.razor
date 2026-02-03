@@ -1,0 +1,230 @@
+@page "/parts"
+@layout PhoebeLayout
+@attribute [Authorize(Roles = "Technician, Administrator")]
+@using MESS.Blazor.Components.Layout
+@using MESS.Data.Models
+@using MESS.Services.CRUD.PartDefinitions
+@using Microsoft.AspNetCore.Authorization
+@inject IPartDefinitionService PartDefinitionService
+@inject IToastService ToastService
+
+<PageTitle>Part Definitions</PageTitle>
+
+@if (PartDefinitions.Count == 0)
+{
+    <h3>Part Definitions</h3>
+    <p>No part definitions currently available.</p>
+}
+else
+{
+    <div class="d-flex justify-content-between my-2" style="flex-direction: row">
+        <h3>Part Definitions</h3>
+        <div class="flex-grow-1"/>
+        <input type="text" class="form-control w-auto" placeholder="Search..."
+               @bind="SearchString" @bind:event="oninput"  />
+    </div>
+
+    <MudTable @ref="_table"
+              T="PartDefinition"
+              ServerData="ServerReload"
+              Loading="_isLoading"
+              FixedHeader="true"
+              Class="border rounded-3 pt-1"
+              TableClass="table table-striped table-hover align-top"
+              CellClass="align-top">
+
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortLabel="name_field" SortBy="new Func<PartDefinition, object>(x => x.Name)"><strong>Name</strong></MudTableSortLabel></MudTh>
+            
+            <MudTh><MudTableSortLabel SortLabel="number_field" SortBy="new Func<PartDefinition, object>(x => x.Number ?? string.Empty)">
+                <strong>Number</strong>
+                </MudTableSortLabel></MudTh>
+            <MudTh><strong>Actions</strong></MudTh>
+        </HeaderContent>
+
+        <RowTemplate Context="part">
+            <PartDefinitionTableRow 
+                PartDefinition="part"
+                OnSubmit="@SubmitPartDefinitionCallback"
+                OnDeleteRequested="@HandleDeletePartDefinitionAsync" />
+        </RowTemplate>
+
+        <FooterContent>
+            <PartDefinitionTableRow
+                PartDefinition="_newPart"
+                OnSubmit="@SubmitPartDefinitionCallback" />
+        </FooterContent>
+
+        <PagerContent>
+            <MudTablePager InfoFormat="@InfoFormat()" HorizontalAlignment="MudBlazor.HorizontalAlignment.Center" RowsPerPageString="Rows per Page" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<PartDefinition> PartDefinitions { get; set; } = new();
+    private PartDefinition _newPart = new() { Name = "", Number = "" };
+    private MudTable<PartDefinition> _table = new();
+    private bool _isLoading;
+    private int _totalItems;
+    private string _searchString = "";
+    private string SearchString
+    {
+        get => _searchString;
+        set
+        {
+            _searchString = value;
+            _table.ReloadServerData();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadParts();
+    }
+
+    private async Task LoadParts()
+    {
+        _isLoading = true;
+
+        try
+        {
+            // Use the new GetAllAsync to retrieve all parts
+            PartDefinitions = (await PartDefinitionService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to load parts: {ex.Message}");
+            PartDefinitions = new();
+        }
+
+        // Reset the new part row
+        _newPart = new PartDefinition { Name = "", Number = "" };
+
+        _isLoading = false;
+    }
+    
+    private Task<TableData<PartDefinition>> ServerReload(TableState state, CancellationToken token)
+    {
+        var data = PartDefinitions.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(SearchString))
+        {
+            data = data.Where(p => (p.Name.Contains(SearchString, StringComparison.OrdinalIgnoreCase)) ||
+                                   (p.Number?.Contains(SearchString, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        _totalItems = data.Count();
+
+        data = state.SortLabel switch
+        {
+            "name_field" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(p => p.Name)
+                : data.OrderByDescending(p => p.Name),
+            "number_field" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(p => p.Number ?? string.Empty)
+                : data.OrderByDescending(p => p.Number ?? string.Empty),
+            _ => data
+        };
+
+        var paged = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
+
+        // Return a completed task instead of using async/await
+        return Task.FromResult(new TableData<PartDefinition> { TotalItems = _totalItems, Items = paged });
+    }
+    
+    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_totalItems / _table.RowsPerPage) + 1}";
+
+    private EventCallback<PartDefinition> SubmitPartDefinitionCallback =>
+        EventCallback.Factory.Create<PartDefinition>(this, HandleSubmitPartAsync);
+
+    private async Task HandleSubmitPartAsync(PartDefinition part)
+    {
+        try
+        {
+            PartDefinition? result;
+
+            if (part.Id == 0)
+            {
+                result = await PartDefinitionService.CreateAsync(part);
+
+                if (result is null)
+                {
+                    ToastService.ShowError($"Failed to create part '{part.Name}'.");
+                    return;
+                }
+
+                ToastService.ShowSuccess($"Created part '{result.Name}'.");
+            }
+            else
+            {
+                result = await PartDefinitionService.UpdateAsync(part);
+
+                if (result is null)
+                {
+                    ToastService.ShowError($"Failed to update part '{part.Name}'.");
+                    return;
+                }
+
+                ToastService.ShowSuccess($"Updated part '{result.Name}'.");
+            }
+
+            // Refresh data after a successful write
+            await LoadParts();
+            await _table.ReloadServerData();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to submit part '{part.Name}': {ex.Message}");
+        }
+    }
+
+    private async Task HandleDeletePartDefinitionAsync(PartDefinition part)
+    {
+        try
+        {
+            var response = await PartDefinitionService.DeleteAsync(part);
+
+            switch (response.Result)
+            {
+                case DeletePartDefinitionResult.Success:
+                    ToastService.ShowSuccess($"Deleted part '{part.Name}'.");
+                    await LoadParts();
+                    await _table.ReloadServerData();
+                    break;
+
+                case DeletePartDefinitionResult.InUse:
+                    // Build a readable message from usage info
+                    var usageList = string.Join(
+                        ", ",
+                        response.Usages
+                            .Select(u => $"{u.WorkInstructionTitle} (step {u.NodePosition + 1})"));
+
+                    ToastService.ShowWarning(
+                        $"Cannot delete part '{part.Name}' because it is used by: {usageList}");
+
+                    break;
+
+                case DeletePartDefinitionResult.NotFound:
+                    ToastService.ShowWarning(
+                        $"Part '{part.Name}' no longer exists.");
+
+                    await LoadParts();
+                    await _table.ReloadServerData();
+                    break;
+
+                case DeletePartDefinitionResult.Error:
+                default:
+                    ToastService.ShowError(
+                        $"An error occurred while deleting part '{part.Name}'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Defensive: this should be rare since DeleteAsync already handles errors
+            ToastService.ShowError(
+                $"Unexpected error deleting part '{part.Name}': {ex.Message}");
+        }
+    }
+}
