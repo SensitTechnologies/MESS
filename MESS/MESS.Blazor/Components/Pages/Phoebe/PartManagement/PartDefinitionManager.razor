@@ -142,18 +142,34 @@ else
     {
         try
         {
+            PartDefinition? result;
+
             if (part.Id == 0)
             {
-                var created = await PartDefinitionService.GetOrAddPartAsync(part);
-                if (created != null) ToastService.ShowSuccess($"Created part '{created.Name}'");
+                result = await PartDefinitionService.CreateAsync(part);
+
+                if (result is null)
+                {
+                    ToastService.ShowError($"Failed to create part '{part.Name}'.");
+                    return;
+                }
+
+                ToastService.ShowSuccess($"Created part '{result.Name}'.");
             }
             else
             {
-                // For now, use GetOrAddPartAsync to update
-                var updated = await PartDefinitionService.GetOrAddPartAsync(part);
-                if (updated != null) ToastService.ShowSuccess($"Updated part '{updated.Name}'");
+                result = await PartDefinitionService.UpdateAsync(part);
+
+                if (result is null)
+                {
+                    ToastService.ShowError($"Failed to update part '{part.Name}'.");
+                    return;
+                }
+
+                ToastService.ShowSuccess($"Updated part '{result.Name}'.");
             }
 
+            // Refresh data after a successful write
             await LoadParts();
             await _table.ReloadServerData();
         }
