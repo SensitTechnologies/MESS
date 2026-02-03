@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.DTOs.PartDefinitions;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -63,6 +64,33 @@ public class PartDefinitionService : IPartDefinitionService
     }
     
     /// <inheritdoc />
+    public async Task<PartDefinition?> CreateAsync(PartDefinition part)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            part.Id = 0; // defensive: force identity generation
+            context.PartDefinitions.Add(part);
+
+            await context.SaveChangesAsync();
+
+            Log.Information(
+                "Created PartDefinition '{Name}' (ID {Id})",
+                part.Name,
+                part.Id);
+
+            return part;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error creating PartDefinition '{Name}'", part.Name);
+            return null;
+        }
+    }
+
+    
+    /// <inheritdoc />
     public async Task<PartDefinition?> GetOrCreateByNameAsync(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -105,6 +133,39 @@ public class PartDefinitionService : IPartDefinitionService
         catch (Exception ex)
         {
             Log.Error(ex, "Error in GetOrCreateByNameAsync for name '{Name}'", name);
+            return null;
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<PartDefinition?> UpdateAsync(PartDefinition updated)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var existing = await context.PartDefinitions.FindAsync(updated.Id);
+            if (existing == null)
+            {
+                Log.Warning("Update failed: PartDefinition ID {Id} not found", updated.Id);
+                return null;
+            }
+
+            existing.Name = updated.Name;
+            existing.Number = updated.Number;
+
+            await context.SaveChangesAsync();
+
+            Log.Information(
+                "Updated PartDefinition '{Name}' (ID {Id})",
+                existing.Name,
+                existing.Id);
+
+            return existing;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error updating PartDefinition ID {Id}", updated.Id);
             return null;
         }
     }
@@ -166,6 +227,33 @@ public class PartDefinitionService : IPartDefinitionService
             .ToList();
 
         return commonParts;
+    }
+    
+    /// <summary>
+    /// Retrieves all <see cref="PartDefinition"/> entities in the database.
+    /// </summary>
+    /// <returns>A task that returns a list of all <see cref="PartDefinition"/> objects.</returns>
+    public async Task<List<PartDefinition>> GetAllAsync()
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Use AsNoTracking for performance since we don't intend to update these
+            var parts = await context.PartDefinitions
+                .AsNoTracking()
+                .OrderBy(p => p.Name) // optional: sort by Name by default
+                .ToListAsync();
+
+            Log.Information("Retrieved {Count} PartDefinitions from the database.", parts.Count);
+
+            return parts;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving all PartDefinitions.");
+            return [];
+        }
     }
     
     /// <summary>
@@ -380,6 +468,73 @@ public class PartDefinitionService : IPartDefinitionService
         {
             Log.Error(ex, "Error checking existence of PartDefinition '{Name}'", name);
             return false;
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<DeletePartDefinitionResponse> DeleteAsync(PartDefinition partDefinition)
+    {
+        if (partDefinition.Id <= 0)
+            return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.NotFound };
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var entity = await context.PartDefinitions.FindAsync(partDefinition.Id);
+            if (entity is null)
+                return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.NotFound };
+
+            var usages = await context.Set<WorkInstructionNode>()
+                .OfType<PartNode>()
+                .Where(pn => pn.PartDefinitionId == partDefinition.Id)
+                .Join(
+                    context.WorkInstructions,
+                    pn => EF.Property<int>(pn, "WorkInstructionId"),
+                    wi => wi.Id,
+                    (pn, wi) => new PartDefinitionUsage
+                    {
+                        PartNodeId = pn.Id,
+                        NodePosition = pn.Position,
+                        WorkInstructionId = wi.Id,
+                        WorkInstructionTitle = wi.Title
+                    })
+                .ToListAsync();
+
+            if (usages.Count > 0)
+            {
+                Log.Warning(
+                    "Cannot delete PartDefinition '{Name}' (ID {Id}); referenced by {UsageCount} part nodes.",
+                    entity.Name,
+                    entity.Id,
+                    usages.Count);
+
+                return new DeletePartDefinitionResponse
+                {
+                    Result = DeletePartDefinitionResult.InUse,
+                    Usages = usages
+                };
+            }
+
+            context.PartDefinitions.Remove(entity);
+            await context.SaveChangesAsync();
+
+            Log.Information(
+                "Deleted PartDefinition '{Name}' (ID {Id})",
+                entity.Name,
+                entity.Id);
+
+            return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.Success };
+        }
+        catch (Exception ex)
+        {
+            Log.Error(
+                ex,
+                "Error deleting PartDefinition '{Name}' (ID {Id})",
+                partDefinition.Name,
+                partDefinition.Id);
+
+            return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.Error };
         }
     }
 }

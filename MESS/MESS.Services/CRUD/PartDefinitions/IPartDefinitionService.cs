@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using MESS.Services.DTOs.PartDefinitions;
 
 namespace MESS.Services.CRUD.PartDefinitions;
 
@@ -54,6 +55,51 @@ public interface IPartDefinitionService
     /// If a new entity is created, its <see cref="PartDefinition.Number"/> property will be set to <c>null</c>.
     /// </remarks>
     Task<PartDefinition?> GetOrCreateByNameAsync(string name);
+    
+    /// <summary>
+    /// Creates a new <see cref="PartDefinition"/> record in the database.
+    /// </summary>
+    /// <param name="part">
+    /// The <see cref="PartDefinition"/> to create. The <see cref="PartDefinition.Id"/>
+    /// property must be zero; the database will generate the identity value.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains
+    /// the newly created <see cref="PartDefinition"/> with its database-generated
+    /// identifier populated, or <c>null</c> if creation failed.
+    /// </returns>
+    /// <remarks>
+    /// This method is intended exclusively for creating new part definitions.
+    /// It must not be used to update existing records.
+    /// <para/>
+    /// Callers should ensure that the provided <paramref name="part"/> does not
+    /// conflict with existing part definitions (for example, duplicate name/number
+    /// combinations) before invoking this method.
+    /// </remarks>
+    Task<PartDefinition?> CreateAsync(PartDefinition part);
+    
+    /// <summary>
+    /// Updates an existing <see cref="PartDefinition"/> record in the database.
+    /// </summary>
+    /// <param name="part">
+    /// A <see cref="PartDefinition"/> containing the updated values. The
+    /// <see cref="PartDefinition.Id"/> must correspond to an existing database record.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains
+    /// the updated <see cref="PartDefinition"/> if the update succeeds, or
+    /// <c>null</c> if the target record does not exist or the operation fails.
+    /// </returns>
+    /// <remarks>
+    /// This method performs a controlled update of an existing part definition.
+    /// The target entity is loaded from the database and updated field-by-field
+    /// to avoid identity insert errors and unintended data overwrites.
+    /// <para/>
+    /// This method must not be used to create new part definitions. To create a new
+    /// record, use <see cref="CreateAsync(PartDefinition)"/> instead.
+    /// </remarks>
+    Task<PartDefinition?> UpdateAsync(PartDefinition part);
+
 
 
     /// <summary>
@@ -73,6 +119,20 @@ public interface IPartDefinitionService
     /// It does <b>not</b> include the part defined in <see cref="WorkInstruction.PartProduced"/>.
     /// </remarks>
     Task<List<PartDefinition>> GetByWorkInstructionIdAsync(int workInstructionId);
+    
+    /// <summary>
+    /// Retrieves all <see cref="PartDefinition"/> entities from the database.
+    /// </summary>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result contains
+    /// a list of all <see cref="PartDefinition"/> objects currently stored in the database.
+    /// </returns>
+    /// <remarks>
+    /// This method returns all parts in a detached state (using <c>AsNoTracking</c>),
+    /// which means the returned entities are not tracked by the EF Core change tracker.
+    /// This is suitable for read-only operations, such as displaying in tables or dropdowns.
+    /// </remarks>
+    Task<List<PartDefinition>> GetAllAsync();
 
     /// <summary>
     /// Retrieves a list of <see cref="PartDefinition"/> entities that are
@@ -151,4 +211,43 @@ public interface IPartDefinitionService
     /// part exists; otherwise, <c>false</c>.
     /// </returns>
     Task<bool> ExistsAsync(string name, string? number = null);
+    
+    /// <summary>
+    /// Deletes the specified <see cref="PartDefinition"/> if it is not referenced by any work instruction nodes.
+    /// </summary>
+    /// <param name="partDefinition">
+    /// The part definition to delete. The <see cref="PartDefinition.Id"/> must be a valid, persisted identifier.
+    /// </param>
+    /// <returns>
+    /// A <see cref="DeletePartDefinitionResponse"/> indicating the outcome of the operation:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.Success"/> if the part definition was deleted.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.InUse"/> if the part definition is referenced by one or more
+    /// <see cref="PartNode"/> instances, along with details describing where it is used.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.NotFound"/> if the part definition does not exist.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.Error"/> if an unexpected error occurs during deletion.
+    /// </description>
+    /// </item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This operation performs a usage check against existing work instructions before deletion.
+    /// No deletion is performed if the part definition is currently in use.
+    /// </remarks>
+    Task<DeletePartDefinitionResponse> DeleteAsync(PartDefinition partDefinition);
+
 }
