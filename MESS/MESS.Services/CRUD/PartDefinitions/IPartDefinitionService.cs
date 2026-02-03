@@ -1,5 +1,5 @@
 using MESS.Data.Models;
-using Microsoft.EntityFrameworkCore;
+using MESS.Services.DTOs.PartDefinitions;
 
 namespace MESS.Services.CRUD.PartDefinitions;
 
@@ -168,18 +168,41 @@ public interface IPartDefinitionService
     Task<bool> ExistsAsync(string name, string? number = null);
     
     /// <summary>
-    /// Attempts to delete the specified <see cref="PartDefinition"/>.
+    /// Deletes the specified <see cref="PartDefinition"/> if it is not referenced by any work instruction nodes.
     /// </summary>
     /// <param name="partDefinition">
-    /// The part definition to delete.
+    /// The part definition to delete. The <see cref="PartDefinition.Id"/> must be a valid, persisted identifier.
     /// </param>
     /// <returns>
-    /// A <see cref="DeletePartDefinitionResult"/> indicating the outcome of the delete operation.
+    /// A <see cref="DeletePartDefinitionResponse"/> indicating the outcome of the operation:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.Success"/> if the part definition was deleted.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.InUse"/> if the part definition is referenced by one or more
+    /// <see cref="PartNode"/> instances, along with details describing where it is used.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.NotFound"/> if the part definition does not exist.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// <see cref="DeletePartDefinitionResult.Error"/> if an unexpected error occurs during deletion.
+    /// </description>
+    /// </item>
+    /// </list>
     /// </returns>
     /// <remarks>
-    /// This method performs validation to ensure the part definition can be safely deleted.
-    /// If the part definition is referenced by other entities (for example, part nodes),
-    /// the delete operation will fail and return <see cref="DeletePartDefinitionResult.InUse"/>.
+    /// This operation performs a usage check against existing work instructions before deletion.
+    /// No deletion is performed if the part definition is currently in use.
     /// </remarks>
-    Task<DeletePartDefinitionResult> DeleteAsync(PartDefinition partDefinition);
+    Task<DeletePartDefinitionResponse> DeleteAsync(PartDefinition partDefinition);
+
 }

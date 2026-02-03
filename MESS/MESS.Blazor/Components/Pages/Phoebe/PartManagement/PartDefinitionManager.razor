@@ -165,33 +165,50 @@ else
 
     private async Task HandleDeletePartDefinitionAsync(PartDefinition part)
     {
-        var result = await PartDefinitionService.DeleteAsync(part);
-
-        switch (result)
+        try
         {
-            case DeletePartDefinitionResult.Success:
-                ToastService.ShowSuccess($"Deleted part '{part.Name}'");
-                await LoadParts();
-                await _table.ReloadServerData();
-                break;
+            var response = await PartDefinitionService.DeleteAsync(part);
 
-            case DeletePartDefinitionResult.InUse:
-                ToastService.ShowWarning(
-                    $"Part '{part.Name}' cannot be deleted because it is still used by one or more part nodes."
-                );
-                break;
+            switch (response.Result)
+            {
+                case DeletePartDefinitionResult.Success:
+                    ToastService.ShowSuccess($"Deleted part '{part.Name}'.");
+                    await LoadParts();
+                    await _table.ReloadServerData();
+                    break;
 
-            case DeletePartDefinitionResult.NotFound:
-                ToastService.ShowWarning(
-                    $"Part '{part.Name}' no longer exists."
-                );
-                break;
+                case DeletePartDefinitionResult.InUse:
+                    // Build a readable message from usage info
+                    var usageList = string.Join(
+                        ", ",
+                        response.Usages
+                            .Select(u => $"{u.WorkInstructionTitle} (step {u.NodePosition + 1})"));
 
-            default:
-                ToastService.ShowError(
-                    $"An unexpected error occurred while deleting part '{part.Name}'."
-                );
-                break;
+                    ToastService.ShowWarning(
+                        $"Cannot delete part '{part.Name}' because it is used by: {usageList}");
+
+                    break;
+
+                case DeletePartDefinitionResult.NotFound:
+                    ToastService.ShowWarning(
+                        $"Part '{part.Name}' no longer exists.");
+
+                    await LoadParts();
+                    await _table.ReloadServerData();
+                    break;
+
+                case DeletePartDefinitionResult.Error:
+                default:
+                    ToastService.ShowError(
+                        $"An error occurred while deleting part '{part.Name}'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Defensive: this should be rare since DeleteAsync already handles errors
+            ToastService.ShowError(
+                $"Unexpected error deleting part '{part.Name}': {ex.Message}");
         }
     }
 }

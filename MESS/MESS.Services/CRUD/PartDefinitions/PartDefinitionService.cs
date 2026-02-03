@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.DTOs.PartDefinitions;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -411,31 +412,49 @@ public class PartDefinitionService : IPartDefinitionService
     }
     
     /// <inheritdoc />
-    public async Task<DeletePartDefinitionResult> DeleteAsync(PartDefinition partDefinition)
+    public async Task<DeletePartDefinitionResponse> DeleteAsync(PartDefinition partDefinition)
     {
         if (partDefinition.Id <= 0)
-            return DeletePartDefinitionResult.NotFound;
+            return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.NotFound };
 
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            bool isInUse = await context.PartNodes
-                .AnyAsync(pn => pn.PartDefinitionId == partDefinition.Id);
-
-            if (isInUse)
-            {
-                Log.Warning(
-                    "Cannot delete PartDefinition '{Name}' (ID {Id}) because it is referenced by PartNodes.",
-                    partDefinition.Name,
-                    partDefinition.Id);
-
-                return DeletePartDefinitionResult.InUse;
-            }
-
             var entity = await context.PartDefinitions.FindAsync(partDefinition.Id);
             if (entity is null)
-                return DeletePartDefinitionResult.NotFound;
+                return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.NotFound };
+
+            var usages = await context.Set<WorkInstructionNode>()
+                .OfType<PartNode>()
+                .Where(pn => pn.PartDefinitionId == partDefinition.Id)
+                .Join(
+                    context.WorkInstructions,
+                    pn => EF.Property<int>(pn, "WorkInstructionId"),
+                    wi => wi.Id,
+                    (pn, wi) => new PartDefinitionUsage
+                    {
+                        PartNodeId = pn.Id,
+                        NodePosition = pn.Position,
+                        WorkInstructionId = wi.Id,
+                        WorkInstructionTitle = wi.Title
+                    })
+                .ToListAsync();
+
+            if (usages.Count > 0)
+            {
+                Log.Warning(
+                    "Cannot delete PartDefinition '{Name}' (ID {Id}); referenced by {UsageCount} part nodes.",
+                    entity.Name,
+                    entity.Id,
+                    usages.Count);
+
+                return new DeletePartDefinitionResponse
+                {
+                    Result = DeletePartDefinitionResult.InUse,
+                    Usages = usages
+                };
+            }
 
             context.PartDefinitions.Remove(entity);
             await context.SaveChangesAsync();
@@ -445,7 +464,7 @@ public class PartDefinitionService : IPartDefinitionService
                 entity.Name,
                 entity.Id);
 
-            return DeletePartDefinitionResult.Success;
+            return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.Success };
         }
         catch (Exception ex)
         {
@@ -455,7 +474,7 @@ public class PartDefinitionService : IPartDefinitionService
                 partDefinition.Name,
                 partDefinition.Id);
 
-            return DeletePartDefinitionResult.Error;
+            return new DeletePartDefinitionResponse { Result = DeletePartDefinitionResult.Error };
         }
     }
 }
