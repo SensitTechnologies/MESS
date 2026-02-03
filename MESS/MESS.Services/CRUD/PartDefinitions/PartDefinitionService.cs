@@ -64,6 +64,33 @@ public class PartDefinitionService : IPartDefinitionService
     }
     
     /// <inheritdoc />
+    public async Task<PartDefinition?> CreateAsync(PartDefinition part)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            part.Id = 0; // defensive: force identity generation
+            context.PartDefinitions.Add(part);
+
+            await context.SaveChangesAsync();
+
+            Log.Information(
+                "Created PartDefinition '{Name}' (ID {Id})",
+                part.Name,
+                part.Id);
+
+            return part;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error creating PartDefinition '{Name}'", part.Name);
+            return null;
+        }
+    }
+
+    
+    /// <inheritdoc />
     public async Task<PartDefinition?> GetOrCreateByNameAsync(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -106,6 +133,39 @@ public class PartDefinitionService : IPartDefinitionService
         catch (Exception ex)
         {
             Log.Error(ex, "Error in GetOrCreateByNameAsync for name '{Name}'", name);
+            return null;
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<PartDefinition?> UpdateAsync(PartDefinition updated)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var existing = await context.PartDefinitions.FindAsync(updated.Id);
+            if (existing == null)
+            {
+                Log.Warning("Update failed: PartDefinition ID {Id} not found", updated.Id);
+                return null;
+            }
+
+            existing.Name = updated.Name;
+            existing.Number = updated.Number;
+
+            await context.SaveChangesAsync();
+
+            Log.Information(
+                "Updated PartDefinition '{Name}' (ID {Id})",
+                existing.Name,
+                existing.Id);
+
+            return existing;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error updating PartDefinition ID {Id}", updated.Id);
             return null;
         }
     }

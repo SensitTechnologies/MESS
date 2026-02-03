@@ -55,6 +55,51 @@ public interface IPartDefinitionService
     /// If a new entity is created, its <see cref="PartDefinition.Number"/> property will be set to <c>null</c>.
     /// </remarks>
     Task<PartDefinition?> GetOrCreateByNameAsync(string name);
+    
+    /// <summary>
+    /// Creates a new <see cref="PartDefinition"/> record in the database.
+    /// </summary>
+    /// <param name="part">
+    /// The <see cref="PartDefinition"/> to create. The <see cref="PartDefinition.Id"/>
+    /// property must be zero; the database will generate the identity value.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains
+    /// the newly created <see cref="PartDefinition"/> with its database-generated
+    /// identifier populated, or <c>null</c> if creation failed.
+    /// </returns>
+    /// <remarks>
+    /// This method is intended exclusively for creating new part definitions.
+    /// It must not be used to update existing records.
+    /// <para/>
+    /// Callers should ensure that the provided <paramref name="part"/> does not
+    /// conflict with existing part definitions (for example, duplicate name/number
+    /// combinations) before invoking this method.
+    /// </remarks>
+    Task<PartDefinition?> CreateAsync(PartDefinition part);
+    
+    /// <summary>
+    /// Updates an existing <see cref="PartDefinition"/> record in the database.
+    /// </summary>
+    /// <param name="part">
+    /// A <see cref="PartDefinition"/> containing the updated values. The
+    /// <see cref="PartDefinition.Id"/> must correspond to an existing database record.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains
+    /// the updated <see cref="PartDefinition"/> if the update succeeds, or
+    /// <c>null</c> if the target record does not exist or the operation fails.
+    /// </returns>
+    /// <remarks>
+    /// This method performs a controlled update of an existing part definition.
+    /// The target entity is loaded from the database and updated field-by-field
+    /// to avoid identity insert errors and unintended data overwrites.
+    /// <para/>
+    /// This method must not be used to create new part definitions. To create a new
+    /// record, use <see cref="CreateAsync(PartDefinition)"/> instead.
+    /// </remarks>
+    Task<PartDefinition?> UpdateAsync(PartDefinition part);
+
 
 
     /// <summary>
