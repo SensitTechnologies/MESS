@@ -230,6 +230,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
+            PartProduced = template.PartProduced,
             Products = template.Products?.ToList() ?? new List<Product>(),
             Nodes = await CloneNodesAsync(template.Nodes)
         };
