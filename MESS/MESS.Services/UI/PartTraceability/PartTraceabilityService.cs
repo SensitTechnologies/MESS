@@ -227,508 +227,241 @@ public class PartTraceabilityService : IPartTraceabilityService
         }
     }
     
-    /// <summary>
-    /// Persists in-memory part traceability entries into the database.
-    /// For each group (logIndex) the corresponding savedLogs[logIndex].Id is used
-    /// as the ProductionLogId for created ProductionLogPart records.
-    /// </summary>
+    /// <inheritdoc />
     public async Task<bool> PersistAsync(List<ProductionLogFormDTO> savedLogs)
     {
         ArgumentNullException.ThrowIfNull(savedLogs);
 
         var partsToCreate = new List<ProductionLogPart>();
-
-        // Determine whether we have a snapshot (Scenario 2) or not (Scenario 1)
         var hasSnapshot = _snapshotGroups.Count > 0;
 
-        // Iterate through current groups (these are the logs we're saving)
         foreach (var group in _entryGroups.Values)
         {
             var logIndex = group.LogIndex;
 
-            // Validate mapping to savedLogs
             if (logIndex < 0 || logIndex >= savedLogs.Count)
-            {
-                Log.Warning("No saved production log for log index {LogIndex}; skipping persistence for this group.", logIndex);
                 continue;
-            }
 
             var savedLogId = savedLogs[logIndex].Id;
             if (savedLogId <= 0)
-            {
-                Log.Warning("Saved production log at index {LogIndex} has invalid Id {Id}; skipping group.", logIndex, savedLogId);
                 continue;
+
+            _snapshotGroups.TryGetValue(logIndex, out var snapshot);
+
+            if (snapshot != null)
+            {
+                await IdentifySnapshotChangesAsync(
+                    group,
+                    snapshot,
+                    savedLogId,
+                    partsToCreate);
+            }
+            else
+            {
+                await IdentifyInitialInstallsAsync(
+                    group,
+                    savedLogId,
+                    partsToCreate);
             }
 
-            // find snapshot group if present
-            _snapshotGroups.TryGetValue(logIndex, out var snapshotGroup);
-
-            // Build quick lookup of snapshot entries by PartNodeId
-            var snapshotEntriesByNode = (snapshotGroup?.PartNodeEntries ?? [])
-                .ToDictionary(e => e.PartNodeId, e => e);
-
-            // For each entry in current group, decide actions
-            foreach (var entry in group.PartNodeEntries)
-            {
-                var currentSerial = entry.SerializablePart;
-                var currentLinkedLog = entry.LinkedProductionLog;
-
-                snapshotEntriesByNode.TryGetValue(entry.PartNodeId, out var snapshotEntry);
-                var snapshotSerial = snapshotEntry?.SerializablePart;
-                var snapshotLinked = snapshotEntry?.LinkedProductionLog;
-
-                // ---------- SNAPSHOT MODE ----------
-                if (hasSnapshot && snapshotEntry != null)
-                {
-                    // 1) Snapshot had a serial and current has no entry => REMOVED
-                    if (snapshotSerial != null && currentSerial == null && currentLinkedLog == null)
-                    {
-                        // Removed: use snapshotSerial.Id
-                        partsToCreate.Add(BuildRemovedPart(savedLogId, snapshotSerial));
-                        Log.Information("Detected removal (snapshot serial existed, now empty) for node {NodeId} in logIndex {LogIndex}.", entry.PartNodeId, logIndex);
-                        continue;
-                    }
-
-                    // 2) Snapshot had a linked production log and current is now empty => REMOVED (resolve produced via linked)
-                    if (snapshotLinked != null && currentSerial == null && currentLinkedLog == null)
-                    {
-                        try
-                        {
-                            var produced = await _serializablePartService.GetProducedForProductionLogAsync(snapshotLinked.Id);
-                            if (produced != null)
-                            {
-                                partsToCreate.Add(BuildRemovedPart(savedLogId, produced));
-                                Log.Information("Detected removal of part produced in prior log {PriorLogId} for node {NodeId} in logIndex {LogIndex}.", snapshotLinked.Id, entry.PartNodeId, logIndex);
-                            }
-                            else
-                            {
-                                Log.Warning("Snapshot linked log {PriorLogId} could not be resolved to a produced part; cannot produce removal entry.", snapshotLinked.Id);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning(ex, "Error resolving produced part for linked snapshot log {LinkedLogId}.", snapshotLinked.Id);
-                        }
-
-                        continue;
-                    }
-
-                    // 3) Snapshot had a serial and current has a different serial => Removed(old) + Installed(new)
-                    if (snapshotSerial != null && currentSerial != null && snapshotSerial.Id != currentSerial.Id)
-                    {
-                        // Removed old
-                        partsToCreate.Add(BuildRemovedPart(savedLogId, snapshotSerial));
-                        Log.Information("Replacing serial for node {NodeId} in logIndex {LogIndex}: removed old serial {OldSerial}.", entry.PartNodeId, logIndex, snapshotSerial.SerialNumber);
-
-                        // Installed new — but ensure we have a persisted SerializablePart (attempt reuse if same serial exists)
-                        var installedPart = currentSerial;
-                        if (currentSerial.Id <= 0)
-                        {
-                            // The currentSerial in memory may not be in DB; attempt to check/create
-                            try
-                            {
-                                // If serial string provided, try to create or fetch
-                                if (!string.IsNullOrWhiteSpace(currentSerial.SerialNumber))
-                                {
-                                    var serialStr = currentSerial.SerialNumber!;
-                                    var defId = currentSerial.PartDefinitionId;
-
-                                    // Prefer to fetch existing if present
-                                    var exists = await _serializablePartService.ExistsAsync(defId, serialStr);
-                                    if (exists)
-                                    {
-                                        var existing = await _serializablePartService.GetBySerialNumberAsync(serialStr);
-                                        if (existing != null)
-                                            installedPart = existing;
-                                        else
-                                            Log.Warning("ExistsAsync returned true but GetBySerialNumberAsync returned null for serial {Serial}. Creating new.", serialStr);
-                                    }
-                                    else
-                                    {
-                                        var created = await _serializablePartService.CreateAsync(currentSerial.PartDefinition!, serialStr);
-                                        if (created != null)
-                                            installedPart = created;
-                                        else
-                                            Log.Warning("Failed to create SerializablePart for replacement serial {Serial}.", serialStr);
-                                    }
-                                }
-                                else
-                                {
-                                    // No serial string: nothing to install
-                                    Log.Debug("Replacement current serial for node {NodeId} lacks SerialNumber; skipping install.", entry.PartNodeId);
-                                    continue;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Warning(ex, "Error resolving/creating serializable part for replacement in node {NodeId}.", entry.PartNodeId);
-                                continue;
-                            }
-                        }
-
-                        // Add installed entry
-                        partsToCreate.Add(BuildInstalledPart(savedLogId, installedPart));
-                        continue;
-                    }
-
-                    // 4) Snapshot had a linked production log and current has a different linked or a serial => handle removal + optional install
-                    if (snapshotLinked != null)
-                    {
-                        var snapshotLinkedId = snapshotLinked.Id;
-
-                        // If still linked to same prior log => nothing to do
-                        if (currentLinkedLog != null && currentLinkedLog.Id == snapshotLinkedId)
-                        {
-                            // Unchanged - nothing to do
-                            continue;
-                        }
-
-                        // Otherwise the snapshot linked item was removed or replaced -> create Removed for the snapshot produced part
-                        try
-                        {
-                            var produced = await _serializablePartService.GetProducedForProductionLogAsync(snapshotLinkedId);
-                            if (produced != null)
-                            {
-                                partsToCreate.Add(BuildRemovedPart(savedLogId, produced));
-                                Log.Information("Snapshot referenced linked log {LinkedId} for node {NodeId}; creating Removed entry.", snapshotLinkedId, entry.PartNodeId);
-                            }
-                            else
-                            {
-                                Log.Warning("Snapshot linked production log {LinkedId} could not be resolved to a produced part; skipping removal entry.", snapshotLinkedId);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning(ex, "Error resolving produced part for snapshot linked log {LinkedId}.", snapshotLinkedId);
-                        }
-
-                        // If new current is a serial -> create Installed for it (resolve/create as needed)
-                        if (currentSerial != null)
-                        {
-                            SerializablePart installedPart = currentSerial;
-                            if (currentSerial.Id <= 0)
-                            {
-                                try
-                                {
-                                    var serialStr = currentSerial.SerialNumber!;
-                                    var defId = currentSerial.PartDefinitionId;
-
-                                    var exists = await _serializablePartService.ExistsAsync(defId, serialStr);
-                                    if (exists)
-                                    {
-                                        var existing = await _serializablePartService.GetBySerialNumberAsync(serialStr);
-                                        if (existing != null)
-                                            installedPart = existing;
-                                        else
-                                            Log.Warning("ExistsAsync true but GetBySerialNumberAsync returned null for serial {Serial}. Creating new.", serialStr);
-                                    }
-                                    else
-                                    {
-                                        var created = await _serializablePartService.CreateAsync(currentSerial.PartDefinition!, serialStr);
-                                        if (created != null)
-                                            installedPart = created;
-                                        else
-                                            Log.Warning("Failed to create SerializablePart for serial {Serial}.", serialStr);
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    Log.Warning(ex, "Error resolving/creating serializable part for node {NodeId}.", entry.PartNodeId);
-                                    continue;
-                                }
-                            }
-
-                            partsToCreate.Add(BuildInstalledPart(savedLogId, installedPart));
-                        }
-
-                        continue;
-                    }
-
-                    // 5) Snapshot had serial and current is still same -> do nothing
-                    if (snapshotSerial != null && currentSerial != null && snapshotSerial.Id == currentSerial.Id)
-                    {
-                        // unchanged — do nothing
-                        continue;
-                    }
-
-                    // 6) Snapshot empty but current has serial or linked — handled below in non-snapshot path
-                }
-
-                // ---------- NO SNAPSHOT (Scenario 1) or case fell through ----------
-                if (!hasSnapshot)
-                {
-                    // Try to determine which part to install
-                    SerializablePart? partToInstall = null;
-
-                    // 1) If current serial exists and already has an Id (pre-produced), install it
-                    if (currentSerial != null && currentSerial.Id > 0)
-                    {
-                        partToInstall = currentSerial;
-                        Log.Information("Scenario1: installing pre-produced part {Id} for node {NodeId}", currentSerial.Id, entry.PartNodeId);
-                    }
-                    // 2) If current serial exists and has a serial number, resolve/create as usual
-                    else if (currentSerial != null && !string.IsNullOrWhiteSpace(currentSerial.SerialNumber))
-                    {
-                        try
-                        {
-                            if (currentSerial.PartDefinition == null)
-                            {
-                                Log.Warning("Scenario1: currentSerial.PartDefinition is null for node {NodeId}", entry.PartNodeId);
-                            }
-                            else
-                            {
-                                var exists = await _serializablePartService.ExistsAsync(currentSerial.PartDefinitionId, currentSerial.SerialNumber!);
-                                if (exists)
-                                {
-                                    partToInstall = await _serializablePartService.GetBySerialNumberAsync(currentSerial.SerialNumber!) 
-                                                    ?? await _serializablePartService.CreateAsync(currentSerial.PartDefinition, currentSerial.SerialNumber!);
-                                }
-                                else
-                                {
-                                    partToInstall = await _serializablePartService.CreateAsync(currentSerial.PartDefinition, currentSerial.SerialNumber!);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning(ex, "Scenario1: error resolving/creating serial for node {NodeId}", entry.PartNodeId);
-                        }
-                    }
-                    // 3) If no serial, try linked production log
-                    else if (currentLinkedLog != null)
-                    {
-                        partToInstall = await _serializablePartService.GetProducedForProductionLogAsync(currentLinkedLog.Id);
-                    }
-
-                    // 4) Before creating Installed PLP, enforce InputType rules
-                    var nodeInputType = entry.PartNode?.InputType;
-
-                    // SerialNumber nodes require non-null serial
-                    if (nodeInputType == PartInputType.SerialNumber)
-                    {
-                        if (partToInstall == null || string.IsNullOrWhiteSpace(partToInstall.SerialNumber))
-                        {
-                            Log.Information("Skipping Installed PLP for node {NodeId}: SerialNumber-required but null.",
-                                entry.PartNodeId);
-                            continue;
-                        }
-                    }
-
-                    // ProductionLogId nodes do not require serial
-                    if (nodeInputType == PartInputType.ProductionLogId)
-                    {
-                        if (partToInstall == null)
-                        {
-                            Log.Warning("ProductionLogId node {NodeId} had no resolvable SerializablePart.",
-                                entry.PartNodeId);
-                            continue;
-                        }
-                    }
-
-                    // 5) Create Installed PLP
-                    if (partToInstall != null)
-                    {
-                        partsToCreate.Add(BuildInstalledPart(savedLogId, partToInstall));
-                        Log.Information("Created Installed PLP for node {NodeId}, part {PartId}",
-                            entry.PartNodeId, partToInstall.Id);
-                    }
-                    else
-                    {
-                        Log.Warning("Tried to create Installed PLP for node {NodeId} but partToInstall was null.",
-                            entry.PartNodeId);
-                    }
-                    
-                }
-                else
-                {
-                    // We are in snapshot mode but some edge fell through above (e.g., snapshot missing but hasSnapshot true)
-                    // Handle the common cases: if current has a serial and snapshot either didn't have it or it was different (already mostly covered),
-                    // ensure we install the current serial (resolve/create) when needed.
-
-                    // If current has a serial and it wasn't matched above, and wasn't the same as snapshot → install it
-                    if (currentSerial != null)
-                    {
-                        // If it already has an Id (persisted), just create Installed entry
-                        if (currentSerial.Id > 0)
-                        {
-                            partsToCreate.Add(BuildInstalledPart(savedLogId, currentSerial));
-                            Log.Information("Snapshot-mode fallback: adding Installed for existing serial id {Id} for node {NodeId}.", currentSerial.Id, entry.PartNodeId);
-                        }
-                        else
-                        {
-                            try
-                            {
-                                // ---- REQUIRED NULLABILITY GUARDS ----
-                                if (string.IsNullOrWhiteSpace(currentSerial.SerialNumber))
-                                {
-                                    Log.Warning(
-                                        "Snapshot-mode fallback: cannot resolve/create SerializablePart for node {NodeId} because SerialNumber is null or empty.",
-                                        entry.PartNodeId);
-                                    continue;
-                                }
-
-                                if (currentSerial.PartDefinition == null)
-                                {
-                                    Log.Warning(
-                                        "Snapshot-mode fallback: cannot resolve/create SerializablePart for node {NodeId} because PartDefinition is null.",
-                                        entry.PartNodeId);
-                                    continue;
-                                }
-                                // -------------------------------------
-
-                                var serialStr = currentSerial.SerialNumber;
-                                var defId = currentSerial.PartDefinitionId;
-
-                                SerializablePart? installedPart = null;
-
-                                // Try to reuse existing
-                                var exists = await _serializablePartService.ExistsAsync(defId, serialStr);
-                                if (exists)
-                                {
-                                    var existing = await _serializablePartService.GetBySerialNumberAsync(serialStr);
-                                    if (existing != null)
-                                    {
-                                        installedPart = existing;
-                                    }
-                                    else
-                                    {
-                                        Log.Warning(
-                                            "Snapshot fallback: ExistsAsync true but GetBySerialNumberAsync returned null for serial {Serial}. Attempting create.",
-                                            serialStr);
-
-                                        installedPart = await _serializablePartService.CreateAsync(
-                                            currentSerial.PartDefinition,
-                                            serialStr);
-                                    }
-                                }
-                                else
-                                {
-                                    // Create new serializable part
-                                    installedPart = await _serializablePartService.CreateAsync(
-                                        currentSerial.PartDefinition,
-                                        serialStr);
-                                }
-
-                                if (installedPart != null)
-                                {
-                                    partsToCreate.Add(BuildInstalledPart(savedLogId, installedPart));
-                                    Log.Information(
-                                        "Snapshot-mode fallback: created or used serial {Serial} and added Installed for node {NodeId}.",
-                                        serialStr,
-                                        entry.PartNodeId);
-                                }
-                                else
-                                {
-                                    Log.Warning(
-                                        "Snapshot-mode fallback: failed to create/resolve serializable part for node {NodeId}.",
-                                        entry.PartNodeId);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Warning(ex,
-                                    "Snapshot-mode fallback: exception while resolving/creating serializable part for node {NodeId}.",
-                                    entry.PartNodeId);
-                            }
-                        }
-                    }
-                }
-
-                continue;
-                
-                // Helper local functions for creating ProductionLogPart objects
-                ProductionLogPart BuildRemovedPart(int productionLogIdForThisSavedLog, SerializablePart removedPart)
-                {
-                    return new ProductionLogPart
-                    {
-                        ProductionLogId = productionLogIdForThisSavedLog,
-                        SerializablePartId = removedPart.Id,
-                        SerializablePart = removedPart,
-                        OperationType = PartOperationType.Removed
-                    };
-                }
-                
-                ProductionLogPart BuildInstalledPart(int productionLogIdForThisSavedLog, SerializablePart installedPart)
-                {
-                    return new ProductionLogPart
-                    {
-                        ProductionLogId = productionLogIdForThisSavedLog,
-                        SerializablePartId = installedPart.Id,
-                        SerializablePart = installedPart,
-                        OperationType = PartOperationType.Installed
-                    };
-                }
-            } // foreach entry
-            
-            // Requirement: scenario 2 must re-produce the same serializable part
-            if (snapshotGroup?.ProducedPart != null)
-            {
-                // Force the current produced part to be the snapshot’s produced part
-                group.ProducedPart = snapshotGroup.ProducedPart;
-            }
-            
-            // Handle ProducedPart for this log
-            if (group.ProducedPart != null)
-            {
-                var produced = group.ProducedPart;
-
-                SerializablePart persisted;
-
-                // Create or get serializable part
-                if (produced.Id > 0)
-                {
-                    persisted = produced;
-                }
-                else
-                {
-                    if (produced.PartDefinition == null)
-                    {
-                        Log.Warning("Produced part for log {LogIndex} has no PartDefinition; skipping.", logIndex);
-                        continue;
-                    }
-
-                    persisted = await _serializablePartService.CreateAsync(
-                        produced.PartDefinition, 
-                        produced.SerialNumber
-                    ) ?? throw new Exception("Failed to create produced part.");
-                }
-
-                // Create Installed PLP entry for this produced part
-                partsToCreate.Add(new ProductionLogPart
-                {
-                    ProductionLogId = savedLogId,
-                    SerializablePartId = persisted.Id,
-                    OperationType = PartOperationType.Produced,
-                });
-
-                Log.Information("Persisted produced part for log {LogIndex}, serial {Serial}.",
-                    logIndex, persisted.SerialNumber);
-            }
-        } // foreach group
+            await ProcessProducedPartAsync(
+                group,
+                snapshot,
+                savedLogId,
+                partsToCreate);
+        }
 
         if (partsToCreate.Count == 0)
-        {
-            Log.Information("No ProductionLogPart records to persist after comparison with snapshot/current state.");
             return true;
+
+        try
+        {
+            return await _productionLogPartService.CreateRangeAsync(partsToCreate);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error persisting ProductionLogPart records.");
+            return false;
+        }
+    }
+    
+    private async Task<SerializablePart?> GetOrPersistPartAsync(SerializablePart current)
+    {
+        if (current.Id > 0)
+            return current;
+
+        if (string.IsNullOrWhiteSpace(current.SerialNumber))
+        {
+            Log.Warning("Cannot persist SerializablePart because SerialNumber is null or empty.");
+            return null;
+        }
+
+        if (current.PartDefinition == null)
+        {
+            Log.Warning("Cannot persist SerializablePart because PartDefinition is null.");
+            return null;
         }
 
         try
         {
-            var created = await _productionLogPartService.CreateRangeAsync(partsToCreate);
-            if (!created)
+            var defId = current.PartDefinitionId;
+            var serial = current.SerialNumber;
+
+            if (await _serializablePartService.ExistsAsync(defId, serial))
             {
-                Log.Warning("ProductionLogPartService.CreateRangeAsync returned false.");
-                return false;
+                return await _serializablePartService.GetBySerialNumberAsync(serial)
+                       ?? await _serializablePartService.CreateAsync(current.PartDefinition, serial);
             }
 
-            Log.Information("Persisted {Count} ProductionLogPart records.", partsToCreate.Count);
-            return true;
+            return await _serializablePartService.CreateAsync(current.PartDefinition, serial);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error while persisting ProductionLogPart records.");
-            return false;
+            Log.Warning(ex, "Error resolving or creating SerializablePart for serial {Serial}.", current.SerialNumber);
+            return null;
         }
+    }
+    
+    private static ProductionLogPart CreateOp(
+        int productionLogId,
+        SerializablePart part,
+        PartOperationType type)
+    {
+        return new ProductionLogPart
+        {
+            ProductionLogId = productionLogId,
+            SerializablePartId = part.Id,
+            SerializablePart = part,
+            OperationType = type
+        };
+    }
+    
+    private async Task IdentifySnapshotChangesAsync(
+        PartEntryGroup group,
+        PartEntryGroup snapshot,
+        int savedLogId,
+        List<ProductionLogPart> partsToCreate)
+    {
+        var snapshotByNode = snapshot.PartNodeEntries
+            .ToDictionary(e => e.PartNodeId);
+
+        foreach (var entry in group.PartNodeEntries)
+        {
+            snapshotByNode.TryGetValue(entry.PartNodeId, out var snap);
+
+            var currentSerial = entry.SerializablePart;
+            var currentLinked = entry.LinkedProductionLog;
+
+            var snapshotSerial = snap?.SerializablePart;
+            var snapshotLinked = snap?.LinkedProductionLog;
+
+            // Snapshot serial removed
+            if (snapshotSerial != null && currentSerial == null && currentLinked == null)
+            {
+                partsToCreate.Add(CreateOp(savedLogId, snapshotSerial, PartOperationType.Removed));
+                continue;
+            }
+
+            // Snapshot linked log removed
+            if (snapshotLinked != null && currentSerial == null && currentLinked == null)
+            {
+                var produced = await _serializablePartService
+                    .GetProducedForProductionLogAsync(snapshotLinked.Id);
+
+                if (produced != null)
+                    partsToCreate.Add(CreateOp(savedLogId, produced, PartOperationType.Removed));
+
+                continue;
+            }
+
+            // Replacement: serial changed
+            if (snapshotSerial != null &&
+                currentSerial != null &&
+                snapshotSerial.Id != currentSerial.Id)
+            {
+                partsToCreate.Add(CreateOp(savedLogId, snapshotSerial, PartOperationType.Removed));
+
+                var installed = await GetOrPersistPartAsync(currentSerial);
+                if (installed != null)
+                    partsToCreate.Add(CreateOp(savedLogId, installed, PartOperationType.Installed));
+
+                continue;
+            }
+
+            // Replacement: linked log changed
+            if (snapshotLinked != null &&
+                (currentLinked == null || currentLinked.Id != snapshotLinked.Id))
+            {
+                var produced = await _serializablePartService
+                    .GetProducedForProductionLogAsync(snapshotLinked.Id);
+
+                if (produced != null)
+                    partsToCreate.Add(CreateOp(savedLogId, produced, PartOperationType.Removed));
+
+                if (currentSerial != null)
+                {
+                    var installed = await GetOrPersistPartAsync(currentSerial);
+                    if (installed != null)
+                        partsToCreate.Add(CreateOp(savedLogId, installed, PartOperationType.Installed));
+                }
+            }
+        }
+    }
+    
+    private async Task IdentifyInitialInstallsAsync(
+        PartEntryGroup group,
+        int savedLogId,
+        List<ProductionLogPart> partsToCreate)
+    {
+        foreach (var entry in group.PartNodeEntries)
+        {
+            SerializablePart? part = null;
+
+            if (entry.SerializablePart != null)
+            {
+                part = await GetOrPersistPartAsync(entry.SerializablePart);
+            }
+            else if (entry.LinkedProductionLog != null)
+            {
+                part = await _serializablePartService
+                    .GetProducedForProductionLogAsync(entry.LinkedProductionLog.Id);
+            }
+
+            var inputType = entry.PartNode?.InputType;
+
+            if (inputType == PartInputType.SerialNumber &&
+                (part == null || string.IsNullOrWhiteSpace(part.SerialNumber)))
+                continue;
+
+            if (inputType == PartInputType.ProductionLogId && part == null)
+                continue;
+
+            if (part != null)
+            {
+                partsToCreate.Add(CreateOp(savedLogId, part, PartOperationType.Installed));
+            }
+        }
+    }
+    
+    private async Task ProcessProducedPartAsync(
+        PartEntryGroup group,
+        PartEntryGroup? snapshot,
+        int savedLogId,
+        List<ProductionLogPart> partsToCreate)
+    {
+        if (snapshot?.ProducedPart != null)
+        {
+            group.ProducedPart = snapshot.ProducedPart;
+        }
+
+        if (group.ProducedPart == null)
+            return;
+
+        var persisted = await GetOrPersistPartAsync(group.ProducedPart);
+        if (persisted == null)
+            return;
+
+        partsToCreate.Add(CreateOp(savedLogId, persisted, PartOperationType.Produced));
     }
     
     /// <inheritdoc />
