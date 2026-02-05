@@ -394,6 +394,86 @@ public class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
+
+    /// <inheritdoc />
+    public async Task<bool> CreateNewVersionAsync(WorkInstruction workInstruction)
+{
+    if (workInstruction.OriginalId == null)
+        throw new InvalidOperationException("OriginalId is required to create a new version.");
+
+    await using var context = await _contextFactory.CreateDbContextAsync();
+
+    var strategy = context.Database.CreateExecutionStrategy();
+
+    try
+    {
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync();
+
+            // Mark all existing versions as not latest
+            var versions = await context.WorkInstructions
+                .Where(w => w.Id == workInstruction.OriginalId
+                         || w.OriginalId == workInstruction.OriginalId)
+                .ToListAsync();
+
+            foreach (var wi in versions)
+                wi.IsLatest = false;
+
+            // Attach existing references safely
+            if (workInstruction.PartProduced?.Id > 0)
+            {
+                context.Attach(workInstruction.PartProduced);
+                context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
+            }
+
+            foreach (var product in workInstruction.Products.Where(p => p.Id > 0))
+            {
+                context.Attach(product);
+                context.Entry(product).State = EntityState.Unchanged;
+            }
+
+            foreach (var node in workInstruction.Nodes.OfType<PartNode>())
+            {
+                if (node.PartDefinition?.Id > 0)
+                {
+                    context.Attach(node.PartDefinition);
+                    context.Entry(node.PartDefinition).State = EntityState.Unchanged;
+                }
+            }
+
+            // Create the new version
+            workInstruction.IsLatest = true;
+            workInstruction.IsActive = false;
+
+            await context.WorkInstructions.AddAsync(workInstruction);
+            await context.SaveChangesAsync();
+
+            // 4Commit
+            await transaction.CommitAsync();
+
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+
+            Log.Information(
+                "Created new WorkInstruction version {Id} for OriginalId {OriginalId}",
+                workInstruction.Id,
+                workInstruction.OriginalId);
+
+            return true;
+        });
+    }
+    catch (Exception e)
+    {
+        Log.Warning(
+            "Exception thrown while creating new version of WorkInstruction. OriginalId={OriginalId}. Exception: {Exception}",
+            workInstruction.OriginalId,
+            e);
+
+        return false;
+    }
+}
+
     
     /// <summary>
     /// Deletes a Work Instruction from the database if there are no Production log relationships.
