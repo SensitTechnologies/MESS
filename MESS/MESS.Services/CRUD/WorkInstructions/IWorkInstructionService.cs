@@ -85,19 +85,6 @@ public interface IWorkInstructionService
     /// <param name="workInstruction">A WorkInstruction instance.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
-    /// <summary>
-    /// Marks all versions of a WorkInstruction within a version chain as not the latest.
-    /// This is typically used before creating a new version to ensure only one is flagged as the latest.
-    /// </summary>
-    /// <param name="originalId">
-    /// The ID of the original WorkInstruction representing the root of the version chain.
-    /// All WorkInstructions with this OriginalId, or with an Id equal to this value,
-    /// will have their <c>IsLatest</c> flag set to <c>false</c>.
-    /// </param>
-    /// <returns>
-    /// A task that represents the asynchronous operation. The task result is <c>true</c> if the update succeeded; otherwise, <c>false</c>.
-    /// </returns>
-    Task<bool> MarkAllVersionsNotLatestAsync(int originalId);
     
     /// <summary>
     /// Sets IsActive = false for all other versions in this version chain.
@@ -111,4 +98,40 @@ public interface IWorkInstructionService
     /// </summary>
     /// <param name="nodes">The collection of <see cref="WorkInstructionNode"/> entities whose images should be deleted.</param>
     public Task<bool> DeleteNodesAsync(IEnumerable<WorkInstructionNode> nodes);
+    
+    /// <summary>
+    /// Creates a new version of an existing <see cref="WorkInstruction"/> as part of a version lineage.
+    /// </summary>
+    /// <param name="workInstruction">
+    /// The work instruction representing the new version to create. 
+    /// This instance must reference an existing version lineage via <see cref="WorkInstruction.OriginalId"/>.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the new version was created successfully; otherwise, <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// This operation is transactional and enforces versioning invariants:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>
+    /// All existing versions in the same lineage are marked as not latest (<see cref="WorkInstruction.IsLatest"/> = <c>false</c>).
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// The newly created version is marked as the latest version (<see cref="WorkInstruction.IsLatest"/> = <c>true</c>).
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// The new version is persisted as a distinct database record and does not overwrite prior versions.
+    /// </description>
+    /// </item>
+    /// </list>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if <see cref="WorkInstruction.OriginalId"/> is <c>null</c>, as versioning requires an existing lineage.
+    /// </exception>
+    Task<bool> CreateNewVersionAsync(WorkInstruction workInstruction);
+
 }

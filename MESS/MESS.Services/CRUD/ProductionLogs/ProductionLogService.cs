@@ -1,4 +1,5 @@
 ﻿using MESS.Data.Context;
+using MESS.Services.CRUD.SerializableParts;
 using MESS.Services.DTOs.ProductionLogs.Batch;
 using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.DTOs.ProductionLogs.Detail;
@@ -15,13 +16,18 @@ using Data.Models;
 public class ProductionLogService : IProductionLogService
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
+    private readonly ISerializablePartService _serializablePartService;
+    
     /// <summary>
     /// Initializes a new instance of the <see cref="ProductionLogService"/> class.
     /// </summary>
     /// <param name="contextFactory">The application database context used for accessing production logs.</param>
-    public ProductionLogService(IDbContextFactory<ApplicationContext> contextFactory)
+    /// <param name="serializablePartService">The service for managing serializable parts.</param>
+    /// <remarks>The SerializablePartService is used here for loading the ProductionLogDetailDTO.</remarks>
+    public ProductionLogService(IDbContextFactory<ApplicationContext> contextFactory, ISerializablePartService serializablePartService)
     {
         _contextFactory = contextFactory;
+        _serializablePartService = serializablePartService;
     }
     
     /// <inheritdoc />
@@ -307,11 +313,29 @@ public class ProductionLogService : IProductionLogService
                 .ThenInclude(ls => ls.Attempts)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (log != null) return log.ToDetailDTO();
-            Log.Warning("ProductionLog with ID {LogId} not found in GetDetailByIdAsync.", id);
-            return null;
+            if (log is null)
+            {
+                Log.Warning(
+                    "ProductionLog with ID {LogId} not found in GetDetailByIdAsync.",
+                    id);
+                return null;
+            }
 
-            // Map to DTO for UI consumption
+            // Map core log → DTO
+            var dto = log.ToDetailDTO();
+
+            // Load produced part separately (NO tracking)
+            var producedPart = await _serializablePartService
+                .GetProducedForProductionLogAsync(log.Id);
+            
+            var installedParts = await _serializablePartService
+                .GetInstalledForProductionLogAsync(log.Id);
+
+            dto.ProducedPartName = producedPart?.PartDefinition?.Name;
+            dto.ProducedPartSerialNumber = producedPart?.SerialNumber;
+            dto.InstalledParts = installedParts;
+
+            return dto;
         }
         catch (Exception ex)
         {

@@ -1,3 +1,4 @@
+using MESS.Data.Models;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Detail;
 
 namespace MESS.Services.DTOs.ProductionLogs.Detail;
@@ -48,10 +49,27 @@ public class ProductionLogDetailDTO
     /// May be <c>null</c> if the log has never been modified after creation.
     /// </summary>
     public string? LastModifiedBy { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the name of the part produced by this production log.
+    /// <c>null</c> if no produced part is associated.
+    /// </summary>
+    public string? ProducedPartName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the serial number of the produced part.
+    /// <c>null</c> if the produced part has no serial number or does not exist.
+    /// </summary>
+    public string? ProducedPartSerialNumber { get; set; }
 
     /// <summary>
     /// Gets or sets all step attempts in the log, each including associated step metadata.
     /// This collection is flattened for display and editing purposes.
     /// </summary>
     public List<StepAttemptDetailDTO> Attempts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets all installed parts from a production log. This collection is flattened for display and editing purposes.
+    /// </summary>
+    public List<SerializablePart> InstalledParts { get; set; } = [];
 }

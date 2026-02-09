@@ -230,6 +230,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
+            PartProduced = template.PartProduced,
             Products = template.Products?.ToList() ?? new List<Product>(),
             Nodes = await CloneNodesAsync(template.Nodes)
         };
@@ -323,32 +324,31 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         if (Current == null)
             return false;
 
-        // Resolve the PartDefinition
+        // Resolve the produced part name → PartDefinition
         if (!string.IsNullOrWhiteSpace(_pendingProducedPartName))
         {
-            var part = await _partDefinitionService.GetOrCreateByNameAsync(_pendingProducedPartName);
+            var part = await _partDefinitionService
+                .GetOrCreateByNameAsync(_pendingProducedPartName);
+
             if (part != null)
             {
                 Current.PartProduced = part;
                 Current.PartProducedId = part.Id;
             }
 
-            _pendingProducedPartName = null; // reset after save
+            _pendingProducedPartName = null;
         }
-        
-        bool success = false;
+
+        bool success;
 
         switch (Mode)
         {
             case EditorMode.CreateNew:
                 Current.OriginalId = null;
-                Current.IsLatest = true;
                 success = await _workInstructionService.Create(Current);
-                Mode = EditorMode.EditExisting;
                 break;
 
             case EditorMode.EditExisting:
-                Current.IsLatest = true;
                 success = await _workInstructionService.UpdateWorkInstructionAsync(Current);
                 break;
 
@@ -356,44 +356,49 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 if (Current.OriginalId == null)
                     throw new InvalidOperationException("OriginalId is required for versioning.");
 
-                await _workInstructionService.MarkAllVersionsNotLatestAsync(Current.OriginalId.Value);
-                Current.IsLatest = true;
-                success = await _workInstructionService.Create(Current);
+                success = await _workInstructionService.CreateNewVersionAsync(Current);
                 break;
+
+            default:
+                return false;
         }
-        if (Current != null)
+
+        if (!success)
+            return false;
+
+        // -----------------------------
+        // Post-commit editor state only
+        // -----------------------------
+
+        if (Current.IsActive)
         {
-            if (success && Current.IsActive)
+            await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
+        }
+
+        IsDirty = false;
+        Mode = EditorMode.EditExisting;
+        NotifyChanged();
+
+        // Cleanup queued deletions AFTER a successful save
+        if (_nodesQueuedForDeletion.Any())
+        {
+            var deleted = await _workInstructionService.DeleteNodesAsync(_nodesQueuedForDeletion);
+            if (deleted)
             {
-                await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
+                _nodesQueuedForDeletion.Clear();
             }
-        }
-        else
-        {
-            Log.Warning("Current Work Instruction in editor is null.");
-        }
-        if (success)
-        {
-            IsDirty = false;
-            NotifyChanged();
-            
-            // after saving Current, delete nodes to prevent orphaning
-            if (_nodesQueuedForDeletion.Any())
+            else
             {
-                var deleted = await _workInstructionService.DeleteNodesAsync(_nodesQueuedForDeletion);
-                if (deleted)
-                {
-                    _nodesQueuedForDeletion.Clear();
-                }
-                else
-                {
-                    // handle failure to delete nodes, maybe log warning or throw
-                }
+                Log.Warning(
+                    "Failed to delete {Count} queued nodes after saving WorkInstruction {Id}",
+                    _nodesQueuedForDeletion.Count,
+                    Current.Id);
             }
         }
 
-        return success;
+        return true;
     }
+
 
     /// <inheritdoc />
     public void Reset()
