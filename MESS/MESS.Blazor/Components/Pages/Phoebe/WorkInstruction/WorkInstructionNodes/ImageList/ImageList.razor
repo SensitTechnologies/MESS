@@ -42,11 +42,13 @@
     <div class="card-footer">
         <div class="upload-area my-1">
             <!-- Hidden file input -->
-            <InputFile id="fileUpload" OnChange="HandleUpload" multiple accept="image/*"
+            <InputFile id="@_fileUploadId"
+                       OnChange="HandleUpload"
+                       multiple
+                       accept="image/*"
                        class="d-none" />
 
-            <!-- Styled button that triggers the file picker -->
-            <label for="fileUpload" class="btn btn-sm btn-primary">
+            <label for="@_fileUploadId" class="btn btn-sm btn-primary">
                 <i class="bi bi-upload"></i> Upload New @ActiveLabel Image(s)
             </label>
         </div>
@@ -87,6 +89,8 @@
 
 
     private string ActiveLabel => ShowBody ? "Secondary" : "Primary";
+    
+    private readonly string _fileUploadId = $"fileUpload_{Guid.NewGuid():N}";
 
     /// <summary>
     /// Gets or sets the inline style applied to the image.
