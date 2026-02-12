@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using MESS.Services.CRUD.ProductionLogs;
+using MESS.Services.DTOs.WorkInstructions.Form;
+using MESS.Services.DTOs.WorkInstructions.Summary;
 using MESS.Services.Media.WorkInstructions;
 
 namespace MESS.Services.CRUD.WorkInstructions;
@@ -182,7 +184,86 @@ public class WorkInstructionService : IWorkInstructionService
             return [];
         }
     }
+    
+    /// <inheritdoc />
+    public async Task<List<WorkInstructionSummaryDTO>> GetAllSummariesAsync()
+    {
+        const string cacheKey = WORK_INSTRUCTION_LATEST_CACHE_KEY + "_AllSummaries";
 
+        if (_cache.TryGetValue(cacheKey, out List<WorkInstructionSummaryDTO>? cachedSummaries) &&
+            cachedSummaries != null)
+        {
+            return cachedSummaries;
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load all work instructions with related entities needed for summaries
+            var allWorkInstructions = await context.WorkInstructions
+                .Include(w => w.Products)        // Needed for ProductSummaryDTO
+                .Include(w => w.PartProduced)    // Needed for PartProducedName/Number
+                .ToListAsync();
+
+            // Map entities to summary DTOs
+            var summaries = allWorkInstructions
+                .Select(wi => wi.ToSummaryDTO())
+                .ToList();
+
+            // Cache data for 15 minutes
+            _cache.Set(cacheKey, summaries, TimeSpan.FromMinutes(15));
+
+            Log.Information("GetAllSummariesAsync successfully retrieved {Count} WorkInstruction summaries", summaries.Count);
+            return summaries;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown in GetAllSummariesAsync in WorkInstructionService. Exception: {Exception}", e.ToString());
+            return new List<WorkInstructionSummaryDTO>();
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<List<WorkInstructionSummaryDTO>> GetAllLatestSummariesAsync()
+    {
+        const string cacheKey = WORK_INSTRUCTION_LATEST_CACHE_KEY + "_Summary";
+
+        if (_cache.TryGetValue(cacheKey, out List<WorkInstructionSummaryDTO>? cachedSummaries) &&
+            cachedSummaries != null)
+        {
+            return cachedSummaries;
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load all latest work instructions with related entities needed for summaries
+            var latestWorkInstructions = await context.WorkInstructions
+                .Where(w => w.IsLatest)
+                .Include(w => w.Products)        // Needed for ProductSummaryDTO
+                .Include(w => w.PartProduced)    // Needed for PartProducedName/Number
+                .ToListAsync();
+
+            // Map entities to summary DTOs
+            var summaries = latestWorkInstructions
+                .Select(wi => wi.ToSummaryDTO())
+                .ToList();
+
+            // Cache data for 15 minutes
+            _cache.Set(cacheKey, summaries, TimeSpan.FromMinutes(15));
+
+            Log.Information("GetAllLatestSummariesAsync successfully retrieved {Count} WorkInstruction summaries", summaries.Count);
+            return summaries;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown in GetAllLatestSummariesAsync in WorkInstructionService. Exception: {Exception}", e.ToString());
+            return [];
+        }
+    }
+    
     /// <summary>
     /// Retrieves a work instruction by its title.
     /// </summary>
@@ -239,6 +320,54 @@ public class WorkInstructionService : IWorkInstructionService
             return null;
         }
     }
+    
+    /// <summary>
+    /// Asynchronously retrieves a work instruction by its ID and maps it to a <see cref="WorkInstructionFormDTO"/>.
+    /// Includes related products, nodes, and part information required for editing in the UI.
+    /// </summary>
+    /// <param name="id">The ID of the work instruction to retrieve.</param>
+    /// <returns>
+    /// A <see cref="WorkInstructionFormDTO"/> representing the work instruction if found; otherwise, <c>null</c>.
+    /// </returns>
+    public async Task<WorkInstructionFormDTO?> GetFormByIdAsync(int id)
+    {
+        if (id <= 0)
+            return null;
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load work instruction with related entities needed for the form
+            var workInstruction = await context.WorkInstructions
+                .Include(w => w.Products)      // Needed for ProductIds
+                .Include(w => w.Nodes)         // Needed for node DTOs
+                .ThenInclude(n => ((PartNode)n).PartDefinition) // Needed if nodes reference PartDefinition
+                .Include(w => w.PartProduced)  // Needed for PartProducedId / serialized info
+                .FirstOrDefaultAsync(w => w.Id == id);
+
+            if (workInstruction == null)
+                return null;
+
+            // Optional: Sort nodes by position if your UI expects a specific order
+            SortNodesByPosition(workInstruction);
+
+            // Map to Form DTO using your existing mapper
+            var dto = workInstruction.ToFormDTO();
+
+            return dto;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown when attempting to GetFormByIdAsync with ID: {id} in WorkInstructionService. Exception: {Exception}",
+                id,
+                e.ToString()
+            );
+            return null;
+        }
+    }
+
     
     /// <summary>
     /// Ensures that the WorkInstruction's Nodes are ordered by their Position property.
@@ -541,6 +670,44 @@ public class WorkInstructionService : IWorkInstructionService
 
             var nodesToDelete = await context.WorkInstructionNodes
                 .Where(n => nodeIds.Contains(n.Id))
+                .ToListAsync();
+
+            if (!nodesToDelete.Any())
+                return true;
+
+            // Delegate image deletion to the ImageService
+            await _imageService.DeleteImagesByNodesAsync(nodesToDelete);
+
+            context.WorkInstructionNodes.RemoveRange(nodesToDelete);
+            await context.SaveChangesAsync();
+
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+
+            Log.Information("Deleted {Count} WorkInstructionNodes and their images successfully.", nodesToDelete.Count);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Exception thrown when attempting to delete WorkInstructionNodes and images. Exception: {Exception}", e);
+            return false;
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<bool> DeleteNodesAsync(IEnumerable<int> nodeIds)
+    {
+        var idsList = nodeIds.ToList();
+
+        if (!idsList.Any())
+            return true;
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var nodesToDelete = await context.WorkInstructionNodes
+                .Where(n => idsList.Contains(n.Id))
                 .ToListAsync();
 
             if (!nodesToDelete.Any())

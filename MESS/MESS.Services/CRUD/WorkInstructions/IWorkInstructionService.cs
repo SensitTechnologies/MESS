@@ -1,5 +1,5 @@
-using MESS.Services.DTOs;
-using Microsoft.AspNetCore.Components.Forms;
+using MESS.Services.DTOs.WorkInstructions.Form;
+using MESS.Services.DTOs.WorkInstructions.Summary;
 
 namespace MESS.Services.CRUD.WorkInstructions;
 using Data.Models;
@@ -37,10 +37,35 @@ public interface IWorkInstructionService
     /// </summary>
     /// <returns>List of WorkInstruction objects</returns>
     public Task<List<WorkInstruction>> GetAllAsync();
+    
     /// <summary>
     /// Retrieves only the latest versions of all work instructions (IsLatest = true).
     /// </summary>
     Task<List<WorkInstruction>> GetAllLatestAsync();
+
+    /// <summary>
+    /// Asynchronously retrieves summaries of only the latest versions of all work instructions,
+    /// using caching for performance.
+    /// </summary>
+    /// <returns>List of <see cref="WorkInstructionSummaryDTO"/> for latest work instructions.</returns>
+    /// <remarks>
+    /// Results are cached for 15 minutes to improve performance.
+    /// </remarks>
+    public Task<List<WorkInstructionSummaryDTO>> GetAllLatestSummariesAsync();
+
+    /// <summary>
+    /// Asynchronously retrieves summaries of all work instructions,
+    /// including historical versions, using caching for performance.
+    /// </summary>
+    /// <returns>
+    /// A list of <see cref="WorkInstructionSummaryDTO"/> objects representing all work instructions.
+    /// Each DTO includes the work instruction details and associated products in summary form.
+    /// </returns>
+    /// <remarks>
+    /// Results are cached for 15 minutes to improve performance.
+    /// </remarks>
+    public Task<List<WorkInstructionSummaryDTO>> GetAllSummariesAsync();
+    
     /// <summary>
     /// Retrieves all versions of a work instruction lineage given its OriginalId.
     /// </summary>
@@ -59,6 +84,17 @@ public interface IWorkInstructionService
     /// <param name="id">The ID of the WorkInstruction to retrieve.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the WorkInstruction if found; otherwise, <c>null</c>.</returns>
     public Task<WorkInstruction?> GetByIdAsync(int id);
+
+    /// <summary>
+    /// Asynchronously retrieves a work instruction by its ID and maps it to a <see cref="WorkInstructionFormDTO"/>.
+    /// Includes related products, nodes, and part information required for editing in the UI.
+    /// </summary>
+    /// <param name="id">The ID of the work instruction to retrieve.</param>
+    /// <returns>
+    /// A <see cref="WorkInstructionFormDTO"/> representing the work instruction if found; otherwise, <c>null</c>.
+    /// </returns>
+    public Task<WorkInstructionFormDTO?> GetFormByIdAsync(int id);
+    
     /// <summary>
     /// Creates a WorkInstruction object and saves it to the database.
     /// </summary>
@@ -98,6 +134,17 @@ public interface IWorkInstructionService
     /// </summary>
     /// <param name="nodes">The collection of <see cref="WorkInstructionNode"/> entities whose images should be deleted.</param>
     public Task<bool> DeleteNodesAsync(IEnumerable<WorkInstructionNode> nodes);
+
+    /// <summary>
+    /// Deletes the <see cref="WorkInstructionNode"/> entities with the specified IDs,
+    /// along with any associated images, from the database.
+    /// </summary>
+    /// <param name="nodeIds">The IDs of the nodes to delete.</param>
+    /// <returns>
+    /// <c>true</c> if the deletion was successful or if no matching nodes were found; 
+    /// otherwise <c>false</c> if an exception occurred.
+    /// </returns>
+    public Task<bool> DeleteNodesAsync(IEnumerable<int> nodeIds);
     
     /// <summary>
     /// Creates a new version of an existing <see cref="WorkInstruction"/> as part of a version lineage.
