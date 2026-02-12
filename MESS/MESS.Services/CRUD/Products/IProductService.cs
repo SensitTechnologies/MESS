@@ -1,3 +1,5 @@
+using MESS.Services.DTOs.Products.Summary;
+
 namespace MESS.Services.CRUD.Products;
 
 using Data.Models;
@@ -43,6 +45,21 @@ public interface IProductService
     /// </summary>
     /// <returns>A list of all products.</returns>
     Task<IEnumerable<Product>> GetAllAsync();
+    
+    /// <summary>
+    /// Asynchronously retrieves all products as lightweight summary DTOs,
+    /// suitable for display in lists or selection controls.
+    /// </summary>
+    /// <returns>
+    /// A collection of <see cref="ProductSummaryDTO"/> objects representing all products.
+    /// Each DTO contains the product ID, name, number, active status, and associated part definition ID.
+    /// </returns>
+    /// <remarks>
+    /// Only the <see cref="Product.PartDefinition"/> relationship is loaded to populate
+    /// the DTO's Name and Number fields. This method is optimized for read-only projections.
+    /// Exceptions during retrieval are caught and logged, with an empty list returned on failure.
+    /// </remarks>
+    Task<IEnumerable<ProductSummaryDTO>> GetAllSummariesAsync();
 
     /// <summary>
     /// Updates an existing product in the database.

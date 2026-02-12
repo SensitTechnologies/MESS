@@ -1,4 +1,5 @@
 using MESS.Data.Context;
+using MESS.Services.DTOs.Products.Summary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
@@ -179,6 +180,30 @@ public class ProductService : IProductService
         {
             Log.Warning(e, "Exception occured while getting all products. Returning empty product list.");
             return new List<Product>();
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<IEnumerable<ProductSummaryDTO>> GetAllSummariesAsync()
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load products with PartDefinition (needed for Name and Number)
+            var products = await context.Products
+                .Include(p => p.PartDefinition)
+                .ToListAsync();
+
+            // Map to ProductSummaryDTO using your mapper
+            var summaries = products.ToSummaryDTOList();
+
+            return summaries;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Exception occurred while getting all product summaries. Returning empty list.");
+            return new List<ProductSummaryDTO>();
         }
     }
 
