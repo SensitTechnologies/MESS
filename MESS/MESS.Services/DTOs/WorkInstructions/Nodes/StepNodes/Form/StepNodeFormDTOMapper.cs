@@ -18,7 +18,7 @@ public static class StepNodeFormDTOMapper
         return new StepNodeFormDTO
         {
             Id = entity.Id,
-            ClientId = Guid.NewGuid().ToString(), // required for form DTOs
+            ClientId = Guid.NewGuid(), // required for form DTOs
             Position = entity.Position,
             NodeType = entity.NodeType,
             Name = entity.Name,

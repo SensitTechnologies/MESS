@@ -22,7 +22,7 @@ public static class PartNodeFormDTOMapper
         return new PartNodeFormDTO
         {
             Id = entity.Id,
-            ClientId = Guid.NewGuid().ToString(),
+            ClientId = Guid.NewGuid(),
             Position = entity.Position,
             NodeType = entity.NodeType,
             PartDefinitionId = entity.PartDefinitionId,
