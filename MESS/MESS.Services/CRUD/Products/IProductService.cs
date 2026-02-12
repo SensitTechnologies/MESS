@@ -1,3 +1,4 @@
+using MESS.Services.DTOs.Products.Detail;
 using MESS.Services.DTOs.Products.Summary;
 
 namespace MESS.Services.CRUD.Products;
@@ -60,6 +61,18 @@ public interface IProductService
     /// Exceptions during retrieval are caught and logged, with an empty list returned on failure.
     /// </remarks>
     Task<IEnumerable<ProductSummaryDTO>> GetAllSummariesAsync();
+
+    /// <summary>
+    /// Retrieves all products from the database along with their associated
+    /// part definitions and work instructions, and maps them to
+    /// <see cref="ProductDetailDTO"/> instances.
+    /// </summary>
+    /// <returns>
+    /// A task that resolves to an <see cref="IEnumerable{ProductDetailDTO}"/> containing
+    /// all products with full detail information. If an exception occurs,
+    /// an empty list is returned and a warning is logged.
+    /// </returns>
+    public Task<IEnumerable<ProductDetailDTO>> GetAllDetailsAsync();
 
     /// <summary>
     /// Updates an existing product in the database.

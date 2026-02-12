@@ -1,4 +1,5 @@
 using MESS.Data.Context;
+using MESS.Services.DTOs.Products.Detail;
 using MESS.Services.DTOs.Products.Summary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -208,62 +209,87 @@ public class ProductService : IProductService
     }
 
     /// <inheritdoc />
-public async Task UpdateProductAsync(Product product)
-{
-    try
+    public async Task<IEnumerable<ProductDetailDTO>> GetAllDetailsAsync()
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-
-        // Load the existing product with PartDefinition and WorkInstructions
-        var existingProduct = await context.Products
-            .Include(p => p.PartDefinition)
-            .Include(p => p.WorkInstructions)
-            .FirstOrDefaultAsync(p => p.Id == product.Id);
-
-        if (existingProduct is null)
+        try
         {
-            Log.Warning("Product with ID {ProductId} not found during modification.", product.Id);
-            return;
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load products with PartDefinition and associated WorkInstructions
+            var products = await context.Products
+                .Include(p => p.PartDefinition)
+                .Include(p => p.WorkInstructions) // assuming a navigation property exists
+                .ToListAsync();
+
+            // Map entities to ProductDetailDTOs using your mapper
+            var details = products.Select(p => p.ToDetailDTO()).ToList();
+
+            return details;
         }
-
-        // Update the IsActive flag
-        existingProduct.IsActive = product.IsActive;
-
-        // Update PartDefinition fields
-        // Load the tracked PartDefinition
-        var existingPartDef = await context.PartDefinitions.FindAsync(existingProduct.PartDefinition.Id);
-        if (existingPartDef != null)
+        catch (Exception e)
         {
-            existingPartDef.Name = product.PartDefinition.Name;
-            existingPartDef.Number = product.PartDefinition.Number;
+            Log.Warning(e, "Exception occurred while getting all product details. Returning empty list.");
+            return new List<ProductDetailDTO>();
         }
-        
-
-        // Update WorkInstructions
-        existingProduct.WorkInstructions ??= new List<WorkInstruction>();
-        existingProduct.WorkInstructions.Clear();
-
-        if (product.WorkInstructions != null)
+    }
+    
+    /// <inheritdoc />
+    public async Task UpdateProductAsync(Product product)
+    {
+        try
         {
-            foreach (var wi in product.WorkInstructions)
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load the existing product with PartDefinition and WorkInstructions
+            var existingProduct = await context.Products
+                .Include(p => p.PartDefinition)
+                .Include(p => p.WorkInstructions)
+                .FirstOrDefaultAsync(p => p.Id == product.Id);
+
+            if (existingProduct is null)
             {
-                var trackedWi = await context.WorkInstructions.FindAsync(wi.Id);
-                if (trackedWi != null)
+                Log.Warning("Product with ID {ProductId} not found during modification.", product.Id);
+                return;
+            }
+
+            // Update the IsActive flag
+            existingProduct.IsActive = product.IsActive;
+
+            // Update PartDefinition fields
+            // Load the tracked PartDefinition
+            var existingPartDef = await context.PartDefinitions.FindAsync(existingProduct.PartDefinition.Id);
+            if (existingPartDef != null)
+            {
+                existingPartDef.Name = product.PartDefinition.Name;
+                existingPartDef.Number = product.PartDefinition.Number;
+            }
+            
+
+            // Update WorkInstructions
+            existingProduct.WorkInstructions ??= new List<WorkInstruction>();
+            existingProduct.WorkInstructions.Clear();
+
+            if (product.WorkInstructions != null)
+            {
+                foreach (var wi in product.WorkInstructions)
                 {
-                    existingProduct.WorkInstructions.Add(trackedWi);
+                    var trackedWi = await context.WorkInstructions.FindAsync(wi.Id);
+                    if (trackedWi != null)
+                    {
+                        existingProduct.WorkInstructions.Add(trackedWi);
+                    }
                 }
             }
+
+            await context.SaveChangesAsync();
+
+            Log.Information("Product (ID: {ProductId}) updated successfully.", product.Id);
         }
-
-        await context.SaveChangesAsync();
-
-        Log.Information("Product (ID: {ProductId}) updated successfully.", product.Id);
+        catch (Exception e)
+        {
+            Log.Warning(e, "Exception occurred while modifying product. Product ID: {ProductId}", product.Id);
+        }
     }
-    catch (Exception e)
-    {
-        Log.Warning(e, "Exception occurred while modifying product. Product ID: {ProductId}", product.Id);
-    }
-}
 
     /// <inheritdoc />
     public async Task DeleteByIdAsync(int id)
