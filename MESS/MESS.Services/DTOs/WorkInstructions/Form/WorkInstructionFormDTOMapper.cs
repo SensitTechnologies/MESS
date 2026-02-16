@@ -1,5 +1,7 @@
 using MESS.Data.Models;
+using MESS.Services.DTOs.Products.Summary;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
+using MESS.Services.DTOs.WorkInstructions.Summary;
 
 namespace MESS.Services.DTOs.WorkInstructions.Form;
 
@@ -35,6 +37,7 @@ public static class WorkInstructionFormDTOMapper
             ShouldGenerateQrCode = entity.ShouldGenerateQrCode,
             PartProducedIsSerialized = entity.PartProducedIsSerialized,
             PartProducedId = entity.PartProducedId,
+            ProducedPartName = entity.PartProduced?.Name,
             ProductIds = entity.Products.Select(p => p.Id).ToList(),
             Nodes = entity.Nodes.Select(n => n.ToFormDTO(Guid.NewGuid().ToString())).ToList()
         };
@@ -63,6 +66,39 @@ public static class WorkInstructionFormDTOMapper
             PartProducedId = dto.PartProducedId,
             // PartProduced and Products can be attached separately by services if needed
             Nodes = dto.Nodes.Select(n => n.ToEntity()).ToList()
+        };
+    }
+    
+    /// <summary>
+    /// Maps a <see cref="WorkInstructionFormDTO"/> to a <see cref="WorkInstructionSummaryDTO"/>.
+    /// </summary>
+    /// <param name="formDto">The form DTO representing the editable work instruction.</param>
+    /// <param name="allProducts">
+    /// A collection of <see cref="ProductSummaryDTO"/> used to populate the
+    /// <see cref="WorkInstructionSummaryDTO.Products"/> property.
+    /// Only products whose IDs match <see cref="WorkInstructionFormDTO.ProductIds"/> will be included.
+    /// </param>
+    /// <returns>A <see cref="WorkInstructionSummaryDTO"/> containing the mapped summary data.</returns>
+    public static WorkInstructionSummaryDTO ToSummaryDTO(
+        this WorkInstructionFormDTO formDto,
+        IEnumerable<ProductSummaryDTO> allProducts)
+    {
+        ArgumentNullException.ThrowIfNull(formDto);
+        ArgumentNullException.ThrowIfNull(allProducts);
+
+        return new WorkInstructionSummaryDTO
+        {
+            Id = formDto.Id ?? 0,
+            Title = formDto.Title,
+            Version = formDto.Version,
+            OriginalId = formDto.OriginalId,
+            IsLatest = formDto.IsLatest,
+            IsActive = formDto.IsActive,
+            PartProducedId = formDto.PartProducedId,
+            PartProducedName = formDto.ProducedPartName,
+            Products = allProducts
+                .Where(p => formDto.ProductIds.Contains(p.ProductId))
+                .ToList()
         };
     }
 }
