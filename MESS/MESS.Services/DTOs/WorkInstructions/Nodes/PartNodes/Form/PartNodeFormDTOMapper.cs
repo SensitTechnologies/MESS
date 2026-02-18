@@ -1,5 +1,6 @@
 using MESS.Data.Models;
 using MESS.Services.DTOs.PartDefinitions;
+using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.File;
 
 namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
 
@@ -25,8 +26,24 @@ public static class PartNodeFormDTOMapper
             ClientId = Guid.NewGuid(),
             Position = entity.Position,
             NodeType = entity.NodeType,
+            InputType = entity.InputType,
             PartDefinitionId = entity.PartDefinitionId,
             PartDefinition = entity.PartDefinition.ToDTO()
+        };
+    }
+    
+        
+    /// <summary>
+    /// Converts a PartNodeFormDTO to a file-safe DTO for export.
+    /// </summary>
+    public static PartNodeFileDTO ToFileDTO(this PartNodeFormDTO form)
+    {
+        return new PartNodeFileDTO
+        {
+            Position = form.Position,
+            PartName = form.PartDefinition?.Name ?? "UNKNOWN",
+            PartNumber = form.PartDefinition?.Number ?? "UNKNOWN",
+            InputType = form.InputType,
         };
     }
 
@@ -45,6 +62,7 @@ public static class PartNodeFormDTOMapper
             Id = dto.Id,
             Position = dto.Position,
             NodeType = dto.NodeType,
+            InputType = dto.InputType,
             PartDefinitionId = dto.PartDefinitionId,
             PartDefinition = dto.PartDefinition is not null
                 ? dto.PartDefinition.ToEntity()
