@@ -36,4 +36,9 @@ public class PartNodeFileDTO : WorkInstructionNodeFileDTO
     /// Gets or sets the type of input expected for this part node.
     /// </summary>
     public PartInputType InputType { get; set; }
+    
+    /// <summary>
+    /// Gets a combined display string for the part, including both name and number if available.
+    /// </summary>
+    public string PartNameWithNumber => string.IsNullOrWhiteSpace(PartNumber) ? PartName : $"({PartNumber}, {PartName})";
 }
