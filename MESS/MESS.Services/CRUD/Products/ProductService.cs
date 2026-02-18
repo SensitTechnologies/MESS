@@ -113,6 +113,36 @@ public class ProductService : IProductService
     }
     
     /// <inheritdoc />
+    public async Task CreateAsync(ProductDetailDTO dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var partDefinition = await context.PartDefinitions
+                .FirstAsync(pd => pd.Id == dto.PartDefinitionId);
+
+            var product = new Product
+            {
+                PartDefinitionId = partDefinition.Id,
+                PartDefinition = partDefinition,
+                IsActive = dto.IsActive
+            };
+
+            await context.Products.AddAsync(product);
+            await context.SaveChangesAsync();
+
+            Log.Information("Product successfully created from DTO. ID: {ProductID}", product.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "An error occurred while adding product from DTO");
+        }
+    }
+    
+    /// <inheritdoc />
     public async Task<Product?> GetByIdAsync(int id)
     {
         try
@@ -290,6 +320,59 @@ public class ProductService : IProductService
             Log.Warning(e, "Exception occurred while modifying product. Product ID: {ProductId}", product.Id);
         }
     }
+    
+    /// <inheritdoc />
+    public async Task UpdateProductAsync(ProductDetailDTO dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load the existing product with navigation properties
+            var existingProduct = await context.Products
+                .Include(p => p.PartDefinition)
+                .Include(p => p.WorkInstructions)
+                .FirstOrDefaultAsync(p => p.Id == dto.ProductId);
+
+            if (existingProduct is null)
+            {
+                Log.Warning("Product with ID {ProductId} not found during modification.", dto.ProductId);
+                return;
+            }
+
+            // Update scalar + PartDefinition fields via mapper
+            dto.UpdateEntity(existingProduct);
+
+            // Sync WorkInstructions
+            existingProduct.WorkInstructions ??= new List<WorkInstruction>();
+            existingProduct.WorkInstructions.Clear();
+
+            if (dto.WorkInstructions != null)
+            {
+                foreach (var wiDto in dto.WorkInstructions)
+                {
+                    var trackedWi = await context.WorkInstructions
+                        .FindAsync(wiDto.Id);
+
+                    if (trackedWi != null)
+                    {
+                        existingProduct.WorkInstructions.Add(trackedWi);
+                    }
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            Log.Information("Product (ID: {ProductId}) updated successfully from DTO.", dto.ProductId);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Exception occurred while modifying product. Product ID: {ProductId}", dto.ProductId);
+        }
+    }
+
 
     /// <inheritdoc />
     public async Task DeleteByIdAsync(int id)

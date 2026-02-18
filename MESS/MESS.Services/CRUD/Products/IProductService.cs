@@ -23,6 +23,26 @@ public interface IProductService
     /// <param name="product">The product to add.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task CreateAsync(Product product);
+    
+    /// <summary>
+    /// Asynchronously creates a new product using the provided <see cref="ProductDetailDTO"/>.
+    /// </summary>
+    /// <param name="dto">
+    /// The detailed product DTO containing the data required to create the product,
+    /// including the associated PartDefinition identifier.
+    /// </param>
+    /// <remarks>
+    /// The implementation is expected to resolve and attach the existing PartDefinition
+    /// referenced by <see cref="ProductDetailDTO.PartDefinitionId"/> before persisting
+    /// the new Product entity.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="dto"/> is <c>null</c>.
+    /// </exception>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous create operation.
+    /// </returns>
+    Task CreateAsync(ProductDetailDTO dto);
 
     /// <summary>
     /// Finds a product by its unique ID, including related WorkInstructions and WorkStations.
@@ -80,6 +100,38 @@ public interface IProductService
     /// <param name="product">The product to update.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task UpdateProductAsync(Product product);
+    
+    /// <summary>
+    /// Asynchronously updates an existing product using the provided <see cref="ProductDetailDTO"/>.
+    /// </summary>
+    /// <param name="dto">
+    /// The detailed product DTO containing the updated product data, including
+    /// its identifier, associated PartDefinition information, and related WorkInstructions.
+    /// </param>
+    /// <remarks>
+    /// The implementation is expected to:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>Locate the existing Product entity by <see cref="ProductDetailDTO.ProductId"/>.</description>
+    /// </item>
+    /// <item>
+    /// <description>Update scalar properties such as <c>IsActive</c>.</description>
+    /// </item>
+    /// <item>
+    /// <description>Update the associated PartDefinition fields (e.g., Number and Name).</description>
+    /// </item>
+    /// <item>
+    /// <description>Synchronize the product's WorkInstructions based on the DTO.</description>
+    /// </item>
+    /// </list>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="dto"/> is <c>null</c>.
+    /// </exception>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous update operation.
+    /// </returns>
+    Task UpdateProductAsync(ProductDetailDTO dto);
 
     /// <summary>
     /// Removes a product from the database by its unique ID.
