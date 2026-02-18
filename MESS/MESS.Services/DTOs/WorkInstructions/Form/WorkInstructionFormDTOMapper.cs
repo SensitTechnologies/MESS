@@ -1,5 +1,6 @@
 using MESS.Data.Models;
 using MESS.Services.DTOs.Products.Summary;
+using MESS.Services.DTOs.WorkInstructions.File;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
 
@@ -98,6 +99,40 @@ public static class WorkInstructionFormDTOMapper
             PartProducedName = formDto.ProducedPartName,
             Products = allProducts
                 .Where(p => formDto.ProductIds.Contains(p.ProductId))
+                .ToList()
+        };
+    }
+    
+    
+    /// <summary>
+    /// Converts a <see cref="WorkInstructionFormDTO"/> (editable form DTO)
+    /// to a <see cref="WorkInstructionFileDTO"/> for file export.
+    /// </summary>
+    /// <param name="formDto">The editable work instruction DTO.</param>
+    /// <param name="productNameResolver">
+    /// A function to resolve product IDs to product names.
+    /// Typically, this comes from the loaded product list in the UI.
+    /// </param>
+    public static WorkInstructionFileDTO ToFileDTO(
+        this WorkInstructionFormDTO formDto,
+        Func<int, string> productNameResolver)
+    {
+        if (formDto == null) throw new ArgumentNullException(nameof(formDto));
+        if (productNameResolver == null) throw new ArgumentNullException(nameof(productNameResolver));
+
+        return new WorkInstructionFileDTO
+        {
+            Title = formDto.Title,
+            Version = formDto.Version,
+            IsActive = formDto.IsActive,
+            ShouldGenerateQrCode = formDto.ShouldGenerateQrCode,
+            PartProducedIsSerialized = formDto.PartProducedIsSerialized,
+            ProducedPartName = formDto.ProducedPartName,
+            AssociatedProductNames = formDto.ProductIds
+                .Select(productNameResolver)
+                .ToList(),
+            Nodes = formDto.Nodes
+                .Select(n => n.ToFileDTO())
                 .ToList()
         };
     }
