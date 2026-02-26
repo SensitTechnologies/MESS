@@ -12,8 +12,6 @@ using Data.Models;
 public class ProductService : IProductService
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
-    private readonly IMemoryCache _cache;
-    private const string WORK_INSTRUCTION_LATEST_CACHE_KEY = "AllWorkInstructions_Latest";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProductService"/> class.
@@ -22,10 +20,9 @@ public class ProductService : IProductService
     /// </summary>
     /// <param name="contextFactory">Factory for creating instances of the application database context.</param>
     /// <param name="cache">In-memory cache used to store and invalidate cached data.</param>
-    public ProductService(IDbContextFactory<ApplicationContext> contextFactory, IMemoryCache cache)
+    public ProductService(IDbContextFactory<ApplicationContext> contextFactory)
     {
         _contextFactory = contextFactory;
-        _cache = cache;
     }
     
     /// <inheritdoc />
