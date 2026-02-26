@@ -29,7 +29,10 @@ public static class PartNodeFormDTOMapper
             NodeType = entity.NodeType,
             InputType = entity.InputType,
             PartDefinitionId = entity.PartDefinitionId,
-            PartDefinition = entity.PartDefinition.ToDTO()
+            PartDefinition = entity.PartDefinition is not null
+                ? entity.PartDefinition.ToDTO()
+                : throw new InvalidOperationException(
+                    $"PartDefinition was not loaded for PartNode {entity.Id}")
         };
     }
     
@@ -64,10 +67,11 @@ public static class PartNodeFormDTOMapper
             Position = dto.Position,
             NodeType = dto.NodeType,
             InputType = dto.InputType,
+            // Only set FK
             PartDefinitionId = dto.PartDefinitionId,
-            PartDefinition = dto.PartDefinition is not null
-                ? dto.PartDefinition.ToEntity()
-                : new PartDefinition { Id = dto.PartDefinitionId, Number = null!, Name = null! }
+
+            // DO NOT set navigation property
+            PartDefinition = null
         };
     }
 

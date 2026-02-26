@@ -14,6 +14,10 @@ public static class PartNodeFileDTOMapper
     /// </summary>
     public static PartNodeFileDTO ToFileDTO(this PartNode entity)
     {
+        if (entity.PartDefinition is null)
+            throw new InvalidOperationException(
+                $"PartDefinition not loaded for PartNode {entity.Id}");
+
         return new PartNodeFileDTO
         {
             Position = entity.Position,
@@ -58,6 +62,10 @@ public static class PartNodeFileDTOMapper
     public static PartNodeFormDTO ToFormDTO(this PartNodeFileDTO dto, PartDefinition resolvedPart)
     {
         var entity = dto.ToEntity(resolvedPart);
+
+        if (entity.PartDefinition is null)
+            throw new InvalidOperationException(
+                $"PartDefinition was not resolved for PartNode at Position {entity.Position}");
 
         return new PartNodeFormDTO
         {

@@ -1120,7 +1120,15 @@ public class WorkInstructionService : IWorkInstructionService
         // Update scalar properties on the PartNode itself
         context.Entry(existing).CurrentValues.SetValues(updated);
 
-        // Handle the single PartDefinition relationship
+        // Handle the PartDefinition relationship safely
+        if (updated.PartDefinition == null)
+        {
+            // No PartDefinition provided – just clear it
+            existing.PartDefinition = null;
+            existing.PartDefinitionId = updated.PartDefinitionId;
+            return;
+        }
+
         if (updated.PartDefinition.Id == 0)
         {
             // New PartDefinition – add it
@@ -1140,20 +1148,11 @@ public class WorkInstructionService : IWorkInstructionService
             else
             {
                 Log.Warning("PartDefinition ID {Id} not found for PartNode {NodeId}", updated.PartDefinition.Id, updated.Id);
-                // Optionally attach it anyway if it should exist
+                // Attach anyway if it should exist
                 context.Attach(updated.PartDefinition);
                 existing.PartDefinition = updated.PartDefinition;
             }
         }
-
-        // Mark node as modified
-        context.Entry(existing).State = EntityState.Modified;
-
-        Log.Information(
-            "PartNode ID {Id} now has PartDefinition ID {PartDefId}",
-            existing.Id,
-            existing.PartDefinition.Id
-        );
     }
     
     /// <summary>
