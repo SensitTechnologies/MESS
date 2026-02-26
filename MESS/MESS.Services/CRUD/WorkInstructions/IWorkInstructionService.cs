@@ -111,6 +111,42 @@ public interface IWorkInstructionService
     /// <param name="workInstruction">An instance of WorkInstruction.</param>
     /// <returns>A boolean value indicating true for success or false for failure.</returns>
     public Task<bool> Create(WorkInstruction workInstruction);
+
+    /// <summary>
+    /// Creates a new work instruction from the provided form DTO.
+    /// </summary>
+    /// <param name="dto">
+    /// The <see cref="WorkInstructionFormDTO"/> containing scalar values,
+    /// related product IDs, produced part ID, and node definitions.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if creation was successful; otherwise, <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// Related entities are explicitly resolved from the database to ensure proper
+    /// EF Core tracking and to prevent detached entity conflicts. The new work
+    /// instruction is created as inactive by default.
+    /// </remarks>
+    public Task<bool> CreateAsync(WorkInstructionFormDTO dto);
+
+    /// <summary>
+    /// Updates an existing work instruction using the provided form DTO.
+    /// </summary>
+    /// <param name="dto">
+    /// The <see cref="WorkInstructionFormDTO"/> containing updated scalar values,
+    /// associated product IDs, and node definitions.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the work instruction was successfully updated; otherwise, <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// The existing entity is loaded and tracked by the DbContext before applying updates.
+    /// Related entities such as products, produced part, and nodes are explicitly
+    /// resolved from the database to ensure correct EF Core tracking and to prevent
+    /// detached graph conflicts. Cache entries are invalidated after a successful update.
+    /// </remarks>
+    public Task<bool> UpdateWorkInstructionAsync(WorkInstructionFormDTO dto);
+    
     /// <summary>
     /// Deletes a WorkInstruction from the database.
     /// </summary>
@@ -157,38 +193,23 @@ public interface IWorkInstructionService
     public Task<bool> DeleteNodesAsync(IEnumerable<int> nodeIds);
 
     /// <summary>
-    /// Creates a new version of an existing <see cref="WorkInstruction"/> as part of a version lineage.
+    /// Creates a new version of a work instruction from the provided form DTO.
     /// </summary>
-    /// <param name="workInstruction">
-    /// The work instruction representing the new version to create. 
-    /// This instance must reference an existing version lineage via <see cref="WorkInstruction.OriginalId"/>.
+    /// <param name="dto">
+    /// The form DTO containing the updated work instruction data, including
+    /// associated product IDs and node definitions.
     /// </param>
     /// <returns>
-    /// <c>true</c> if the new version was created successfully; otherwise, <c>false</c>.
+    /// The newly created <see cref="WorkInstruction"/> marked as the latest
+    /// and active version in the version chain, or <c>null</c> if the operation fails.
     /// </returns>
     /// <remarks>
-    /// This operation is transactional and enforces versioning invariants:
-    /// <list type="bullet">
-    /// <item>
-    /// <description>
-    /// All existing versions in the same lineage are marked as not latest (<see cref="WorkInstruction.IsLatest"/> = <c>false</c>).
-    /// </description>
-    /// </item>
-    /// <item>
-    /// <description>
-    /// The newly created version is marked as the latest version (<see cref="WorkInstruction.IsLatest"/> = <c>true</c>).
-    /// </description>
-    /// </item>
-    /// <item>
-    /// <description>
-    /// The new version is persisted as a distinct database record and does not overwrite prior versions.
-    /// </description>
-    /// </item>
-    /// </list>
+    /// Existing versions in the chain are marked inactive and not latest.
+    /// Related entities (such as products and produced part) are resolved
+    /// from the database to ensure proper EF Core tracking before saving.
     /// </remarks>
     /// <exception cref="InvalidOperationException">
-    /// Thrown if <see cref="WorkInstruction.OriginalId"/> is <c>null</c>, as versioning requires an existing lineage.
+    /// Thrown if <see cref="WorkInstructionFormDTO.OriginalId"/> is not provided.
     /// </exception>
-    public Task<WorkInstruction?> CreateNewVersionAsync(WorkInstruction workInstruction);
-
+    public Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto);
 }

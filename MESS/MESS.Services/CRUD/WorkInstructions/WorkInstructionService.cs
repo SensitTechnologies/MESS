@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.DTOs.WorkInstructions.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
 using MESS.Services.DTOs.WorkInstructions.Version;
 using MESS.Services.Media.WorkInstructions;
@@ -20,7 +21,9 @@ public class WorkInstructionService : IWorkInstructionService
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     
     private const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
-    const string WORK_INSTRUCTION_LATEST_CACHE_KEY = WORK_INSTRUCTION_CACHE_KEY + "_Latest";
+    private const string WORK_INSTRUCTION_LATEST_CACHE_KEY = "AllLatestWorkInstructions";
+    private const string WORK_INSTRUCTION_LATEST_SUMMARY_CACHE_KEY = "AllLatestWorkInstructionSummaries";
+    private const string WORK_INSTRUCTION_SUMMARY_CACHE_KEY = "AllWorkInstructionSummaries";
     
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionService"/> class.
@@ -148,8 +151,6 @@ public class WorkInstructionService : IWorkInstructionService
     /// </remarks>
     public async Task<List<WorkInstruction>> GetAllLatestAsync()
     {
-        
-
         if (_cache.TryGetValue(WORK_INSTRUCTION_LATEST_CACHE_KEY, out List<WorkInstruction>? cachedLatestList) &&
             cachedLatestList != null)
         {
@@ -189,8 +190,8 @@ public class WorkInstructionService : IWorkInstructionService
     /// <inheritdoc />
     public async Task<List<WorkInstructionSummaryDTO>> GetAllSummariesAsync()
     {
-        const string cacheKey = WORK_INSTRUCTION_LATEST_CACHE_KEY + "_AllSummaries";
-
+        const string cacheKey = WORK_INSTRUCTION_SUMMARY_CACHE_KEY;
+        
         if (_cache.TryGetValue(cacheKey, out List<WorkInstructionSummaryDTO>? cachedSummaries) &&
             cachedSummaries != null)
         {
@@ -228,7 +229,7 @@ public class WorkInstructionService : IWorkInstructionService
     /// <inheritdoc />
     public async Task<List<WorkInstructionSummaryDTO>> GetAllLatestSummariesAsync()
     {
-        const string cacheKey = WORK_INSTRUCTION_LATEST_CACHE_KEY + "_Summary";
+        const string cacheKey = WORK_INSTRUCTION_LATEST_SUMMARY_CACHE_KEY;
 
         if (_cache.TryGetValue(cacheKey, out List<WorkInstructionSummaryDTO>? cachedSummaries) &&
             cachedSummaries != null)
@@ -356,6 +357,7 @@ public class WorkInstructionService : IWorkInstructionService
             // Map to Form DTO using your existing mapper
             var dto = workInstruction.ToFormDTO();
 
+            Log.Debug("Form DTO Products: {ProductIds}", string.Join(", ", dto.ProductIds));
             return dto;
         }
         catch (Exception e)
@@ -432,7 +434,7 @@ public class WorkInstructionService : IWorkInstructionService
         var target = await context.WorkInstructions.FindAsync(workInstructionId);
         if (target == null) return;
 
-        int rootId = target.OriginalId ?? target.Id;
+        var rootId = target.OriginalId ?? target.Id;
 
         var chain = await context.WorkInstructions
             .Where(w => (w.Id == rootId || w.OriginalId == rootId) && w.Id != workInstructionId)
@@ -494,8 +496,7 @@ public class WorkInstructionService : IWorkInstructionService
             await context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
             
             Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
@@ -509,90 +510,170 @@ public class WorkInstructionService : IWorkInstructionService
     }
     
     /// <inheritdoc />
-   public async Task<WorkInstruction?> CreateNewVersionAsync(WorkInstruction workInstruction)
+    public async Task<bool> CreateAsync(WorkInstructionFormDTO dto)
     {
-        if (workInstruction.OriginalId == null)
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        try
+        {
+            // Build base entity from mapper
+            var workInstruction = dto.ToEntity();
+
+            // Validate entity
+            var validator = new WorkInstructionValidator();
+            var validationResult = await validator.ValidateAsync(workInstruction);
+
+            if (!validationResult.IsValid)
+                return false;
+
+            // Resolve PartProduced safely
+            if (dto.PartProducedId.HasValue && dto.PartProducedId.Value > 0)
+            {
+                var partProduced = await context.PartDefinitions
+                    .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
+
+                if (partProduced == null)
+                    return false; // invalid reference
+
+                workInstruction.PartProduced = partProduced;
+            }
+
+            // Resolve Products safely
+            if (dto.ProductIds?.Any() == true)
+            {
+                workInstruction.Products = await context.Products
+                    .Where(p => dto.ProductIds.Contains(p.Id))
+                    .ToListAsync();
+            }
+            else
+            {
+                workInstruction.Products = new List<Product>();
+            }
+
+            // Resolve PartDefinitions for PartNodes safely
+            foreach (var node in workInstruction.Nodes.OfType<PartNode>())
+            {
+                if (node.PartDefinitionId > 0)
+                {
+                    var partDefinition = await context.PartDefinitions
+                        .FirstOrDefaultAsync(p => p.Id == node.PartDefinitionId);
+
+                    if (partDefinition == null)
+                        return false; // invalid reference
+
+                    node.PartDefinition = partDefinition;
+                }
+            }
+
+            // Default new WorkInstructions to inactive
+            workInstruction.IsActive = false;
+            workInstruction.IsLatest = false;
+
+            await context.WorkInstructions.AddAsync(workInstruction);
+            await context.SaveChangesAsync();
+
+            ClearWorkInstructionCaches();
+
+            Log.Information(
+                "Successfully created WorkInstruction with ID: {Id}",
+                workInstruction.Id);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown when creating WorkInstruction. Exception: {Exception}",
+                e);
+
+            return false;
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto)
+    {
+        if (dto.OriginalId == null)
             throw new InvalidOperationException("OriginalId is required to create a new version.");
 
         await using var context = await _contextFactory.CreateDbContextAsync();
         var strategy = context.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            return await strategy.ExecuteAsync(async () =>
+            await using var transaction = await context.Database.BeginTransactionAsync();
+
+            // Resolve the referenced work instruction to determine the true root
+            var referenced = await context.WorkInstructions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(w => w.Id == dto.OriginalId.Value);
+
+            if (referenced == null)
+                throw new InvalidOperationException("Referenced work instruction not found.");
+
+            var rootId = referenced.OriginalId ?? referenced.Id;
+
+            // Load full version chain
+            var versions = await context.WorkInstructions
+                .Where(w => w.Id == rootId || w.OriginalId == rootId)
+                .ToListAsync();
+
+            if (!versions.Any())
+                throw new InvalidOperationException("No existing version chain found.");
+
+            // Deactivate all existing versions
+            foreach (var wi in versions)
             {
-                await using var transaction = await context.Database.BeginTransactionAsync();
+                wi.IsActive = false;
+                wi.IsLatest = false;
+            }
 
-                // Determine root ID for version chain
-                int rootId = workInstruction.OriginalId.Value;
+            // Build new entity from DTO
+            var workInstruction = dto.ToEntity();
 
-                // Load all existing versions
-                var versions = await context.WorkInstructions
-                    .Where(w => w.Id == rootId || w.OriginalId == rootId)
+            // Force insert (never reuse existing Id)
+            workInstruction.Id = 0;
+
+            // Ensure correct root linkage
+            workInstruction.OriginalId = rootId;
+
+            // Resolve PartProduced (if any)
+            if (dto.PartProducedId.HasValue)
+            {
+                workInstruction.PartProduced = await context.PartDefinitions
+                    .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
+            }
+
+            // Resolve Products (if any)
+            if (dto.ProductIds.Any())
+            {
+                workInstruction.Products = await context.Products
+                    .Where(p => dto.ProductIds.Contains(p.Id))
                     .ToListAsync();
+            }
+            else
+            {
+                workInstruction.Products = [];
+            }
 
-                // Mark all existing versions inactive and not latest
-                foreach (var wi in versions)
-                {
-                    wi.IsActive = false;
-                    wi.IsLatest = false;
-                }
+            // Mark new version active/latest
+            workInstruction.IsLatest = true;
+            workInstruction.IsActive = true;
 
-                // Attach existing references safely
-                if (workInstruction.PartProduced?.Id > 0)
-                {
-                    context.Attach(workInstruction.PartProduced);
-                    context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
-                }
+            await context.WorkInstructions.AddAsync(workInstruction);
+            await context.SaveChangesAsync();
 
-                foreach (var product in workInstruction.Products.Where(p => p.Id > 0))
-                {
-                    context.Attach(product);
-                    context.Entry(product).State = EntityState.Unchanged;
-                }
+            await transaction.CommitAsync();
 
-                foreach (var node in workInstruction.Nodes.OfType<PartNode>())
-                {
-                    if (node.PartDefinition?.Id > 0)
-                    {
-                        context.Attach(node.PartDefinition);
-                        context.Entry(node.PartDefinition).State = EntityState.Unchanged;
-                    }
-                }
+            ClearWorkInstructionCaches();
 
-                // Create the new version
-                workInstruction.IsLatest = true;
-                workInstruction.IsActive = true; // Newly created version is active
-                await context.WorkInstructions.AddAsync(workInstruction);
+            Log.Information(
+                "Created new WorkInstruction version {Id} for RootId {RootId}",
+                workInstruction.Id,
+                rootId);
 
-                // Save changes (assigns Id)
-                await context.SaveChangesAsync();
-
-                // Commit transaction
-                await transaction.CommitAsync();
-
-                // Clear cache
-                _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-                _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
-
-                Log.Information(
-                    "Created new WorkInstruction version {Id} for OriginalId {OriginalId}",
-                    workInstruction.Id,
-                    workInstruction.OriginalId);
-
-                // Return the saved entity
-                return workInstruction;
-            });
-        }
-        catch (Exception e)
-        {
-            Log.Warning(
-                "Exception thrown while creating new version of WorkInstruction. OriginalId={OriginalId}. Exception: {Exception}",
-                workInstruction.OriginalId,
-                e);
-
-            return null;
-        }
+            return workInstruction;
+        });
     }
     
     /// <summary>
@@ -632,8 +713,7 @@ public class WorkInstructionService : IWorkInstructionService
             await context.SaveChangesAsync();
             
             // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
             
             Log.Information("Successfully deleted WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
 
@@ -672,8 +752,7 @@ public class WorkInstructionService : IWorkInstructionService
             context.WorkInstructionNodes.RemoveRange(nodesToDelete);
             await context.SaveChangesAsync();
 
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
 
             Log.Information("Deleted {Count} WorkInstructionNodes and their images successfully.", nodesToDelete.Count);
             return true;
@@ -710,8 +789,7 @@ public class WorkInstructionService : IWorkInstructionService
             context.WorkInstructionNodes.RemoveRange(nodesToDelete);
             await context.SaveChangesAsync();
 
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
 
             Log.Information("Deleted {Count} WorkInstructionNodes and their images successfully.", nodesToDelete.Count);
             return true;
@@ -783,8 +861,7 @@ public class WorkInstructionService : IWorkInstructionService
             await context.SaveChangesAsync();
 
             // Invalidate cache so that on next request users retrieve the latest data
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
 
             Log.Information("Successfully deleted all versions associated with WorkInstruction ID: {workInstructionID}", originalWorkInstruction.Id);
 
@@ -839,19 +916,135 @@ public class WorkInstructionService : IWorkInstructionService
             await UpdateNodes(context, existing, workInstruction);
 
             await context.SaveChangesAsync();
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
 
             Log.Information("Successfully updated WorkInstruction with ID: {Id}", workInstruction.Id);
             return true;
         }
         catch (Exception e)
         {
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+            ClearWorkInstructionCaches();
             Log.Warning("Error updating WorkInstruction {Id}: {Exception}", workInstruction.Id, e);
             return false;
         }
+    }
+    
+    /// <inheritdoc />
+    public async Task<bool> UpdateWorkInstructionAsync(WorkInstructionFormDTO dto)
+    {
+        Log.Information("Beginning update for WorkInstruction {Id}", dto.Id);
+
+        if (dto.Id == null || dto.Id == 0)
+            return false;
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Load tracked entity with relationships
+                var existing = await context.WorkInstructions
+                    .Include(w => w.Products)
+                    .Include(w => w.Nodes)
+                        .ThenInclude(n => (n as PartNode)!.PartDefinition)
+                    .FirstOrDefaultAsync(w => w.Id == dto.Id.Value);
+
+                if (existing == null)
+                    return false;
+
+                // Enforce uniqueness if title/version changed
+                if (!string.Equals(existing.Title, dto.Title, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(existing.Version, dto.Version, StringComparison.OrdinalIgnoreCase))
+                {
+                    var uniquenessCheck = dto.ToEntity();
+                    uniquenessCheck.Id = existing.Id;
+
+                    if (!await IsUnique(uniquenessCheck))
+                        return false;
+                }
+
+                // -----------------------------
+                // Update scalar properties
+                // -----------------------------
+                existing.Title = dto.Title;
+                existing.Version = dto.Version;
+                existing.IsActive = dto.IsActive;
+                existing.ShouldGenerateQrCode = dto.ShouldGenerateQrCode;
+                existing.PartProducedIsSerialized = dto.PartProducedIsSerialized;
+                existing.PartProducedId = dto.PartProducedId;
+
+                // -----------------------------
+                // Resolve PartProduced
+                // -----------------------------
+                if (dto.PartProducedId.HasValue)
+                {
+                    existing.PartProduced = await context.PartDefinitions
+                        .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
+                }
+                else
+                {
+                    existing.PartProduced = null;
+                }
+
+                // -----------------------------
+                // Reconcile Products
+                // -----------------------------
+                var newProducts = dto.ProductIds.Count != 0
+                    ? await context.Products
+                        .Where(p => dto.ProductIds.Contains(p.Id))
+                        .ToListAsync()
+                    : new List<Product>();
+
+                existing.Products.Clear();
+
+                foreach (var product in newProducts)
+                    existing.Products.Add(product);
+
+                // -----------------------------
+                // Reconcile Nodes
+                // -----------------------------
+                // Rebuild node graph from DTO (safer than patching detached graph)
+                var mappedNodes = dto.Nodes.Select(n => n.ToEntity()).ToList();
+
+                existing.Nodes.Clear();
+
+                foreach (var node in mappedNodes)
+                {
+                    // Ensure PartNode PartDefinition is resolved
+                    if (node is PartNode partNode && partNode.PartDefinitionId > 0)
+                    {
+                        var resolvedPart = await context.PartDefinitions
+                            .FirstOrDefaultAsync(p => p.Id == partNode.PartDefinitionId);
+
+                        if (resolvedPart == null)
+                            throw new InvalidOperationException(
+                                $"PartDefinition {partNode.PartDefinitionId} not found.");
+
+                        partNode.PartDefinition = resolvedPart;
+                    }
+
+                    existing.Nodes.Add(node);
+                }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                ClearWorkInstructionCaches();
+
+                Log.Information("Successfully updated WorkInstruction {Id}", existing.Id);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Error updating WorkInstruction {Id}: {Exception}", dto.Id, ex);
+                return false;
+            }
+        });
     }
 
     private static async Task UpdateProducts(DbContext context, WorkInstruction existing, WorkInstruction updated)
@@ -961,5 +1154,13 @@ public class WorkInstructionService : IWorkInstructionService
             existing.Id,
             existing.PartDefinition.Id
         );
+    }
+
+    private void ClearWorkInstructionCaches()
+    {
+        _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+        _cache.Remove(WORK_INSTRUCTION_SUMMARY_CACHE_KEY);
+        _cache.Remove(WORK_INSTRUCTION_LATEST_CACHE_KEY);
+        _cache.Remove(WORK_INSTRUCTION_LATEST_SUMMARY_CACHE_KEY);
     }
 }

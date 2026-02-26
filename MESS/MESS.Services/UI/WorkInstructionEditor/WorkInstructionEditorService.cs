@@ -348,11 +348,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         {
             case EditorMode.CreateNew:
                 Current.OriginalId = null;
-                success = await _workInstructionService.Create(Current.ToEntity());
+                success = await _workInstructionService.CreateAsync(Current);
                 break;
 
             case EditorMode.EditExisting:
-                success = await _workInstructionService.UpdateWorkInstructionAsync(Current.ToEntity());
+                success = await _workInstructionService.UpdateWorkInstructionAsync(Current);
                 break;
 
             case EditorMode.CreateNewVersion:
@@ -360,7 +360,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                     throw new InvalidOperationException("OriginalId is required for versioning.");
 
                 // Create new version; already handles marking old versions inactive
-                var newVersion = await _workInstructionService.CreateNewVersionAsync(Current.ToEntity());
+                var newVersion = await _workInstructionService.CreateNewVersionAsync(Current);
                 if (newVersion == null)
                     return false;
 
@@ -371,6 +371,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 success = true;
                 break;
 
+            case EditorMode.None:
             default:
                 return false;
         }
