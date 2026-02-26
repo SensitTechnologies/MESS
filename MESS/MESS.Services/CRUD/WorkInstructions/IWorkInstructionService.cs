@@ -212,4 +212,19 @@ public interface IWorkInstructionService
     /// Thrown if <see cref="WorkInstructionFormDTO.OriginalId"/> is not provided.
     /// </exception>
     public Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto);
+    
+    /// <summary>
+    /// Associates additional work instructions with the specified product,
+    /// without removing existing associations.
+    /// </summary>
+    /// <param name="productId">The ID of the product to update.</param>
+    /// <param name="workInstructionIds">A list of work instruction IDs to associate.</param>
+    Task AddWorkInstructionsToProductAsync(int productId, List<int> workInstructionIds);
+
+    /// <summary>
+    /// Removes specific work instruction associations from a product.
+    /// </summary>
+    /// <param name="productId">The ID of the product to update.</param>
+    /// <param name="workInstructionIds">A list of work instruction IDs to remove.</param>
+    Task RemoveWorkInstructionsFromProductAsync(int productId, List<int> workInstructionIds);
 }

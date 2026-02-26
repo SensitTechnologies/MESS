@@ -372,8 +372,7 @@ public class ProductService : IProductService
             Log.Warning(ex, "Exception occurred while modifying product. Product ID: {ProductId}", dto.ProductId);
         }
     }
-
-
+    
     /// <inheritdoc />
     public async Task DeleteByIdAsync(int id)
     {
@@ -392,93 +391,4 @@ public class ProductService : IProductService
             Log.Warning("Product for removal not found. ID: {InputId}", id);
         }
     }
-    
-    /// <summary>
-    /// Associates additional work instructions with the specified product,
-    /// without removing existing associations.
-    /// </summary>
-    /// <param name="productId">The ID of the product to update.</param>
-    /// <param name="workInstructionIds">A list of work instruction IDs to associate.</param>
-    public async Task AddWorkInstructionsAsync(int productId, List<int> workInstructionIds)
-    {
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
-            var product = await context.Products
-                .Include(p => p.WorkInstructions)
-                .FirstOrDefaultAsync(p => p.Id == productId);
-
-            if (product is null)
-            {
-                Log.Warning("Product not found for ID {ProductId} while adding work instructions.", productId);
-                return;
-            }
-
-            // Defensive initialization to avoid null references
-            product.WorkInstructions ??= new List<WorkInstruction>();
-
-            var existingIds = product.WorkInstructions.Select(wi => wi.Id).ToHashSet();
-
-            foreach (var id in workInstructionIds)
-            {
-                if (!existingIds.Contains(id))
-                {
-                    var wi = await context.WorkInstructions.FindAsync(id);
-                    if (wi != null)
-                    {
-                        product.WorkInstructions.Add(wi);
-                    }
-                }
-            }
-
-            await context.SaveChangesAsync();
-            _cache.Remove(WORK_INSTRUCTION_LATEST_CACHE_KEY);
-            
-            Log.Information("Associated {Count} work instructions with product ID {ProductId}.", workInstructionIds.Count, productId);
-        }
-        catch (Exception e)
-        {
-            Log.Warning(e, "Exception while associating work instructions with product ID {ProductId}.", productId);
-        }
-    }
-    
-    /// <summary>
-    /// Removes specific work instruction associations from a product.
-    /// </summary>
-    /// <param name="productId">The ID of the product to update.</param>
-    /// <param name="workInstructionIds">A list of work instruction IDs to remove.</param>
-    public async Task RemoveWorkInstructionsAsync(int productId, List<int> workInstructionIds)
-    {
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
-            var product = await context.Products
-                .Include(p => p.WorkInstructions)
-                .FirstOrDefaultAsync(p => p.Id == productId);
-
-            if (product is null)
-            {
-                Log.Warning("Product not found for ID {ProductId} while removing work instructions.", productId);
-                return;
-            }
-
-            // Defensive initialization in case WorkInstructions is null
-            product.WorkInstructions ??= new List<WorkInstruction>();
-
-            // Remove only the matching work instructions by ID
-            product.WorkInstructions.RemoveAll(wi => workInstructionIds.Contains(wi.Id));
-
-            await context.SaveChangesAsync();
-            _cache.Remove(WORK_INSTRUCTION_LATEST_CACHE_KEY);
-            
-            Log.Information("Removed {Count} work instructions from product ID {ProductId}.", workInstructionIds.Count, productId);
-        }
-        catch (Exception e)
-        {
-            Log.Warning(e, "Exception while removing work instructions from product ID {ProductId}.", productId);
-        }
-    }
-
 }
