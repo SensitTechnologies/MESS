@@ -1,15 +1,15 @@
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using ClosedXML.Excel;
-using MESS.Data.Context;
 using MESS.Data.Models;
-using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.Products;
-using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.DTOs;
+using MESS.Services.DTOs.WorkInstructions.File;
+using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.File;
+using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.File;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -25,7 +25,6 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string VERSION_CELL = "B3";
     private const string SHOULD_GENERATE_QR_CODE_CELL = "B4";
     private const string PART_PRODUCED_IS_SERIALIZED = "B5";
-    private const string ORIGINAL_ID_CELL = "B6";
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
     private const int STEP_START_ROW = 9;
@@ -42,45 +41,23 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     
     private readonly IWebHostEnvironment _webHostEnvironment;
-    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
-    private readonly IWorkInstructionService _workInstructionService;
     private readonly IProductService _productService;
-    private readonly IPartDefinitionService _partDefinitionService;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionFileService"/> class.
     /// </summary>
-    /// <param name="contextFactory">
-    /// Factory used to create <see cref="ApplicationContext"/> instances for database operations.
-    /// </param>
-    /// <param name="webHostEnvironment">
-    /// Provides access to the hosting environment, including the web root path for reading and writing media files.
-    /// </param>
-    /// <param name="workInstructionService">
-    /// Service responsible for creating and managing <see cref="WorkInstruction"/> entities.
-    /// </param>
-    /// <param name="productService">
-    /// Service used to retrieve <see cref="Product"/> entities for associating with imported work instructions.
-    /// </param>
-    /// <param name="partDefinitionService">
-    /// Service for resolving <see cref="PartDefinition"/> entities referenced by part nodes in a work instruction.
-    /// </param>
     /// <remarks>
     /// This constructor injects all dependencies required for reading, writing, and mapping
     /// work instruction data between Excel and the database.
     /// </remarks>
-    public WorkInstructionFileService(IDbContextFactory<ApplicationContext> contextFactory, IWebHostEnvironment webHostEnvironment, 
-        IWorkInstructionService workInstructionService, IProductService productService, IPartDefinitionService partDefinitionService)
+    public WorkInstructionFileService(IWebHostEnvironment webHostEnvironment, IProductService productService)
     {
-        _contextFactory = contextFactory;
         _webHostEnvironment = webHostEnvironment;
-        _workInstructionService = workInstructionService;
         _productService = productService;
-        _partDefinitionService = partDefinitionService;
     }
     
     /// <inheritdoc />
-    public string? ExportToXlsx(WorkInstruction workInstructionToExport)
+    public string? ExportToXlsx(WorkInstructionFileDTO workInstructionToExport)
     {
         try
         {
@@ -92,14 +69,13 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
             worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).Value = workInstructionToExport.ShouldGenerateQrCode;
             worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).Value = workInstructionToExport.PartProducedIsSerialized;
-            worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId ?? workInstructionToExport.Id;
+            //worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId ?? workInstructionToExport.Id;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
-            if (workInstructionToExport.Products.Count > 0)
-            {
-                var productNames = string.Join(", ", workInstructionToExport.Products.Select(p => p.PartDefinition.Name));
-                worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
-            }
+            
+            var productNames = string.Join(", ", workInstructionToExport.AssociatedProductNames);
+            worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
+            
             
             // Setup headers
             worksheet.Cell("A1").Value = "Product";
@@ -107,7 +83,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell("A3").Value = "Version";
             worksheet.Cell("A4").Value = "QR Code";
             worksheet.Cell("A5").Value = "Serial Number";
-            worksheet.Cell("A6").Value = "Version History ID";
+            //worksheet.Cell("A6").Value = "Version History ID";
             worksheet.Range("A1:A6").Style.Font.Bold = true;
             
             // Setup Header Comments
@@ -118,11 +94,11 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                                          "False otherwise.";
             worksheet.Cell("C5").Value = "True if the work instruction allows the operator to input a product serial " +
                                          "number after the last step.  False otherwise.";
-            worksheet.Cell("C6").Value = "Optional integer field that can be used to link this work instruction to an " +
-                                         "already existing version history chain. Leave blank if unsure.";
+            //worksheet.Cell("C6").Value = "Optional integer field that can be used to link this work instruction to an " +
+                                         //"already existing version history chain. Leave blank if unsure.";
             
             //Styling the comments
-            var commentRange = worksheet.Range("C1:C6");
+            var commentRange = worksheet.Range("C1:C5");
             commentRange.Style.Font.FontColor = XLColor.Gray;
             commentRange.Style.Font.Italic = true;
             
@@ -153,11 +129,11 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
                 switch (node)
                 {
-                    case PartNode:
+                    case PartNodeFileDTO:
                     {
                         // Collect all consecutive part nodes
-                        var partGroup = new List<PartNode>();
-                        while (index < orderedNodes.Count && orderedNodes[index] is PartNode pn)
+                        var partGroup = new List<PartNodeFileDTO>();
+                        while (index < orderedNodes.Count && orderedNodes[index] is PartNodeFileDTO pn)
                         {
                             partGroup.Add(pn);
                             index++;
@@ -165,7 +141,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
                         // Combine all part definitions into a single string
                         var partStrings = partGroup
-                            .Select(pn => $"({pn.PartDefinition.Number}, {pn.PartDefinition.Name})");
+                            .Select(pn => pn.PartNameWithNumber);
 
                         worksheet.Cell(currentRow, PART_COLUMN).Value = string.Join(", ", partStrings);
 
@@ -173,7 +149,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         currentRow++;
                         break;
                     }
-                    case Step step:
+                    case StepNodeFileDTO step:
                         worksheet.Cell(currentRow, PART_COLUMN).Value = ""; // no part
 
                         worksheet.Cell(currentRow, STEP_NAME_COLUMN).Value = step.Name;
@@ -508,8 +484,8 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
         var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        var regex = new System.Text.RegularExpressions.Regex(@"(\w+)\s*=\s*(""[^""]*""|'[^']*'|[^\s]*)");
-        foreach (System.Text.RegularExpressions.Match m in regex.Matches(attrString))
+        var regex = new Regex(@"(\w+)\s*=\s*(""[^""]*""|'[^']*'|[^\s]*)");
+        foreach (Match m in regex.Matches(attrString))
         {
             var key = m.Groups[1].Value;
             var val = m.Groups[2].Value.Trim('"', '\'');
@@ -594,8 +570,6 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     {
         try
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
             using var memoryStream = new MemoryStream();
             await file.OpenReadStream(maxAllowedSize: SPREADSHEET_SIZE_LIMIT).CopyToAsync(memoryStream);
             memoryStream.Position = 0;
@@ -612,83 +586,42 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             // Retrieve Product and assign relationship
             var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
             var product = await _productService.GetByTitleAsync(productString);
+            
+            var fileName = file.Name;
+            var validationErrors = new List<string>();
 
+            if (string.IsNullOrWhiteSpace(workInstructionTitle))
+                validationErrors.Add("Work Instruction title is required.");
+
+            if (string.IsNullOrWhiteSpace(versionString))
+                validationErrors.Add("Version is required.");
+
+            if (string.IsNullOrWhiteSpace(productString))
+                validationErrors.Add("Product name is required.");
+
+            if (validationErrors.Any())
+            {
+                return WorkInstructionImportResult.ValidationFailure(fileName, validationErrors);
+            }
+            
             if (product == null)
             {
                 Log.Information("Product not found. Cannot create Work Instruction");
                 return WorkInstructionImportResult.NoProductFound(file.Name, productString);
             }
             
-            var originalIdString = worksheet.Cell(ORIGINAL_ID_CELL).GetString()?.Trim();
-            int? originalId = null;
-
-            if (int.TryParse(originalIdString, out var parsedId))
-            {
-                originalId = parsedId;
-            }
-            
-            // Prepare to query for duplicates
-            IQueryable<WorkInstruction> versionQuery;
-
-            if (originalId.HasValue)
-            {
-                versionQuery = context.WorkInstructions
-                    .Where(w => w.OriginalId == originalId.Value || w.Id == originalId.Value);
-            }
-            else
-            {
-                versionQuery = context.WorkInstructions
-                    .Where(w => w.Title == workInstructionTitle && w.Products.Any(p => p.Id == product.Id));
-            }
-
-            // Duplicate check
-            var duplicateExists = await versionQuery
-                .Where(w => w.Version == versionString)
-                .AnyAsync();
-
-            if (duplicateExists)
-            {
-                Log.Information("Unable to import Work Instruction. Duplicate version found for Title: {Title}, Version: {Version}.", workInstructionTitle, versionString);
-                return WorkInstructionImportResult.DuplicateWorkInstructionFound(file.Name, workInstructionTitle, versionString);
-            }
-            
             // Building the work instruction object with gathered data
-            var workInstruction = new WorkInstruction
+            var workInstruction = new WorkInstructionFileDTO
             {
                 Title = workInstructionTitle,
                 Version = versionString,
-                Products = [],
+                AssociatedProductNames = [],
                 Nodes = [],
                 ShouldGenerateQrCode = shouldGenerateQrCode,
                 PartProducedIsSerialized = partProducedIsSerialized,
-                IsLatest = true
             };
             
-            // Handle lineage
-            if (originalId.HasValue)
-            {
-                var existingChain = await context.WorkInstructions
-                    .Where(w => w.OriginalId == originalId.Value || w.Id == originalId.Value)
-                    .ToListAsync();
-
-                if (existingChain.Any())
-                {
-                    Log.Information("Found {Count} existing work instructions with OriginalId {OriginalId} to mark as not latest", existingChain.Count, originalId.Value);
-
-                    foreach (var old in existingChain)
-                    {
-                        old.IsLatest = false;
-                    }
-                    
-                    Log.Information("Saving changes to demote old versions");
-                    await context.SaveChangesAsync();
-                    Log.Information("Demotion save completed");
-
-                    workInstruction.OriginalId = originalId.Value;
-                }
-            }
-            
-            workInstruction.Products.Add(product);
+            workInstruction.AssociatedProductNames.Add(productString);
 
             // Create all steps within instruction and add part nodes where logical
             // Start from row 9 (assuming header row is 8)
@@ -697,8 +630,8 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
             while (true)
             {
-                var partCell = worksheet.Cell(currentRow, PART_COLUMN).GetString()?.Trim();
-                var stepBodyCell = worksheet.Cell(currentRow, STEP_BODY_COLUMN).GetString()?.Trim();
+                var partCell = worksheet.Cell(currentRow, PART_COLUMN).GetString().Trim();
+                var stepBodyCell = worksheet.Cell(currentRow, STEP_BODY_COLUMN).GetString().Trim();
 
                 var isPartRow = !string.IsNullOrWhiteSpace(partCell);
                 var isStepRow = !string.IsNullOrWhiteSpace(stepBodyCell);
@@ -711,68 +644,57 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
                 if (isPartRow)
                 {
-                    // Parse part list string, e.g. "(12345, Widget A), (67890, Widget B)"
-                    var partDefinitions = await GetPartsListFromString(partCell ?? string.Empty);
+                    var parsedParts = ParsePartsListFromString(partCell);
 
-                    if (partDefinitions != null && partDefinitions.Any())
+                    foreach (var parsedPart in parsedParts)
                     {
-                        // For each part definition, create a separate PartNode
-                        foreach (var partDefinition in partDefinitions)
+                        workInstruction.Nodes.Add(new PartNodeFileDTO
                         {
-                            var partNode = new PartNode
-                            {
-                                NodeType = WorkInstructionNodeType.Part,
-                                Position = position,
-                                PartDefinition = partDefinition
-                            };
-
-                            workInstruction.Nodes.Add(partNode);
-
-                            Log.Information(
-                                "Imported PartNode at position {Position} with PartDefinition ID {Id}, Name {Name}, Number {Number}",
-                                position,
-                                partDefinition.Id,
-                                partDefinition.Name,
-                                partDefinition.Number
-                            );
-                        }
+                            Position = position++,
+                            PartName = parsedPart.PartName,
+                            PartNumber = parsedPart.PartNumber
+                        });
                     }
                 }
                 else if (isStepRow)
                 {
-                    var step = new Step
+                    var step = new StepNodeFileDTO
                     {
-                        Name = System.Text.RegularExpressions.Regex.Replace(
+                        Name = Regex.Replace(
                             string.Join(" ", worksheet.Cell(currentRow, STEP_NAME_COLUMN)
                                 .GetRichText()
                                 .Select(r => r.Text.Trim())),
                             @"\s+", " ").Trim(),
+
                         Body = ProcessCellText(worksheet.Cell(currentRow, STEP_BODY_COLUMN), workbook),
                         DetailedBody = ProcessCellText(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), workbook),
                         NodeType = WorkInstructionNodeType.Step,
-                        Position = position
+                        Position = position++
                     };
 
                     await ProcessStepMedia(worksheet, step, currentRow);
 
                     workInstruction.Nodes.Add(step);
-                    Log.Information("Imported Step at position {Position} with title {Title}", position, step.Body);
-                }
 
-                position++;
+                    Log.Information("Imported Step at position {Position} with title {Title}", step.Position, step.Body);
+                }
+                
                 currentRow++;
             }
             
-            var fileName = file.Name;
-
-            if (await _workInstructionService.Create(workInstruction))
+            if (!workInstruction.Nodes.Any())
             {
-                Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
-                // Not invalidating cache here, since it gets invalidated on successful creation
-                return WorkInstructionImportResult.Success(fileName, workInstruction);
+                return WorkInstructionImportResult.ValidationFailure(
+                    fileName,
+                    ["No steps or parts were found in the spreadsheet."]
+                );
             }
-
-            return WorkInstructionImportResult.Failure(fileName);
+            
+            //var fileName = file.Name;
+            
+            Log.Information("Successfully imported WorkInstruction from Excel: {title}", workInstruction.Title);
+            // Not invalidating cache here, since it gets invalidated on successful creation
+            return WorkInstructionImportResult.Success(fileName, workInstruction);
         }
         catch (Exception e)
         {
@@ -782,7 +704,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
             var error = new ImportError
             {
-                File = string.IsNullOrEmpty(fileName) ? fileName : "Unknown",
+                File = string.IsNullOrEmpty(fileName) ? "Unknown" : fileName,
                 Message = e.Message,
                 ErrorType = e.GetType().Name
             };
@@ -804,10 +726,6 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 case NullReferenceException:
                     error.ErrorType = "Missing Data";
                     error.Message = "Required data is missing from the Excel file";
-                    break;
-                case DbUpdateException:
-                    error.ErrorType = "Database Error";
-                    error.Message = "Failed to save work instruction to database";
                     break;
                 case InvalidOperationException:
                     error.ErrorType = "Processing Error";
@@ -838,7 +756,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     /// Logs any exceptions that occur during the processing of step media, such as file I/O errors or 
     /// issues with the Excel worksheet structure.
     /// </exception>
-    private async Task ProcessStepMedia(IXLWorksheet worksheet, Step step, int row)
+    private async Task ProcessStepMedia(IXLWorksheet worksheet, StepNodeFileDTO step, int row)
     {
         try
         {
@@ -1026,67 +944,32 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         }
     }
     
-    /// <summary>
-    /// Extracts a list of part definitions from a formatted string.
-    /// </summary>
-    /// <param name="partsListString">
-    /// String in format: "(PART_NUMBER, PART_NAME), (PART_NUMBER, PART_NAME), ..."
-    /// </param>
-    /// <returns>
-    /// List of <see cref="PartDefinition"/> objects if successful; null otherwise.
-    /// </returns>
-    /// <remarks>
-    /// Uses regex to parse the parts list string and either retrieve existing part definitions
-    /// from the database or create new ones as needed.
-    /// </remarks>
-    private async Task<List<PartDefinition>?> GetPartsListFromString(string partsListString)
+    private List<(string PartName, string? PartNumber)> ParsePartsListFromString(string input)
     {
-        try
+        var results = new List<(string, string?)>();
+
+        if (string.IsNullOrWhiteSpace(input))
+            return results;
+
+        var matches = PartsListRegex().Matches(input);
+
+        foreach (Match match in matches)
         {
-            if (string.IsNullOrWhiteSpace(partsListString))
-                return null;
+            if (!match.Success)
+                continue;
 
-            var partDefinitions = new List<PartDefinition>();
-            var regex = PartsListRegex();
-            var matches = regex.Matches(partsListString);
+            var partNumber = match.Groups[1].Value.Trim();
+            var partName = match.Groups[2].Value.Trim();
 
-            foreach (System.Text.RegularExpressions.Match match in matches)
-            {
-                // Expecting format: (NUMBER, NAME)
-                if (match.Groups.Count >= 3)
-                {
-                    var partToAdd = new PartDefinition
-                    {
-                        Number = match.Groups[1].Value.Trim(),
-                        Name = match.Groups[2].Value.Trim()
-                    };
-
-                    // Persist or retrieve existing part definition
-                    var persistedPart = await _partDefinitionService.GetOrAddPartAsync(partToAdd);
-
-                    if (persistedPart != null)
-                    {
-                        partDefinitions.Add(persistedPart);
-                    }
-                    else
-                    {
-                        Log.Warning("Unable to find or create PartDefinition when importing XLSX. Parts List: {PartsList}", partsListString);
-                    }
-                }
-            }
-
-            return partDefinitions.Count > 0 ? partDefinitions : null;
+            results.Add((partName, partNumber));
         }
-        catch (Exception e)
-        {
-            Log.Warning("Exception while parsing parts list string during Work Instruction import. Exception: {Exception}", e);
-            return null;
-        }
+
+        return results;
     }
     
     /// <summary>
     /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"
     /// </summary>
-    [System.Text.RegularExpressions.GeneratedRegex(@"\(([^,]+),\s*([^)]+)\)")]
-    private static partial System.Text.RegularExpressions.Regex PartsListRegex();
+    [GeneratedRegex(@"\(([^,]+),\s*([^)]+)\)")]
+    private static partial Regex PartsListRegex();
 }

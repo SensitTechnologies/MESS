@@ -1,4 +1,6 @@
 @using MESS.Data.Models
+@using MESS.Services.DTOs.WorkInstructions.File
+@using MESS.Services.DTOs.WorkInstructions.Form
 
 @if (Visible)
 {
@@ -40,11 +42,12 @@
     /// Passes the imported <see cref="WorkInstruction"/> instance to the parent component.
     /// </summary>
     [Parameter]
-    public EventCallback<WorkInstruction> OnImportComplete { get; set; }
+    public EventCallback<WorkInstructionFormDTO> OnImportComplete { get; set; }
 
-    private async Task HandleImportComplete(WorkInstruction wi)
+    private async Task HandleImportComplete(WorkInstructionFileDTO fileDto)
     {
-        await OnImportComplete.InvokeAsync(wi);
+
+        await OnImportComplete.InvokeAsync();
         await Close();
     }
 

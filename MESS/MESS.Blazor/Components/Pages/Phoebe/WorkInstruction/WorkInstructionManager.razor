@@ -7,6 +7,13 @@
 @using MESS.Blazor.Components.Navigator
 @using MESS.Services.CRUD.Products
 @using MESS.Services.CRUD.WorkInstructions
+@using MESS.Services.DTOs.PartDefinitions
+@using MESS.Services.DTOs.Products.Detail
+@using MESS.Services.DTOs.WorkInstructions.Form
+@using MESS.Services.DTOs.WorkInstructions.Nodes.Form
+@using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form
+@using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form
+@using MESS.Services.DTOs.WorkInstructions.Summary
 @using MESS.Services.UI.WorkInstructionEditor
 @using Microsoft.AspNetCore.Authorization
 @using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
@@ -20,7 +27,7 @@
 @attribute [Authorize(Roles = "Technician, Administrator")]
 
 <MenuBarPhoebe 
-    Products="@Products"
+    Products="@AllProducts"
     WorkInstructions="@FilteredWorkInstructions"
     SelectedProductId="@SelectedProductId"
     SelectedWorkInstructionId="@SelectedWorkInstructionId"
@@ -46,7 +53,7 @@
     {
         <div class="flex-grow-1">
             <WorkInstructionNodeManagerList
-                WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNode>()" 
+                WorkInstructionNodes="WorkInstructionEditorService.Current?.Nodes ?? new List<WorkInstructionNodeFormDTO>()" 
                 OnChanged="OnListChanged" 
                 OnNewNodeAt="NewNodeAt"
                 OnNodeRemoved="HandleNodeRemoved" />
@@ -87,14 +94,14 @@
     private bool InstructionHasPart => WorkInstructionEditorService.CurrentHasParts();
     private bool InstructionHasSteps => WorkInstructionEditorService.CurrentHasSteps();
     
-    private List<Product> Products { get; set; } = new();
-    private List<WorkInstruction> AllWorkInstructions { get; set; } = new();
+    private List<ProductDetailDTO> AllProducts { get; set; } = new();
+    private List<WorkInstructionSummaryDTO> AllWorkInstructions { get; set; } = new();
 
-    private List<WorkInstruction> FilteredWorkInstructions =>
+    private List<WorkInstructionSummaryDTO> FilteredWorkInstructions =>
         SelectedProductId == null || SelectedProductId == -1
             ? AllWorkInstructions
             : AllWorkInstructions
-                .Where(wi => wi.Products?.Any(p => p.Id == SelectedProductId) == true)
+                .Where(wi => wi.Products?.Any(p => p.ProductId == SelectedProductId) == true)
                 .ToList();
 
     private int? SelectedProductId { get; set; }
@@ -108,10 +115,9 @@
         WorkInstructionEditorService.OnChanged += HandleEditorChanged;
 
         // Load initial data
-        Products = (await ProductService.GetAllAsync())?
-            .Where(p => p.IsActive)
-            .ToList() ?? new List<Product>();
-        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+        AllProducts = (await ProductService.GetAllDetailsAsync()).Where(p => p.IsActive)
+            .ToList();
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
         
         await base.OnInitializedAsync();
     }
@@ -156,7 +162,7 @@
 
         try
         {
-            bool isEditable = await WorkInstructionService.IsEditable(current);
+            bool isEditable = await WorkInstructionService.IsEditable(current.ToEntity());
 
             bool success;
             if (isEditable)
@@ -181,28 +187,49 @@
                 {
                     // Create new version, then save
                     await WorkInstructionEditorService.LoadForNewVersionFromCurrentAsync();
+
                     success = await WorkInstructionEditorService.SaveAsync();
+
                     if (success)
                     {
                         ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+
                         if (WorkInstructionEditorService.Current != null)
-                            await WorkInstructionEditorService.LoadForEditAsync(WorkInstructionEditorService.Current.Id);
+                        {
+                            // Ensure Current.Id has a value before calling LoadForEditAsync
+                            if (!WorkInstructionEditorService.Current.Id.HasValue)
+                            {
+                                // Should never happen after SaveAsync, but handle just in case
+                                WorkInstructionEditorService.Reset();
+                                ToastService.ShowWarning("The new version was created but could not be loaded for editing.");
+                            }
+                            else
+                            {
+                                await WorkInstructionEditorService.LoadForEditAsync(
+                                    WorkInstructionEditorService.Current.Id.Value
+                                );
+                            }
+                        }
                         else
+                        {
                             WorkInstructionEditorService.Reset();
+                        }
                     }
                     else
+                    {
                         ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
+                    }
                 }
             }
 
             if (success)
             {
                 // Refresh all latest work instructions list after save
-                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
                 
-                Products = (await ProductService.GetAllAsync())?
+                AllProducts = (await ProductService.GetAllDetailsAsync())?
                     .Where(p => p.IsActive)
-                    .ToList() ?? new List<Product>();
+                    .ToList() ?? [];
                 StateHasChanged();
             }
         }
@@ -224,7 +251,14 @@
         
         try
         {
-            bool success = await WorkInstructionService.DeleteAllVersionsByIdAsync(current.Id);
+            if (!current.Id.HasValue)
+            {
+                ToastService.ShowError("Cannot delete: Work Instruction ID is null.");
+                return;
+            }
+
+            bool success = await WorkInstructionService.DeleteAllVersionsByIdAsync(current.Id.Value);
+            
             if (success)
                 ToastService.ShowSuccess("Work Instructions deleted successfully.");
             else
@@ -233,7 +267,7 @@
             if (success)
             {
                 // Refresh all latest work instructions list after delete
-                AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync() ?? new List<WorkInstruction>();
+                AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
                 WorkInstructionEditorService.Reset();
             }
         }
@@ -284,14 +318,14 @@
         }
     }
     
-    private async Task HandleImportComplete(WorkInstruction importedWorkInstruction)
+    private async Task HandleImportComplete(WorkInstructionFormDTO importedWorkInstruction)
     {
         ToastService.ShowSuccess(
             $"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}",
             3000);
 
         // Refresh latest instructions list
-        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
 
         // Reset product filter to show all
         SelectedProductId = null;
@@ -300,33 +334,41 @@
         SelectedWorkInstructionId = importedWorkInstruction.Id;
 
         // Load into editor service to sync editor state
-        await WorkInstructionEditorService.LoadForEditAsync(importedWorkInstruction.Id);
+        if (importedWorkInstruction.Id.HasValue)
+        {
+            SelectedWorkInstructionId = importedWorkInstruction.Id;
+            await WorkInstructionEditorService.LoadForEditAsync(importedWorkInstruction.Id.Value);
+        }
+        else
+        {
+            ToastService.ShowError("Imported Work Instruction has no ID.");
+        }
 
         // Trigger UI refresh
         StateHasChanged();
     }
     
-    private async Task HandleNewInstruction((string Title, List<Product> Products) workInstructionData)
+    private async Task HandleNewInstruction((string Title, List<ProductDetailDTO> Products) workInstructionData)
     {
+        // Start the new work instruction in the editor
         WorkInstructionEditorService.StartNew(workInstructionData.Title, workInstructionData.Products);
-        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
+
+        // Load all latest work instruction summaries
+        AllWorkInstructions = (await WorkInstructionService.GetAllLatestSummariesAsync()).ToList();
+
         ToastService.ShowInfo($"Started New Work Instruction \"{workInstructionData.Title}\"");
-        
-        //Setting the Dropdown to the New Unsaved Instruction
-        if (WorkInstructionEditorService.Current != null)
-        {
-            AllWorkInstructions.Add(WorkInstructionEditorService.Current);
-            SelectedWorkInstructionId = WorkInstructionEditorService.Current.Id;
-        }
-        
+
+        // Code to load the item in the dropdown could go here.
+
         StateHasChanged();
     }
+
     
-    private async Task HandleSaveAs((string Title, List<Product> Products) workInstructionData)
+    private async Task HandleSaveAs((string Title, List<ProductDetailDTO> Products) workInstructionData)
     {
         await WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
         await WorkInstructionEditorService.SaveAsync();
-        AllWorkInstructions = await WorkInstructionService.GetAllLatestAsync();
+        AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
         ToastService.ShowInfo($"Saved new work instruction \"{workInstructionData.Title}\"");
         if (WorkInstructionEditorService.Current != null)
         {
@@ -336,7 +378,8 @@
         StateHasChanged();
     }
     
-    private async Task HandleEditAssociations((string Title, List<Product> Products) workInstructionData)
+    private async Task HandleEditAssociations(
+        (string Title, List<ProductDetailDTO> Products) workInstructionData)
     {
         if (WorkInstructionEditorService.Current != null)
         {
@@ -345,11 +388,14 @@
                 WorkInstructionEditorService.Current.Title = workInstructionData.Title;
             }
 
-            WorkInstructionEditorService.Current.Products = workInstructionData.Products;
+            WorkInstructionEditorService.Current.ProductIds =
+                workInstructionData.Products
+                    .Select(p => p.ProductId)
+                    .ToList();
         }
 
         SelectedWorkInstructionId = null;
-            
+
         StateHasChanged();
         await MarkEditorDirty();
     }
@@ -366,7 +412,7 @@
         return Task.CompletedTask;
     }
 
-    private async Task OnListChanged(WorkInstructionNode? node)
+    private async Task OnListChanged(WorkInstructionNodeFormDTO? node)
     {
         RecalculatePositions();
         WorkInstructionEditorService.MarkDirty();
@@ -384,16 +430,16 @@
     
     private async Task NewNodeAt((string nodeType, int index)args)
     {
-        WorkInstructionNode newNode;
+        WorkInstructionNodeFormDTO newNode;
 
         switch (args.nodeType)
         {
             case part:
-                newNode = new PartNode { NodeType = WorkInstructionNodeType.Part, PartDefinition = new PartDefinition { Name = "", Number = "" } };
+                newNode = new PartNodeFormDTO { NodeType = WorkInstructionNodeType.Part, PartDefinition = new PartDefinitionDTO { Name = "", Number = "" } };
                 break;
 
             default:
-                newNode = new Step {NodeType = WorkInstructionNodeType.Step, Name = "", Body = "", DetailedBody = "" };
+                newNode = new StepNodeFormDTO {NodeType = WorkInstructionNodeType.Step, Name = "", Body = "", DetailedBody = "" };
                 break;
         }
 
@@ -420,7 +466,7 @@
         }
     }
 
-    private async Task ScrollToElement(WorkInstructionNode node)
+    private async Task ScrollToElement(WorkInstructionNodeFormDTO node)
     {
         string elementId = $"node-{node.Position}";
         if (scrollToModule != null)
@@ -459,9 +505,9 @@
         ToastService.ShowInfo("Version restored from history.");
     }
     
-    private void HandleNodeRemoved(WorkInstructionNode removedNode)
+    private void HandleNodeRemoved(WorkInstructionNodeFormDTO removedNode)
     {
         // Add the removed node to the queue for deletion in the editor service
-        WorkInstructionEditorService.QueueNodeForDeletion(removedNode);
+        WorkInstructionEditorService.QueueNodeForDeletion(removedNode.Id);
     }
 }

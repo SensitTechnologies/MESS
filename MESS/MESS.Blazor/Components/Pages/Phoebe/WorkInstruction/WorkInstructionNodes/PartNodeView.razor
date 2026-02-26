@@ -1,4 +1,7 @@
 @using MESS.Data.Models
+@using MESS.Services.DTOs.PartDefinitions
+@using MESS.Services.DTOs.WorkInstructions.Nodes.Form
+@using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form
 @inherits ComponentBase
 
 @if (PartNode?.PartDefinition is not null)
@@ -54,13 +57,13 @@ else
 @code {
 
     [Parameter]
-    public EventCallback<(WorkInstructionNode node, string action)> OnNodeAction { get; set; }
+    public EventCallback<(WorkInstructionNodeFormDTO node, string action)> OnNodeAction { get; set; }
 
     [Parameter]
     public EventCallback OnChanged { get; set; }
 
     [Parameter, EditorRequired]
-    public PartNode? PartNode { get; set; }
+    public PartNodeFormDTO? PartNode { get; set; }
 
     private async Task HandleNodeAction(string action)
     {
@@ -80,9 +83,9 @@ else
 
         var newValue = e.Value?.ToString() ?? string.Empty;
 
-        if (propertyName == nameof(PartDefinition.Number))
+        if (propertyName == nameof(PartDefinitionDTO.Number))
             PartNode.PartDefinition.Number = newValue;
-        else if (propertyName == nameof(PartDefinition.Name))
+        else if (propertyName == nameof(PartDefinitionDTO.Name))
             PartNode.PartDefinition.Name = newValue;
 
         await NotifyChangedAsync();

@@ -1,5 +1,6 @@
 using MESS.Data.Models;
 using MESS.Services.DTOs;
+using MESS.Services.DTOs.WorkInstructions.File;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace MESS.Services.Files.WorkInstructions;
@@ -37,7 +38,7 @@ public interface IWorkInstructionFileService
     /// 
     /// The file will be saved with a filename based on the work instruction title and a timestamp.
     /// </remarks>
-    public string? ExportToXlsx(WorkInstruction workInstructionToExport);
+    public string? ExportToXlsx(WorkInstructionFileDTO workInstructionToExport);
     
     /// <summary>
     /// Imports work instructions from an Excel file.

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using MESS.Data.Models;
+using MESS.Services.DTOs.WorkInstructions.File;
 using Microsoft.Extensions.Primitives;
 
 namespace MESS.Services.DTOs;
@@ -56,7 +57,7 @@ public class WorkInstructionImportResult
     /// <summary>
     /// Gets or sets the work instruction associated with the import operation.
     /// </summary>
-    public WorkInstruction? WorkInstruction { get; set; }
+    public WorkInstructionFileDTO? WorkInstruction { get; set; }
 
     /// <summary>
     /// Creates a successful result for a work instruction import operation.
@@ -64,7 +65,7 @@ public class WorkInstructionImportResult
     /// <param name="fileName">The file name associated with the import.</param>
     /// <param name="instruction">The successfully imported work instruction.</param>
     /// <returns>A <see cref="WorkInstructionImportResult"/> indicating success.</returns>
-    public static WorkInstructionImportResult Success(string fileName, WorkInstruction instruction)
+    public static WorkInstructionImportResult Success(string fileName, WorkInstructionFileDTO instruction)
     {
         return new WorkInstructionImportResult
         {
@@ -146,6 +147,40 @@ public class WorkInstructionImportResult
                 Message = $"There exists a work instruction in the database with the same Title: {workInstructionTitle} and Version: {workInstructionVersion}. Please ensure you are creating a unique Work Instruction, by changing the Title and/or Version."
             },
             Status = ImportStatus.Error
+        };
+    }
+    
+    /// <summary>
+    /// Creates a <see cref="WorkInstructionImportResult"/> representing a validation failure
+    /// for the specified file.
+    /// </summary>
+    /// <param name="file">
+    /// The name of the file that failed validation.
+    /// </param>
+    /// <param name="errors">
+    /// A collection of validation error messages associated with the file.
+    /// </param>
+    /// <returns>
+    /// A <see cref="WorkInstructionImportResult"/> configured with an error status
+    /// and a combined validation error message.
+    /// </returns>
+    /// <remarks>
+    /// The returned result indicates that the import did not succeed and contains
+    /// validation details describing the failure.
+    /// </remarks>
+    public static WorkInstructionImportResult ValidationFailure(string file, IEnumerable<string> errors)
+    {
+        return new WorkInstructionImportResult
+        {
+            HasValue = false,
+            FileName = file,
+            Status = ImportStatus.Error,
+            ImportError = new ImportError
+            {
+                File = file,
+                Message = string.Join(" ", errors),
+                ErrorType = "Validation Error"
+            }
         };
     }
 }

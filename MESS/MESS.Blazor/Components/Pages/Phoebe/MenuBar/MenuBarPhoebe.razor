@@ -1,13 +1,17 @@
 ﻿@namespace MESS.Blazor.Components.Pages.Phoebe.MenuBar
 @using System.ComponentModel
 @using Microsoft.AspNetCore.Components.Authorization
-@using MESS.Data.Models
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
 @using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
 @using MESS.Services.CRUD.PartDefinitions
 @using MESS.Services.CRUD.WorkInstructions
+@using MESS.Services.DTOs.Products.Detail
+@using MESS.Services.DTOs.WorkInstructions.File
+@using MESS.Services.DTOs.WorkInstructions.Form
+@using MESS.Services.DTOs.WorkInstructions.Summary
+@using MESS.Services.DTOs.WorkInstructions.Version
 @using MESS.Services.UI.DarkMode
 @using MESS.Services.UI.WorkInstructionEditor
 @inject AuthenticationStateProvider AuthProvider
@@ -21,8 +25,8 @@
     <button class="btn-small" title="Toggle Sidebar" @onclick="ToggleSidebar" aria-label="Toggle sidebar">☰</button>
 
     <div class="menu-left-buttons">
-        <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@open">File</button>
-        <FluentMenu Anchor="btnOpen1" Open="@open" OpenChanged="@(val => open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+        <button class="btn-small" @onclick="ToggleFileMenu" id="btnOpen1" aria-expanded="@_open">File</button>
+        <FluentMenu Anchor="btnOpen1" Open="@_open" OpenChanged="@(val => _open = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem OnClick="@ShowNewInstructionDialog">New</FluentMenuItem>
             <FluentDivider></FluentDivider>
             <FluentMenuItem OnClick="@(() => TriggerImport())">Import</FluentMenuItem>
@@ -36,8 +40,8 @@
             </AuthorizeView>
         </FluentMenu>
 
-        <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@openOptions">Options</button>
-        <FluentMenu Anchor="btnOpen2" Open="@openOptions" OpenChanged="@(val => openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
+        <button class="btn-small" @onclick="ToggleOptionsMenu" id="btnOpen2" aria-expanded="@_openOptions">Options</button>
+        <FluentMenu Anchor="btnOpen2" Open="@_openOptions" OpenChanged="@(val => _openOptions = val)" OnMenuChange="OnMenuChange" VerticalThreshold="170">
             <FluentMenuItem Checked="@(CurrentInstruction?.ShouldGenerateQrCode ?? false)"
                             OnClick="ToggleQrCode" Disabled="@(!HasInstruction)">Generates QR Code</FluentMenuItem>
             <FluentMenuItem Checked="@(CurrentInstruction?.PartProducedIsSerialized ?? false)" 
@@ -141,34 +145,34 @@
 
 <!-- Version History Sidebar Component -->
 <VersionHistoryMenu
-    IsOpen="isVersionHistoryOpen"
+    IsOpen="_isVersionHistoryOpen"
     OnToggle="ToggleVersionHistorySidebar"
     Versions="_versionHistoryList"
-    CurrentInstruction="CurrentInstruction"
+    CurrentVersionId="CurrentInstruction?.Id"
     IsLoading="_isLoadingVersions"
     OnRestore="HandleRestoreVersion"
     OnDelete="HandleDeleteVersion" />
 
 <WorkInstructionImportDialog 
-    Visible="@showImportDialog" 
+    Visible="@_showImportDialog" 
     VisibleChanged="HandleImportDialogClosed" 
     OnImportComplete="HandleImportComplete" />
 
 <WorkInstructionExportDialog
-    WorkInstruction="CurrentInstruction"
-    Visible="@showExportDialog"
-    VisibleChanged="@(val => showExportDialog = val)" />
+    WorkInstruction="GetExportFileDTO()"
+    Visible="@_showExportDialog"
+    VisibleChanged="@(val => _showExportDialog = val)" />
 
 <ProductAssociationDialog 
     AllProducts="@Products"
     SelectedProducts="@DialogSelectedProducts"
     SelectedProductsChanged="OnDialogSelectedProductsChanged"
-    IsVisible="@isAnyDialogVisible"
-    IsVisibleChanged="@(val => isAnyDialogVisible = val)"
-    AllowsRenaming="@associationDialogAllowsRenaming"
-    HeaderText="@dialogHeaderText"
-    ConfirmButtonText="@confirmButtonText"
-    OnConfirmed="@OnDialogConfirmed" />
+    IsVisible="@_isAnyDialogVisible"
+    IsVisibleChanged="@(val => _isAnyDialogVisible = val)"
+    AllowsRenaming="@_associationDialogAllowsRenaming"
+    HeaderText="@_dialogHeaderText"
+    ConfirmButtonText="@_confirmButtonText"
+    OnConfirmed="@_onDialogConfirmed" />
 
 @code {
     private string? ActiveLineOperator { get; set; }
@@ -184,7 +188,7 @@
     /// Event callback triggered when the user selects "New" to create a new work instruction. This passes up a work
     /// instruction title and list of associated products.
     /// </summary>
-    [Parameter] public EventCallback<(string Title, List<Product> Products)> OnNewConfirmed { get; set; }
+    [Parameter] public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnNewConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Save" to persist current edits to the work instruction either
@@ -197,13 +201,13 @@
     /// Callback invoked when the user confirms the "Save As" action from the dialog.
     /// The associated products and work instruction title are passed up.
     /// </summary>
-    [Parameter] public EventCallback<(string Title, List<Product> Products)> OnSaveAsConfirmed { get; set; }
+    [Parameter] public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnSaveAsConfirmed { get; set; }
     
     /// <summary>
     /// Callback invoked when the user confirms the "Edit Product Associations" action from the dialog.
     /// The associated products and work instruction title are passed up.
     /// </summary>
-    [Parameter] public EventCallback<(string Title, List<Product> Products)> OnEditAssociationsConfirmed { get; set; }
+    [Parameter] public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnEditAssociationsConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Delete" to completely remove a work instruction.
@@ -233,7 +237,7 @@
     /// Event callback triggered after a work instruction has successfully been imported.
     /// </summary>
     [Parameter]
-    public EventCallback<WorkInstruction> OnImportComplete { get; set; }
+    public EventCallback<WorkInstructionFormDTO> OnImportComplete { get; set; }
 
     /// <summary>
     /// Indicates whether there are unsaved changes in the current work instruction editor session.
@@ -245,7 +249,7 @@
     /// The currently loaded work instruction being edited. 
     /// Used to display or bind title, version, and other properties in the toolbar.
     /// </summary>
-    [Parameter] public WorkInstruction? CurrentInstruction { get; set; }
+    [Parameter] public WorkInstructionFormDTO? CurrentInstruction { get; set; }
     
     /// <summary>
     /// Event callback triggered when a product is selected.
@@ -271,40 +275,40 @@
     [Parameter]
     public int? SelectedWorkInstructionId { get; set; }
 
-    private bool open = false;
-    private bool openOptions = false;
-    private string darkModeIcon = "bi bi-moon-stars";
+    private bool _open = false;
+    private bool _openOptions = false;
+    private string _darkModeIcon = "bi bi-moon-stars";
     private bool HasInstruction => CurrentInstruction != null;
     
-    private List<WorkInstruction> _versionHistoryList = new();
+    private List<WorkInstructionVersionDTO> _versionHistoryList = [];
     private bool _isLoadingVersions = false;
     
-    private bool showImportDialog;
-    private bool showExportDialog = false;
+    private bool _showImportDialog;
+    private bool _showExportDialog = false;
     
-    private bool associationDialogAllowsRenaming;
+    private bool _associationDialogAllowsRenaming;
     
-    private bool isAnyDialogVisible;
-    private string dialogHeaderText = "";
-    private string confirmButtonText = "";
-    private EventCallback<(string Title, List<Product> Products)> OnDialogConfirmed;
+    private bool _isAnyDialogVisible;
+    private string _dialogHeaderText = "";
+    private string _confirmButtonText = "";
+    private EventCallback<(string Title, List<ProductDetailDTO> Products)> _onDialogConfirmed;
     
-    private List<Product> DialogSelectedProducts { get; set; } = new List<Product>();
+    private List<ProductDetailDTO> DialogSelectedProducts { get; set; } = [];
 
     /// <summary>
     /// The list of products to show in the dropdown.
     /// </summary>
     [Parameter]
-    public List<Product>? Products { get; set; }
+    public List<ProductDetailDTO>? Products { get; set; }
 
     /// <summary>
     /// The list of work instructions to show in the dropdown.
     /// </summary>
     [Parameter]
-    public List<WorkInstruction>? WorkInstructions { get; set; }
+    public List<WorkInstructionSummaryDTO>? WorkInstructions { get; set; }
 
     // ** Version History Sidebar Open State **
-    private bool isVersionHistoryOpen = false;
+    private bool _isVersionHistoryOpen = false;
     
     private string _partProducedName = "";
     private string PartProducedName
@@ -324,7 +328,7 @@
     // called only from the input field
     private async Task OnPartProducedInput(ChangeEventArgs e)
     {
-        PartProducedName = CurrentInstruction?.PartProduced?.Name ?? "";
+        PartProducedName = CurrentInstruction?.ProducedPartName ?? "";
         await OnPartProducedChangedDebounced();
     }
     
@@ -332,7 +336,7 @@
     private string PartStatusTooltip => WillCreateNewPart ? "New part will be created" : "Part already exists";
     private CancellationTokenSource? _debounceCts;
     
-    private WorkInstruction? _previousInstruction;
+    private WorkInstructionFormDTO? _previousInstruction;
 
     /// <summary>
     /// Called when the component is initialized.
@@ -360,7 +364,7 @@
             _previousInstruction = CurrentInstruction;
         
             // Update text field without triggering debounce
-            PartProducedName = CurrentInstruction?.PartProduced?.Name ?? "";
+            PartProducedName = CurrentInstruction?.ProducedPartName ?? "";
             WillCreateNewPart = false;
 
             StateHasChanged();
@@ -369,14 +373,14 @@
     
     private void ToggleFileMenu()
     {
-        open = !open;
-        openOptions = false;
+        _open = !_open;
+        _openOptions = false;
     }
 
     private void ToggleOptionsMenu()
     {
-        openOptions = !openOptions;
-        open = false;
+        _openOptions = !_openOptions;
+        _open = false;
     }
     
     private void ToggleQrCode()
@@ -402,7 +406,7 @@
     {
         await JS.InvokeVoidAsync("document.body.classList.toggle", "dark-mode");
         var isDark = await JS.InvokeAsync<bool>("document.body.classList.contains", "dark-mode");
-        darkModeIcon = isDark ? "bi bi-sun" : "bi bi-moon-stars";
+        _darkModeIcon = isDark ? "bi bi-sun" : "bi bi-moon-stars";
         DarkModeInstance.Toggle();
     }
 
@@ -415,17 +419,17 @@
     // ** Toggle Version History Sidebar **
     private async Task ToggleVersionHistorySidebar()
     {
-        isVersionHistoryOpen = !isVersionHistoryOpen;
+        _isVersionHistoryOpen = !_isVersionHistoryOpen;
 
-        if (isVersionHistoryOpen)
+        if (_isVersionHistoryOpen)
         {
-            if (CurrentInstruction?.OriginalId is int originalId)
+            if (CurrentInstruction?.OriginalId is { } originalId)
             {
                 await LoadVersionHistoryAsync(originalId);
             }
             else
             {
-                _versionHistoryList = new List<WorkInstruction>(); // or null, as you prefer
+                _versionHistoryList = []; // or null, as you prefer
             }
         }
     }
@@ -445,8 +449,8 @@
     
     private async Task TriggerAndClose(EventCallback callback)
     {
-        open = false;
-        openOptions = false;
+        _open = false;
+        _openOptions = false;
         if (callback.HasDelegate)
         {
             await callback.InvokeAsync();
@@ -507,26 +511,35 @@
     
     private void TriggerImport()
     {
-        open = false;
-        openOptions = false;
-        showImportDialog = true;
+        _open = false;
+        _openOptions = false;
+        _showImportDialog = true;
     }
     
     private void TriggerExport()
     {
-        open = false;
-        openOptions = false;
-        showExportDialog = true;
+        _open = false;
+        _openOptions = false;
+        _showExportDialog = true;
+    }
+    
+    private WorkInstructionFileDTO? GetExportFileDTO()
+    {
+        if (CurrentInstruction == null || Products == null)
+            return null;
+
+        return CurrentInstruction.ToFileDTO(
+            id => Products.FirstOrDefault(p => p.ProductId == id)?.Name ?? $"Product {id}");
     }
 
-    private async Task HandleImportComplete(WorkInstruction wi)
+    private async Task HandleImportComplete(WorkInstructionFormDTO wi)
     {
         // Update UI state to reflect the imported instruction
         CurrentInstruction = wi;
         SelectedWorkInstructionId = wi.Id;
 
         // Hide the import dialog
-        showImportDialog = false;
+        _showImportDialog = false;
 
         // Notify parent component so it can do the data reload and editor load
         if (OnImportComplete.HasDelegate)
@@ -539,63 +552,83 @@
     
     private void HandleImportDialogClosed(bool isOpen)
     {
-        showImportDialog = isOpen;
+        _showImportDialog = isOpen;
     }
     
     private void ShowNewInstructionDialog()
     {
-        isAnyDialogVisible = true;
-        dialogHeaderText = "Create New Work Instruction";
-        confirmButtonText = "Open New";
-        associationDialogAllowsRenaming = true;
-        OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleNewDialogConfirmed);
+        _isAnyDialogVisible = true;
+        _dialogHeaderText = "Create New Work Instruction";
+        _confirmButtonText = "Open New";
+        _associationDialogAllowsRenaming = true;
+        _onDialogConfirmed = EventCallback.Factory.Create<(string, List<ProductDetailDTO>)>(this, HandleNewDialogConfirmed);
+    }
+    
+    private List<ProductDetailDTO> GetSelectedProductDetails()
+    {
+        if (CurrentInstruction == null || Products == null)
+            return new();
+
+        return Products
+            .Where(p => CurrentInstruction.ProductIds.Contains(p.ProductId))
+            .ToList();
     }
 
     private void ShowSaveAsDialog()
     {
-        isAnyDialogVisible = true;
-        DialogSelectedProducts = CurrentInstruction?.Products?.ToList() ?? new();
-        dialogHeaderText = "Save Work Instruction As";
-        confirmButtonText = "Save New";
-        associationDialogAllowsRenaming = true;
-        OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleSaveAsDialogConfirmed);
+        _isAnyDialogVisible = true;
+        DialogSelectedProducts = GetSelectedProductDetails();
+        _dialogHeaderText = "Save Work Instruction As";
+        _confirmButtonText = "Save New";
+        _associationDialogAllowsRenaming = true;
+        _onDialogConfirmed = EventCallback.Factory.Create<(string, List<ProductDetailDTO>)>(this, HandleSaveAsDialogConfirmed);
     }
 
     private void ShowEditAssociationsDialog()
     {
-        isAnyDialogVisible = true;
-        DialogSelectedProducts = CurrentInstruction?.Products?.ToList() ?? new();
-        dialogHeaderText = "Edit Instruction Associations";
-        confirmButtonText = "Confirm Edits";
-        associationDialogAllowsRenaming = false;
-        OnDialogConfirmed = EventCallback.Factory.Create<(string, List<Product>)>(this, HandleEditAssociationsConfirmed);
+        _isAnyDialogVisible = true;
+        DialogSelectedProducts = GetSelectedProductDetails();
+        _dialogHeaderText = "Edit Instruction Associations";
+        _confirmButtonText = "Confirm Edits";
+        _associationDialogAllowsRenaming = false;
+        _onDialogConfirmed = EventCallback.Factory.Create<(string, List<ProductDetailDTO>)>(this, HandleEditAssociationsConfirmed);
     }
     
-    private async Task HandleNewDialogConfirmed((string Title, List<Product> Products) data)
+    private async Task HandleNewDialogConfirmed((string Title, List<ProductDetailDTO> Products) data)
     {
         Log.Information("[MenuBarPhoebe] HandleNewDialogConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
-        isAnyDialogVisible = false;
+        _isAnyDialogVisible = false;
         if (OnNewConfirmed.HasDelegate)
             await OnNewConfirmed.InvokeAsync(data);
     }
 
-    private async Task HandleSaveAsDialogConfirmed((string Title, List<Product> Products) data)
+    private async Task HandleSaveAsDialogConfirmed((string Title, List<ProductDetailDTO> Products) data)
     {
         Log.Information("[MenuBarPhoebe] HandleSaveAsDialogConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
-        isAnyDialogVisible = false;
+        _isAnyDialogVisible = false;
         if (OnSaveAsConfirmed.HasDelegate)
             await OnSaveAsConfirmed.InvokeAsync(data);
     }
     
-    private async Task HandleEditAssociationsConfirmed((string Title, List<Product> Products) data)
+    private async Task HandleEditAssociationsConfirmed(
+        (string Title, List<ProductDetailDTO> Products) data)
     {
-        Log.Information("[MenuBarPhoebe] HandleEditAssociationsConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
-        isAnyDialogVisible = false;
+        if (CurrentInstruction != null)
+        {
+            CurrentInstruction.ProductIds = data.Products
+                .Select(p => p.ProductId)
+                .ToList();
+
+            MarkDirty();
+        }
+
+        _isAnyDialogVisible = false;
+
         if (OnEditAssociationsConfirmed.HasDelegate)
             await OnEditAssociationsConfirmed.InvokeAsync(data);
     }
     
-    private Task OnDialogSelectedProductsChanged(List<Product> products)
+    private Task OnDialogSelectedProductsChanged(List<ProductDetailDTO> products)
     {
         DialogSelectedProducts = products;
         return Task.CompletedTask;

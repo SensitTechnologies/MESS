@@ -25,23 +25,18 @@ public interface IProductService
     Task CreateAsync(Product product);
     
     /// <summary>
-    /// Asynchronously creates a new product using the provided <see cref="ProductDetailDTO"/>.
+    /// Asynchronously creates a new product using the specified data transfer object.
     /// </summary>
     /// <param name="dto">
-    /// The detailed product DTO containing the data required to create the product,
-    /// including the associated PartDefinition identifier.
+    /// The data transfer object containing the information required to create the product.
     /// </param>
     /// <remarks>
-    /// The implementation is expected to resolve and attach the existing PartDefinition
-    /// referenced by <see cref="ProductDetailDTO.PartDefinitionId"/> before persisting
-    /// the new Product entity.
+    /// Implementations are responsible for mapping the DTO to the underlying domain model
+    /// and persisting it to the data store.
     /// </remarks>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="dto"/> is <c>null</c>.
     /// </exception>
-    /// <returns>
-    /// A <see cref="Task"/> that represents the asynchronous create operation.
-    /// </returns>
     Task CreateAsync(ProductDetailDTO dto);
 
     /// <summary>

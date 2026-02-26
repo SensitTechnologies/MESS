@@ -1,4 +1,4 @@
-@using MESS.Data.Models
+@using MESS.Services.DTOs.Products.Detail
 
 @if (Products?.Any(p => p.IsActive && p.WorkInstructions?.Any() == true) == true)
 {
@@ -6,9 +6,9 @@
         <option value="-1">All Products</option>
         @foreach (var product in Products
                       .Where(p => p.IsActive && p.WorkInstructions?.Any() == true)
-                      .OrderBy(p => p.PartDefinition.Name ?? string.Empty))
+                      .OrderBy(p => p.Name ?? string.Empty))
         {
-            <option value="@product.Id">@product.PartDefinition.Name</option>
+            <option value="@product.ProductId">@product.Name</option>
         }
     </select>
 }
@@ -37,7 +37,7 @@ else
     /// The list of products to display in the dropdown.
     /// </summary>
     [Parameter]
-    public List<Product>? Products { get; set; }
+    public List<ProductDetailDTO>? Products { get; set; }
 
     /// <summary>
     /// Gets or sets the currently selected product ID.

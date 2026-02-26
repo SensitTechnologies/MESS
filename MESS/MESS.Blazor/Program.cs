@@ -17,6 +17,7 @@ using MESS.Services.Media.WorkInstructions;
 using MESS.Services.UI.PartTraceability;
 using MESS.Services.UI.ProductionLogEvent;
 using MESS.Services.UI.WorkInstructionEditor;
+using MESS.Services.UI.WorkInstructionImport;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,6 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using MudBlazor.Services;
 using Serilog;
 using Serilog.Events;
-using Serilog.Formatting.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +78,7 @@ builder.Services.AddScoped<IPartTraceabilityService, PartTraceabilityService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
 builder.Services.AddScoped<IWorkInstructionEditorService, WorkInstructionEditorService>();
 builder.Services.AddScoped<IWorkInstructionFileService, WorkInstructionFileService>();
+builder.Services.AddScoped<IWorkInstructionImportService, WorkInstructionImportService>();
 builder.Services.AddScoped<IWorkInstructionImageService, WorkInstructionImageService>();
 builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();

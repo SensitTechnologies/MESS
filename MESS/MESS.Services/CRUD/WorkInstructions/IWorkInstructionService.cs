@@ -1,5 +1,6 @@
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
+using MESS.Services.DTOs.WorkInstructions.Version;
 
 namespace MESS.Services.CRUD.WorkInstructions;
 using Data.Models;
@@ -65,13 +66,22 @@ public interface IWorkInstructionService
     /// Results are cached for 15 minutes to improve performance.
     /// </remarks>
     public Task<List<WorkInstructionSummaryDTO>> GetAllSummariesAsync();
-    
+
     /// <summary>
-    /// Retrieves all versions of a work instruction lineage given its OriginalId.
+    /// Asynchronously retrieves the full version history for a given work instruction lineage,
+    /// identified by its root instruction identifier.
+    /// Results are ordered by LastModifiedOn descending (most recent edits first).
     /// </summary>
-    /// <param name="originalId">The OriginalId of the lineage.</param>
-    /// <returns>List of all versions for that lineage.</returns>
-    Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId);
+    /// <param name="originalId">
+    /// The root identifier of the work instruction lineage to retrieve.
+    /// This should be the Id of the original (first) version in the chain.
+    /// </param>
+    /// <returns>
+    /// A list of <see cref="WorkInstructionVersionDTO"/> objects representing
+    /// all versions in the lineage, ordered by LastModifiedOn descending.
+    /// </returns>
+    public Task<List<WorkInstructionVersionDTO>> GetVersionHistoryAsync(int originalId);
+    
     /// <summary>
     /// Retrieves a WorkInstruction by its title.
     /// </summary>
@@ -145,7 +155,7 @@ public interface IWorkInstructionService
     /// otherwise <c>false</c> if an exception occurred.
     /// </returns>
     public Task<bool> DeleteNodesAsync(IEnumerable<int> nodeIds);
-    
+
     /// <summary>
     /// Creates a new version of an existing <see cref="WorkInstruction"/> as part of a version lineage.
     /// </summary>
@@ -179,6 +189,6 @@ public interface IWorkInstructionService
     /// <exception cref="InvalidOperationException">
     /// Thrown if <see cref="WorkInstruction.OriginalId"/> is <c>null</c>, as versioning requires an existing lineage.
     /// </exception>
-    Task<bool> CreateNewVersionAsync(WorkInstruction workInstruction);
+    public Task<WorkInstruction?> CreateNewVersionAsync(WorkInstruction workInstruction);
 
 }

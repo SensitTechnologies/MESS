@@ -40,7 +40,7 @@ public static class WorkInstructionFormDTOMapper
             PartProducedId = entity.PartProducedId,
             ProducedPartName = entity.PartProduced?.Name,
             ProductIds = entity.Products.Select(p => p.Id).ToList(),
-            Nodes = entity.Nodes.Select(n => n.ToFormDTO(Guid.NewGuid().ToString())).ToList()
+            Nodes = entity.Nodes.Select(n => n.ToFormDTO(Guid.NewGuid())).ToList()
         };
     }
 

@@ -1,6 +1,9 @@
+using MESS.Services.DTOs.Products.Detail;
+using MESS.Services.DTOs.WorkInstructions.Form;
+
 namespace MESS.Services.UI.WorkInstructionEditor;
 
-using MESS.Data.Models;
+using Data.Models;
 
 
 /// <summary>
@@ -45,7 +48,7 @@ public interface IWorkInstructionEditorService
     /// Gets the WorkInstruction currently being edited in the UI.
     /// May be null if no editing session is active.
     /// </summary>
-    WorkInstruction? Current { get; }
+    WorkInstructionFormDTO? Current { get; }
 
     /// <summary>
     /// Determines if the current work instruction has parts
@@ -71,6 +74,17 @@ public interface IWorkInstructionEditorService
     /// or creating a new version in an existing version chain.
     /// </summary>
     EditorMode Mode { get; }
+    
+    /// <summary>
+    /// Gets a read-only collection of IDs representing the work instruction nodes
+    /// that have been queued for deletion but have not yet been removed from the database.
+    /// </summary>
+    /// <remarks>
+    /// These IDs correspond to the database IDs of the nodes and can be used
+    /// by the implementing service to delete the nodes when <see cref="SaveAsync"/> or
+    /// another deletion operation is performed. Duplicate IDs are automatically ignored.
+    /// </remarks>
+    IReadOnlyCollection<int> NodesQueuedForDeletionIds { get; }
 
     /// <summary>
     /// Loads an existing WorkInstruction from the database for editing.
@@ -123,8 +137,8 @@ public interface IWorkInstructionEditorService
     /// Optionally pre-populates the WorkInstruction with a list of products.
     /// </summary>
     /// <param name="title">An optional title for the new work instruction. If not provided, the title will be an empty string.</param>
-    /// <param name="products">Optional list of products to prefill the WorkInstruction.</param>
-    void StartNew(string? title = null, List<Product>? products = null);
+    /// <param name="products">Optional list of product ids to prefill the WorkInstruction.</param>
+    void StartNew(string? title = null, List<ProductDetailDTO>? products = null);
 
     /// <summary>
     /// Creates a new work instruction based on the current one, resets versioning and status flags,
@@ -138,7 +152,7 @@ public interface IWorkInstructionEditorService
     /// This method deep-copies all nodes from the current instruction using the <c>CloneNode</c> method,
     /// resets the version to "1.0", and marks the instruction as inactive and the latest version.
     /// </remarks>
-    public Task StartNewFromCurrent(string? title = null, List<Product>? products = null);
+    public Task StartNewFromCurrent(string? title = null, List<ProductDetailDTO>? products = null);
 
     /// <summary>
     /// Marks the current editing session as having unsaved changes.
@@ -179,22 +193,12 @@ public interface IWorkInstructionEditorService
     /// This does not persist the change to the database immediately; the update will be applied when <see cref="SaveAsync"/> is called.
     /// </summary>
     void ToggleActive();
-    
-    /// <summary>
-    /// Gets a read-only list of <see cref="WorkInstructionNode"/> instances
-    /// that have been queued for deletion but not yet removed from the database.
-    /// </summary>
-    IReadOnlyList<WorkInstructionNode> NodesQueuedForDeletion { get; }
 
     /// <summary>
-    /// Adds the specified <paramref name="node"/> to the list of nodes queued for deletion.
-    /// This method marks the editor as dirty and triggers the <see cref="OnChanged"/> event.
+    /// Queues a node for deletion by its ID. Duplicate IDs are ignored.
     /// </summary>
-    /// <param name="node">The <see cref="WorkInstructionNode"/> to queue for deletion.</param>
-    /// <remarks>
-    /// The queued nodes will be removed from the database when <see cref="SaveAsync"/> is called.
-    /// </remarks>
-    public void QueueNodeForDeletion(WorkInstructionNode node);
+    /// <param name="nodeId">The ID of the node to delete.</param>
+    public void QueueNodeForDeletion(int nodeId);
     
     /// <summary>
     /// Sets the name of the part produced by the current work instruction in the editor.

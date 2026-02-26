@@ -1,71 +1,81 @@
-﻿@using MESS.Data.Models
+﻿@using MESS.Services.DTOs.WorkInstructions.Version
+
 <div class="sidebar-panel @(IsOpen ? "open" : "closed")">
+    <!-- Sidebar Header -->
     <div class="sidebar-header d-flex justify-content-between align-items-center mb-3">
         <h5>Version History</h5>
         <button class="btn-close" @onclick="OnToggleClicked" aria-label="Close sidebar" />
     </div>
 
+    @* Loading Spinner *@
     @if (IsLoading)
     {
         <div class="text-center">
             <div class="spinner-border" role="status" aria-hidden="true"></div>
             <span class="visually-hidden">Loading...</span>
         </div>
-    }
-    else if ((Versions is null || !Versions.Any()) && CurrentInstruction == null)
+    } 
+    @* No Versions Message *@
+    else if (Versions == null || !Versions.Any())
     {
         <p class="text-muted">No versions available for this work instruction.</p>
     }
+    @* Versions List *@
     else
     {
         <div class="version-list">
-
-            @if (CurrentInstruction != null)
+            @foreach (var version in Versions)
             {
-                <div class="version-item border rounded p-2 mb-2 bg-light">
+                var isCurrent = CurrentVersionId.HasValue && version.Id == CurrentVersionId.Value;
+
+                <div @key="version.Id"
+                     class="version-item border rounded p-2 mb-2 @(isCurrent ? "bg-light" : "")">
+
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <strong>Current Version: @CurrentInstruction.Version</strong>
+                            <strong>
+                                @(isCurrent ? "Current Version: " : "Version: ")
+                                @(string.IsNullOrWhiteSpace(version.Version) ? "N/A" : version.Version)
+                            </strong>
+
                             <div class="text-muted small">
-                                @CurrentInstruction.LastModifiedOn.ToLocalTime().ToString("g")
+                                @version.LastModifiedOn.ToLocalTime().ToString("g")
                             </div>
+
                             <div class="text-muted small">
-                                @CurrentInstruction.Title
+                                @version.Title
                             </div>
                         </div>
+
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-secondary" disabled>Loaded</button>
+                            @if (isCurrent)
+                            {
+                                <button class="btn btn-sm btn-secondary" disabled>
+                                    Loaded
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-success"
+                                        aria-label="Restore version @version.Version"
+                                        @onclick="() => OnRestoreClicked(version.Id)">
+                                    Restore
+                                </button>
+
+                                <button class="btn btn-sm btn-danger"
+                                        aria-label="Delete version @version.Version"
+                                        @onclick="() => OnDeleteClicked(version.Id)">
+                                    Delete
+                                </button>
+                            }
                         </div>
                     </div>
                 </div>
             }
-
-            @if (Versions != null)
-            {
-                @foreach (var version in Versions.Where(v => CurrentInstruction == null || v.Id != CurrentInstruction.Id).OrderByDescending(v => v.Version))
-                {
-                    <div @key="version.Id" class="version-item border rounded p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>Version: @version.Version</strong>
-                                <div class="text-muted small">
-                                    @version.LastModifiedOn.ToLocalTime().ToString("g")
-                                </div>
-                                <div class="text-muted small">
-                                    @version.Title
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-success" aria-label="Restore version @version.Version" @onclick="() => OnRestoreClicked(version.Id)">Restore</button>
-                                <button class="btn btn-sm btn-danger" aria-label="Delete version @version.Version" @onclick="() => OnDeleteClicked(version.Id)">Delete</button>
-                            </div>
-                        </div>
-                    </div>
-                }
-            }
         </div>
     }
 </div>
+    
 
 @code {
     /// <summary>
@@ -87,17 +97,17 @@
     [Parameter] public EventCallback OnToggle { get; set; }
 
     /// <summary>
-    /// The current (active) work instruction being edited. 
+    /// The id of the current (active) work instruction being edited. 
     /// Displayed at the top of the version list.
     /// </summary>
     [Parameter]
-    public WorkInstruction? CurrentInstruction { get; set; }
+    public int? CurrentVersionId { get; set; }
     
     /// <summary>
     /// The list of all historical versions of the current work instruction.
     /// </summary>
     [Parameter]
-    public List<WorkInstruction>? Versions { get; set; }
+    public List<WorkInstructionVersionDTO>? Versions { get; set; }
 
     /// <summary>
     /// Whether the parent is still loading them.

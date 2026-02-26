@@ -14,8 +14,9 @@ public static class PartNodeFormDTOMapper
     /// Converts a <see cref="PartNode"/> entity to a <see cref="PartNodeFormDTO"/>.
     /// </summary>
     /// <param name="entity">The <see cref="PartNode"/> to convert.</param>
+    /// <param name="clientId">A unique client-generated identifier for nodes.</param>
     /// <returns>A mapped <see cref="PartNodeFormDTO"/>.</returns>
-    public static PartNodeFormDTO ToFormDTO(this PartNode entity)
+    public static PartNodeFormDTO ToFormDTO(this PartNode entity, Guid clientId)
     {
         if (entity is null)
             throw new ArgumentNullException(nameof(entity));
@@ -23,7 +24,7 @@ public static class PartNodeFormDTOMapper
         return new PartNodeFormDTO
         {
             Id = entity.Id,
-            ClientId = Guid.NewGuid(),
+            ClientId = clientId,
             Position = entity.Position,
             NodeType = entity.NodeType,
             InputType = entity.InputType,
@@ -69,12 +70,6 @@ public static class PartNodeFormDTOMapper
                 : new PartDefinition { Id = dto.PartDefinitionId, Number = null!, Name = null! }
         };
     }
-
-    /// <summary>
-    /// Converts a collection of <see cref="PartNode"/> entities to a list of <see cref="PartNodeFormDTO"/>s.
-    /// </summary>
-    public static List<PartNodeFormDTO> ToFormDTOList(this IEnumerable<PartNode> entities)
-        => entities.Select(e => e.ToFormDTO()).ToList();
 
     /// <summary>
     /// Converts a collection of <see cref="PartNodeFormDTO"/> DTOs to a list of <see cref="PartNode"/> entities.

@@ -1,7 +1,10 @@
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes.SortableList
 @using MESS.Data.Models
+@using MESS.Services.DTOs.WorkInstructions.Nodes.Form
+@using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form
+@using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form
 
-<SortableList T="WorkInstructionNode"
+<SortableList T="WorkInstructionNodeFormDTO"
               Items="WorkInstructionNodes"
               Handle=".drag-handle"
               OnUpdate="OnItemsChanged"
@@ -22,21 +25,21 @@
     /// as well as for displaying and editing the content of the nodes.
     /// /// </remarks>
     [Parameter, EditorRequired]
-    public required List<WorkInstructionNode> WorkInstructionNodes { get; set; }
+    public required List<WorkInstructionNodeFormDTO> WorkInstructionNodes { get; set; }
     
     /// <summary>
     /// Event callback that is triggered when *any* of the steps in this list has been changed.
     /// Use this to notify the parent page that the editor state should be marked as dirty.
     /// </summary>
     [Parameter]
-    public EventCallback<WorkInstructionNode?> OnChanged { get; set; }
+    public EventCallback<WorkInstructionNodeFormDTO?> OnChanged { get; set; }
     
     /// <summary>
     /// Event callback triggered when a node is removed from the list.
     /// The removed <see cref="WorkInstructionNode"/> is passed as the argument.
     /// </summary>
     [Parameter]
-    public EventCallback<WorkInstructionNode> OnNodeRemoved { get; set; }
+    public EventCallback<WorkInstructionNodeFormDTO> OnNodeRemoved { get; set; }
     
     /// <summary>
     /// Event callback that is triggered when a New Node needs to be made
@@ -48,7 +51,7 @@
     private Dictionary<Guid, BlazoredTextEditor> EditorRefs { get; set; } = new();
     private Dictionary<Guid, string> ActiveFields { get; set; } = new();
 
-    private RenderFragment<WorkInstructionNode> NodeTemplate => (node) =>
+    private RenderFragment<WorkInstructionNodeFormDTO> NodeTemplate => (node) =>
         @<div id="node-@node.Position">
             <div class="d-flex mb-3 border rounded disable-highlight shadow-sm">
                 <div class="d-flex align-items-center drag-handle me-2">
@@ -58,13 +61,13 @@
                 <div class="flex-grow-1 my-1">
                     @switch (node)
                     {
-                        case PartNode partNode:
+                        case PartNodeFormDTO partNode:
                             <PartNodeView PartNode="partNode"
                                           OnNodeAction="HandleNodeAction"
                                           OnChanged="() => OnChanged.InvokeAsync(node)"/>
                             break;
 
-                        case Step stepNode:
+                        case StepNodeFormDTO stepNode:
                             <StepNodeView Step="stepNode"
                                           EditorRefs="EditorRefs"
                                           ActiveFields="ActiveFields"
@@ -105,7 +108,7 @@
         }
     }
 
-    private async Task HandleNodeAction((WorkInstructionNode node, string action) actionTuple)
+    private async Task HandleNodeAction((WorkInstructionNodeFormDTO node, string action) actionTuple)
     {
         var (node, action) = actionTuple;
         var index = WorkInstructionNodes.IndexOf(node);
@@ -118,10 +121,10 @@
                 switch (action)
                 {
                     case "insertBefore":
-                        await OnNewNodeAt.InvokeAsync((node is PartNode? "part" : "step" , index));
+                        await OnNewNodeAt.InvokeAsync((node is PartNodeFormDTO? "part" : "step" , index));
                         break;
                     case "insertAfter":
-                        await OnNewNodeAt.InvokeAsync((node is PartNode? "part" : "step" , index+1));
+                        await OnNewNodeAt.InvokeAsync((node is PartNodeFormDTO? "part" : "step" , index+1));
                         break;
                 }
             }
@@ -182,8 +185,8 @@
             var currentHtml = await editor.GetHTML();
 
             // Find the node by ClientId
-            var node = WorkInstructionNodes.FirstOrDefault(n => n is Step s && s.ClientId == stepClientId);
-            if (node is Step step)
+            var node = WorkInstructionNodes.FirstOrDefault(n => n is StepNodeFormDTO s && s.ClientId == stepClientId);
+            if (node is StepNodeFormDTO step)
             {
                 if (ActiveFields.TryGetValue(stepClientId, out var field) && field == "Body")
                     step.DetailedBody = currentHtml;

@@ -5,6 +5,7 @@ using Serilog;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
+using MESS.Services.DTOs.WorkInstructions.Version;
 using MESS.Services.Media.WorkInstructions;
 
 namespace MESS.Services.CRUD.WorkInstructions;
@@ -382,31 +383,30 @@ public class WorkInstructionService : IWorkInstructionService
             .ToList();
     }
     
-    /// <summary>
-    /// Asynchronously retrieves the full version history for a given work instruction lineage,
-    /// identified by its OriginalId. Results are ordered by LastModifiedOn descending (most recent edits first).
-    /// </summary>
-    /// <param name="originalId">The OriginalId of the work instruction lineage to retrieve.</param>
-    /// <returns>
-    /// List of all versions in the lineage, including the original itself,
-    /// ordered by LastModifiedOn descending.
-    /// </returns>
-    public async Task<List<WorkInstruction>> GetVersionHistoryAsync(int originalId)
+    /// <inheritdoc />
+    public async Task<List<WorkInstructionVersionDTO>> GetVersionHistoryAsync(int originalId)
     {
         try
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var versionHistory = await context.WorkInstructions
+                .AsNoTracking()
                 .Where(w => w.OriginalId == originalId || w.Id == originalId)
-                .Include(w => w.Products)
-                .Include(w => w.Nodes)
-                .ThenInclude(w => ((PartNode)w).PartDefinition)
                 .OrderByDescending(w => w.LastModifiedOn)
+                .Select(w => new WorkInstructionVersionDTO
+                {
+                    Id = w.Id,
+                    RootInstructionId = w.OriginalId ?? w.Id,
+                    Version = w.Version,
+                    Title = w.Title,
+                    LastModifiedOn = w.LastModifiedOn,
+                    LastModifiedBy = w.LastModifiedBy
+                })
                 .ToListAsync();
 
             Log.Information(
-                "GetVersionHistoryAsync successfully retrieved {Count} versions for OriginalId {OriginalId}",
+                "GetVersionHistoryAsync successfully retrieved {Count} versions for RootInstructionId {RootInstructionId}",
                 versionHistory.Count,
                 originalId
             );
@@ -419,25 +419,9 @@ public class WorkInstructionService : IWorkInstructionService
                 "Exception thrown in GetVersionHistoryAsync in WorkInstructionService. Exception: {Exception}",
                 e.ToString()
             );
+
             return [];
         }
-    }
-    
-    /// <inheritdoc />
-    public async Task<bool> MarkAllVersionsNotLatestAsync(int originalId)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        var versions = await context.WorkInstructions
-            .Where(w => w.OriginalId == originalId || w.Id == originalId)
-            .ToListAsync();
-
-        foreach (var wi in versions)
-        {
-            wi.IsLatest = false;
-        }
-
-        await context.SaveChangesAsync();
-        return true;
     }
     
     /// <inheritdoc />
@@ -523,86 +507,93 @@ public class WorkInstructionService : IWorkInstructionService
             return false;
         }
     }
-
+    
     /// <inheritdoc />
-    public async Task<bool> CreateNewVersionAsync(WorkInstruction workInstruction)
-{
-    if (workInstruction.OriginalId == null)
-        throw new InvalidOperationException("OriginalId is required to create a new version.");
-
-    await using var context = await _contextFactory.CreateDbContextAsync();
-
-    var strategy = context.Database.CreateExecutionStrategy();
-
-    try
+   public async Task<WorkInstruction?> CreateNewVersionAsync(WorkInstruction workInstruction)
     {
-        return await strategy.ExecuteAsync(async () =>
+        if (workInstruction.OriginalId == null)
+            throw new InvalidOperationException("OriginalId is required to create a new version.");
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        try
         {
-            await using var transaction = await context.Database.BeginTransactionAsync();
-
-            // Mark all existing versions as not latest
-            var versions = await context.WorkInstructions
-                .Where(w => w.Id == workInstruction.OriginalId
-                         || w.OriginalId == workInstruction.OriginalId)
-                .ToListAsync();
-
-            foreach (var wi in versions)
-                wi.IsLatest = false;
-
-            // Attach existing references safely
-            if (workInstruction.PartProduced?.Id > 0)
+            return await strategy.ExecuteAsync(async () =>
             {
-                context.Attach(workInstruction.PartProduced);
-                context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
-            }
+                await using var transaction = await context.Database.BeginTransactionAsync();
 
-            foreach (var product in workInstruction.Products.Where(p => p.Id > 0))
-            {
-                context.Attach(product);
-                context.Entry(product).State = EntityState.Unchanged;
-            }
+                // Determine root ID for version chain
+                int rootId = workInstruction.OriginalId.Value;
 
-            foreach (var node in workInstruction.Nodes.OfType<PartNode>())
-            {
-                if (node.PartDefinition?.Id > 0)
+                // Load all existing versions
+                var versions = await context.WorkInstructions
+                    .Where(w => w.Id == rootId || w.OriginalId == rootId)
+                    .ToListAsync();
+
+                // Mark all existing versions inactive and not latest
+                foreach (var wi in versions)
                 {
-                    context.Attach(node.PartDefinition);
-                    context.Entry(node.PartDefinition).State = EntityState.Unchanged;
+                    wi.IsActive = false;
+                    wi.IsLatest = false;
                 }
-            }
 
-            // Create the new version
-            workInstruction.IsLatest = true;
-            workInstruction.IsActive = false;
+                // Attach existing references safely
+                if (workInstruction.PartProduced?.Id > 0)
+                {
+                    context.Attach(workInstruction.PartProduced);
+                    context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
+                }
 
-            await context.WorkInstructions.AddAsync(workInstruction);
-            await context.SaveChangesAsync();
+                foreach (var product in workInstruction.Products.Where(p => p.Id > 0))
+                {
+                    context.Attach(product);
+                    context.Entry(product).State = EntityState.Unchanged;
+                }
 
-            // 4Commit
-            await transaction.CommitAsync();
+                foreach (var node in workInstruction.Nodes.OfType<PartNode>())
+                {
+                    if (node.PartDefinition?.Id > 0)
+                    {
+                        context.Attach(node.PartDefinition);
+                        context.Entry(node.PartDefinition).State = EntityState.Unchanged;
+                    }
+                }
 
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
-            _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+                // Create the new version
+                workInstruction.IsLatest = true;
+                workInstruction.IsActive = true; // Newly created version is active
+                await context.WorkInstructions.AddAsync(workInstruction);
 
-            Log.Information(
-                "Created new WorkInstruction version {Id} for OriginalId {OriginalId}",
-                workInstruction.Id,
-                workInstruction.OriginalId);
+                // Save changes (assigns Id)
+                await context.SaveChangesAsync();
 
-            return true;
-        });
+                // Commit transaction
+                await transaction.CommitAsync();
+
+                // Clear cache
+                _cache.Remove(WORK_INSTRUCTION_CACHE_KEY);
+                _cache.Remove(WORK_INSTRUCTION_CACHE_KEY + "_Latest");
+
+                Log.Information(
+                    "Created new WorkInstruction version {Id} for OriginalId {OriginalId}",
+                    workInstruction.Id,
+                    workInstruction.OriginalId);
+
+                // Return the saved entity
+                return workInstruction;
+            });
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Exception thrown while creating new version of WorkInstruction. OriginalId={OriginalId}. Exception: {Exception}",
+                workInstruction.OriginalId,
+                e);
+
+            return null;
+        }
     }
-    catch (Exception e)
-    {
-        Log.Warning(
-            "Exception thrown while creating new version of WorkInstruction. OriginalId={OriginalId}. Exception: {Exception}",
-            workInstruction.OriginalId,
-            e);
-
-        return false;
-    }
-}
-
     
     /// <summary>
     /// Deletes a Work Instruction from the database if there are no Production log relationships.
