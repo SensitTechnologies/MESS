@@ -2,7 +2,6 @@ using MESS.Data.Context;
 using MESS.Services.DTOs.Products.Detail;
 using MESS.Services.DTOs.Products.Summary;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 
 namespace MESS.Services.CRUD.Products;
@@ -19,7 +18,6 @@ public class ProductService : IProductService
     /// for managing product data and invalidating cached work instruction associations.
     /// </summary>
     /// <param name="contextFactory">Factory for creating instances of the application database context.</param>
-    /// <param name="cache">In-memory cache used to store and invalidate cached data.</param>
     public ProductService(IDbContextFactory<ApplicationContext> contextFactory)
     {
         _contextFactory = contextFactory;
