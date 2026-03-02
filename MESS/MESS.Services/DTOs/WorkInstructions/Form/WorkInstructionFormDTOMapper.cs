@@ -49,7 +49,7 @@ public static class WorkInstructionFormDTOMapper
     /// </summary>
     /// <param name="dto">The form DTO to convert.</param>
     /// <returns>A <see cref="WorkInstruction"/> entity populated from the DTO.</returns>
-    public static WorkInstruction ToEntity(this WorkInstructionFormDTO dto)
+    public static WorkInstruction ToNewEntity(this WorkInstructionFormDTO dto)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
@@ -66,7 +66,7 @@ public static class WorkInstructionFormDTOMapper
             PartProducedIsSerialized = dto.PartProducedIsSerialized,
             PartProducedId = dto.PartProducedId,
             // PartProduced and Products can be attached separately by services if needed
-            Nodes = dto.Nodes.Select(n => n.ToEntity()).ToList()
+            Nodes = dto.Nodes.Select(n => n.ToNewEntity()).ToList()
         };
     }
     

@@ -162,7 +162,7 @@
 
         try
         {
-            bool isEditable = await WorkInstructionService.IsEditable(current.ToEntity());
+            bool isEditable = await WorkInstructionService.IsEditable(current.ToNewEntity());
 
             bool success;
             if (isEditable)

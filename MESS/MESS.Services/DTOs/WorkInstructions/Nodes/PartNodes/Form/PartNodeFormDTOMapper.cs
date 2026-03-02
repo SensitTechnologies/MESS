@@ -56,7 +56,7 @@ public static class PartNodeFormDTOMapper
     /// </summary>
     /// <param name="dto">The <see cref="PartNodeFormDTO"/> to convert.</param>
     /// <returns>A mapped <see cref="PartNode"/> entity.</returns>
-    public static PartNode ToEntity(this PartNodeFormDTO dto)
+    public static PartNode ToNewEntity(this PartNodeFormDTO dto)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
@@ -79,5 +79,5 @@ public static class PartNodeFormDTOMapper
     /// Converts a collection of <see cref="PartNodeFormDTO"/> DTOs to a list of <see cref="PartNode"/> entities.
     /// </summary>
     public static List<PartNode> ToEntityList(this IEnumerable<PartNodeFormDTO> dtos)
-        => dtos.Select(d => d.ToEntity()).ToList();
+        => dtos.Select(d => d.ToNewEntity()).ToList();
 }

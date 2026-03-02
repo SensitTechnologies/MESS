@@ -68,12 +68,12 @@ public static class WorkInstructionNodeFormMapper
     /// <exception cref="NotSupportedException">
     /// Thrown when the DTO type is not recognized.
     /// </exception>
-    public static WorkInstructionNode ToEntity(this WorkInstructionNodeFormDTO dto)
+    public static WorkInstructionNode ToNewEntity(this WorkInstructionNodeFormDTO dto)
     {
         return dto switch
         {
-            PartNodeFormDTO partDto => PartNodeFormDTOMapper.ToEntity(partDto),
-            StepNodeFormDTO stepDto => StepNodeFormDTOMapper.ToEntity(stepDto),
+            PartNodeFormDTO partDto => PartNodeFormDTOMapper.ToNewEntity(partDto),
+            StepNodeFormDTO stepDto => StepNodeFormDTOMapper.ToNewEntity(stepDto),
             _ => throw new NotSupportedException($"Unsupported node DTO type: {dto.GetType().Name}")
         };
     }

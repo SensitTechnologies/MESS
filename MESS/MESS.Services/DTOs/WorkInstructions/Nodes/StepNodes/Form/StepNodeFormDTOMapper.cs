@@ -33,7 +33,7 @@ public static class StepNodeFormDTOMapper
     /// <summary>
     /// Converts a <see cref="StepNodeFormDTO"/> back to a <see cref="Step"/> entity.
     /// </summary>
-    public static Step ToEntity(this StepNodeFormDTO dto)
+    public static Step ToNewEntity(this StepNodeFormDTO dto)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
@@ -77,5 +77,5 @@ public static class StepNodeFormDTOMapper
     /// Converts a collection of <see cref="StepNodeFormDTO"/> DTOs to entities.
     /// </summary>
     public static List<Step> ToEntityList(this IEnumerable<StepNodeFormDTO> dtos)
-        => dtos.Select(d => d.ToEntity()).ToList();
+        => dtos.Select(d => d.ToNewEntity()).ToList();
 }
