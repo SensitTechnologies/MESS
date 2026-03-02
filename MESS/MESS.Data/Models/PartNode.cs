@@ -13,7 +13,7 @@ public class PartNode : WorkInstructionNode
     /// <summary>
     /// Gets or sets the part associated with this node.
     /// </summary>
-    public required PartDefinition? PartDefinition { get; set; }
+    public PartDefinition? PartDefinition { get; set; }
     
     /// <summary>
     /// Indicates what kind of input this part node expects (e.g., serial number or production log ID).
