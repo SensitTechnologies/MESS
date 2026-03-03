@@ -209,24 +209,26 @@ public class PartDefinitionService : IPartDefinitionService
         if (workInstructionA is null || workInstructionB is null)
             return [];
 
-        // Extract all PartDefinitions used in each work instruction
+        // Extract all PartDefinitions used in each work instruction, ignoring nulls
         var partsA = workInstructionA.Nodes
             .OfType<PartNode>()
             .Select(pn => pn.PartDefinition)
-            .ToList();
+            .Where(pd => pd != null)   
+            .ToList();                
 
         var partsB = workInstructionB.Nodes
             .OfType<PartNode>()
             .Select(pn => pn.PartDefinition)
+            .Where(pd => pd != null)
             .ToList();
 
         // Return only common parts (matched by ID)
         var commonParts = partsA
-            .Where(pA => partsB.Any(pB => pB.Id == pA.Id))
-            .DistinctBy(p => p.Id)
+            .Where(pA => partsB.Any(pB => pB!.Id == pA!.Id))  
+            .DistinctBy(p => p!.Id)                             
             .ToList();
 
-        return commonParts;
+        return commonParts!;
     }
     
     /// <summary>
@@ -291,7 +293,8 @@ public class PartDefinitionService : IPartDefinitionService
 
             var partDefinitions = workInstruction.Nodes
                 .OfType<PartNode>()
-                .Select(pn => pn.PartDefinition)
+                .Select(pn => pn.PartDefinition ?? throw new InvalidOperationException(
+                    $"PartNode {pn.Id} has no PartDefinition loaded"))
                 .DistinctBy(pd => pd.Id)
                 .ToList();
 

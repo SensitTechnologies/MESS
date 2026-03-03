@@ -52,6 +52,11 @@ public class WorkInstructionFormDTO
     /// Gets or sets the ID of the part produced, if any.
     /// </summary>
     public int? PartProducedId { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the name of the part produced, if any. This is included in the form DTO for display purposes.
+    /// </summary>
+    public string? ProducedPartName { get; set; }
 
     /// <summary>
     /// Gets or sets the IDs of the products associated with this work instruction.

@@ -7,24 +7,24 @@
             <InputText
                 id="serialInput"
                 class="form-control tall-input text-lightweight"
-                placeholder="@PartNode.PartDefinition.Number"
+                placeholder="@PartNode.PartDefinition!.Number"
                 @bind-Value="_serialNumber"
                 @bind-Value:after="OnInputChanged" />
 
             <label for="serialInput" class="form-label subtle-label">
-                @(PartNode.PartDefinition.Name)
+                @(PartNode.PartDefinition!.Name)
             </label>
             break;
         case PartInputType.ProductionLogId:
             <InputNumber TValue="int?" 
                          id="logInput"
                          class="form-control tall-input text-lightweight"
-                         placeholder="@PartNode.PartDefinition.Number"
+                         placeholder="@PartNode.PartDefinition!.Number"
                          @bind-Value="_productionLogId"
                          @bind-Value:after="OnInputChanged" />
 
             <label for="logInput" class="form-label subtle-label">
-                @(PartNode.PartDefinition.Name)
+                @(PartNode.PartDefinition!.Name)
             </label>
             break;
         default:
@@ -66,6 +66,12 @@
     /// </summary>
     protected override void OnParametersSet()
     {
+        if (PartNode is null)
+            throw new ArgumentNullException(nameof(PartNode));
+
+        if (PartNode.PartDefinition is null)
+            throw new InvalidOperationException("PartNode.PartDefinition cannot be null.");
+
         if (PartNode.InputType == PartInputType.SerialNumber)
         { 
             _serialNumber = SerializablePart?.SerialNumber;

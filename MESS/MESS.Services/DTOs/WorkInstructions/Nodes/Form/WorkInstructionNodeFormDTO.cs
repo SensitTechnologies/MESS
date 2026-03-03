@@ -26,7 +26,7 @@ public abstract class WorkInstructionNodeFormDTO
     /// This field is generated on the client (typically as a GUID or temporary key)
     /// and ensures that new, unsaved nodes can be tracked and updated reliably in the UI.
     /// </remarks>
-    public required string ClientId { get; set; }
+    public Guid ClientId { get; set; } = Guid.NewGuid();
 
     /// <summary>
     /// Gets or sets the position of the node within the work instruction.

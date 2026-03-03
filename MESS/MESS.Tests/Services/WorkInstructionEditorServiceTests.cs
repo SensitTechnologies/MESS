@@ -1,6 +1,10 @@
 using MESS.Data.Models;
 using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.DTOs.PartDefinitions;
+using MESS.Services.DTOs.WorkInstructions.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
 using MESS.Services.Media.WorkInstructions;
 using MESS.Services.UI.WorkInstructionEditor;
 using Moq;
@@ -42,7 +46,7 @@ public class WorkInstructionEditorServiceTests
         // Arrange
         _sut.StartNew("Base WI");
         _sut.Current!.ShouldGenerateQrCode = true;
-        _sut.Current.Nodes.Add(new Step
+        _sut.Current.Nodes.Add(new StepNodeFormDTO
         {
             Name = "Step 1",
             Body = "Body 1"
@@ -65,8 +69,8 @@ public class WorkInstructionEditorServiceTests
     public async Task LoadForEditAsync_ShouldLoadExistingInstruction()
     {
         // Arrange
-        var wi = new WorkInstruction { Id = 42, Title = "Existing" };
-        _mockWorkInstructionService.Setup(s => s.GetByIdAsync(42)).ReturnsAsync(wi);
+        var wi = new WorkInstructionFormDTO { Id = 42, Title = "Existing" };
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(42)).ReturnsAsync(wi);
 
         // Act
         await _sut.LoadForEditAsync(42);
@@ -80,17 +84,19 @@ public class WorkInstructionEditorServiceTests
     [Fact]
     public async Task LoadForEditAsync_NotFound_ShouldThrow()
     {
-        _mockWorkInstructionService.Setup(s => s.GetByIdAsync(99)).ReturnsAsync((WorkInstruction?)null);
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(99)).ReturnsAsync((WorkInstructionFormDTO?)null);
 
         await Assert.ThrowsAsync<Exception>(() => _sut.LoadForEditAsync(99));
     }
 
     [Fact]
-    public async Task SaveAsync_CreateNew_ShouldCallCreateAndMarkClean()
+    public async Task SaveAsync_CreateNew_ShouldCallCreate()
     {
         // Arrange
         _sut.StartNew("New WI");
-        _mockWorkInstructionService.Setup(s => s.Create(It.IsAny<WorkInstruction>()))
+
+        _mockWorkInstructionService
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
             .ReturnsAsync(true);
 
         // Act
@@ -100,41 +106,60 @@ public class WorkInstructionEditorServiceTests
         Assert.True(result);
         Assert.False(_sut.IsDirty);
         Assert.Equal(EditorMode.EditExisting, _sut.Mode);
-        _mockWorkInstructionService.Verify(s => s.Create(It.IsAny<WorkInstruction>()), Times.Once);
-    }
 
+        _mockWorkInstructionService.Verify(
+            s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()),
+            Times.Once);
+    }
+    
     [Fact]
-    public async Task SaveAsync_EditExisting_ShouldCallUpdate()
+    public async Task SaveAsync_WithQueuedNodes_ShouldDeleteAfterSave()
     {
         // Arrange
-        var wi = new WorkInstruction { Id = 5, Title = "Existing" };
-        _mockWorkInstructionService.Setup(s => s.GetByIdAsync(5)).ReturnsAsync(wi);
-        _mockWorkInstructionService.Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstruction>()))
+        _sut.StartNew("New WI");
+        _sut.QueueNodeForDeletion(1);
+        _sut.QueueNodeForDeletion(2);
+
+        _mockWorkInstructionService
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
             .ReturnsAsync(true);
 
-        // put service into EditExisting state properly
-        await _sut.LoadForEditAsync(5);
+        List<int>? capturedIds = null;
+
+        _mockWorkInstructionService
+            .Setup(s => s.DeleteNodesAsync(It.IsAny<IEnumerable<int>>()))
+            .Callback<IEnumerable<int>>(ids =>
+                capturedIds = ids.ToList())
+            .ReturnsAsync(true);
 
         // Act
         var result = await _sut.SaveAsync();
 
         // Assert
         Assert.True(result);
-        _mockWorkInstructionService.Verify(s => s.UpdateWorkInstructionAsync(It.Is<WorkInstruction>(w => w.Id == 5)), Times.Once);
+        Assert.False(_sut.IsDirty);
+        Assert.Equal(EditorMode.EditExisting, _sut.Mode);
+
+        _mockWorkInstructionService.Verify(
+            s => s.DeleteNodesAsync(It.IsAny<IEnumerable<int>>()),
+            Times.Once);
+
+        Assert.NotNull(capturedIds);
+        Assert.Equal(2, capturedIds!.Count);
+        Assert.Contains(1, capturedIds);
+        Assert.Contains(2, capturedIds);
+
+        Assert.Empty(_sut.NodesQueuedForDeletionIds);
     }
 
     [Fact]
-    public void QueueNodeForDeletion_ShouldAddNode()
+    public void QueueNodeForDeletion_ShouldAddNodeId()
     {
-        var node = new Step
-        {
-            Name = "Step A",
-            Body = "Body A"
-        };
+        var nodeId = 123;
 
-        _sut.QueueNodeForDeletion(node);
+        _sut.QueueNodeForDeletion(nodeId);
 
-        Assert.Contains(node, _sut.NodesQueuedForDeletion);
+        Assert.Contains(nodeId, _sut.NodesQueuedForDeletionIds);
     }
 
     [Fact]
@@ -156,8 +181,8 @@ public class WorkInstructionEditorServiceTests
         Assert.False(_sut.CurrentHasParts());
         Assert.False(_sut.CurrentHasSteps());
 
-        _sut.Current!.Nodes.Add(new PartNode{ PartDefinition = new PartDefinition { Name = "Some Part", Number = "Some Number"}});
-        _sut.Current!.Nodes.Add(new Step { Name = "Some name", Body = "Some body" });
+        _sut.Current!.Nodes.Add(new PartNodeFormDTO{ PartDefinition = new PartDefinitionDTO { Name = "Some Part", Number = "Some Number"}});
+        _sut.Current!.Nodes.Add(new StepNodeFormDTO { Name = "Some name", Body = "Some body" });
 
         Assert.True(_sut.CurrentHasParts());
         Assert.True(_sut.CurrentHasSteps());

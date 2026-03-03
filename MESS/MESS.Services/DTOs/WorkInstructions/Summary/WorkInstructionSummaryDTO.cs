@@ -1,3 +1,5 @@
+using MESS.Services.DTOs.Products.Summary;
+
 namespace MESS.Services.DTOs.WorkInstructions.Summary;
 
 /// <summary>
@@ -53,4 +55,9 @@ public class WorkInstructionSummaryDTO
     /// Gets or sets the part number of the part produced by this work instruction, if available.
     /// </summary>
     public string? PartProducedNumber { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the list of associated products in summary form.
+    /// </summary>
+    public List<ProductSummaryDTO> Products { get; set; } = new();
 }

@@ -1,3 +1,6 @@
+using MESS.Services.DTOs.Products.Detail;
+using MESS.Services.DTOs.Products.Summary;
+
 namespace MESS.Services.CRUD.Products;
 
 using Data.Models;
@@ -20,6 +23,21 @@ public interface IProductService
     /// <param name="product">The product to add.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task CreateAsync(Product product);
+    
+    /// <summary>
+    /// Asynchronously creates a new product using the specified data transfer object.
+    /// </summary>
+    /// <param name="dto">
+    /// The data transfer object containing the information required to create the product.
+    /// </param>
+    /// <remarks>
+    /// Implementations are responsible for mapping the DTO to the underlying domain model
+    /// and persisting it to the data store.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="dto"/> is <c>null</c>.
+    /// </exception>
+    Task CreateAsync(ProductDetailDTO dto);
 
     /// <summary>
     /// Finds a product by its unique ID, including related WorkInstructions and WorkStations.
@@ -43,6 +61,33 @@ public interface IProductService
     /// </summary>
     /// <returns>A list of all products.</returns>
     Task<IEnumerable<Product>> GetAllAsync();
+    
+    /// <summary>
+    /// Asynchronously retrieves all products as lightweight summary DTOs,
+    /// suitable for display in lists or selection controls.
+    /// </summary>
+    /// <returns>
+    /// A collection of <see cref="ProductSummaryDTO"/> objects representing all products.
+    /// Each DTO contains the product ID, name, number, active status, and associated part definition ID.
+    /// </returns>
+    /// <remarks>
+    /// Only the <see cref="Product.PartDefinition"/> relationship is loaded to populate
+    /// the DTO's Name and Number fields. This method is optimized for read-only projections.
+    /// Exceptions during retrieval are caught and logged, with an empty list returned on failure.
+    /// </remarks>
+    Task<IEnumerable<ProductSummaryDTO>> GetAllSummariesAsync();
+
+    /// <summary>
+    /// Retrieves all products from the database along with their associated
+    /// part definitions and work instructions, and maps them to
+    /// <see cref="ProductDetailDTO"/> instances.
+    /// </summary>
+    /// <returns>
+    /// A task that resolves to an <see cref="IEnumerable{ProductDetailDTO}"/> containing
+    /// all products with full detail information. If an exception occurs,
+    /// an empty list is returned and a warning is logged.
+    /// </returns>
+    public Task<IEnumerable<ProductDetailDTO>> GetAllDetailsAsync();
 
     /// <summary>
     /// Updates an existing product in the database.
@@ -50,6 +95,38 @@ public interface IProductService
     /// <param name="product">The product to update.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task UpdateProductAsync(Product product);
+    
+    /// <summary>
+    /// Asynchronously updates an existing product using the provided <see cref="ProductDetailDTO"/>.
+    /// </summary>
+    /// <param name="dto">
+    /// The detailed product DTO containing the updated product data, including
+    /// its identifier, associated PartDefinition information, and related WorkInstructions.
+    /// </param>
+    /// <remarks>
+    /// The implementation is expected to:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>Locate the existing Product entity by <see cref="ProductDetailDTO.ProductId"/>.</description>
+    /// </item>
+    /// <item>
+    /// <description>Update scalar properties such as <c>IsActive</c>.</description>
+    /// </item>
+    /// <item>
+    /// <description>Update the associated PartDefinition fields (e.g., Number and Name).</description>
+    /// </item>
+    /// <item>
+    /// <description>Synchronize the product's WorkInstructions based on the DTO.</description>
+    /// </item>
+    /// </list>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="dto"/> is <c>null</c>.
+    /// </exception>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous update operation.
+    /// </returns>
+    Task UpdateProductAsync(ProductDetailDTO dto);
 
     /// <summary>
     /// Removes a product from the database by its unique ID.
@@ -57,19 +134,4 @@ public interface IProductService
     /// <param name="id">The ID of the product to remove.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task DeleteByIdAsync(int id);
-
-    /// <summary>
-    /// Associates additional work instructions with the specified product,
-    /// without removing existing associations.
-    /// </summary>
-    /// <param name="productId">The ID of the product to update.</param>
-    /// <param name="workInstructionIds">A list of work instruction IDs to associate.</param>
-    Task AddWorkInstructionsAsync(int productId, List<int> workInstructionIds);
-
-    /// <summary>
-    /// Removes specific work instruction associations from a product.
-    /// </summary>
-    /// <param name="productId">The ID of the product to update.</param>
-    /// <param name="workInstructionIds">A list of work instruction IDs to remove.</param>
-    Task RemoveWorkInstructionsAsync(int productId, List<int> workInstructionIds);
 }

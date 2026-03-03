@@ -1,5 +1,6 @@
 using MESS.Data.Models;
 using MESS.Services.DTOs.PartDefinitions;
+using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.File;
 
 namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
 
@@ -13,8 +14,9 @@ public static class PartNodeFormDTOMapper
     /// Converts a <see cref="PartNode"/> entity to a <see cref="PartNodeFormDTO"/>.
     /// </summary>
     /// <param name="entity">The <see cref="PartNode"/> to convert.</param>
+    /// <param name="clientId">A unique client-generated identifier for nodes.</param>
     /// <returns>A mapped <see cref="PartNodeFormDTO"/>.</returns>
-    public static PartNodeFormDTO ToFormDTO(this PartNode entity)
+    public static PartNodeFormDTO ToFormDTO(this PartNode entity, Guid clientId)
     {
         if (entity is null)
             throw new ArgumentNullException(nameof(entity));
@@ -22,11 +24,30 @@ public static class PartNodeFormDTOMapper
         return new PartNodeFormDTO
         {
             Id = entity.Id,
-            ClientId = Guid.NewGuid().ToString(),
+            ClientId = clientId,
             Position = entity.Position,
             NodeType = entity.NodeType,
+            InputType = entity.InputType,
             PartDefinitionId = entity.PartDefinitionId,
-            PartDefinition = entity.PartDefinition.ToDTO()
+            PartDefinition = entity.PartDefinition is not null
+                ? entity.PartDefinition.ToDTO()
+                : throw new InvalidOperationException(
+                    $"PartDefinition was not loaded for PartNode {entity.Id}")
+        };
+    }
+    
+        
+    /// <summary>
+    /// Converts a PartNodeFormDTO to a file-safe DTO for export.
+    /// </summary>
+    public static PartNodeFileDTO ToFileDTO(this PartNodeFormDTO form)
+    {
+        return new PartNodeFileDTO
+        {
+            Position = form.Position,
+            PartName = form.PartDefinition?.Name ?? "UNKNOWN",
+            PartNumber = form.PartDefinition?.Number ?? "UNKNOWN",
+            InputType = form.InputType,
         };
     }
 
@@ -35,7 +56,7 @@ public static class PartNodeFormDTOMapper
     /// </summary>
     /// <param name="dto">The <see cref="PartNodeFormDTO"/> to convert.</param>
     /// <returns>A mapped <see cref="PartNode"/> entity.</returns>
-    public static PartNode ToEntity(this PartNodeFormDTO dto)
+    public static PartNode ToNewEntity(this PartNodeFormDTO dto)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
@@ -45,22 +66,18 @@ public static class PartNodeFormDTOMapper
             Id = dto.Id,
             Position = dto.Position,
             NodeType = dto.NodeType,
+            InputType = dto.InputType,
+            // Only set FK
             PartDefinitionId = dto.PartDefinitionId,
-            PartDefinition = dto.PartDefinition is not null
-                ? dto.PartDefinition.ToEntity()
-                : new PartDefinition { Id = dto.PartDefinitionId, Number = null!, Name = null! }
+
+            // DO NOT set navigation property
+            PartDefinition = null
         };
     }
-
-    /// <summary>
-    /// Converts a collection of <see cref="PartNode"/> entities to a list of <see cref="PartNodeFormDTO"/>s.
-    /// </summary>
-    public static List<PartNodeFormDTO> ToFormDTOList(this IEnumerable<PartNode> entities)
-        => entities.Select(e => e.ToFormDTO()).ToList();
 
     /// <summary>
     /// Converts a collection of <see cref="PartNodeFormDTO"/> DTOs to a list of <see cref="PartNode"/> entities.
     /// </summary>
     public static List<PartNode> ToEntityList(this IEnumerable<PartNodeFormDTO> dtos)
-        => dtos.Select(d => d.ToEntity()).ToList();
+        => dtos.Select(d => d.ToNewEntity()).ToList();
 }

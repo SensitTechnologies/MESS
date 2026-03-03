@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.File;
 
 namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
 
@@ -11,14 +12,14 @@ public static class StepNodeFormDTOMapper
     /// <summary>
     /// Converts a <see cref="Step"/> entity to a <see cref="StepNodeFormDTO"/>.
     /// </summary>
-    public static StepNodeFormDTO ToFormDTO(this Step entity)
+    public static StepNodeFormDTO ToFormDTO(this Step entity, Guid clientId)
     {
         ArgumentNullException.ThrowIfNull(entity);
 
         return new StepNodeFormDTO
         {
             Id = entity.Id,
-            ClientId = Guid.NewGuid().ToString(), // required for form DTOs
+            ClientId =  clientId, // required for form DTOs
             Position = entity.Position,
             NodeType = entity.NodeType,
             Name = entity.Name,
@@ -32,7 +33,7 @@ public static class StepNodeFormDTOMapper
     /// <summary>
     /// Converts a <see cref="StepNodeFormDTO"/> back to a <see cref="Step"/> entity.
     /// </summary>
-    public static Step ToEntity(this StepNodeFormDTO dto)
+    public static Step ToNewEntity(this StepNodeFormDTO dto)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
@@ -49,16 +50,32 @@ public static class StepNodeFormDTOMapper
             SecondaryMedia = dto.SecondaryMedia.ToList()
         };
     }
-
+    
     /// <summary>
-    /// Converts a collection of <see cref="Step"/> entities to form DTOs.
+    /// Converts a <see cref="StepNodeFormDTO"/> to a <see cref="StepNodeFileDTO"/> suitable for file export.
     /// </summary>
-    public static List<StepNodeFormDTO> ToFormDTOList(this IEnumerable<Step> entities)
-        => entities.Select(e => e.ToFormDTO()).ToList();
+    /// <param name="dto">The form DTO representing a step node.</param>
+    /// <returns>A <see cref="StepNodeFileDTO"/> containing the exportable step data.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="dto"/> is null.</exception>
+    public static StepNodeFileDTO ToFileDTO(this StepNodeFormDTO dto)
+    {
+        if (dto is null)
+            throw new ArgumentNullException(nameof(dto));
+
+        return new StepNodeFileDTO
+        {
+            Position = dto.Position,
+            Name = dto.Name,
+            Body = dto.Body,
+            DetailedBody = dto.DetailedBody,
+            PrimaryMedia = dto.PrimaryMedia.ToList(),
+            SecondaryMedia = dto.SecondaryMedia.ToList()
+        };
+    }
 
     /// <summary>
     /// Converts a collection of <see cref="StepNodeFormDTO"/> DTOs to entities.
     /// </summary>
     public static List<Step> ToEntityList(this IEnumerable<StepNodeFormDTO> dtos)
-        => dtos.Select(d => d.ToEntity()).ToList();
+        => dtos.Select(d => d.ToNewEntity()).ToList();
 }

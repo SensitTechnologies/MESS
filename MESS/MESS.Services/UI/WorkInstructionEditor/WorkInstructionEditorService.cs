@@ -1,5 +1,11 @@
 using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.DTOs.PartDefinitions;
+using MESS.Services.DTOs.Products.Detail;
+using MESS.Services.DTOs.WorkInstructions.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
 using MESS.Services.Media.WorkInstructions;
 using Serilog;
 
@@ -15,34 +21,24 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     private readonly IPartDefinitionService _partDefinitionService;
     
     /// <inheritdoc />
-    public WorkInstruction? Current { get; private set; }
+    public WorkInstructionFormDTO? Current { get; private set; }
     
     private string? _pendingProducedPartName;
     
-    private readonly List<WorkInstructionNode> _nodesQueuedForDeletion = [];
     
-    /// <summary>
-    /// Gets a read-only list of <see cref="WorkInstructionNode"/> instances
-    /// that have been queued for deletion but not yet removed from the database.
-    /// </summary>
-    public IReadOnlyList<WorkInstructionNode> NodesQueuedForDeletion => _nodesQueuedForDeletion.AsReadOnly();
-
+    private readonly HashSet<int> _nodesQueuedForDeletionIds = [];
+    
+    /// <inheritdoc />
+    public IReadOnlyCollection<int> NodesQueuedForDeletionIds => _nodesQueuedForDeletionIds;
+    
     /// <inheritdoc />
     public bool CurrentHasParts()
     {
         if (Current == null) return false;
 
         if (Current.Nodes.Count == 0) return false;
-        
-        foreach (var node in Current.Nodes)
-        {
-            if (node is PartNode)
-            {
-                return true;
-            }
-        }
 
-        return false;
+        return Current.Nodes.OfType<PartNodeFormDTO>().Any();
     }
     
     /// <inheritdoc />
@@ -51,16 +47,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         if (Current == null) return false;
 
         if (Current.Nodes.Count == 0) return false;
-        
-        foreach (var node in Current.Nodes)
-        {
-            if (node is Step)
-            {
-                return true;
-            }
-        }
 
-        return false;
+        return Current.Nodes.OfType<StepNodeFormDTO>().Any();
     }
     
     /// <inheritdoc />
@@ -106,9 +94,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public void StartNew(string? title = null, List<Product>? products = null)
+    public void StartNew(string? title = null, List<ProductDetailDTO>? products = null)
     {
-        Current = new WorkInstruction
+        Current = new WorkInstructionFormDTO
         {
             Title = title ?? "",
             Version = "1.0",
@@ -116,8 +104,10 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = false,
             PartProducedIsSerialized = false,
-            Products = products ?? new List<Product>(),
-            Nodes = new List<WorkInstructionNode>()
+            ProductIds = products?
+                .Select(p => p.ProductId)
+                .ToList() ?? new List<int>(),
+            Nodes = []
         };
 
         Mode = EditorMode.CreateNew;
@@ -126,12 +116,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
     
     /// <inheritdoc />
-    public async Task StartNewFromCurrent(string? title = null, List<Product>? products = null)
+    public async Task StartNewFromCurrent(string? title = null, List<ProductDetailDTO>? products = null)
     {
         if (Current == null)
             throw new InvalidOperationException("Cannot start a new work instruction from current because it is null.");
 
-        var newInstruction = new WorkInstruction
+        var newInstruction = new WorkInstructionFormDTO
         {
             Title = title ?? Current.Title,
             Version = "1.0",
@@ -139,7 +129,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
             PartProducedIsSerialized = Current.PartProducedIsSerialized,
-            Products = products ?? Current.Products?.ToList() ?? new List<Product>(),
+            ProductIds = Current.ProductIds?.ToList() ?? [],
             Nodes = await CloneNodesAsync(Current.Nodes)
         };
 
@@ -152,11 +142,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public async Task LoadForEditAsync(int id)
     {
-        var wi = await _workInstructionService.GetByIdAsync(id);
-        if (wi == null)
-            throw new Exception($"WorkInstruction with ID {id} not found.");
+        var wi = await _workInstructionService.GetFormByIdAsync(id);
 
-        Current = wi;
+        Current = wi ?? throw new Exception($"WorkInstruction with ID {id} not found.");
         Mode = EditorMode.EditExisting;
         IsDirty = false;
         NotifyChanged();
@@ -177,19 +165,24 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public async Task LoadForNewVersionAsync(int originalId)
     {
-        var latest = await _workInstructionService.GetAllAsync();
+        var latestSummaries = await _workInstructionService.GetAllSummariesAsync();
         
         // Finds the latest version in the same version chain as the given originalId.
         // Matches any work instruction that is marked as IsLatest and belongs to the chain
         // identified by originalId. We allow matching either OriginalId or Id because
         // the very first version in a chain has OriginalId == Id.
-        var template = latest
+        var templateSummary = latestSummaries
             .FirstOrDefault(w => w.IsLatest && (w.OriginalId == originalId || w.Id == originalId));
 
-        if (template == null)
+        if (templateSummary == null)
             throw new Exception($"No latest version found for OriginalId {originalId}.");
+        
+        var templateForm = await _workInstructionService.GetFormByIdAsync(templateSummary.Id);
 
-        Current = await CloneForNewVersion(template);
+        if (templateForm == null)
+            throw new Exception($"Failed to load WorkInstructionFormDTO for ID {templateSummary.Id}.");
+
+        Current = await CloneForNewVersion(templateForm);
         Mode = EditorMode.CreateNewVersion;
         IsDirty = true;
         NotifyChanged();
@@ -199,7 +192,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     public async Task LoadForNewVersionFromVersionAsync(int versionId)
     {
         // Load the version to restore by ID
-        var oldVersion = await _workInstructionService.GetByIdAsync(versionId);
+        var oldVersion = await _workInstructionService.GetFormByIdAsync(versionId);
         if (oldVersion == null)
             throw new Exception($"Version with ID {versionId} not found.");
 
@@ -219,9 +212,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         NotifyChanged();
     }
     
-    private async Task<WorkInstruction> CloneForNewVersion(WorkInstruction template)
+    private async Task<WorkInstructionFormDTO> CloneForNewVersion(WorkInstructionFormDTO template)
     {
-        return new WorkInstruction
+        return new WorkInstructionFormDTO
         {
             Title = template.Title,
             Version = template.Version,
@@ -230,49 +223,58 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
-            PartProduced = template.PartProduced,
-            Products = template.Products?.ToList() ?? new List<Product>(),
+            PartProducedId = template.PartProducedId,
+            ProductIds = template.ProductIds,
             Nodes = await CloneNodesAsync(template.Nodes)
         };
     }
 
-    private async Task<List<WorkInstructionNode>> CloneNodesAsync(List<WorkInstructionNode> nodes)
+    private async Task<List<WorkInstructionNodeFormDTO>> CloneNodesAsync(List<WorkInstructionNodeFormDTO> nodes)
     {
         if (nodes.Count == 0)
         {
             return nodes;
         }
 
-        var clone = new List<WorkInstructionNode>();
+        var clone = new List<WorkInstructionNodeFormDTO>();
         foreach (var node in nodes)
         {
             clone.Add(await CloneNodeAsync(node));
         }
 
-        return clone?.ToList() ?? new List<WorkInstructionNode>();
+        return clone?.ToList() ?? new List<WorkInstructionNodeFormDTO>();
     }
 
-    private async Task<WorkInstructionNode> CloneNodeAsync(WorkInstructionNode node)
+    private async Task<WorkInstructionNodeFormDTO> CloneNodeAsync(WorkInstructionNodeFormDTO node)
     {
-        if (node is PartNode partNode)
+        if (node is PartNodeFormDTO partNode)
         {
-            return new PartNode
+            return new PartNodeFormDTO
             {
+                // New unsaved node
+                ClientId = Guid.NewGuid(),
+
                 NodeType = WorkInstructionNodeType.Part,
-                // Clone the single PartDefinition associated with this node
-                PartDefinition = new PartDefinition
-                {
-                    Id = partNode.PartDefinition.Id, // Preserving the Database ID for the PartDefinition
-                    Name = partNode.PartDefinition.Name,
-                    Number = partNode.PartDefinition.Number
-                },
-                PartDefinitionId = partNode.PartDefinitionId
+                Position = partNode.Position,
+
+                PartDefinitionId = partNode.PartDefinitionId,
+                InputType = partNode.InputType,
+
+                PartDefinition = partNode.PartDefinition == null
+                    ? null
+                    : new PartDefinitionDTO
+                    {
+                        PartDefinitionId = partNode.PartDefinition.PartDefinitionId,
+                        Name = partNode.PartDefinition.Name,
+                        Number = partNode.PartDefinition.Number
+                    }
             };
         }
-        else if (node is Step stepNode)
+        else if (node is StepNodeFormDTO stepNode)
         {
-            return new Step
+            return new StepNodeFormDTO
             {
+                ClientId = Guid.NewGuid(), // Assign a new ClientId for the cloned node
                 NodeType = WorkInstructionNodeType.Step,
                 Name = stepNode.Name,
                 Body = stepNode.Body,
@@ -324,28 +326,29 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         if (Current == null)
             return false;
 
-        // Resolve the produced part name → PartDefinition
+        // -----------------------------
+        // Resolve pending produced part
+        // -----------------------------
         if (!string.IsNullOrWhiteSpace(_pendingProducedPartName))
         {
-            var part = await _partDefinitionService
-                .GetOrCreateByNameAsync(_pendingProducedPartName);
-
+            var part = await _partDefinitionService.GetOrCreateByNameAsync(_pendingProducedPartName);
             if (part != null)
             {
-                Current.PartProduced = part;
                 Current.PartProducedId = part.Id;
             }
-
             _pendingProducedPartName = null;
         }
 
         bool success;
 
+        // -----------------------------
+        // Handle save based on editor mode
+        // -----------------------------
         switch (Mode)
         {
             case EditorMode.CreateNew:
                 Current.OriginalId = null;
-                success = await _workInstructionService.Create(Current);
+                success = await _workInstructionService.CreateAsync(Current);
                 break;
 
             case EditorMode.EditExisting:
@@ -356,9 +359,19 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 if (Current.OriginalId == null)
                     throw new InvalidOperationException("OriginalId is required for versioning.");
 
-                success = await _workInstructionService.CreateNewVersionAsync(Current);
+                // Create new version; already handles marking old versions inactive
+                var newVersion = await _workInstructionService.CreateNewVersionAsync(Current);
+                if (newVersion == null)
+                    return false;
+
+                // Update Current with the newly created version's ID and status
+                Current.Id = newVersion.Id;
+                Current.IsLatest = newVersion.IsLatest;
+                Current.IsActive = newVersion.IsActive;
+                success = true;
                 break;
 
+            case EditorMode.None:
             default:
                 return false;
         }
@@ -367,38 +380,33 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             return false;
 
         // -----------------------------
-        // Post-commit editor state only
+        // Post-save editor state
         // -----------------------------
-
-        if (Current.IsActive)
-        {
-            await _workInstructionService.MarkOtherVersionsInactiveAsync(Current.Id);
-        }
-
         IsDirty = false;
         Mode = EditorMode.EditExisting;
         NotifyChanged();
 
-        // Cleanup queued deletions AFTER a successful save
-        if (_nodesQueuedForDeletion.Any())
+        // -----------------------------
+        // Cleanup queued deletions
+        // -----------------------------
+        if (_nodesQueuedForDeletionIds.Any())
         {
-            var deleted = await _workInstructionService.DeleteNodesAsync(_nodesQueuedForDeletion);
+            var deleted = await _workInstructionService.DeleteNodesAsync(_nodesQueuedForDeletionIds);
             if (deleted)
             {
-                _nodesQueuedForDeletion.Clear();
+                _nodesQueuedForDeletionIds.Clear();
             }
             else
             {
                 Log.Warning(
                     "Failed to delete {Count} queued nodes after saving WorkInstruction {Id}",
-                    _nodesQueuedForDeletion.Count,
+                    _nodesQueuedForDeletionIds.Count,
                     Current.Id);
             }
         }
 
         return true;
     }
-
 
     /// <inheritdoc />
     public void Reset()
@@ -418,13 +426,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
     
     /// <inheritdoc />
-    public void QueueNodeForDeletion(WorkInstructionNode node)
+    public void QueueNodeForDeletion(int nodeId)
     {
-        if (!_nodesQueuedForDeletion.Contains(node))
-        {
-            _nodesQueuedForDeletion.Add(node);
-        }
+        _nodesQueuedForDeletionIds.Add(nodeId); // no duplicates allowed
     }
+
     
     /// <inheritdoc />
     public void SetProducedPartName(string? name)

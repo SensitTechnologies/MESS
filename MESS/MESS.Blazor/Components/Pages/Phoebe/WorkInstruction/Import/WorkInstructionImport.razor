@@ -1,7 +1,10 @@
 @using MESS.Data.Models
 @using MESS.Services.DTOs
+@using MESS.Services.DTOs.WorkInstructions.File
 @using MESS.Services.Files.WorkInstructions
+@using MESS.Services.UI.WorkInstructionImport
 @inject IWorkInstructionFileService WorkInstructionFileService
+@inject IWorkInstructionImportService WorkInstructionImportService
 @inject IToastService ToastService
 
 <FluentCard Width="400" Class="m-0 w-100">
@@ -38,7 +41,7 @@
     /// Passes the imported <see cref="WorkInstruction"/> as a parameter.
     /// </summary>
     [Parameter]
-    public EventCallback<WorkInstruction> OnImportComplete { get; set; }
+    public EventCallback<WorkInstructionFileDTO> OnImportComplete { get; set; }
     
     private IBrowserFile? File { get; set; }
     private bool IsImporting { get; set; }
@@ -50,6 +53,7 @@
     {
         IsImporting = true;
         ImportComplete = false;
+        StatusMessage = null;
 
         if (File == null)
         {
@@ -58,29 +62,48 @@
             ToastService.ShowError("File is null. Please try again.");
             return;
         }
-        
-        var importResult = await WorkInstructionFileService.ImportFromXlsx(File);
 
-        FileStatus = importResult.Status;
-        if (importResult is { Status: ImportStatus.Error, ImportError: not null })
+        // Step 1: Convert uploaded file to file-layer DTO
+        var fileImportResult = await WorkInstructionFileService.ImportFromXlsx(File);
+
+        if (fileImportResult.Status == ImportStatus.Error)
         {
-            StatusMessage = importResult.ImportError.ToString();
+            StatusMessage = fileImportResult.ImportError?.ToString() ?? "Unknown import error";
             ToastService.ShowError(StatusMessage, 10000);
+            IsImporting = false;
+            return;
         }
 
-        IsImporting = importResult is {Status: ImportStatus.Pending};
-
-        if (importResult.Status == ImportStatus.Complete)
+        var fileDto = fileImportResult.WorkInstruction;
+        if (fileDto == null)
         {
             IsImporting = false;
-            ImportComplete = true;
-            if (importResult.WorkInstruction == null)
-            {
-                return;
-            }
-            await OnImportComplete.InvokeAsync(importResult.WorkInstruction);
-            ToastService.ShowSuccess($"Successfully Imported WorkInstruction: {importResult.WorkInstruction.Title}. Version: {importResult.WorkInstruction.Version}", 3000);
+            ToastService.ShowError("Imported file contained no work instruction data.");
+            return;
         }
+
+        // Step 2: Use the import service to resolve references and validate
+        var importResult = await WorkInstructionImportService.ImportAsync(fileDto);
+
+        if (!importResult.Success)
+        {
+            StatusMessage = string.Join("; ", importResult.Errors);
+            ToastService.ShowError($"Failed to import work instruction: {StatusMessage}", 10000);
+            IsImporting = false;
+            return;
+        }
+
+        // Step 3: Success — get the resolved WorkInstructionFormDTO
+        var resolvedFormDto = importResult.WorkInstruction;
+
+        // Notify parent if needed (can pass file DTO or resolved form DTO)
+        await OnImportComplete.InvokeAsync(fileDto);
+
+        StatusMessage = $"Successfully imported: {resolvedFormDto?.Title} v{resolvedFormDto?.Version}";
+        ToastService.ShowSuccess(StatusMessage, 3000);
+
+        IsImporting = false;
+        ImportComplete = true;
     }
 
     private void LoadFile(InputFileChangeEventArgs obj)

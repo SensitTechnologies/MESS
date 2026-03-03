@@ -315,7 +315,7 @@ else
 
     private async Task AssociateInstructionsToProduct(int productId, List<int> instructionIds)
     {
-        await ProductService.AddWorkInstructionsAsync(productId, instructionIds);
+        await WorkInstructionService.AddWorkInstructionsToProductAsync(productId, instructionIds);
         SelectedInstructionMap[productId] = [];
         await GrabServerData();
         await _table.ReloadServerData();
@@ -324,7 +324,7 @@ else
 
     private async Task RemoveInstructionsFromProduct(int productId, List<int> instructionIds)
     {
-        await ProductService.RemoveWorkInstructionsAsync(productId, instructionIds);
+        await WorkInstructionService.RemoveWorkInstructionsFromProductAsync(productId, instructionIds);
         SelectedInstructionMap[productId] = [];
         await GrabServerData();
         await _table.ReloadServerData();

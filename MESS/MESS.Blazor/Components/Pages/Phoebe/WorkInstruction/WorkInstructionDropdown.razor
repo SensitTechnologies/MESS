@@ -1,4 +1,4 @@
-@using MESS.Data.Models
+@using MESS.Services.DTOs.WorkInstructions.Summary
 
 @if (WorkInstructions?.Any() == true)
 {
@@ -39,7 +39,7 @@ else
     /// Typically filtered by the selected product in the parent component.
     /// </summary>
     [Parameter]
-    public List<WorkInstruction>? WorkInstructions { get; set; }
+    public List<WorkInstructionSummaryDTO>? WorkInstructions { get; set; }
 
     /// <summary>
     /// The currently selected work instruction ID, set by the parent.

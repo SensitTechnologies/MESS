@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using MESS.Services.DTOs.WorkInstructions.Nodes.File;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
 
@@ -26,13 +27,35 @@ public static class WorkInstructionNodeFormMapper
     /// <exception cref="NotSupportedException">
     /// Thrown when the entity type is not recognized.
     /// </exception>
-    public static WorkInstructionNodeFormDTO ToFormDTO(this WorkInstructionNode entity, string clientId)
+    public static WorkInstructionNodeFormDTO ToFormDTO(this WorkInstructionNode entity, Guid clientId)
     {
         return entity switch
         {
-            PartNode part => part.ToFormDTO(clientId),
-            Step step => step.ToFormDTO(clientId),
+            PartNode part => PartNodeFormDTOMapper.ToFormDTO(part, clientId),
+            Step step => StepNodeFormDTOMapper.ToFormDTO(step, clientId),
             _ => throw new NotSupportedException($"Unsupported node entity type: {entity.GetType().Name}")
+        };
+    }
+    
+    
+    
+    /// <summary>
+    /// Converts a <see cref="WorkInstructionNodeFormDTO"/> into its corresponding
+    /// file/export DTO representation.
+    /// </summary>
+    /// <param name="dto">The node form DTO to convert.</param>
+    /// <returns>A file DTO representation of the node.</returns>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when the DTO type is not recognized.
+    /// </exception>
+    public static WorkInstructionNodeFileDTO ToFileDTO(this WorkInstructionNodeFormDTO dto)
+    {
+        return dto switch
+        {
+            PartNodeFormDTO partDto => PartNodeFormDTOMapper.ToFileDTO(partDto),
+            StepNodeFormDTO stepDto => StepNodeFormDTOMapper.ToFileDTO(stepDto),
+            _ => throw new NotSupportedException(
+                $"Unsupported node DTO type: {dto.GetType().Name}")
         };
     }
 
@@ -45,12 +68,12 @@ public static class WorkInstructionNodeFormMapper
     /// <exception cref="NotSupportedException">
     /// Thrown when the DTO type is not recognized.
     /// </exception>
-    public static WorkInstructionNode ToEntity(this WorkInstructionNodeFormDTO dto)
+    public static WorkInstructionNode ToNewEntity(this WorkInstructionNodeFormDTO dto)
     {
         return dto switch
         {
-            PartNodeFormDTO partDto => partDto.ToEntity(),
-            StepNodeFormDTO stepDto => stepDto.ToEntity(),
+            PartNodeFormDTO partDto => PartNodeFormDTOMapper.ToNewEntity(partDto),
+            StepNodeFormDTO stepDto => StepNodeFormDTOMapper.ToNewEntity(stepDto),
             _ => throw new NotSupportedException($"Unsupported node DTO type: {dto.GetType().Name}")
         };
     }

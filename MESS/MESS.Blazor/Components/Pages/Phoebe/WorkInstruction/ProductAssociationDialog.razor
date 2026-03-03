@@ -1,4 +1,5 @@
 ﻿@using MESS.Data.Models
+@using MESS.Services.DTOs.Products.Detail
 
 @if (IsVisible)
 {
@@ -70,20 +71,20 @@
     /// <summary>
     /// A list of all available products to display in the selector.
     /// </summary>
-    [Parameter] public required List<Product> AllProducts { get; set; }
+    [Parameter] public required List<ProductDetailDTO> AllProducts { get; set; }
     
     /// <summary>
     /// The currently selected products from the dialog.
     /// </summary>
     [Parameter]
-    public List<Product> SelectedProducts { get; set; } = new();
+    public List<ProductDetailDTO> SelectedProducts { get; set; } = new();
     
     /// <summary>
     /// An event callback used to send the associated products and entered work instruction title up to the menu bar.
     /// </summary>
     [Parameter]
-    public EventCallback<(string Title, List<Product> Products)> OnConfirmed { get; set; }
-    
+    public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnConfirmed { get; set; }
+
     /// <summary>
     /// Gets or sets the callback that is triggered whenever the selection of products changes.
     /// This allows the parent component to receive and react to updates to the selected products list,
@@ -93,7 +94,7 @@
     /// The callback is invoked with a new list of <see cref="Product"/> instances representing the current selection.
     /// </remarks>
     [Parameter]
-    public EventCallback<List<Product>> SelectedProductsChanged { get; set; }
+    public EventCallback<List<ProductDetailDTO>> SelectedProductsChanged { get; set; }
 
     /// <summary>
     /// The name of the work instruction, bound to the name text area.
@@ -117,7 +118,7 @@
         IsVisible = false;
     }
     
-    private Task OnSelectedProductsChanged(List<Product> products)
+    private Task OnSelectedProductsChanged(List<ProductDetailDTO> products)
     {
         // Instead of assigning locally, notify the parent to update
         return SelectedProductsChanged.InvokeAsync(products);

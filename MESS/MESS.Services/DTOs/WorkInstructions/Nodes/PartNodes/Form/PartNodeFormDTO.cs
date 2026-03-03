@@ -27,4 +27,9 @@ public class PartNodeFormDTO : WorkInstructionNodeFormDTO
     /// <see cref="PartDefinitionId"/> is needed for binding or updates.
     /// </remarks>
     public PartDefinitionDTO? PartDefinition { get; set; }
+    
+    /// <summary>
+    /// Indicates what kind of input this part node expects (e.g., serial number or production log ID).
+    /// </summary>
+    public PartInputType InputType { get; set; } = PartInputType.SerialNumber;
 }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Blazored.TextEditor;
 using MESS.Data.Models;
+using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
+using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
 using Serilog;
 
 namespace MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes;
@@ -35,7 +37,7 @@ public partial class StepNodeView : IDisposable
     /// including fields like Name and Body.
     /// </remarks>
     [Parameter, EditorRequired]
-    public required Step Step { get; set; }
+    public required StepNodeFormDTO Step { get; set; }
 
     /// <summary>
     /// Gets or sets the dictionary of editor references, keyed by Step ID.
@@ -63,7 +65,7 @@ public partial class StepNodeView : IDisposable
     /// The parent handles this action by modifying the list of nodes appropriately.
     /// </remarks>
     [Parameter]
-    public EventCallback<(WorkInstructionNode step, string action)> OnAction { get; set; }
+    public EventCallback<(WorkInstructionNodeFormDTO step, string action)> OnAction { get; set; }
     
     /// <summary>
     /// Event callback that is triggered when the step data has been modified by the user.
