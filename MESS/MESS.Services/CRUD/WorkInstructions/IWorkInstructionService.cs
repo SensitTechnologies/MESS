@@ -160,13 +160,6 @@ public interface IWorkInstructionService
     /// <param name="id">the id of the starting instruction</param>
     /// <returns></returns>
     public Task<bool> DeleteAllVersionsByIdAsync(int id);
-
-    /// <summary>
-    /// Updates a WorkInstruction that is currently saved in the Database.
-    /// </summary>
-    /// <param name="workInstruction">A WorkInstruction instance.</param>
-    /// <returns>A boolean value indicating true for success or false for failure.</returns>
-    public Task<bool> UpdateWorkInstructionAsync(WorkInstruction workInstruction);
     
     /// <summary>
     /// Sets IsActive = false for all other versions in this version chain.

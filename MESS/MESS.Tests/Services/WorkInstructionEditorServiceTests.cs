@@ -123,41 +123,6 @@ public class WorkInstructionEditorServiceTests
         _mockWorkInstructionService.Verify(s => s.Create(It.IsAny<WorkInstruction>()), Times.Once);
         _mockWorkInstructionService.Verify(s => s.MarkOtherVersionsInactiveAsync(10), Times.Once);
     }
-
-    [Fact]
-    public async Task SaveAsync_EditExisting_ShouldCallUpdate()
-    {
-        // Arrange
-        var formDto = new WorkInstructionFormDTO { Id = 5, Title = "Existing" };
-
-        _mockWorkInstructionService
-            .Setup(s => s.GetFormByIdAsync(5))
-            .ReturnsAsync(formDto);
-
-        _mockWorkInstructionService
-            .Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstruction>()))
-            .ReturnsAsync(true);
-
-        _mockWorkInstructionService
-            .Setup(s => s.MarkOtherVersionsInactiveAsync(It.IsAny<int>()))
-            .Returns(Task.CompletedTask);
-
-        _mockWorkInstructionService
-            .Setup(s => s.DeleteNodesAsync(It.IsAny<IEnumerable<int>>()))
-            .ReturnsAsync(true);
-
-        await _sut.LoadForEditAsync(5);
-
-        // Act
-        var result = await _sut.SaveAsync();
-
-        // Assert
-        Assert.True(result);
-
-        _mockWorkInstructionService.Verify(
-            s => s.UpdateWorkInstructionAsync(It.Is<WorkInstruction>(w => w.Id == 5)),
-            Times.Once);
-    }
     
     [Fact]
     public async Task SaveAsync_WithQueuedNodes_ShouldDeleteAfterSave()
