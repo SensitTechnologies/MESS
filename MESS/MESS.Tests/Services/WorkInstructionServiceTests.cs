@@ -39,8 +39,9 @@ public class WorkInstructionServiceTests
         var logMock = new Mock<IProductionLogService>();
         var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
+        var updaterMock = new Mock<IWorkInstructionUpdater>();
         
-        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, dbFactory.Object);
+        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, dbFactory.Object);
     }
     
     [Fact]
@@ -54,8 +55,9 @@ public class WorkInstructionServiceTests
         var logMock = new Mock<IProductionLogService>();
         var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
+        var updaterMock = new Mock<IWorkInstructionUpdater>();
     
-        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, dbFactory.Object);
+        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, dbFactory.Object);
 
         // Act
         var result = service.GetByTitle("Test Title");

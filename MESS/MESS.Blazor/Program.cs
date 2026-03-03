@@ -67,6 +67,7 @@ builder.Services.AddRazorComponents()
     
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IWorkInstructionService, WorkInstructionService>();
+builder.Services.AddScoped<IWorkInstructionUpdater, WorkInstructionUpdater>();
 builder.Services.AddScoped<IProductionLogService, ProductionLogService>();
 builder.Services.AddScoped<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddScoped<ISessionManager, SessionManager>();

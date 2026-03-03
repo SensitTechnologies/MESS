@@ -4,7 +4,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.DTOs.WorkInstructions.Form;
-using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
 using MESS.Services.DTOs.WorkInstructions.Version;
 using MESS.Services.Media.WorkInstructions;
@@ -18,6 +17,7 @@ public class WorkInstructionService : IWorkInstructionService
     private readonly IProductionLogService _productionLogService;
     private readonly IWorkInstructionImageService _imageService;
     private readonly IMemoryCache _cache;
+    private readonly IWorkInstructionUpdater _workInstructionUpdater;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     
     private const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -31,13 +31,19 @@ public class WorkInstructionService : IWorkInstructionService
     /// <param name="productionLogService">The service for managing product-related operations.</param>
     /// <param name="imageService">The service for managing work instruction image-related operations.</param>
     /// <param name="cache">The memory cache for caching work instructions.</param>
+    /// <param name="workInstructionUpdater"> The service responsible for applying updates from form DTOs to existing work instruction entities.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
-    public WorkInstructionService(IProductionLogService productionLogService, IWorkInstructionImageService imageService, IMemoryCache cache, IDbContextFactory<ApplicationContext> contextFactory)
+    public WorkInstructionService(
+        IProductionLogService productionLogService, 
+        IWorkInstructionImageService imageService, IMemoryCache cache, 
+        IWorkInstructionUpdater workInstructionUpdater,
+        IDbContextFactory<ApplicationContext> contextFactory)
     {
         _productionLogService = productionLogService;
         _imageService = imageService;
         _cache = cache;
         _contextFactory = contextFactory;
+        _workInstructionUpdater = workInstructionUpdater;
     }
     
     /// <inheritdoc />
@@ -470,7 +476,7 @@ public class WorkInstructionService : IWorkInstructionService
                 return false;
             }
             
-            if (workInstruction.PartProduced != null && workInstruction.PartProduced.Id > 0)
+            if (workInstruction.PartProduced is { Id: > 0 })
             {
                 context.Attach(workInstruction.PartProduced);
                 context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
@@ -517,7 +523,7 @@ public class WorkInstructionService : IWorkInstructionService
         try
         {
             // Build base entity from mapper
-            var workInstruction = dto.ToEntity();
+            var workInstruction = dto.ToNewEntity();
 
             // Validate entity
             var validator = new WorkInstructionValidator();
@@ -527,7 +533,7 @@ public class WorkInstructionService : IWorkInstructionService
                 return false;
 
             // Resolve PartProduced safely
-            if (dto.PartProducedId.HasValue && dto.PartProducedId.Value > 0)
+            if (dto.PartProducedId is > 0)
             {
                 var partProduced = await context.PartDefinitions
                     .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
@@ -539,7 +545,7 @@ public class WorkInstructionService : IWorkInstructionService
             }
 
             // Resolve Products safely
-            if (dto.ProductIds?.Any() == true)
+            if (dto.ProductIds.Count != 0)
             {
                 workInstruction.Products = await context.Products
                     .Where(p => dto.ProductIds.Contains(p.Id))
@@ -629,7 +635,7 @@ public class WorkInstructionService : IWorkInstructionService
             }
 
             // Build new entity from DTO
-            var workInstruction = dto.ToEntity();
+            var workInstruction = dto.ToNewEntity();
 
             // Force insert (never reuse existing Id)
             workInstruction.Id = 0;
@@ -934,7 +940,7 @@ public class WorkInstructionService : IWorkInstructionService
     {
         Log.Information("Beginning update for WorkInstruction {Id}", dto.Id);
 
-        if (dto.Id == null || dto.Id == 0)
+        if (dto.Id is null or 0)
             return false;
 
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -946,89 +952,18 @@ public class WorkInstructionService : IWorkInstructionService
 
             try
             {
-                // Load tracked entity with relationships
                 var existing = await context.WorkInstructions
                     .Include(w => w.Products)
                     .Include(w => w.Nodes)
-                        .ThenInclude(n => (n as PartNode)!.PartDefinition)
                     .FirstOrDefaultAsync(w => w.Id == dto.Id.Value);
 
                 if (existing == null)
                     return false;
 
-                // Enforce uniqueness if title/version changed
-                if (!string.Equals(existing.Title, dto.Title, StringComparison.OrdinalIgnoreCase)
-                    || !string.Equals(existing.Version, dto.Version, StringComparison.OrdinalIgnoreCase))
-                {
-                    var uniquenessCheck = dto.ToEntity();
-                    uniquenessCheck.Id = existing.Id;
+                if (!await ValidateUniquenessAsync(dto, existing))
+                    return false;
 
-                    if (!await IsUnique(uniquenessCheck))
-                        return false;
-                }
-
-                // -----------------------------
-                // Update scalar properties
-                // -----------------------------
-                existing.Title = dto.Title;
-                existing.Version = dto.Version;
-                existing.IsActive = dto.IsActive;
-                existing.ShouldGenerateQrCode = dto.ShouldGenerateQrCode;
-                existing.PartProducedIsSerialized = dto.PartProducedIsSerialized;
-                existing.PartProducedId = dto.PartProducedId;
-
-                // -----------------------------
-                // Resolve PartProduced
-                // -----------------------------
-                if (dto.PartProducedId.HasValue)
-                {
-                    existing.PartProduced = await context.PartDefinitions
-                        .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
-                }
-                else
-                {
-                    existing.PartProduced = null;
-                }
-
-                // -----------------------------
-                // Reconcile Products
-                // -----------------------------
-                var newProducts = dto.ProductIds.Count != 0
-                    ? await context.Products
-                        .Where(p => dto.ProductIds.Contains(p.Id))
-                        .ToListAsync()
-                    : new List<Product>();
-
-                existing.Products.Clear();
-
-                foreach (var product in newProducts)
-                    existing.Products.Add(product);
-
-                // -----------------------------
-                // Reconcile Nodes
-                // -----------------------------
-                // Rebuild node graph from DTO (safer than patching detached graph)
-                var mappedNodes = dto.Nodes.Select(n => n.ToEntity()).ToList();
-
-                existing.Nodes.Clear();
-
-                foreach (var node in mappedNodes)
-                {
-                    // Ensure PartNode PartDefinition is resolved
-                    if (node is PartNode partNode && partNode.PartDefinitionId > 0)
-                    {
-                        var resolvedPart = await context.PartDefinitions
-                            .FirstOrDefaultAsync(p => p.Id == partNode.PartDefinitionId);
-
-                        if (resolvedPart == null)
-                            throw new InvalidOperationException(
-                                $"PartDefinition {partNode.PartDefinitionId} not found.");
-
-                        partNode.PartDefinition = resolvedPart;
-                    }
-
-                    existing.Nodes.Add(node);
-                }
+                await _workInstructionUpdater.ApplyAsync(dto, existing, context);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -1045,6 +980,20 @@ public class WorkInstructionService : IWorkInstructionService
                 return false;
             }
         });
+    }
+    
+    private async Task<bool> ValidateUniquenessAsync(
+        WorkInstructionFormDTO dto,
+        WorkInstruction existing)
+    {
+        if (string.Equals(existing.Title, dto.Title, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(existing.Version, dto.Version, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var uniquenessCheck = dto.ToNewEntity();
+        uniquenessCheck.Id = existing.Id;
+
+        return await IsUnique(uniquenessCheck);
     }
 
     private static async Task UpdateProducts(DbContext context, WorkInstruction existing, WorkInstruction updated)
