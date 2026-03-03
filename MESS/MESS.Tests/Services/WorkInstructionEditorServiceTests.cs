@@ -90,7 +90,7 @@ public class WorkInstructionEditorServiceTests
     }
 
     [Fact]
-    public async Task SaveAsync_CreateNew_ShouldCallCreateAndMarkClean()
+    public async Task SaveAsync_CreateNew_ShouldCallCreate()
     {
         // Arrange
         _sut.StartNew("New WI");
@@ -110,9 +110,6 @@ public class WorkInstructionEditorServiceTests
         _mockWorkInstructionService.Verify(
             s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()),
             Times.Once);
-
-        // REMOVE THIS — no longer called
-        // _mockWorkInstructionService.Verify(s => s.MarkOtherVersionsInactiveAsync(10), Times.Once);
     }
     
     [Fact]
