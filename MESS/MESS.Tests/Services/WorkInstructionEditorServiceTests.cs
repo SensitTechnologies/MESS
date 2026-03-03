@@ -96,20 +96,7 @@ public class WorkInstructionEditorServiceTests
         _sut.StartNew("New WI");
 
         _mockWorkInstructionService
-            .Setup(s => s.Create(It.IsAny<WorkInstruction>()))
-            .ReturnsAsync(true)
-            .Callback<WorkInstruction>(w =>
-            {
-                w.Id = 10;              // simulate EF assigning Id
-                _sut.Current!.Id = 10;  // simulate mapping back to DTO
-            });
-
-        _mockWorkInstructionService
-            .Setup(s => s.MarkOtherVersionsInactiveAsync(It.IsAny<int>()))
-            .Returns(Task.CompletedTask);
-
-        _mockWorkInstructionService
-            .Setup(s => s.DeleteNodesAsync(It.IsAny<IEnumerable<int>>()))
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
             .ReturnsAsync(true);
 
         // Act
@@ -120,8 +107,12 @@ public class WorkInstructionEditorServiceTests
         Assert.False(_sut.IsDirty);
         Assert.Equal(EditorMode.EditExisting, _sut.Mode);
 
-        _mockWorkInstructionService.Verify(s => s.Create(It.IsAny<WorkInstruction>()), Times.Once);
-        _mockWorkInstructionService.Verify(s => s.MarkOtherVersionsInactiveAsync(10), Times.Once);
+        _mockWorkInstructionService.Verify(
+            s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()),
+            Times.Once);
+
+        // REMOVE THIS — no longer called
+        // _mockWorkInstructionService.Verify(s => s.MarkOtherVersionsInactiveAsync(10), Times.Once);
     }
     
     [Fact]
@@ -133,24 +124,15 @@ public class WorkInstructionEditorServiceTests
         _sut.QueueNodeForDeletion(2);
 
         _mockWorkInstructionService
-            .Setup(s => s.Create(It.IsAny<WorkInstruction>()))
-            .ReturnsAsync(true)
-            .Callback<WorkInstruction>(w =>
-            {
-                w.Id = 20;
-                _sut.Current!.Id = 20;
-            });
-
-        _mockWorkInstructionService
-            .Setup(s => s.MarkOtherVersionsInactiveAsync(It.IsAny<int>()))
-            .Returns(Task.CompletedTask);
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
+            .ReturnsAsync(true);
 
         List<int>? capturedIds = null;
 
         _mockWorkInstructionService
             .Setup(s => s.DeleteNodesAsync(It.IsAny<IEnumerable<int>>()))
-            .Callback<IEnumerable<int>>(ids => 
-                capturedIds = ids.ToList()) // SNAPSHOT HERE
+            .Callback<IEnumerable<int>>(ids =>
+                capturedIds = ids.ToList())
             .ReturnsAsync(true);
 
         // Act
