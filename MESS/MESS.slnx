@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MESS.Blazor/MESS.Blazor.csproj" />
+  <Project Path="MESS.Data/MESS.Data.csproj" />
+  <Project Path="MESS.Services/MESS.Services.csproj" />
+  <Project Path="MESS.Tests/MESS.Tests.csproj" />
+</Solution>
