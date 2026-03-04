@@ -27,7 +27,7 @@ on:
 env:
   BUILD_COMMIT: 'last-build-version'
   APP_ARTIFACT: .net-app
-  SOLUTION_PATH: './MESS/MESS.sln'
+  SOLUTION_PATH: './MESS/MESS.slnx'
 
 jobs:
   build:

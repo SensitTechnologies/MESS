@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  SOLUTION_PATH: './MESS/MESS.sln'
+  SOLUTION_PATH: './MESS/MESS.slnx'
 
 jobs:
   build:
