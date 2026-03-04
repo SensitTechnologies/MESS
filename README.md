@@ -1,4 +1,4 @@
-# MESS
+<img src="MESS/MESS.Blazor/wwwroot/Resources/MESS_Full_Icon.svg" alt="MESS" width="300"/>
 
 [![.NET](https://github.com/VidetteMakes/MESS/actions/workflows/dotnet.yml/badge.svg)](https://github.com/SensitTechnologies/MESS/actions/workflows/dotnet.yml)
 [![Build](https://github.com/VidetteMakes/MESS/actions/workflows/build.yml/badge.svg)](https://github.com/SensitTechnologies/MESS/actions/workflows/build.yml)
