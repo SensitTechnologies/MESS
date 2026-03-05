@@ -30,6 +30,12 @@
     "resource": [
       {
         "files": [
+          "../MESS/MESS.Blazor/wwwroot/Resources/MESS_Icon.svg",
+          "../MESS/MESS.Blazor/wwwroot/Resources/MESS_Full_Icon.svg"
+        ]
+      },
+      {
+        "files": [
           "images/**"
         ]
       }
@@ -37,10 +43,13 @@
     "output": "_site",
     "template": [
       "default",
-      "modern"
+      "modern",
+      "templates/material"
     ],
     "globalMetadata": {
-      "_appName": "MESS API",
+      "_appLogoPath": "MESS_Full_Icon.svg",
+      "_appFaviconPath": "MESS_Icon.svg",
+      "_appName": "MESS API Documentation",
       "_appTitle": "MESS API",
       "_enableSearch": true,
       "pdf": false
