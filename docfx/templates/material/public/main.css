@@ -78,6 +78,7 @@ img {
   color: var(--bs-nav-link-color);
   height: 40px;
   width: auto;
+  margin-right: 16px;
 }
 
 [data-bs-theme='light'] nav.navbar {
