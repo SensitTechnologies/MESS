@@ -1,11 +1,1 @@
----
-_layout: landing
----
-
-# MESS API Documentation
-
-Browse the generated API documentation here.
-
-For other written documentation, visit the [MESS GitHub Wiki](https://github.com/VidetteMakes/MESS/wiki).
-
-- [Start here →](api/MESS.html)
+<meta http-equiv="refresh" content="0; url=api/MESS.html">
