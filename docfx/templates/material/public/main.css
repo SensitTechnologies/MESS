@@ -3,6 +3,7 @@
 :root {
   --bs-font-sans-serif: 'Roboto';
   --bs-border-radius: 10px;
+  --bs-primary-bg-subtle: #fff9c4;
 
   --border-radius-button: 40px;
   --card-box-shadow: 0 1px 2px 0 #3d41440f, 0 1px 3px 1px #3d414429;
