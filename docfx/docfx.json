@@ -30,9 +30,10 @@
     "resource": [
       {
         "files": [
-          "../MESS/MESS.Blazor/wwwroot/Resources/MESS_Icon.svg",
-          "../MESS/MESS.Blazor/wwwroot/Resources/MESS_Full_Icon.svg"
-        ]
+          "MESS_Icon.svg",
+          "MESS_Full_Icon.svg"
+        ],
+        "src": "../MESS/MESS.Blazor/wwwroot/Resources"
       },
       {
         "files": [
