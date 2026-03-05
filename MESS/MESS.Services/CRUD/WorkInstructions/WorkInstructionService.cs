@@ -497,7 +497,7 @@ public class WorkInstructionService : IWorkInstructionService
                 context.Entry(partNode.PartDefinition).State = EntityState.Unchanged;
             }
             
-            workInstruction.IsActive = false;
+            workInstruction.IsActive = true;
             await context.WorkInstructions.AddAsync(workInstruction);
             await context.SaveChangesAsync();
             
@@ -571,9 +571,9 @@ public class WorkInstructionService : IWorkInstructionService
                 }
             }
 
-            // Default new WorkInstructions to inactive
-            workInstruction.IsActive = false;
-            workInstruction.IsLatest = false;
+            // Default new WorkInstructions to active and latest since this is a new creation (not a version update)
+            workInstruction.IsActive = true;
+            workInstruction.IsLatest = true;
 
             await context.WorkInstructions.AddAsync(workInstruction);
             await context.SaveChangesAsync();
