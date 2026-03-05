@@ -76,7 +76,7 @@ img {
 .navbar-brand > img {
   box-shadow: none;
   color: var(--bs-nav-link-color);
-  height: 32px;
+  height: 40px;
   width: auto;
 }
 
