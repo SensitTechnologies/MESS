@@ -26,27 +26,24 @@ public static class ProductionLogDetailRequestMapper
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dto"/> is null.</exception>
     public static ProductionLogUpdateRequest ToUpdateRequest(this ProductionLogDetailDTO dto)
     {
-        if (dto == null) throw new ArgumentNullException(nameof(dto));
+        ArgumentNullException.ThrowIfNull(dto);
 
-        // Group all flattened attempts back into their parent log steps
-        var logSteps = dto.Attempts
+        var logSteps = dto.Attempts?
+            .Where(a => a.LogStepId > 0)
             .GroupBy(a => a.LogStepId)
             .Select(group =>
             {
-                var first = group.First();
+                var attempts = group.ToList();
 
                 return new LogStepUpdateRequest
                 {
                     Id = group.Key,
-                    WorkInstructionStepId = first.WorkInstructionStepId,
-                    Attempts = group
-                        .Select(a => a.ToUpdateRequest()) // uses StepAttemptDetailRequestMapper
-                        .ToList()
+                    WorkInstructionStepId = attempts[0].WorkInstructionStepId,
+                    Attempts = attempts.Select(a => a.ToUpdateRequest()).ToList()
                 };
             })
-            .ToList();
+            .ToList() ?? [];
 
-        // Map top-level production log fields
         return new ProductionLogUpdateRequest
         {
             Id = dto.Id,

@@ -25,6 +25,8 @@ public static class StepAttemptDetailDTOMapper
         return new StepAttemptDetailDTO
         {
             AttemptId = attempt.Id,
+            LogStepId = attempt.ProductionLogStepId,
+            WorkInstructionStepId = attempt.ProductionLogStep?.WorkInstructionStepId ?? 0,
             StepName = attempt.ProductionLogStep?.WorkInstructionStep?.Name ?? string.Empty,
             SubmitTime = attempt.SubmitTime,
             IsSuccess = attempt.Success ?? false,
