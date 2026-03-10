@@ -30,8 +30,8 @@ else
 fi
 
 echo "Restoring NuGet packages..."
-if [ -f "MESS.sln" ]; then
-  dotnet restore MESS.sln
+if [ -f "MESS.slnx" ]; then
+  dotnet restore MESS.slnx
 else
   dotnet restore
 fi

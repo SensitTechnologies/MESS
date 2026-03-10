@@ -27,7 +27,7 @@
         ms-azuretools.vscode-docker
       ],
       settings {
-        dotnet.defaultSolution MESS.sln,
+        dotnet.defaultSolution MESS.slnx,
         files.exclude {
           bin true,
           obj true
