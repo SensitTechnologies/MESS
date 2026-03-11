@@ -63,6 +63,16 @@ public class ApplicationContext
     /// </summary>
     public virtual DbSet<SerializablePart> SerializableParts { get; set; } = null!;
     
+    /// <summary>
+    /// DbSet for Tags.
+    /// </summary>
+    public virtual DbSet<Tag> Tags { get; set; } = null!;
+    
+    /// <summary>
+    /// DbSet for TagHistories.
+    /// </summary>
+    public virtual DbSet<TagHistory> TagHistories { get; set; } = null!;
+    
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +111,33 @@ public class ApplicationContext
             .WithMany(sp => sp.ProductionLogParts)
             .HasForeignKey(plp => plp.SerializablePartId)
             .OnDelete(DeleteBehavior.Restrict);
+        
+        // Tag -> TagHistory: Cascade delete when a tag is deleted
+        // EF Core would infer the FK and navigation automatically
+        modelBuilder.Entity<Tag>()
+            .HasMany(t => t.History)
+            .WithOne(h => h.Tag)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        // Tag -> SerializablePart: Optional relationship
+        // Default EF behavior would be Restrict, we want SetNull on delete
+        modelBuilder.Entity<Tag>()
+            .HasOne(t => t.SerializablePart)
+            .WithMany() // no collection on SerializablePart
+            .OnDelete(DeleteBehavior.SetNull);
+        
+        // TagHistory -> SerializablePart: Optional relationship
+        // Default EF behavior would be "Restrict", we want SetNull on delete
+        modelBuilder.Entity<TagHistory>()
+            .HasOne<SerializablePart>()
+            .WithMany()
+            .OnDelete(DeleteBehavior.SetNull);
+        
+        // Index on Tag.Code for faster lookup and uniqueness
+        // EF Core does NOT create this automatically
+        modelBuilder.Entity<Tag>()
+            .HasIndex(t => t.Code)
+            .IsUnique();
     }
     
     /// <inheritdoc />
