@@ -212,6 +212,40 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         NotifyChanged();
     }
     
+    /// <summary>
+    /// Loads an imported <see cref="WorkInstructionFormDTO"/> into the editor service.
+    /// This instruction has not been saved to the database yet.
+    /// </summary>
+    /// <param name="imported">The imported work instruction DTO.</param>
+    public async Task LoadImportedAsync(WorkInstructionFormDTO imported)
+    {
+        if (imported == null) throw new ArgumentNullException(nameof(imported));
+
+        // Optionally clone nodes to avoid accidental shared references
+        var clonedNodes = await CloneNodesAsync(imported.Nodes);
+
+        Current = new WorkInstructionFormDTO
+        {
+            Title = imported.Title,
+            Version = imported.Version,
+            OriginalId = null,
+            IsActive = imported.IsActive,
+            IsLatest = true,
+            ShouldGenerateQrCode = imported.ShouldGenerateQrCode,
+            PartProducedIsSerialized = imported.PartProducedIsSerialized,
+            PartProducedId = imported.PartProducedId,
+            ProducedPartName = imported.ProducedPartName,
+            ProductIds = imported.ProductIds?.ToList() ?? new List<int>(),
+            Nodes = clonedNodes
+        };
+
+        Mode = EditorMode.CreateNew;
+        IsDirty = true;
+
+        NotifyChanged();
+    }
+
+    
     private async Task<WorkInstructionFormDTO> CloneForNewVersion(WorkInstructionFormDTO template)
     {
         return new WorkInstructionFormDTO

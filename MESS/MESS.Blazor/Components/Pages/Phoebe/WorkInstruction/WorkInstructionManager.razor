@@ -322,29 +322,21 @@
     
     private async Task HandleImportComplete(WorkInstructionFormDTO importedWorkInstruction)
     {
+        // Show a success toast for import
         ToastService.ShowSuccess(
             $"Successfully imported Work Instruction: {importedWorkInstruction.Title}, Version: {importedWorkInstruction.Version}",
             3000);
 
-        // Refresh latest instructions list
+        // Refresh the list of instructions (latest summaries)
         AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
 
         // Reset product filter to show all
         SelectedProductId = null;
 
-        // Set selection to the newly imported instruction
-        SelectedWorkInstructionId = importedWorkInstruction.Id;
+        // Clear previous selection, then load the imported instruction into editor service
+        SelectedWorkInstructionId = null;
 
-        // Load into editor service to sync editor state
-        if (importedWorkInstruction.Id.HasValue)
-        {
-            SelectedWorkInstructionId = importedWorkInstruction.Id;
-            await WorkInstructionEditorService.LoadForEditAsync(importedWorkInstruction.Id.Value);
-        }
-        else
-        {
-            ToastService.ShowError("Imported Work Instruction has no ID.");
-        }
+        await WorkInstructionEditorService.LoadImportedAsync(importedWorkInstruction);
 
         // Trigger UI refresh
         StateHasChanged();

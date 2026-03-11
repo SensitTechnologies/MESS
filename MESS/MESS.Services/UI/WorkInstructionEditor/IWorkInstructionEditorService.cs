@@ -132,6 +132,13 @@ public interface IWorkInstructionEditorService
     Task LoadForNewVersionFromVersionAsync(int versionId);
 
     /// <summary>
+    /// Loads an imported <see cref="WorkInstructionFormDTO"/> into the editor service.
+    /// This instruction has not been saved to the database yet.
+    /// </summary>
+    /// <param name="imported">The imported work instruction DTO.</param>
+    public Task LoadImportedAsync(WorkInstructionFormDTO imported);
+    
+    /// <summary>
     /// Initializes a new WorkInstruction in memory for user editing.
     /// Sets the editing mode to CreateNew and marks the editing state as dirty.
     /// Optionally pre-populates the WorkInstruction with a list of products.
