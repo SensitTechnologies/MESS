@@ -1,6 +1,6 @@
 @using MESS.Data.Models
 @using MESS.Services.DTOs
-@using MESS.Services.DTOs.WorkInstructions.File
+@using MESS.Services.DTOs.WorkInstructions.Form
 @using MESS.Services.Files.WorkInstructions
 @using MESS.Services.UI.WorkInstructionImport
 @inject IWorkInstructionFileService WorkInstructionFileService
@@ -41,7 +41,7 @@
     /// Passes the imported <see cref="WorkInstruction"/> as a parameter.
     /// </summary>
     [Parameter]
-    public EventCallback<WorkInstructionFileDTO> OnImportComplete { get; set; }
+    public EventCallback<WorkInstructionFormDTO> OnImportComplete { get; set; }
     
     private IBrowserFile? File { get; set; }
     private bool IsImporting { get; set; }
@@ -96,8 +96,8 @@
         // Step 3: Success — get the resolved WorkInstructionFormDTO
         var resolvedFormDto = importResult.WorkInstruction;
 
-        // Notify parent if needed (can pass file DTO or resolved form DTO)
-        await OnImportComplete.InvokeAsync(fileDto);
+        // Notify parent (passing resolved form DTO)
+        await OnImportComplete.InvokeAsync(resolvedFormDto);
 
         StatusMessage = $"Successfully imported: {resolvedFormDto?.Title} v{resolvedFormDto?.Version}";
         ToastService.ShowSuccess(StatusMessage, 3000);
