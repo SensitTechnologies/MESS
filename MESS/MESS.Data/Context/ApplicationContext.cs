@@ -120,7 +120,7 @@ public class ApplicationContext
             .OnDelete(DeleteBehavior.Cascade);
         
         // Tag -> SerializablePart: Optional relationship
-        // Default EF behavior would be Restrict, we want SetNull on delete
+        // Default EF behavior would be "Restrict", we want SetNull on delete
         modelBuilder.Entity<Tag>()
             .HasOne(t => t.SerializablePart)
             .WithMany() // no collection on SerializablePart
