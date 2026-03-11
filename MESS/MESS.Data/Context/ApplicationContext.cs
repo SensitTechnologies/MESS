@@ -153,6 +153,11 @@ public class ApplicationContext
             // Ensure a child can only have one parent
             entity.HasIndex(r => r.ChildPartId).IsUnique();
         });
+        
+        modelBuilder.Entity<FailureNoun>()
+            .HasMany(fn => fn.Adjectives)
+            .WithMany(fa => fa.Nouns)
+            .UsingEntity(j => j.ToTable("FailureNounAdjectives"));
     }
     
     /// <inheritdoc />
