@@ -10,14 +10,14 @@ using Microsoft.EntityFrameworkCore;
 /// <inheritdoc cref="IApplicationUserService"/>
 public class ApplicationUserService : IApplicationUserService
 {
-    private readonly UserContext _context;
+    private readonly ApplicationContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
 
     /// <inheritdoc cref="IApplicationUserService"/>
-    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager,
+    public ApplicationUserService(ApplicationContext context, UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager)
     {
         _context = context;
