@@ -196,13 +196,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 SecondaryMedia = stepDto.SecondaryMedia.ToList()
             },
 
-            PartNodeFormDTO partDto => (WorkInstructionNode)new PartNode
-            {
-                NodeType = WorkInstructionNodeType.Part,
-                Position = partDto.Position,
-                PartDefinitionId = partDto.PartDefinitionId,
-                InputType = partDto.InputType
-            },
+            PartNodeFormDTO partDto => CreatePartNode(partDto),
 
             _ => throw new NotSupportedException()
         };
@@ -222,5 +216,35 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
     {
         entity.PartDefinitionId = dto.PartDefinitionId;
         entity.InputType = dto.InputType;
+    }
+    
+    private PartNode CreatePartNode(PartNodeFormDTO partDto)
+    {
+        var node = new PartNode
+        {
+            NodeType = WorkInstructionNodeType.Part,
+            Position = partDto.Position,
+            InputType = partDto.InputType
+        };
+
+        if (partDto.PartDefinitionId > 0)
+        {
+            node.PartDefinitionId = partDto.PartDefinitionId;
+        }
+        else if (partDto.PartDefinition != null)
+        {
+            node.PartDefinition = new PartDefinition
+            {
+                Name = partDto.PartDefinition.Name,
+                Number = partDto.PartDefinition.Number
+            };
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                "PartNode must have either PartDefinitionId or PartDefinition.");
+        }
+
+        return node;
     }
 }
