@@ -224,7 +224,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
             PartProducedId = template.PartProducedId,
-            ProductIds = template.ProductIds,
+            ProductIds = template.ProductIds?.ToList() ?? [],
             Nodes = await CloneNodesAsync(template.Nodes)
         };
     }
