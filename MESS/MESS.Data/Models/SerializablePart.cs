@@ -30,4 +30,15 @@ public class SerializablePart
     /// Gets or sets the collection of production log associations for this serialized part.
     /// </summary>
     public List<ProductionLogPart> ProductionLogParts { get; set; } = [];
+    
+    /// <summary>
+    /// The parent assembly this part is currently installed in.
+    /// Null if it’s a top-level part.
+    /// </summary>
+    public SerializablePartRelationship? ParentRelationship { get; set; }
+
+    /// <summary>
+    /// All child parts currently installed in this part.
+    /// </summary>
+    public List<SerializablePartRelationship> ChildrenRelationships { get; set; } = [];
 }

@@ -138,6 +138,21 @@ public class ApplicationContext
         modelBuilder.Entity<Tag>()
             .HasIndex(t => t.Code)
             .IsUnique();
+        
+        modelBuilder.Entity<SerializablePartRelationship>(entity =>
+        {
+            // Child relationship: required one-to-one
+            entity.HasOne(r => r.ChildPart)
+                .WithOne(p => p.ParentRelationship)
+                .HasForeignKey<SerializablePartRelationship>(r => r.ChildPartId);
+
+            // Parent relationship: one-to-many
+            entity.HasOne(r => r.ParentPart)
+                .WithMany(p => p.ChildrenRelationships);
+            
+            // Ensure a child can only have one parent
+            entity.HasIndex(r => r.ChildPartId).IsUnique();
+        });
     }
     
     /// <inheritdoc />
