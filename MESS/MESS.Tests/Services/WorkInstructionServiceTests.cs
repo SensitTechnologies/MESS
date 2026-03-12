@@ -1,10 +1,8 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
-using MESS.Services.CRUD.Products;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.Media.WorkInstructions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
@@ -40,8 +38,9 @@ public class WorkInstructionServiceTests
         var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
         var updaterMock = new Mock<IWorkInstructionUpdater>();
+        var resolverMock = new Mock<IPartNodeResolver>();
         
-        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, dbFactory.Object);
+        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, resolverMock.Object, dbFactory.Object);
     }
     
     [Fact]
@@ -56,8 +55,9 @@ public class WorkInstructionServiceTests
         var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
         var updaterMock = new Mock<IWorkInstructionUpdater>();
+        var resolverMock = new Mock<IPartNodeResolver>();
     
-        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, dbFactory.Object);
+        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, resolverMock.Object, dbFactory.Object);
 
         // Act
         var result = service.GetByTitle("Test Title");
@@ -72,7 +72,7 @@ public class WorkInstructionServiceTests
         // Arrange
         var service = MockWorkInstructionService();
         var title = "Case Sensitive Test";
-        var workInstruction = new Data.Models.WorkInstruction
+        var workInstruction = new WorkInstruction
         {
             Title = title,
             Nodes = new List<WorkInstructionNode> { new Step { Name = "Test Step", Body = "Test Step" } }

@@ -18,6 +18,7 @@ public class WorkInstructionService : IWorkInstructionService
     private readonly IWorkInstructionImageService _imageService;
     private readonly IMemoryCache _cache;
     private readonly IWorkInstructionUpdater _workInstructionUpdater;
+    private readonly IPartNodeResolver _partNodeResolver;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     
     private const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -32,18 +33,22 @@ public class WorkInstructionService : IWorkInstructionService
     /// <param name="imageService">The service for managing work instruction image-related operations.</param>
     /// <param name="cache">The memory cache for caching work instructions.</param>
     /// <param name="workInstructionUpdater"> The service responsible for applying updates from form DTOs to existing work instruction entities.</param>
+    /// <param name="partNodeResolver"> The service responsible for resolving part definitions for part nodes when updating a work instruction.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
     public WorkInstructionService(
         IProductionLogService productionLogService, 
         IWorkInstructionImageService imageService, IMemoryCache cache, 
         IWorkInstructionUpdater workInstructionUpdater,
+        IPartNodeResolver partNodeResolver,
         IDbContextFactory<ApplicationContext> contextFactory)
     {
         _productionLogService = productionLogService;
-        _imageService = imageService;
         _cache = cache;
-        _contextFactory = contextFactory;
+        _imageService = imageService;
         _workInstructionUpdater = workInstructionUpdater;
+        _partNodeResolver = partNodeResolver;
+        _contextFactory = contextFactory;
+        
     }
     
     /// <inheritdoc />
@@ -556,20 +561,8 @@ public class WorkInstructionService : IWorkInstructionService
                 workInstruction.Products = new List<Product>();
             }
 
-            // Resolve PartDefinitions for PartNodes safely
-            foreach (var node in workInstruction.Nodes.OfType<PartNode>())
-            {
-                if (node.PartDefinitionId > 0)
-                {
-                    var partDefinition = await context.PartDefinitions
-                        .FirstOrDefaultAsync(p => p.Id == node.PartDefinitionId);
-
-                    if (partDefinition == null)
-                        return false; // invalid reference
-
-                    node.PartDefinition = partDefinition;
-                }
-            }
+            // Resolve all PartNodes via PartNodeResolver
+            await _partNodeResolver.ResolvePendingNodesAsync(workInstruction.Nodes);
 
             // Default new WorkInstructions to active and latest since this is a new creation (not a version update)
             workInstruction.IsActive = true;
@@ -637,7 +630,7 @@ public class WorkInstructionService : IWorkInstructionService
             // Build new entity from DTO
             var workInstruction = dto.ToNewEntity();
 
-            // Force insert (never reuse existing Id)
+            // Force insert (never reuse existing id)
             workInstruction.Id = 0;
 
             // Ensure correct root linkage
@@ -909,6 +902,8 @@ public class WorkInstructionService : IWorkInstructionService
                     return false;
 
                 await _workInstructionUpdater.ApplyAsync(dto, existing, context);
+                
+                await _partNodeResolver.ResolvePendingNodesAsync(existing.Nodes);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();

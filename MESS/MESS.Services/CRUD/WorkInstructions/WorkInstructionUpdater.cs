@@ -144,7 +144,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         }
     }
     
-    private async Task SyncPartProducedAsync(
+    private static async Task SyncPartProducedAsync(
         WorkInstructionFormDTO dto,
         WorkInstruction entity,
         ApplicationContext context)
@@ -214,37 +214,32 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
     
     private void ApplyPartNode(PartNodeFormDTO dto, PartNode entity)
     {
-        entity.PartDefinitionId = dto.PartDefinitionId;
         entity.InputType = dto.InputType;
+
+        // Store part info in a "pending resolution" way
+        entity.PartDefinitionId = 0; // Leave FK unset
+        entity.PartDefinition = new PartDefinition
+        {
+            Name = dto.Name,
+            Number = dto.Number
+        };
     }
     
     private PartNode CreatePartNode(PartNodeFormDTO partDto)
     {
-        var node = new PartNode
+        return new PartNode
         {
             NodeType = WorkInstructionNodeType.Part,
             Position = partDto.Position,
-            InputType = partDto.InputType
-        };
+            InputType = partDto.InputType,
 
-        if (partDto.PartDefinitionId > 0)
-        {
-            node.PartDefinitionId = partDto.PartDefinitionId;
-        }
-        else if (partDto.PartDefinition != null)
-        {
-            node.PartDefinition = new PartDefinition
+            // Store part info without FK; will be resolved later
+            PartDefinitionId = 0,
+            PartDefinition = new PartDefinition
             {
-                Name = partDto.PartDefinition.Name,
-                Number = partDto.PartDefinition.Number
-            };
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                "PartNode must have either PartDefinitionId or PartDefinition.");
-        }
-
-        return node;
+                Name = partDto.Name,
+                Number = partDto.Number
+            }
+        };
     }
 }
