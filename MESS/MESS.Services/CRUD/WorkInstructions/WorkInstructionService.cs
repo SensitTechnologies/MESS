@@ -318,6 +318,7 @@ public class WorkInstructionService : IWorkInstructionService
             await using var context = await _contextFactory.CreateDbContextAsync();
             var workInstruction = await context.WorkInstructions
                 .Include(w => w.Products)
+                .ThenInclude(p => p.PartDefinition)
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).PartDefinition)
                 .Include(w => w.PartProduced)
@@ -353,7 +354,8 @@ public class WorkInstructionService : IWorkInstructionService
 
             // Load work instruction with related entities needed for the form
             var workInstruction = await context.WorkInstructions
-                .Include(w => w.Products)      // Needed for ProductNames
+                .Include(w => w.Products)
+                .ThenInclude(p => p.PartDefinition)// Needed for ProductNames
                 .Include(w => w.Nodes)         // Needed for node DTOs
                 .ThenInclude(n => ((PartNode)n).PartDefinition) // Needed if nodes reference PartDefinition
                 .Include(w => w.PartProduced)  // Needed for PartProducedId / serialized info
