@@ -10,7 +10,7 @@ namespace MESS.Services.CRUD.WorkInstructions;
 /// <see cref="PartNodeFormDTO.Name"/> and <see cref="PartNodeFormDTO.Number"/>
 /// to existing <see cref="PartDefinition"/>s or creating new ones if needed.
 /// </summary>
-public class PartNodeResolver
+public class PartNodeResolver : IPartNodeResolver
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
 
