@@ -8,16 +8,6 @@
         <div class="col-auto">
             <div class="border rounded ps-2 py-2 h-100 d-flex align-items-center gap-2 shadow-sm">
 
-                <!-- Part Number -->
-                <div class="d-flex flex-column">
-                    <label class="form-label mb-1">Part Number</label>
-                    <input type="text"
-                           class="form-control form-control-sm"
-                           @bind="PartNode!.Number"
-                           @bind:event="oninput"
-                           @oninput="NotifyChangedAsync" />
-                </div>
-
                 <!-- Part Name -->
                 <div class="d-flex flex-column">
                     <label class="form-label mb-1">Part Name</label>
@@ -25,7 +15,17 @@
                            class="form-control form-control-sm"
                            @bind="PartNode!.Name"
                            @bind:event="oninput"
-                           @oninput="NotifyChangedAsync" />
+                           @bind:after="NotifyChangedAsync" />
+                </div>
+                
+                <!-- Part Number -->
+                <div class="d-flex flex-column">
+                    <label class="form-label mb-1">Part Number</label>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           @bind="PartNode!.Number"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChangedAsync" />
                 </div>
 
                 <!-- InputType Toggle -->
