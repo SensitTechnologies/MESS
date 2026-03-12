@@ -5,6 +5,7 @@ namespace MESS.Services.UI.WorkInstructionImport;
 /// <inheritdoc/>
 public class WorkInstructionImportService : IWorkInstructionImportService
 {
+    /// <inheritdoc/>
     public Task<WorkInstructionImportApplicationResult> ImportAsync(
         WorkInstructionFileDTO fileDto)
     {

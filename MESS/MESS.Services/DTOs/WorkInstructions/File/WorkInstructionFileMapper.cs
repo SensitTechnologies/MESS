@@ -42,6 +42,20 @@ public static class WorkInstructionFileMapper
         };
     }
     
+    /// <summary>
+    /// Converts a <see cref="WorkInstructionFileDTO"/> into a <see cref="WorkInstructionFormDTO"/>,
+    /// which is suitable for use in the Blazor UI or for editing in the application.
+    /// </summary>
+    /// <param name="fileDto">The file DTO representing a work instruction, typically imported from an external source.</param>
+    /// <returns>
+    /// A new <see cref="WorkInstructionFormDTO"/> containing all relevant properties from the file DTO,
+    /// including title, version, flags, produced part name, and ordered nodes mapped to their form DTOs.
+    /// </returns>
+    /// <remarks>
+    /// Nodes from the file DTO are ordered by <see cref="WorkInstructionNodeFileDTO.Position"/>
+    /// and converted individually using <c>ToFormDTO()</c>. The ProductIds list is initialized empty
+    /// and can be populated later as needed. This method does not modify the original <paramref name="fileDto"/>.
+    /// </remarks>
     public static WorkInstructionFormDTO ToFormDTO(this WorkInstructionFileDTO fileDto)
     {
         return new WorkInstructionFormDTO
