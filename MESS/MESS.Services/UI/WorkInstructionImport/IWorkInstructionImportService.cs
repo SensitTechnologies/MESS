@@ -1,64 +1,60 @@
 using MESS.Services.DTOs.WorkInstructions.File;
 using MESS.Services.DTOs.WorkInstructions.Form;
-using MESS.Services.Files.WorkInstructions;
 
 namespace MESS.Services.UI.WorkInstructionImport;
 
 /// <summary>
-/// Provides application-level logic for importing a 
-/// <see cref="WorkInstructionFileDTO"/> into a 
-/// <see cref="WorkInstructionFormDTO"/> suitable for editing or persistence.
+/// Provides application-level logic for converting a parsed
+/// <see cref="WorkInstructionFileDTO"/> into a <see cref="WorkInstructionFormDTO"/>
+/// that can be edited within the UI.
 /// </summary>
 /// <remarks>
-/// This service is responsible for:
-/// <list type="bullet">
-/// <item>
-/// <description>
-/// Resolving name-based references (e.g., products, parts) into database identifiers.
-/// </description>
-/// </item>
-/// <item>
-/// <description>
-/// Validating that referenced entities exist in the current environment.
-/// </description>
-/// </item>
-/// <item>
-/// <description>
-/// Transforming file-layer DTOs into UI-layer form DTOs.
-/// </description>
-/// </item>
-/// <item>
-/// <description>
-/// Reporting validation or resolution errors encountered during import.
-/// </description>
-/// </item>
-/// </list>
-/// 
-/// This service does <b>not</b> handle file parsing or Excel logic. 
-/// That responsibility belongs to <see cref="IWorkInstructionFileService"/>.
+/// This service represents the second stage of the work instruction import pipeline.
+/// The first stage parses an external file (such as an Excel spreadsheet) into a
+/// <see cref="WorkInstructionFileDTO"/>. This service then converts that file DTO
+/// into a <see cref="WorkInstructionFormDTO"/> suitable for display and editing
+/// within the application.
+///
+/// Unlike earlier versions of the import pipeline, this service does not attempt
+/// to resolve database entities such as products or part definitions. It also
+/// does not perform validation against the database. All imported data is preserved
+/// exactly as it appears in the file so that users may review and modify it before
+/// saving.
+///
+/// Validation, entity resolution, and creation of missing parts or products are
+/// expected to occur later during the work instruction save process.
+///
+/// This design allows users to correct import issues interactively rather than
+/// failing the import prematurely.
 /// </remarks>
 public interface IWorkInstructionImportService
 {
     /// <summary>
-    /// Converts a <see cref="WorkInstructionFileDTO"/> into a validated 
-    /// <see cref="WorkInstructionFormDTO"/> by resolving all external references.
+    /// Converts a parsed work instruction file DTO into an editable
+    /// <see cref="WorkInstructionFormDTO"/>.
     /// </summary>
     /// <param name="fileDto">
-    /// The file-layer DTO produced by the file import service.
-    /// This DTO contains name-based references and is persistence-agnostic.
+    /// The work instruction data parsed from an external file such as an Excel spreadsheet.
     /// </param>
     /// <returns>
-    /// A <see cref="WorkInstructionImportApplicationResult"/> containing:
-    /// <list type="bullet">
-    /// <item><description>Success status</description></item>
-    /// <item><description>The mapped <see cref="WorkInstructionFormDTO"/> (if successful)</description></item>
-    /// <item><description>Error or validation messages (if applicable)</description></item>
-    /// </list>
+    /// A <see cref="WorkInstructionImportApplicationResult"/> containing the mapped
+    /// <see cref="WorkInstructionFormDTO"/> if the import mapping succeeds.
     /// </returns>
     /// <remarks>
-    /// If any referenced products or parts cannot be resolved, 
-    /// the result will indicate failure and include details 
-    /// describing the missing references.
+    /// This method performs a structural conversion from the file representation
+    /// of a work instruction to the form representation used by the UI editor.
+    ///
+    /// No validation against the database is performed during this step. In particular:
+    /// <list type="bullet">
+    /// <item><description>Part definitions are not resolved or validated.</description></item>
+    /// <item><description>Products referenced by the instruction are not verified.</description></item>
+    /// <item><description>Missing or unknown parts are preserved rather than rejected.</description></item>
+    /// </list>
+    ///
+    /// The returned form DTO may therefore contain unresolved or incomplete data.
+    /// Users are expected to review and adjust the imported instruction in the UI
+    /// before saving it. Database validation and creation of missing entities occur
+    /// during the work instruction persistence workflow.
     /// </remarks>
     Task<WorkInstructionImportApplicationResult> ImportAsync(WorkInstructionFileDTO fileDto);
 }
