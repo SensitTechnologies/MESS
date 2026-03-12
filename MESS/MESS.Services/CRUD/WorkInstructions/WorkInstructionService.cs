@@ -1021,7 +1021,7 @@ private async Task<List<Product>> ResolveProductsAsync(
             }
 
             // Defensive initialization to avoid null references
-            product.WorkInstructions ??= new List<WorkInstruction>();
+            product.WorkInstructions ??= [];
 
             var existingIds = product.WorkInstructions.Select(wi => wi.Id).ToHashSet();
 

@@ -555,7 +555,8 @@
         ActiveDialog.Type = DialogType.NewInstruction;
         ActiveDialog.HeaderText = "Create New Work Instruction";
         ActiveDialog.ConfirmButtonText = "Open New";
-        ActiveDialog.SelectedProductNames = Products?.Select(p => p.Name).ToList() ?? new List<string>();
+        // Start with empty selection instead of all products
+        ActiveDialog.SelectedProductNames = [];
     }
 
     private void ShowSaveAsDialog()
