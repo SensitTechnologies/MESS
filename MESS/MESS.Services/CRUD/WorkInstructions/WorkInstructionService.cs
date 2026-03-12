@@ -289,7 +289,7 @@ public class WorkInstructionService : IWorkInstructionService
         {
             using var context =  _contextFactory.CreateDbContext();
             var workInstruction = context.WorkInstructions
-                .FirstOrDefault(w => w.Title.ToUpper() == title.ToUpper());
+                .FirstOrDefault(w => w.Title.Equals(title, StringComparison.CurrentCultureIgnoreCase));
 
             Log.Information("Successfully retrieved a WorkInstruction by title: {Title}", title);
             return workInstruction;
