@@ -25,9 +25,10 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string VERSION_CELL = "B3";
     private const string SHOULD_GENERATE_QR_CODE_CELL = "B4";
     private const string PART_PRODUCED_IS_SERIALIZED = "B5";
+    private const string PRODUCES_CELL = "B6";
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
-    private const int STEP_START_ROW = 9;
+    private const int STEP_START_ROW = 10;
     private const int PART_COLUMN = 1;
     private const int STEP_NAME_COLUMN = 2;
     private const int STEP_BODY_COLUMN = 3;
@@ -69,10 +70,9 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
             worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).Value = workInstructionToExport.ShouldGenerateQrCode;
             worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).Value = workInstructionToExport.PartProducedIsSerialized;
-            //worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId ?? workInstructionToExport.Id;
+            worksheet.Cell(PRODUCES_CELL).Value = workInstructionToExport.ProducedPartName;
             
             // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
-            
             var productNames = string.Join(", ", workInstructionToExport.AssociatedProductNames);
             worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
             
@@ -83,7 +83,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell("A3").Value = "Version";
             worksheet.Cell("A4").Value = "QR Code";
             worksheet.Cell("A5").Value = "Serial Number";
-            //worksheet.Cell("A6").Value = "Version History ID";
+            worksheet.Cell("A6").Value = "Produces";
             worksheet.Range("A1:A6").Style.Font.Bold = true;
             
             // Setup Header Comments
@@ -94,11 +94,10 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                                          "False otherwise.";
             worksheet.Cell("C5").Value = "True if the work instruction allows the operator to input a product serial " +
                                          "number after the last step.  False otherwise.";
-            //worksheet.Cell("C6").Value = "Optional integer field that can be used to link this work instruction to an " +
-                                         //"already existing version history chain. Leave blank if unsure.";
+            worksheet.Cell("C6").Value = "The name of the part or product the work instruction produces.";
             
             //Styling the comments
-            var commentRange = worksheet.Range("C1:C5");
+            var commentRange = worksheet.Range("C1:C6");
             commentRange.Style.Font.FontColor = XLColor.Gray;
             commentRange.Style.Font.Italic = true;
             
@@ -579,6 +578,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
+            var producedPartName = worksheet.Cell(PRODUCES_CELL).GetString();
             
             var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
             var partProducedIsSerialized = worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).GetValue<bool>();
@@ -619,12 +619,13 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 Nodes = [],
                 ShouldGenerateQrCode = shouldGenerateQrCode,
                 PartProducedIsSerialized = partProducedIsSerialized,
+                ProducedPartName = producedPartName
             };
             
             workInstruction.AssociatedProductNames.Add(productString);
 
             // Create all steps within instruction and add part nodes where logical
-            // Start from row 9 (assuming header row is 8)
+            // Start from row 10 (assuming header row is 9)
             var currentRow = STEP_START_ROW;
             var position = 0;
 
@@ -946,30 +947,41 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     
     private List<(string PartName, string? PartNumber)> ParsePartsListFromString(string input)
     {
-        var results = new List<(string, string?)>();
+        var results = new List<(string PartName, string? PartNumber)>();
 
         if (string.IsNullOrWhiteSpace(input))
             return results;
 
-        var matches = PartsListRegex().Matches(input);
+        var parts = Regex.Split(input, @",(?![^()]*\))");
 
-        foreach (Match match in matches)
+        foreach (var part in parts)
         {
-            if (!match.Success)
-                continue;
+            var trimmed = part.Trim();
 
-            var partNumber = match.Groups[1].Value.Trim();
-            var partName = match.Groups[2].Value.Trim();
+            var match = PartsListRegex().Match(trimmed);
 
-            results.Add((partName, partNumber));
+            if (match.Success)
+            {
+                var partName = match.Groups["name"].Value.Trim();
+                var partNumber = match.Groups["number"].Success
+                    ? match.Groups["number"].Value.Trim()
+                    : null;
+
+                results.Add((partName, partNumber));
+            }
+            else
+            {
+                results.Add((trimmed, null));
+            }
         }
 
         return results;
     }
     
     /// <summary>
-    /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"
+    /// Regex pattern for parsing parts list strings in the formats:
+    /// (PART_NAME, PART_NUMBER) or (PART_NAME)
     /// </summary>
-    [GeneratedRegex(@"\(([^,]+),\s*([^)]+)\)")]
+    [GeneratedRegex(@"\(\s*(?<name>[^,()]+?)\s*(?:,\s*(?<number>[^)]+?))?\s*\)")]
     private static partial Regex PartsListRegex();
 }

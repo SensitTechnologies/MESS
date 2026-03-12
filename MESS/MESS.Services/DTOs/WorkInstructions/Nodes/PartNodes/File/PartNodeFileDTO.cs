@@ -40,5 +40,5 @@ public class PartNodeFileDTO : WorkInstructionNodeFileDTO
     /// <summary>
     /// Gets a combined display string for the part, including both name and number if available.
     /// </summary>
-    public string PartNameWithNumber => string.IsNullOrWhiteSpace(PartNumber) ? PartName : $"({PartNumber}, {PartName})";
+    public string PartNameWithNumber => string.IsNullOrWhiteSpace(PartNumber) ? PartName : $"({PartName}, {PartNumber})";
 }
