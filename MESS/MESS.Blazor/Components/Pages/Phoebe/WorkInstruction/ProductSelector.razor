@@ -9,31 +9,22 @@
         <div class="list-group-item d-flex align-items-center gap-2">
             <input type="checkbox"
                    class="form-check-input me-1"
-                   checked="@IsProductSelected(product.ProductId)"
-                   @onchange="@(e => ToggleProductSelection(product, e.Value is bool b && b))" />
+                   checked="@IsProductSelected(product.Name)"
+                   @onchange="@(e => ToggleProductSelection(product.Name, e.Value is bool b && b))" />
 
-            @if (product.ProductId == 0)
-            {
-                <input class="form-control"
-                       value="@product.Name"
-                       @onchange="@((ChangeEventArgs e) => UpdateProductName(product, e.Value?.ToString()))"
-                       placeholder="Product name" />
-            }
-            else
-            {
-                <span>@product.Name</span>
-            }
+            <span>@product.Name</span>
         </div>
     }
-    @foreach (var product in UnsavedProducts)
+
+    @foreach (var name in UnsavedProducts)
     {
         <input class="form-control"
-               value="@product.Name"
-               @onchange="(e => UpdateProductName(product, e.Value?.ToString()))"
+               value="@name"
+               @onchange="(e => UpdateUnsavedProductName(name, e.Value?.ToString()))"
                placeholder="Product name"
-               @onblur="@(() => SaveNewProductAsync(product))" />
+               @onblur="@(() => SaveNewProductAsync(name))" />
     }
-        
+
     <div class="list-group-item d-flex justify-content-between align-items-center">
         <button class="btn btn-sm btn-outline-primary" @onclick="AddNewProduct">
             + Add Product
@@ -43,95 +34,77 @@
 
 @code {
     /// <summary>
-    /// Gets or sets the complete list of all available products to display and manage.
-    /// This list is typically provided by the parent component.
+    /// All products available for display (optional metadata retained for UI).
     /// </summary>
     [Parameter, EditorRequired]
     public List<ProductDetailDTO> AllProducts { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the list of currently selected products.
+    /// Currently selected product names.
     /// </summary>
     [Parameter]
-    public List<ProductDetailDTO> SelectedProducts { get; set; } = new List<ProductDetailDTO>();
+    public List<string> SelectedProducts { get; set; } = new();
 
     /// <summary>
-    /// Event callback invoked whenever the selection of products changes.
-    /// The updated list of selected products is passed as an argument.
+    /// Event callback invoked whenever selected products change.
     /// </summary>
     [Parameter]
-    public EventCallback<List<ProductDetailDTO>> SelectedProductsChanged { get; set; }
-    
-    private List<ProductDetailDTO> UnsavedProducts { get; set; } = new();
+    public EventCallback<List<string>> SelectedProductsChanged { get; set; }
 
     /// <summary>
-    /// Determines whether the product with the specified ID is currently selected.
+    /// Unsaved product names being created by the user.
     /// </summary>
-    /// <param name="productId">The ID of the product to check.</param>
-    /// <returns><c>true</c> if the product is selected; otherwise, <c>false</c>.</returns>
-    private bool IsProductSelected(int productId) =>
-        SelectedProducts.Any(p => p.ProductId == productId);
+    private List<string> UnsavedProducts { get; set; } = new();
 
-    /// <summary>
-    /// Toggles the selection state of the specified product.
-    /// The list is rebuilt after each operation.
-    /// </summary>
-    /// <param name="product">The product whose selection state changed.</param>
-    /// <param name="isChecked">Indicates whether the product is selected.</param>
-    /// <returns>A task that completes when the selection change is processed.</returns>
-    private async Task ToggleProductSelection(ProductDetailDTO product, bool isChecked)
+    private bool IsProductSelected(string name) =>
+        SelectedProducts.Contains(name);
+
+    private async Task ToggleProductSelection(string name, bool isChecked)
     {
-        var updatedSelection = SelectedProducts.ToList();
+        var updated = SelectedProducts.ToList();
 
         if (isChecked)
         {
-            if (updatedSelection.All(p => p.ProductId != product.ProductId))
-                updatedSelection.Add(product);
+            if (!updated.Contains(name))
+                updated.Add(name);
         }
         else
         {
-            updatedSelection.RemoveAll(p => p.ProductId == product.ProductId);
+            updated.Remove(name);
         }
 
-        await SelectedProductsChanged.InvokeAsync(updatedSelection);
+        SelectedProducts = updated;
+        await SelectedProductsChanged.InvokeAsync(updated);
     }
 
-    /// <summary>
-    /// Updates the name of the given product and persists the change through the product service.
-    /// </summary>
-    /// <param name="product">The product to update.</param>
-    /// <param name="newName">The new name for the product.</param>
-    /// <returns>A task that completes when the update operation finishes.</returns>
-    private async Task UpdateProductName(ProductDetailDTO product, string? newName)
-    {
-        if (string.IsNullOrWhiteSpace(newName) || newName == product.Name)
-            return;
-
-        product.Name = newName;
-        
-        await ProductService.UpdateProductAsync(product);
-    }
-    
     private void AddNewProduct()
     {
-        var newProduct = new ProductDetailDTO
-        {
-            IsActive = true,
-            Name = "",
-            Number = ""
-        };
-        UnsavedProducts.Add(newProduct);
+        UnsavedProducts.Add(string.Empty);
     }
-    
-    private async Task SaveNewProductAsync(ProductDetailDTO product)
+
+    private void UpdateUnsavedProductName(string oldName, string? newName)
     {
-        if (!string.IsNullOrWhiteSpace(product.Name))
-        {
-            await ProductService.CreateAsync(product);
-            AllProducts.Add(product);
-            UnsavedProducts.Remove(product);
-            SelectedProducts.Add(product);
-            await SelectedProductsChanged.InvokeAsync(SelectedProducts);
-        }
+        if (string.IsNullOrWhiteSpace(newName))
+            return;
+
+        var index = UnsavedProducts.IndexOf(oldName);
+        if (index >= 0)
+            UnsavedProducts[index] = newName;
+    }
+
+    private async Task SaveNewProductAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+
+        // Persist via service
+        var productDto = new ProductDetailDTO { Name = name, IsActive = true };
+        await ProductService.CreateAsync(productDto);
+
+        // Update lists
+        AllProducts.Add(productDto);
+        UnsavedProducts.Remove(name);
+        SelectedProducts.Add(name);
+        await SelectedProductsChanged.InvokeAsync(SelectedProducts);
     }
 }

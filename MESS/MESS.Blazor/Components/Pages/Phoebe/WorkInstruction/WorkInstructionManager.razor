@@ -337,7 +337,7 @@
         StateHasChanged();
     }
     
-    private async Task HandleNewInstruction((string Title, List<ProductDetailDTO> Products) workInstructionData)
+    private async Task HandleNewInstruction((string Title, List<string> Products) workInstructionData)
     {
         // Start the new work instruction in the editor
         WorkInstructionEditorService.StartNew(workInstructionData.Title, workInstructionData.Products);
@@ -353,7 +353,7 @@
     }
 
     
-    private async Task HandleSaveAs((string Title, List<ProductDetailDTO> Products) workInstructionData)
+    private async Task HandleSaveAs((string Title, List<string> Products) workInstructionData)
     {
         await WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
         await WorkInstructionEditorService.SaveAsync();
@@ -367,8 +367,7 @@
         StateHasChanged();
     }
     
-    private async Task HandleEditAssociations(
-        (string Title, List<ProductDetailDTO> Products) workInstructionData)
+    private async Task HandleEditAssociations((string Title, List<string> Products) workInstructionData)
     {
         if (WorkInstructionEditorService.Current != null)
         {
@@ -377,10 +376,11 @@
                 WorkInstructionEditorService.Current.Title = workInstructionData.Title;
             }
 
-            // Store product names instead of IDs
+            // Previously: workInstructionData.Products.Select(p => p.Name)
+            // Now: use strings directly
             WorkInstructionEditorService.Current.ProductNames =
                 workInstructionData.Products
-                    .Select(p => p.Name.Trim())
+                    .Select(n => n.Trim())
                     .Where(n => !string.IsNullOrWhiteSpace(n))
                     .ToList();
         }

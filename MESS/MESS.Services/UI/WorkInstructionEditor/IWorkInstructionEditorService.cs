@@ -145,7 +145,7 @@ public interface IWorkInstructionEditorService
     /// </summary>
     /// <param name="title">An optional title for the new work instruction. If not provided, the title will be an empty string.</param>
     /// <param name="products">Optional list of product ids to prefill the WorkInstruction.</param>
-    void StartNew(string? title = null, List<ProductDetailDTO>? products = null);
+    void StartNew(string? title = null, List<string>? products = null);
 
     /// <summary>
     /// Creates a new work instruction based on the current one, resets versioning and status flags,
@@ -159,7 +159,7 @@ public interface IWorkInstructionEditorService
     /// This method deep-copies all nodes from the current instruction using the <c>CloneNode</c> method,
     /// resets the version to "1.0", and marks the instruction as inactive and the latest version.
     /// </remarks>
-    public Task StartNewFromCurrent(string? title = null, List<ProductDetailDTO>? products = null);
+    public Task StartNewFromCurrent(string? title = null, List<string>? products = null);
 
     /// <summary>
     /// Marks the current editing session as having unsaved changes.

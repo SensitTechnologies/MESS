@@ -94,7 +94,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public void StartNew(string? title = null, List<ProductDetailDTO>? products = null)
+    public void StartNew(string? title = null, List<string>? products = null)
     {
         Current = new WorkInstructionFormDTO
         {
@@ -104,8 +104,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = false,
             PartProducedIsSerialized = false,
-            ProductNames = products?
-                .Select(p => p.Name)
+            ProductNames = products?.Select(p => p.Trim())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
                 .ToList() ?? [],
             Nodes = []
         };
@@ -116,7 +116,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
     
     /// <inheritdoc />
-    public async Task StartNewFromCurrent(string? title = null, List<ProductDetailDTO>? products = null)
+    public async Task StartNewFromCurrent(string? title = null, List<string>? products = null)
     {
         if (Current == null)
             throw new InvalidOperationException("Cannot start a new work instruction from current because it is null.");
