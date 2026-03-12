@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using MESS.Data.Models;
-using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs;
 using MESS.Services.DTOs.WorkInstructions.File;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.File;
@@ -42,7 +41,6 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     
     private readonly IWebHostEnvironment _webHostEnvironment;
-    private readonly IProductService _productService;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionFileService"/> class.
@@ -51,10 +49,9 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     /// This constructor injects all dependencies required for reading, writing, and mapping
     /// work instruction data between Excel and the database.
     /// </remarks>
-    public WorkInstructionFileService(IWebHostEnvironment webHostEnvironment, IProductService productService)
+    public WorkInstructionFileService(IWebHostEnvironment webHostEnvironment)
     {
         _webHostEnvironment = webHostEnvironment;
-        _productService = productService;
     }
     
     /// <inheritdoc />
@@ -72,7 +69,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).Value = workInstructionToExport.PartProducedIsSerialized;
             worksheet.Cell(PRODUCES_CELL).Value = workInstructionToExport.ProducedPartName;
             
-            // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
+            // Since a work instruction can be associated with multiple Products it is stored as a comma separated list
             var productNames = string.Join(", ", workInstructionToExport.AssociatedProductNames);
             worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
             
@@ -583,9 +580,16 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
             var partProducedIsSerialized = worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).GetValue<bool>();
             
-            // Retrieve Product and assign relationship
-            var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
-            var product = await _productService.GetByTitleAsync(productString);
+            // --- Capture product names from Excel cell ---
+            var productCell = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
+            var productNames = string.IsNullOrWhiteSpace(productCell)
+                ? []
+                : productCell
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim())
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .ToList();
+
             
             var fileName = file.Name;
             var validationErrors = new List<string>();
@@ -596,33 +600,27 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             if (string.IsNullOrWhiteSpace(versionString))
                 validationErrors.Add("Version is required.");
 
-            if (string.IsNullOrWhiteSpace(productString))
+            // Validation: require at least one product name
+            if (productNames.Count == 0)
                 validationErrors.Add("Product name is required.");
+            
 
             if (validationErrors.Any())
             {
                 return WorkInstructionImportResult.ValidationFailure(fileName, validationErrors);
             }
             
-            if (product == null)
-            {
-                Log.Information("Product not found. Cannot create Work Instruction");
-                return WorkInstructionImportResult.NoProductFound(file.Name, productString);
-            }
-            
-            // Building the work instruction object with gathered data
+            // --- Build Work Instruction DTO ---
             var workInstruction = new WorkInstructionFileDTO
             {
                 Title = workInstructionTitle,
                 Version = versionString,
-                AssociatedProductNames = [],
+                AssociatedProductNames = productNames,
                 Nodes = [],
                 ShouldGenerateQrCode = shouldGenerateQrCode,
                 PartProducedIsSerialized = partProducedIsSerialized,
                 ProducedPartName = producedPartName
             };
-            
-            workInstruction.AssociatedProductNames.Add(productString);
 
             // Create all steps within instruction and add part nodes where logical
             // Start from row 10 (assuming header row is 9)
