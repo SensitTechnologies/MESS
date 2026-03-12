@@ -1,5 +1,4 @@
-﻿@using MESS.Data.Models
-@using MESS.Services.DTOs.Products.Detail
+﻿@using MESS.Services.DTOs.Products.Detail
 
 @if (IsVisible)
 {
@@ -49,7 +48,8 @@
     /// <summary>
     /// Indicates whether the dialog should display a text box for renaming the work instruction
     /// </summary>
-    [Parameter] public bool AllowsRenaming { get; set; }
+    [Parameter]
+    public bool AllowsRenaming { get; set; }
 
     /// <summary>
     /// Event callback triggered when the dialog's visibility changes.

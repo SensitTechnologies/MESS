@@ -164,12 +164,13 @@
 
 <ProductAssociationDialog
     AllProducts="@Products"
-    SelectedProducts="@(ActiveDialog.Type == DialogType.EditAssociations ? ActiveDialog.SelectedProductNames : new List<string>())"
+    SelectedProducts="@(ActiveDialog.SelectedProductNames)"
     SelectedProductsChanged="OnDialogProductsChanged"
     IsVisible="@ActiveDialog.IsVisible"
     IsVisibleChanged="@(val => ActiveDialog.IsVisible = val)"
     HeaderText="@ActiveDialog.HeaderText"
     ConfirmButtonText="@ActiveDialog.ConfirmButtonText"
+    AllowsRenaming="@(ActiveDialog.Type == DialogType.SaveAs)"
     OnConfirmed="HandleDialogConfirmed" />
 
 @code {
