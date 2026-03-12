@@ -2,6 +2,7 @@ using MESS.Data.Models;
 using MESS.Services.DTOs.WorkInstructions.Nodes.File;
 
 namespace MESS.Services.DTOs.WorkInstructions.File;
+
 /// <summary>
 /// Represents a file-safe data transfer object for importing and exporting
 /// <see cref="WorkInstruction"/> data.

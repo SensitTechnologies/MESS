@@ -5,11 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Services.CRUD.WorkInstructions;
 
-/// <summary>
-/// Resolves all partially specified <see cref="PartNode"/> entities by matching their
-/// <see cref="PartNodeFormDTO.Name"/> and <see cref="PartNodeFormDTO.Number"/>
-/// to existing <see cref="PartDefinition"/>s or creating new ones if needed.
-/// </summary>
+/// <inheritdoc/>
 public class PartNodeResolver : IPartNodeResolver
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
@@ -31,11 +27,7 @@ public class PartNodeResolver : IPartNodeResolver
         _contextFactory = contextFactory;
     }
 
-    /// <summary>
-    /// Resolves all PartNodes in a work instruction before saving.
-    /// Existing PartDefinitions are reused; new ones are created if necessary.
-    /// </summary>
-    /// <param name="nodes">The PartNodes to resolve.</param>
+    /// <inheritdoc/>
     public async Task ResolvePendingNodesAsync(IEnumerable<WorkInstructionNode> nodes)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

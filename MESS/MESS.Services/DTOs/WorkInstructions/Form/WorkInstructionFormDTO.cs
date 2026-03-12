@@ -59,9 +59,10 @@ public class WorkInstructionFormDTO
     public string? ProducedPartName { get; set; }
 
     /// <summary>
-    /// Gets or sets the IDs of the products associated with this work instruction.
+    /// Gets or sets the list of products associated with this work instruction. Storing strings allows us to flexibly
+    /// create products on the fly.
     /// </summary>
-    public List<int> ProductIds { get; set; } = [];
+    public List<string> ProductNames { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the editable list of nodes in the instruction.

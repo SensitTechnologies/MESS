@@ -52,6 +52,7 @@ builder.Services.AddRazorComponents()
     
     
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductResolver, ProductResolver>();
 builder.Services.AddScoped<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddScoped<IWorkInstructionUpdater, WorkInstructionUpdater>();
 builder.Services.AddScoped<IPartNodeResolver, PartNodeResolver>();

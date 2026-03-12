@@ -104,9 +104,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = false,
             PartProducedIsSerialized = false,
-            ProductIds = products?
-                .Select(p => p.ProductId)
-                .ToList() ?? new List<int>(),
+            ProductNames = products?
+                .Select(p => p.Name)
+                .ToList() ?? [],
             Nodes = []
         };
 
@@ -129,7 +129,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
             PartProducedIsSerialized = Current.PartProducedIsSerialized,
-            ProductIds = Current.ProductIds?.ToList() ?? [],
+            ProductNames = Current.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(Current.Nodes)
         };
 
@@ -235,7 +235,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             PartProducedIsSerialized = imported.PartProducedIsSerialized,
             PartProducedId = imported.PartProducedId,
             ProducedPartName = imported.ProducedPartName,
-            ProductIds = imported.ProductIds?.ToList() ?? new List<int>(),
+            ProductNames = imported.ProductNames?.ToList() ?? new List<string>(),
             Nodes = clonedNodes
         };
 
@@ -258,7 +258,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
             PartProducedId = template.PartProducedId,
-            ProductIds = template.ProductIds?.ToList() ?? [],
+            ProductNames = template.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(template.Nodes)
         };
     }

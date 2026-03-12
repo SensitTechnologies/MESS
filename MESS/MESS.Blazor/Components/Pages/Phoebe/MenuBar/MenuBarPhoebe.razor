@@ -525,11 +525,7 @@
     
     private WorkInstructionFileDTO? GetExportFileDTO()
     {
-        if (CurrentInstruction == null || Products == null)
-            return null;
-
-        return CurrentInstruction.ToFileDTO(
-            id => Products.FirstOrDefault(p => p.ProductId == id)?.Name ?? $"Product {id}");
+        return CurrentInstruction?.ToFileDTO();
     }
 
     private async Task HandleImportComplete(WorkInstructionFormDTO wi)
@@ -567,10 +563,10 @@
     private List<ProductDetailDTO> GetSelectedProductDetails()
     {
         if (CurrentInstruction == null || Products == null)
-            return new();
+            return [];
 
         return Products
-            .Where(p => CurrentInstruction.ProductIds.Contains(p.ProductId))
+            .Where(p => CurrentInstruction.ProductNames.Contains(p.Name))
             .ToList();
     }
 
@@ -615,8 +611,10 @@
     {
         if (CurrentInstruction != null)
         {
-            CurrentInstruction.ProductIds = data.Products
-                .Select(p => p.ProductId)
+            // Store the product names instead of IDs
+            CurrentInstruction.ProductNames = data.Products
+                .Select(p => p.Name.Trim())
+                .Where(n => !string.IsNullOrWhiteSpace(n))
                 .ToList();
 
             MarkDirty();

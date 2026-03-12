@@ -377,9 +377,11 @@
                 WorkInstructionEditorService.Current.Title = workInstructionData.Title;
             }
 
-            WorkInstructionEditorService.Current.ProductIds =
+            // Store product names instead of IDs
+            WorkInstructionEditorService.Current.ProductNames =
                 workInstructionData.Products
-                    .Select(p => p.ProductId)
+                    .Select(p => p.Name.Trim())
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
                     .ToList();
         }
 

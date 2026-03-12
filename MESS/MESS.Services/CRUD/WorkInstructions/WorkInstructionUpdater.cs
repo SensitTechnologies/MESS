@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
@@ -22,6 +23,17 @@ namespace MESS.Services.CRUD.WorkInstructions;
 /// </remarks>
 public class WorkInstructionUpdater : IWorkInstructionUpdater
 {
+    private readonly IProductResolver _productResolver;
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkInstructionUpdater"/> class.
+    /// </summary>
+    /// <param name="productResolver">The service used for resolving products from product names.</param>
+    public WorkInstructionUpdater(IProductResolver productResolver)
+    {
+        _productResolver = productResolver;
+    }
+    
     /// <summary>
     /// Applies the values from a <see cref="WorkInstructionFormDTO"/> to an existing
     /// tracked <see cref="WorkInstruction"/> entity.
@@ -90,33 +102,17 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         WorkInstruction entity,
         ApplicationContext context)
     {
-        var existingIds = entity.Products.Select(p => p.Id).ToHashSet();
-        var incomingIds = dto.ProductIds.ToHashSet();
-
-        // Remove
-        entity.Products.RemoveAll(p => !incomingIds.Contains(p.Id));
-
-        // Add
-        var toAdd = incomingIds.Except(existingIds).ToList();
-
-        if (toAdd.Count > 0)
-        {
-            var products = await context.Products
-                .Where(p => toAdd.Contains(p.Id))
-                .ToListAsync();
-
-            entity.Products.AddRange(products);
-        }
+        entity.Products = await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
     }
     
     private void SyncNodes(
-        List<WorkInstructionNodeFormDTO> dtos,
+        List<WorkInstructionNodeFormDTO> formNodes,
         WorkInstruction entity,
         ApplicationContext context)
     {
         var existingById = entity.Nodes.ToDictionary(n => n.Id);
 
-        var incomingIds = dtos
+        var incomingIds = formNodes
             .Where(d => d.Id != 0)   // 0 means “new node”
             .Select(d => d.Id)
             .ToHashSet();
@@ -130,7 +126,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
             context.Remove(node);
 
         // ---- Add / Update ----
-        foreach (var dto in dtos)
+        foreach (var dto in formNodes)
         {
             if (dto.Id != 0 && existingById.TryGetValue(dto.Id, out var existing))
             {
@@ -185,7 +181,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
     {
         return dto switch
         {
-            StepNodeFormDTO stepDto => (WorkInstructionNode)new Step
+            StepNodeFormDTO stepDto => new Step
             {
                 NodeType = WorkInstructionNodeType.Step,
                 Position = stepDto.Position,

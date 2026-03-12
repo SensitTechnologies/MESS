@@ -353,7 +353,7 @@ public class WorkInstructionService : IWorkInstructionService
 
             // Load work instruction with related entities needed for the form
             var workInstruction = await context.WorkInstructions
-                .Include(w => w.Products)      // Needed for ProductIds
+                .Include(w => w.Products)      // Needed for ProductNames
                 .Include(w => w.Nodes)         // Needed for node DTOs
                 .ThenInclude(n => ((PartNode)n).PartDefinition) // Needed if nodes reference PartDefinition
                 .Include(w => w.PartProduced)  // Needed for PartProducedId / serialized info
@@ -362,13 +362,14 @@ public class WorkInstructionService : IWorkInstructionService
             if (workInstruction == null)
                 return null;
 
-            // Optional: Sort nodes by position if your UI expects a specific order
+            // Sort nodes by position (just in case)
             SortNodesByPosition(workInstruction);
 
             // Map to Form DTO using your existing mapper
             var dto = workInstruction.ToFormDTO();
 
-            Log.Debug("Form DTO Products: {ProductIds}", string.Join(", ", dto.ProductIds));
+            Log.Debug("Form DTO Products: {ProductNames}", string.Join(", ", dto.ProductNames));
+
             return dto;
         }
         catch (Exception e)
@@ -378,6 +379,7 @@ public class WorkInstructionService : IWorkInstructionService
                 id,
                 e.ToString()
             );
+
             return null;
         }
     }
@@ -549,17 +551,7 @@ public class WorkInstructionService : IWorkInstructionService
                 workInstruction.PartProduced = partProduced;
             }
 
-            // Resolve Products safely
-            if (dto.ProductIds.Count != 0)
-            {
-                workInstruction.Products = await context.Products
-                    .Where(p => dto.ProductIds.Contains(p.Id))
-                    .ToListAsync();
-            }
-            else
-            {
-                workInstruction.Products = new List<Product>();
-            }
+            workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
 
             // Resolve all PartNodes via PartNodeResolver
             await _partNodeResolver.ResolvePendingNodesAsync(workInstruction.Nodes);
@@ -643,17 +635,7 @@ public class WorkInstructionService : IWorkInstructionService
                     .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
             }
 
-            // Resolve Products (if any)
-            if (dto.ProductIds.Any())
-            {
-                workInstruction.Products = await context.Products
-                    .Where(p => dto.ProductIds.Contains(p.Id))
-                    .ToListAsync();
-            }
-            else
-            {
-                workInstruction.Products = [];
-            }
+            workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
 
             // Mark new version active/latest
             workInstruction.IsLatest = true;
@@ -674,6 +656,84 @@ public class WorkInstructionService : IWorkInstructionService
             return workInstruction;
         });
     }
+    
+    /// <summary>
+/// Resolves a collection of product names into <see cref="Product"/> entities.
+/// Existing products will be reused. Missing <see cref="PartDefinition"/> and
+/// <see cref="Product"/> records will be created automatically.
+/// </summary>
+/// <param name="context">The database context.</param>
+/// <param name="productNames">The product names to resolve.</param>
+/// <returns>A list of resolved <see cref="Product"/> entities.</returns>
+private async Task<List<Product>> ResolveProductsAsync(
+    ApplicationContext context,
+    IEnumerable<string> productNames)
+{
+    var normalizedNames = productNames
+        .Select(p => p.Trim())
+        .Where(p => !string.IsNullOrWhiteSpace(p))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    if (normalizedNames.Count == 0)
+        return [];
+
+    // Load existing PartDefinitions
+    var existingPartDefinitions = await context.PartDefinitions
+        .Where(p => normalizedNames.Contains(p.Name))
+        .ToListAsync();
+
+    var partLookup = existingPartDefinitions
+        .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+    // Create missing PartDefinitions
+    foreach (var name in normalizedNames)
+    {
+        if (!partLookup.ContainsKey(name))
+        {
+            var partDefinition = new PartDefinition
+            {
+                Name = name
+            };
+
+            await context.PartDefinitions.AddAsync(partDefinition);
+            partLookup[name] = partDefinition;
+        }
+    }
+
+    var partIds = partLookup.Values.Select(p => p.Id).ToList();
+
+    // Load existing Products
+    var existingProducts = await context.Products
+        .Where(p => partIds.Contains(p.PartDefinitionId))
+        .Include(p => p.PartDefinition)
+        .ToListAsync();
+
+    var productLookup = existingProducts
+        .ToDictionary(p => p.PartDefinition.Name, StringComparer.OrdinalIgnoreCase);
+
+    var results = new List<Product>();
+
+    foreach (var name in normalizedNames)
+    {
+        if (!productLookup.TryGetValue(name, out var product))
+        {
+            var partDefinition = partLookup[name];
+
+            product = new Product
+            {
+                PartDefinition = partDefinition,
+                IsActive = true
+            };
+
+            await context.Products.AddAsync(product);
+        }
+
+        results.Add(product);
+    }
+
+    return results;
+}
     
     /// <summary>
     /// Deletes a Work Instruction from the database if there are no Production log relationships.

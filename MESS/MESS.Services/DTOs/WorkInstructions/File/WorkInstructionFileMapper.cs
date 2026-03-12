@@ -49,15 +49,19 @@ public static class WorkInstructionFileMapper
     /// <param name="fileDto">The file DTO representing a work instruction, typically imported from an external source.</param>
     /// <returns>
     /// A new <see cref="WorkInstructionFormDTO"/> containing all relevant properties from the file DTO,
-    /// including title, version, flags, produced part name, and ordered nodes mapped to their form DTOs.
+    /// including title, version, flags, produced part name, product names, and ordered nodes mapped to their form DTOs.
     /// </returns>
     /// <remarks>
     /// Nodes from the file DTO are ordered by <see cref="WorkInstructionNodeFileDTO.Position"/>
-    /// and converted individually using <c>ToFormDTO()</c>. The ProductIds list is initialized empty
-    /// and can be populated later as needed. This method does not modify the original <paramref name="fileDto"/>.
+    /// and converted individually using <c>ToFormDTO()</c>. Product names are copied from
+    /// <see cref="WorkInstructionFileDTO.AssociatedProductNames"/>. This method does not modify
+    /// the original <paramref name="fileDto"/>.
     /// </remarks>
     public static WorkInstructionFormDTO ToFormDTO(this WorkInstructionFileDTO fileDto)
     {
+        if (fileDto == null)
+            throw new ArgumentNullException(nameof(fileDto));
+
         return new WorkInstructionFormDTO
         {
             Title = fileDto.Title,
@@ -68,7 +72,10 @@ public static class WorkInstructionFileMapper
 
             ProducedPartName = fileDto.ProducedPartName,
 
-            ProductIds = new List<int>(),
+            ProductNames = fileDto.AssociatedProductNames?
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToList() ?? [],
 
             Nodes = fileDto.Nodes
                 .OrderBy(n => n.Position)

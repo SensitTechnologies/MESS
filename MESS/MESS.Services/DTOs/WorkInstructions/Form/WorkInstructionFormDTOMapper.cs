@@ -39,7 +39,7 @@ public static class WorkInstructionFormDTOMapper
             PartProducedIsSerialized = entity.PartProducedIsSerialized,
             PartProducedId = entity.PartProducedId,
             ProducedPartName = entity.PartProduced?.Name,
-            ProductIds = entity.Products.Select(p => p.Id).ToList(),
+            ProductNames = entity.Products.Select(p => p.PartDefinition.Name).ToList(),
             Nodes = entity.Nodes.Select(n => n.ToFormDTO(Guid.NewGuid())).ToList()
         };
     }
@@ -77,7 +77,7 @@ public static class WorkInstructionFormDTOMapper
     /// <param name="allProducts">
     /// A collection of <see cref="ProductSummaryDTO"/> used to populate the
     /// <see cref="WorkInstructionSummaryDTO.Products"/> property.
-    /// Only products whose IDs match <see cref="WorkInstructionFormDTO.ProductIds"/> will be included.
+    /// Only products whose titles match <see cref="WorkInstructionFormDTO.ProductNames"/> will be included.
     /// </param>
     /// <returns>A <see cref="WorkInstructionSummaryDTO"/> containing the mapped summary data.</returns>
     public static WorkInstructionSummaryDTO ToSummaryDTO(
@@ -98,27 +98,19 @@ public static class WorkInstructionFormDTOMapper
             PartProducedId = formDto.PartProducedId,
             PartProducedName = formDto.ProducedPartName,
             Products = allProducts
-                .Where(p => formDto.ProductIds.Contains(p.ProductId))
+                .Where(p => formDto.ProductNames.Contains(p.Name))
                 .ToList()
         };
     }
-    
     
     /// <summary>
     /// Converts a <see cref="WorkInstructionFormDTO"/> (editable form DTO)
     /// to a <see cref="WorkInstructionFileDTO"/> for file export.
     /// </summary>
     /// <param name="formDto">The editable work instruction DTO.</param>
-    /// <param name="productNameResolver">
-    /// A function to resolve product IDs to product names.
-    /// Typically, this comes from the loaded product list in the UI.
-    /// </param>
-    public static WorkInstructionFileDTO ToFileDTO(
-        this WorkInstructionFormDTO formDto,
-        Func<int, string> productNameResolver)
+    public static WorkInstructionFileDTO ToFileDTO(this WorkInstructionFormDTO formDto)
     {
         if (formDto == null) throw new ArgumentNullException(nameof(formDto));
-        if (productNameResolver == null) throw new ArgumentNullException(nameof(productNameResolver));
 
         return new WorkInstructionFileDTO
         {
@@ -128,9 +120,7 @@ public static class WorkInstructionFormDTOMapper
             ShouldGenerateQrCode = formDto.ShouldGenerateQrCode,
             PartProducedIsSerialized = formDto.PartProducedIsSerialized,
             ProducedPartName = formDto.ProducedPartName,
-            AssociatedProductNames = formDto.ProductIds
-                .Select(productNameResolver)
-                .ToList(),
+            AssociatedProductNames = formDto.ProductNames.ToList(),
             Nodes = formDto.Nodes
                 .Select(n => n.ToFileDTO())
                 .ToList()
