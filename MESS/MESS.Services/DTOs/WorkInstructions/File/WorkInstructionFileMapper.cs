@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.File;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.File;
 using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.File;
@@ -37,6 +38,27 @@ public static class WorkInstructionFileMapper
                     _ => throw new NotSupportedException(
                         $"Unsupported node type: {n.GetType().Name}")
                 })
+                .ToList()
+        };
+    }
+    
+    public static WorkInstructionFormDTO ToFormDTO(this WorkInstructionFileDTO fileDto)
+    {
+        return new WorkInstructionFormDTO
+        {
+            Title = fileDto.Title,
+            Version = fileDto.Version,
+            IsActive = fileDto.IsActive,
+            ShouldGenerateQrCode = fileDto.ShouldGenerateQrCode,
+            PartProducedIsSerialized = fileDto.PartProducedIsSerialized,
+
+            ProducedPartName = fileDto.ProducedPartName,
+
+            ProductIds = new List<int>(),
+
+            Nodes = fileDto.Nodes
+                .OrderBy(n => n.Position)
+                .Select(n => n.ToFormDTO())
                 .ToList()
         };
     }

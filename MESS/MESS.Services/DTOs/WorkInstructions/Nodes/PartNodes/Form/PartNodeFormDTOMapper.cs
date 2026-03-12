@@ -13,13 +13,31 @@ public static class PartNodeFormDTOMapper
     /// <summary>
     /// Converts a <see cref="PartNode"/> entity to a <see cref="PartNodeFormDTO"/>.
     /// </summary>
-    /// <param name="entity">The <see cref="PartNode"/> to convert.</param>
-    /// <param name="clientId">A unique client-generated identifier for nodes.</param>
-    /// <returns>A mapped <see cref="PartNodeFormDTO"/>.</returns>
+    /// <param name="entity">The <see cref="PartNode"/> entity to convert.</param>
+    /// <param name="clientId">
+    /// A unique client-generated identifier used to track nodes in the UI
+    /// before they are persisted.
+    /// </param>
+    /// <returns>
+    /// A <see cref="PartNodeFormDTO"/> containing the node metadata and the
+    /// associated part's name and number for editing in the UI.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the <see cref="PartDefinition"/> navigation property was not loaded.
+    /// </exception>
+    /// <remarks>
+    /// The underlying database model references a <see cref="PartDefinition"/>,
+    /// but the form DTO stores only the part's name and number to keep the UI
+    /// decoupled from database entities.
+    /// </remarks>
     public static PartNodeFormDTO ToFormDTO(this PartNode entity, Guid clientId)
     {
         if (entity is null)
             throw new ArgumentNullException(nameof(entity));
+
+        if (entity.PartDefinition is null)
+            throw new InvalidOperationException(
+                $"PartDefinition was not loaded for PartNode {entity.Id}");
 
         return new PartNodeFormDTO
         {
@@ -28,34 +46,53 @@ public static class PartNodeFormDTOMapper
             Position = entity.Position,
             NodeType = entity.NodeType,
             InputType = entity.InputType,
-            PartDefinitionId = entity.PartDefinitionId,
-            PartDefinition = entity.PartDefinition is not null
-                ? entity.PartDefinition.ToDTO()
-                : throw new InvalidOperationException(
-                    $"PartDefinition was not loaded for PartNode {entity.Id}")
+            Name = entity.PartDefinition.Name,
+            Number = entity.PartDefinition.Number
         };
     }
     
         
     /// <summary>
-    /// Converts a PartNodeFormDTO to a file-safe DTO for export.
+    /// Converts a <see cref="PartNodeFormDTO"/> to a file-safe <see cref="PartNodeFileDTO"/> for export.
     /// </summary>
+    /// <param name="form">The form DTO representing the part node in the UI.</param>
+    /// <returns>
+    /// <see cref="PartNodeFileDTO"/> containing the part name, part number,
+    /// position, and input type suitable for serialization to a work instruction file.
+    /// </returns>
+    /// <remarks>
+    /// This method performs a direct mapping because the form DTO already stores
+    /// the exported part name and number independently of any database entity.
+    /// </remarks>
     public static PartNodeFileDTO ToFileDTO(this PartNodeFormDTO form)
     {
+        if (form is null)
+            throw new ArgumentNullException(nameof(form));
+
         return new PartNodeFileDTO
         {
             Position = form.Position,
-            PartName = form.PartDefinition?.Name ?? "UNKNOWN",
-            PartNumber = form.PartDefinition?.Number ?? "UNKNOWN",
-            InputType = form.InputType,
+            NodeType = form.NodeType,
+            PartName = form.Name,
+            PartNumber = form.Number,
+            InputType = form.InputType
         };
     }
 
     /// <summary>
-    /// Converts a <see cref="PartNodeFormDTO"/> to a <see cref="PartNode"/> entity.
+    /// Converts a <see cref="PartNodeFormDTO"/> to a new <see cref="PartNode"/> entity.
     /// </summary>
     /// <param name="dto">The <see cref="PartNodeFormDTO"/> to convert.</param>
-    /// <returns>A mapped <see cref="PartNode"/> entity.</returns>
+    /// <returns>
+    /// A <see cref="PartNode"/> entity containing the node metadata.
+    /// The <see cref="PartDefinition"/> relationship is not resolved here
+    /// and must be assigned during the save process.
+    /// </returns>
+    /// <remarks>
+    /// The form DTO stores only the part name and number. Resolution or creation
+    /// of the corresponding <see cref="PartDefinition"/> must occur in the
+    /// application service responsible for persisting the work instruction.
+    /// </remarks>
     public static PartNode ToNewEntity(this PartNodeFormDTO dto)
     {
         if (dto is null)
@@ -66,12 +103,10 @@ public static class PartNodeFormDTOMapper
             Id = dto.Id,
             Position = dto.Position,
             NodeType = dto.NodeType,
-            InputType = dto.InputType,
-            // Only set FK
-            PartDefinitionId = dto.PartDefinitionId,
+            InputType = dto.InputType
 
-            // DO NOT set navigation property
-            PartDefinition = null
+            // PartDefinitionId intentionally not set
+            // PartDefinition intentionally not set
         };
     }
 

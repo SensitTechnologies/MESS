@@ -47,33 +47,31 @@ public static class PartNodeFileDTOMapper
     }
     
     /// <summary>
-    /// Converts a <see cref="PartNodeFileDTO"/> into a <see cref="PartNodeFormDTO"/> suitable for use in the UI.
+    /// Converts a <see cref="PartNodeFileDTO"/> into a <see cref="PartNodeFormDTO"/>
+    /// suitable for editing in the UI.
     /// </summary>
-    /// <param name="dto">The file DTO representing a part node, typically imported from a work instruction file.</param>
-    /// <param name="resolvedPart">The resolved <see cref="PartDefinition"/> entity that corresponds to the part referenced in the DTO.</param>
+    /// <param name="dto">
+    /// The file DTO representing a part node, typically imported from a work instruction file.
+    /// </param>
     /// <returns>
-    /// A new <see cref="PartNodeFormDTO"/> containing all properties from the file DTO,
-    /// including position, node type, part definition, and input type, ready for UI consumption.
+    /// A new <see cref="PartNodeFormDTO"/> containing the part information from the file,
+    /// including position, node type, part name, part number, and input type.
     /// </returns>
     /// <remarks>
-    /// This method first converts the file DTO to a <see cref="PartNode"/> entity using the provided <paramref name="resolvedPart"/>.
-    /// The <see cref="PartDefinition"/> is also mapped to its DTO representation using the ToDTO extension method.
+    /// This method performs a direct mapping from the file DTO to the form DTO without
+    /// resolving any database entities. The referenced part may or may not already exist
+    /// in the system. Resolution or creation of the corresponding <see cref="PartDefinition"/>
+    /// occurs later during the work instruction save process.
     /// </remarks>
-    public static PartNodeFormDTO ToFormDTO(this PartNodeFileDTO dto, PartDefinition resolvedPart)
+    public static PartNodeFormDTO ToFormDTO(this PartNodeFileDTO dto)
     {
-        var entity = dto.ToEntity(resolvedPart);
-
-        if (entity.PartDefinition is null)
-            throw new InvalidOperationException(
-                $"PartDefinition was not resolved for PartNode at Position {entity.Position}");
-
         return new PartNodeFormDTO
         {
-            Position = entity.Position,
-            NodeType = entity.NodeType,
-            PartDefinitionId = entity.PartDefinitionId,
-            PartDefinition = entity.PartDefinition.ToDTO(),
-            InputType = entity.InputType
+            Position = dto.Position,
+            NodeType = dto.NodeType,
+            Name = dto.PartName,
+            Number = dto.PartNumber,
+            InputType = dto.InputType
         };
     }
 }

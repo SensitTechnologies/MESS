@@ -7,7 +7,6 @@
 @using MESS.Blazor.Components.Navigator
 @using MESS.Services.CRUD.Products
 @using MESS.Services.CRUD.WorkInstructions
-@using MESS.Services.DTOs.PartDefinitions
 @using MESS.Services.DTOs.Products.Detail
 @using MESS.Services.DTOs.WorkInstructions.Form
 @using MESS.Services.DTOs.WorkInstructions.Nodes.Form
@@ -45,12 +44,12 @@
     OnImportComplete="HandleImportComplete"
     IsDirty="WorkInstructionEditorService.IsDirty"
     CurrentInstruction="WorkInstructionEditorService.Current" 
-    OnNewPart="(() => NewNodeAtBottom(part))"
-    OnNewStep="(() => NewNodeAtBottom(step))"/>
+    OnNewPart="(() => NewNodeAtBottom(PART))"
+    OnNewStep="(() => NewNodeAtBottom(STEP))"/>
 
-<NavigationMenu IsOpen="@isSidebarOpen" OnToggle="ToggleSidebar" />
+<NavigationMenu IsOpen="@_isSidebarOpen" OnToggle="ToggleSidebar" />
 
-<div class="d-flex w-100" style="flex-direction: column; margin-left:@(isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
+<div class="d-flex w-100" style="flex-direction: column; margin-left:@(_isSidebarOpen ? "250px" : "0"); transition: margin-left 0.3s ease;">
     @if (HasInstruction)
     {
         <div class="flex-grow-1">
@@ -76,10 +75,10 @@
                 }
                 
                 <div id="buttons-holder" class="d-flex border rounded p-2 justify-content-around shadow-sm" style="flex-direction: row;">
-                    <button class="btn btn-sm btn-primary" @onclick="(() => NewNodeAtBottom(part))">
+                    <button class="btn btn-sm btn-primary" @onclick="(() => NewNodeAtBottom(PART))">
                         Add Part
                     </button>
-                    <button class="btn btn-sm btn-primary" @onclick="(() => NewNodeAtBottom(step))">
+                    <button class="btn btn-sm btn-primary" @onclick="(() => NewNodeAtBottom(STEP))">
                         Add Step
                     </button>
                 </div>
@@ -89,7 +88,7 @@
 </div>
 
 @code {
-    private bool isSidebarOpen = false;
+    private bool _isSidebarOpen;
     
     private bool HasInstruction => WorkInstructionEditorService.Current != null;
 
@@ -103,13 +102,13 @@
         SelectedProductId == null || SelectedProductId == -1
             ? AllWorkInstructions
             : AllWorkInstructions
-                .Where(wi => wi.Products?.Any(p => p.ProductId == SelectedProductId) == true)
+                .Where(wi => wi.Products.Any(p => p.ProductId == SelectedProductId))
                 .ToList();
 
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
     
-    private IJSObjectReference? scrollToModule;
+    private IJSObjectReference? _scrollToModule;
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -129,7 +128,7 @@
     {
         if (firstRender)
         {
-            scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+            _scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Scripts/ScrollTo.js");
         }
     }
@@ -141,7 +140,7 @@
 
     private void ToggleSidebar()
     {
-        isSidebarOpen = !isSidebarOpen;
+        _isSidebarOpen = !_isSidebarOpen;
         StateHasChanged();
     }
 
@@ -198,7 +197,7 @@
 
                         if (WorkInstructionEditorService.Current != null)
                         {
-                            // Ensure Current.Id has a value before calling LoadForEditAsync
+                            // Ensure Current.id has a value before calling LoadForEditAsync
                             if (!WorkInstructionEditorService.Current.Id.HasValue)
                             {
                                 // Should never happen after SaveAsync, but handle just in case
@@ -229,9 +228,9 @@
                 // Refresh all latest work instructions list after save
                 AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
                 
-                AllProducts = (await ProductService.GetAllDetailsAsync())?
+                AllProducts = (await ProductService.GetAllDetailsAsync())
                     .Where(p => p.IsActive)
-                    .ToList() ?? [];
+                    .ToList();
                 StateHasChanged();
             }
         }
@@ -286,13 +285,9 @@
         bool needsConfirmation = false;
         var current = WorkInstructionEditorService.Current;
 
-        if (current != null)
+        if (current is { OriginalId: not null })
         {
-            if (current.OriginalId != null)
-            {
-                needsConfirmation = true;
-            }
-            
+            needsConfirmation = true;
         }
 
         if (needsConfirmation)
@@ -418,8 +413,8 @@
         }
     }
     
-    private const string step = "step";
-    private const string part = "part";
+    private const string STEP = "step";
+    private const string PART = "part";
     private async Task NewNodeAtBottom(string nodeType) => await NewNodeAt((nodeType, -1));
     
     private async Task NewNodeAt((string nodeType, int index)args)
@@ -428,8 +423,8 @@
 
         switch (args.nodeType)
         {
-            case part:
-                newNode = new PartNodeFormDTO { NodeType = WorkInstructionNodeType.Part, PartDefinition = new PartDefinitionDTO { Name = "", Number = "" } };
+            case PART:
+                newNode = new PartNodeFormDTO { NodeType = WorkInstructionNodeType.Part, Name = "", Number = "" };
                 break;
 
             default:
@@ -463,9 +458,9 @@
     private async Task ScrollToElement(WorkInstructionNodeFormDTO node)
     {
         string elementId = $"node-{node.Position}";
-        if (scrollToModule != null)
+        if (_scrollToModule != null)
         {
-            await scrollToModule.InvokeVoidAsync("scrollTo", elementId);
+            await _scrollToModule.InvokeVoidAsync("scrollTo", elementId);
         }
     }
     

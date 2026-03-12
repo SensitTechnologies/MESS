@@ -281,32 +281,19 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
     private async Task<WorkInstructionNodeFormDTO> CloneNodeAsync(WorkInstructionNodeFormDTO node)
     {
-        if (node is PartNodeFormDTO partNode)
+        return node switch
         {
-            return new PartNodeFormDTO
+            PartNodeFormDTO partNode => new PartNodeFormDTO
             {
                 // New unsaved node
                 ClientId = Guid.NewGuid(),
-
                 NodeType = WorkInstructionNodeType.Part,
                 Position = partNode.Position,
-
-                PartDefinitionId = partNode.PartDefinitionId,
-                InputType = partNode.InputType,
-
-                PartDefinition = partNode.PartDefinition == null
-                    ? null
-                    : new PartDefinitionDTO
-                    {
-                        PartDefinitionId = partNode.PartDefinition.PartDefinitionId,
-                        Name = partNode.PartDefinition.Name,
-                        Number = partNode.PartDefinition.Number
-                    }
-            };
-        }
-        else if (node is StepNodeFormDTO stepNode)
-        {
-            return new StepNodeFormDTO
+                Name = partNode.Name,
+                Number = partNode.Number,
+                InputType = partNode.InputType
+            },
+            StepNodeFormDTO stepNode => new StepNodeFormDTO
             {
                 ClientId = Guid.NewGuid(), // Assign a new ClientId for the cloned node
                 NodeType = WorkInstructionNodeType.Step,
@@ -314,12 +301,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Body = stepNode.Body,
                 Position = stepNode.Position,
                 DetailedBody = stepNode.DetailedBody,
-                PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? new List<string>(),
-                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? new List<string>()
-            };
-        }
-
-        throw new NotSupportedException("Unknown WorkInstructionNode type");
+                PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? [],
+                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? []
+            },
+            _ => throw new NotSupportedException("Unknown WorkInstructionNode type")
+        };
     }
 
     private async Task<List<string>> CloneImages(List<string> Images)

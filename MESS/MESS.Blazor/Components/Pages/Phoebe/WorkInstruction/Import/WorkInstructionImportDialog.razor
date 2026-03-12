@@ -1,5 +1,4 @@
 @using MESS.Data.Models
-@using MESS.Services.DTOs.WorkInstructions.File
 @using MESS.Services.DTOs.WorkInstructions.Form
 
 @if (Visible)
@@ -46,7 +45,6 @@
 
     private async Task HandleImportComplete(WorkInstructionFormDTO wi)
     {
-
         await OnImportComplete.InvokeAsync(wi);
         await Close();
     }
