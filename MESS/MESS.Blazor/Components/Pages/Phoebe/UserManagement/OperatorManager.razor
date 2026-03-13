@@ -6,21 +6,32 @@
 @using MESS.Services.CRUD.ApplicationUser
 @using MESS.Services.DTOs
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Serilog
-@inject AuthenticationStateProvider AuthProvider
 @inject IApplicationUserService ApplicationUserService
 @inject UserManager<ApplicationUser> UserManager
 @inject IToastService ToastService
+@inject IJSRuntime JS
 
 <PageTitle>Users</PageTitle>
 
 <div class="container justify-content-center">
-    <h1 class="mb-4">
-        Users
-    </h1>
-    @* <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button> *@
+    <div class="d-flex align-items-center mb-4 justify-content-between">
+        <h1 class="m-0">Users</h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" @onclick="ExportUsers" disabled="@_isLoading">
+                Export CSV
+                @if (_isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+                }
+            </button>
+            <label class="btn btn-secondary mb-0">
+                Import CSV
+                <input type="file" style="display:none;" @onchange="ImportUsers" accept=".csv" />
+            </label>
+        </div>
+    </div>
     
     <div>
         <table>
@@ -58,6 +69,8 @@
 
 @code {
     private List<UserRoleDTO> ApplicationUserDtoList { get; set; } = [];
+    
+    private bool _isLoading;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -67,13 +80,13 @@
         {
             var roles = await UserManager.GetRolesAsync(user);
             var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
-            var IsLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
+            var isLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
 
             var userDto = new UserRoleDTO
             {
                 User = user,
                 Roles = roles,
-                IsLockedOut = IsLockedOut
+                IsLockedOut = isLockedOut
             };
             
             ApplicationUserDtoList.Add(userDto);
@@ -138,5 +151,79 @@
         };
         
         ApplicationUserDtoList.Add(newUser);
+    }
+    
+    private async Task ExportUsers()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            // Get CSV from orchestrator
+            var csvContent = await ApplicationUserService.ExportUsersToCsvAsync();
+
+            using var memoryStream = new MemoryStream();
+            await using var writer = new StreamWriter(memoryStream);
+            await writer.WriteAsync(csvContent);
+            await writer.FlushAsync();
+            memoryStream.Position = 0;
+
+            using var streamRef = new DotNetStreamReference(stream: memoryStream);
+            var fileName = $"Users_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+            ToastService.ShowSuccess("Users exported successfully!");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error exporting users");
+            ToastService.ShowError("Failed to export users.");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ImportUsers(ChangeEventArgs e)
+    {
+        var file = ((IBrowserFile?)e.Value);
+        if (file == null) return;
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            using var reader = new StreamReader(stream);
+            var csvContent = await reader.ReadToEndAsync();
+
+            var (errors, count) = await ApplicationUserService.ImportUsersFromCsvAsync(csvContent);
+
+            if (errors.Any())
+            {
+                foreach (var error in errors)
+                    ToastService.ShowError(error);
+            }
+
+            ToastService.ShowSuccess($"{count} users imported successfully!");
+
+            // Reload users
+            ApplicationUserDtoList.Clear();
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error importing users");
+            ToastService.ShowError("Failed to import users.");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 }
