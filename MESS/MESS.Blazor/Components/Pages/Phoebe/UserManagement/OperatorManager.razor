@@ -1,6 +1,7 @@
 ﻿@page "/users"
 @layout PhoebeLayout
 @attribute [Authorize(Roles = "Technician, Administrator")]
+@using System.Text
 @using MESS.Blazor.Components.Layout
 @using MESS.Data.Models
 @using MESS.Services.CRUD.ApplicationUser
@@ -19,16 +20,23 @@
     <div class="d-flex align-items-center mb-4 justify-content-between">
         <h1 class="m-0">Users</h1>
         <div class="d-flex gap-2">
-            <button class="btn btn-primary" @onclick="ExportUsers" disabled="@_isLoading">
-                Export CSV
+            <button class="btn btn-sm btn-primary" @onclick="ExportUsers" disabled="@_isLoading">
+                <i class="bi bi-download me-1"></i>
+                Export
                 @if (_isLoading)
                 {
-                    <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+                    <span class="spinner-border spinner-border-sm ms-2"></span>
                 }
             </button>
-            <label class="btn btn-secondary mb-0">
-                Import CSV
-                <input type="file" style="display:none;" @onchange="ImportUsers" accept=".csv" />
+            
+            <!-- Hidden file input -->
+            <InputFile id="@_userImportId"
+                       OnChange="ImportUsers"
+                       accept=".csv"
+                       class="d-none" />
+
+            <label for="@_userImportId" class="btn btn-sm btn-primary">
+                <i class="bi bi-upload"></i> Import
             </label>
         </div>
     </div>
@@ -75,22 +83,30 @@
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
+        await LoadUsers();
+    }
+    
+    private async Task LoadUsers()
+    {
+        ApplicationUserDtoList.Clear();
+
         var applicationUsers = await ApplicationUserService.GetAllAsync();
+
         foreach (var user in applicationUsers)
         {
             var roles = await UserManager.GetRolesAsync(user);
             var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
             var isLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
 
-            var userDto = new UserRoleDTO
+            ApplicationUserDtoList.Add(new UserRoleDTO
             {
                 User = user,
                 Roles = roles,
                 IsLockedOut = isLockedOut
-            };
-            
-            ApplicationUserDtoList.Add(userDto);
+            });
         }
+
+        StateHasChanged();
     }
 
     private async Task SaveChanges(ApplicationUser user)
@@ -156,19 +172,15 @@
     private async Task ExportUsers()
     {
         _isLoading = true;
-        StateHasChanged();
+
         try
         {
-            // Get CSV from orchestrator
             var csvContent = await ApplicationUserService.ExportUsersToCsvAsync();
 
-            using var memoryStream = new MemoryStream();
-            await using var writer = new StreamWriter(memoryStream);
-            await writer.WriteAsync(csvContent);
-            await writer.FlushAsync();
-            memoryStream.Position = 0;
+            var bytes = Encoding.UTF8.GetBytes(csvContent);
+            using var stream = new MemoryStream(bytes);
+            using var streamRef = new DotNetStreamReference(stream);
 
-            using var streamRef = new DotNetStreamReference(stream: memoryStream);
             var fileName = $"Users_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
 
             await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
@@ -183,47 +195,39 @@
         finally
         {
             _isLoading = false;
-            StateHasChanged();
         }
     }
 
-    private async Task ImportUsers(ChangeEventArgs e)
-    {
-        var file = ((IBrowserFile?)e.Value);
-        if (file == null) return;
+    private readonly string _userImportId = $"userImport_{Guid.NewGuid():N}";
 
-        _isLoading = true;
-        StateHasChanged();
+    private async Task ImportUsers(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
 
         try
         {
             await using var stream = file.OpenReadStream();
             using var reader = new StreamReader(stream);
-            var csvContent = await reader.ReadToEndAsync();
 
-            var (errors, count) = await ApplicationUserService.ImportUsersFromCsvAsync(csvContent);
+            var csvData = await reader.ReadToEndAsync();
 
-            if (errors.Any())
+            var result = await ApplicationUserService.ImportUsersFromCsvAsync(csvData);
+
+            if (result.Errors.Any())
             {
-                foreach (var error in errors)
+                foreach (var error in result.Errors)
                     ToastService.ShowError(error);
+
+                return;
             }
 
-            ToastService.ShowSuccess($"{count} users imported successfully!");
+            ToastService.ShowSuccess($"{result.ImportedCount} users imported successfully!");
 
-            // Reload users
-            ApplicationUserDtoList.Clear();
-            await OnInitializedAsync();
+            await LoadUsers();
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error importing users");
-            ToastService.ShowError("Failed to import users.");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
+            ToastService.ShowError($"Import failed: {ex.Message}");
         }
     }
 }
