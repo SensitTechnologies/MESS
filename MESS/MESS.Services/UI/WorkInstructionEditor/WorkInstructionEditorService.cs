@@ -453,10 +453,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
     
     /// <inheritdoc />
-    public void SetProducedPartName(string? name)
+    public void SetProducedPartName(string? name, bool markDirty = true)
     {
         _pendingProducedPartName = name;
-        MarkDirty();
+
+        if (markDirty)
+            MarkDirty();
     }
 
 }

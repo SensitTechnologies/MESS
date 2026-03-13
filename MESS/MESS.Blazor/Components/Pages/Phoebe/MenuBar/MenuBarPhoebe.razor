@@ -311,7 +311,12 @@
             if (_partProducedName != value)
             {
                 _partProducedName = value;
-                _ = OnPartProducedChangedDebounced();
+
+                // Update editor state immediately
+                EditorService.SetProducedPartName(value);
+
+                // Only debounce the lookup logic
+                _ = RunPartLookupDebounce();
             }
         }
     }
@@ -349,10 +354,13 @@
         if (_previousInstruction != CurrentInstruction)
         {
             _previousInstruction = CurrentInstruction;
-        
-            // Update text field without triggering debounce
-            PartProducedName = CurrentInstruction?.ProducedPartName ?? "";
-            WillCreateNewPart = false;
+
+            _partProducedName = CurrentInstruction?.ProducedPartName ?? "";
+
+            // Update editor WITHOUT dirty
+            EditorService.SetProducedPartName(_partProducedName, markDirty: false);
+
+            _ = RunPartLookupDebounce();
 
             StateHasChanged();
         }
@@ -624,10 +632,8 @@
         return Task.CompletedTask;
     }
     
-    private async Task OnPartProducedChangedDebounced()
+    private async Task RunPartLookupDebounce()
     {
-        EditorService.SetProducedPartName(PartProducedName);
-
         _debounceCts?.Cancel();
         _debounceCts = new CancellationTokenSource();
         var token = _debounceCts.Token;
@@ -638,12 +644,12 @@
 
             if (string.IsNullOrWhiteSpace(PartProducedName))
             {
-                WillCreateNewPart = false; // No icon for empty input
+                WillCreateNewPart = false;
             }
             else
             {
-                // If it doesn't exist yet OR it's different from the currently assigned part
-                WillCreateNewPart = !await PartDefinitionService.ExistsAsync(PartProducedName);
+                WillCreateNewPart =
+                    !await PartDefinitionService.ExistsAsync(PartProducedName);
             }
 
             StateHasChanged();

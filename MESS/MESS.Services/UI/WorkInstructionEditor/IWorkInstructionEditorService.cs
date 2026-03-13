@@ -208,19 +208,16 @@ public interface IWorkInstructionEditorService
     public void QueueNodeForDeletion(int nodeId);
     
     /// <summary>
-    /// Sets the name of the part produced by the current work instruction in the editor.
-    /// <para>
-    /// This does not immediately create or fetch a <see cref="PartDefinition"/> from the database.
-    /// The pending part name will be applied to <see cref="Current"/> when <see cref="SaveAsync"/> is called.
-    /// </para>
+    /// Sets the name of the part that the current work instruction produces.
     /// </summary>
     /// <param name="name">
-    /// The name of the part to assign to the current work instruction.
-    /// If null or empty, the current produced part will not be changed on save.
+    /// The name of the produced part. This may be <c>null</c> or empty if no part has been specified.
     /// </param>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown if there is no current work instruction loaded in the editor.
-    /// </exception>
-    void SetProducedPartName(string? name);
+    /// <param name="markDirty">
+    /// If <c>true</c>, the editor state will be marked as having unsaved changes. 
+    /// This should typically be <c>true</c> for user-initiated edits and <c>false</c> when initializing
+    /// or restoring editor state (e.g., when loading an existing work instruction).
+    /// </param>
+    void SetProducedPartName(string? name, bool markDirty = true);
 }
 
