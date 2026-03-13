@@ -1,5 +1,6 @@
 ﻿using System.Transactions;
 using MESS.Data.Context;
+using MESS.Services.Files.ApplicationUsers;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -13,16 +14,21 @@ public class ApplicationUserService : IApplicationUserService
     private readonly ApplicationContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IApplicationUserFileService _fileService;
+
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
 
     /// <inheritdoc cref="IApplicationUserService"/>
     public ApplicationUserService(ApplicationContext context, UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,  RoleManager<IdentityRole> roleManager, ApplicationUserFileService fileService)
     {
         _context = context;
         _userManager = userManager;
         _signInManager = signInManager;
+        _roleManager = roleManager;
+        _fileService = fileService;
     }
 
     /// <inheritdoc />
@@ -228,5 +234,68 @@ public class ApplicationUserService : IApplicationUserService
             Log.Error(ex, "Error updating user with ID {id}", applicationUser.Id);
             return false;
         }
+    }
+    
+    /// <inheritdoc />
+     public async Task<(List<string> Errors, int ImportedCount)> ImportUsersFromCsvAsync(string csvData)
+    {
+        var errors = new List<string>();
+        int importedCount = 0;
+
+        // Step 1: Validate CSV
+        var validationErrors = _fileService.ValidateCsv(csvData);
+        if (validationErrors.Any())
+        {
+            errors.AddRange(validationErrors);
+            return (errors, importedCount);
+        }
+
+        // Step 2: Parse CSV
+        var users = _fileService.ImportFromCsv(csvData, out var userRoles);
+
+        foreach (var user in users)
+        {
+            // Step 3: Check if user already exists
+            var existingUser = await _userManager.FindByNameAsync(user.UserName!);
+            if (existingUser != null)
+            {
+                errors.Add($"User '{user.UserName}' already exists in the database.");
+                continue;
+            }
+
+            // Step 4: Add user
+            var result = await _userManager.CreateAsync(user);
+            if (!result.Succeeded)
+            {
+                errors.Add($"Failed to create user '{user.UserName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                continue;
+            }
+
+            // Step 5: Assign default role if none provided
+            if (!userRoles.TryGetValue(user.UserName!, out var roles) || roles.Count == 0)
+            {
+                roles = new List<string> { "Operator" }; // default role
+            }
+
+            // Step 6: Ensure roles exist and assign
+            foreach (var roleName in roles)
+            {
+                if (!await _roleManager.RoleExistsAsync(roleName))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(roleName));
+                    if (!roleResult.Succeeded)
+                    {
+                        errors.Add($"Failed to create role '{roleName}' for user '{user.UserName}'.");
+                        continue;
+                    }
+                }
+
+                await _userManager.AddToRoleAsync(user, roleName);
+            }
+
+            importedCount++;
+        }
+
+        return (errors, importedCount);
     }
 }
