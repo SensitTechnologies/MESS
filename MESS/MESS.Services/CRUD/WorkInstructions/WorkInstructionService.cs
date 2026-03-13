@@ -638,6 +638,8 @@ public class WorkInstructionService : IWorkInstructionService
             }
 
             workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
+            
+            await _partNodeResolver.ResolvePendingNodesAsync(workInstruction.Nodes);
 
             // Mark new version active/latest
             workInstruction.IsLatest = true;
