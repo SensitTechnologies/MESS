@@ -174,20 +174,20 @@ public class ApplicationUserService : IApplicationUserService
     }
 
     /// <inheritdoc />
-    public async Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser)
+    public async Task<IdentityResult> AddApplicationUser(ApplicationUser applicationUser)
     {
         try
         {
-            var result = await _userManager.CreateAsync(ApplicationUser);
+            var result = await _userManager.CreateAsync(applicationUser);
             
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(ApplicationUser, DEFAULT_ROLE);
-                Log.Information("Added ApplicationUser with ID {id}", ApplicationUser.Id);
+                await _userManager.AddToRoleAsync(applicationUser, DEFAULT_ROLE);
+                Log.Information("Added ApplicationUser with ID {id}", applicationUser.Id);
                 return IdentityResult.Success;
             }
             
-            Log.Warning("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
+            Log.Warning("Unable to create ApplicationUser with ID {id}", applicationUser.Id);
             return result;
         }
         catch (Exception ex)
@@ -299,6 +299,7 @@ public class ApplicationUserService : IApplicationUserService
         return (errors, importedCount);
     }
     
+    /// <inheritdoc />
     public async Task<string> ExportUsersToCsvAsync()
     {
         // Step 1: Load all users from database
