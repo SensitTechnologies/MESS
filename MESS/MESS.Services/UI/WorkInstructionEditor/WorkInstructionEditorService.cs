@@ -1,7 +1,5 @@
 using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.WorkInstructions;
-using MESS.Services.DTOs.PartDefinitions;
-using MESS.Services.DTOs.Products.Detail;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
@@ -129,6 +127,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
             PartProducedIsSerialized = Current.PartProducedIsSerialized,
+            ProducedPartName = Current.ProducedPartName,
+            PartProducedId = Current.PartProducedId,
             ProductNames = Current.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(Current.Nodes)
         };
@@ -258,6 +258,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
             PartProducedId = template.PartProducedId,
+            ProducedPartName = template.ProducedPartName,
             ProductNames = template.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(template.Nodes)
         };
