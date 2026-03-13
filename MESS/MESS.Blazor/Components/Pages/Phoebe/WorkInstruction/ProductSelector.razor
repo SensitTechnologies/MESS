@@ -3,23 +3,66 @@
 <div class="list-group scrollable-checkbox-container">
     @foreach (var product in AllProducts)
     {
-        <div class="list-group-item d-flex align-items-center gap-2">
-            <input type="checkbox"
-                   class="form-check-input me-1"
-                   checked="@IsProductSelected(product.Name)"
-                   @onchange="@(e => ToggleProductSelection(product.Name, e.Value is bool b && b))" />
+        var isSelected = IsProductSelected(product.Name);
+        var isSaved = product.ProductId > 0;
 
-            <span>@product.Name</span>
+        <div class="list-group-item d-flex align-items-center justify-content-between">
+
+            <div class="d-flex align-items-center gap-2">
+                <input type="checkbox"
+                       class="form-check-input"
+                       checked="@isSelected"
+                       @onchange="@(e => ToggleProductSelection(product.Name, e.Value is bool b && b))" />
+
+                <span>@product.Name</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+
+                @if (isSaved)
+                {
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> Saved
+                    </span>
+                }
+                else if (isSelected)
+                {
+                    <span class="badge bg-warning text-dark">
+                        <i class="bi bi-hourglass-split"></i> Creation Pending
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">
+                        <i class="bi bi-x-circle"></i> Will Not Save
+                    </span>
+
+                    <button class="btn btn-sm btn-outline-danger"
+                            title="Remove product"
+                            @onclick="() => RemoveUnsavedProduct(product)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                }
+
+            </div>
         </div>
     }
 
-    @foreach (var name in UnsavedProducts)
+    @foreach (var product in UnsavedProducts)
     {
-        <input class="form-control"
-               value="@name"
-               @onchange="(e => UpdateUnsavedProductName(name, e.Value?.ToString()))"
-               placeholder="Product name"
-               @onblur="@(() => SaveNewProductAsync(name))" />
+        <div class="list-group-item d-flex gap-2">
+
+            <input class="form-control"
+                   @bind="product.Name"
+                   placeholder="Product name"
+                   @onblur="@(() => SaveNewProductAsync(product))" />
+
+            <button class="btn btn-outline-danger btn-sm"
+                    @onclick="() => RemovePendingProduct(product)">
+                <i class="bi bi-trash"></i>
+            </button>
+
+        </div>
     }
 
     <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -51,7 +94,7 @@
     /// <summary>
     /// Unsaved product names being created by the user.
     /// </summary>
-    private List<string> UnsavedProducts { get; set; } = new();
+    private List<PendingProduct> UnsavedProducts { get; set; } = [];
 
     private bool IsProductSelected(string name) =>
         SelectedProducts.Contains(name);
@@ -76,31 +119,53 @@
 
     private void AddNewProduct()
     {
-        UnsavedProducts.Add(string.Empty);
+        UnsavedProducts.Add(new PendingProduct());
     }
-
-    private void UpdateUnsavedProductName(string oldName, string? newName)
+    
+    private void RemoveUnsavedProduct(ProductDetailDTO product)
     {
-        if (string.IsNullOrWhiteSpace(newName))
+        if (product.ProductId != 0)
             return;
 
-        var index = UnsavedProducts.IndexOf(oldName);
-        if (index >= 0)
-            UnsavedProducts[index] = newName;
+        AllProducts.Remove(product);
+        SelectedProducts.Remove(product.Name);
+    }
+    
+    private void RemovePendingProduct(PendingProduct pending)
+    {
+        UnsavedProducts.Remove(pending);
     }
 
-    private async Task SaveNewProductAsync(string name)
+    private async Task SaveNewProductAsync(PendingProduct pending)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(pending.Name))
             return;
 
-        // Persist via service
-        var productDto = new ProductDetailDTO { Name = name, IsActive = true };
+        if (AllProducts.Any(p => 
+                p.Name.Equals(pending.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            UnsavedProducts.Remove(pending);
+            return;
+        }
 
-        // Update lists
+        var productDto = new ProductDetailDTO
+        {
+            ProductId = 0,
+            Name = pending.Name.Trim(),
+            IsActive = true
+        };
+
         AllProducts.Add(productDto);
-        UnsavedProducts.Remove(name);
-        SelectedProducts.Add(name);
+        UnsavedProducts.Remove(pending);
+
+        if (!SelectedProducts.Contains(productDto.Name))
+            SelectedProducts.Add(productDto.Name);
+
         await SelectedProductsChanged.InvokeAsync(SelectedProducts);
+    }
+    
+    private class PendingProduct
+    {
+        public string Name { get; set; } = "";
     }
 }
