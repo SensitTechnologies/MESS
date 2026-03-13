@@ -103,10 +103,13 @@ public static class PartNodeFormDTOMapper
             Id = dto.Id,
             Position = dto.Position,
             NodeType = dto.NodeType,
-            InputType = dto.InputType
+            InputType = dto.InputType,
 
-            // PartDefinitionId intentionally not set
-            // PartDefinition intentionally not set
+            PartDefinition = new PartDefinition
+            {
+                Name = dto.Name,
+                Number = dto.Number,
+            }
         };
     }
 
