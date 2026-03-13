@@ -1,7 +1,4 @@
-@using MESS.Services.CRUD.Products
 @using MESS.Services.DTOs.Products.Detail
-
-@inject IProductService ProductService
 
 <div class="list-group scrollable-checkbox-container">
     @foreach (var product in AllProducts)
@@ -99,7 +96,6 @@
 
         // Persist via service
         var productDto = new ProductDetailDTO { Name = name, IsActive = true };
-        await ProductService.CreateAsync(productDto);
 
         // Update lists
         AllProducts.Add(productDto);
