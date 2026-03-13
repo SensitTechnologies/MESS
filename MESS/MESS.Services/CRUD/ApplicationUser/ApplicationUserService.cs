@@ -22,7 +22,7 @@ public class ApplicationUserService : IApplicationUserService
 
     /// <inheritdoc cref="IApplicationUserService"/>
     public ApplicationUserService(ApplicationContext context, UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,  RoleManager<IdentityRole> roleManager, ApplicationUserFileService fileService)
+        SignInManager<ApplicationUser> signInManager,  RoleManager<IdentityRole> roleManager, IApplicationUserFileService fileService)
     {
         _context = context;
         _userManager = userManager;
