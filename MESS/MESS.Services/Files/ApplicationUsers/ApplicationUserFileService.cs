@@ -16,7 +16,7 @@ public class ApplicationUserFileService : IApplicationUserFileService
         var sb = new StringBuilder();
 
         // CSV header
-        sb.AppendLine("UserName,Email,FirstName,LastName,IsActive,Roles");
+        sb.AppendLine("UserName,Email,FirstName,LastName,Roles");
 
         foreach (var user in users)
         {
@@ -39,7 +39,6 @@ public class ApplicationUserFileService : IApplicationUserFileService
                 Escape(user.Email),
                 Escape(user.FirstName),
                 Escape(user.LastName),
-                user.IsActive.ToString(),
                 Escape(rolesList)
             );
 
@@ -66,16 +65,16 @@ public class ApplicationUserFileService : IApplicationUserFileService
         if (line == null) throw new FormatException("CSV data is empty, no header found.");
 
         var headers = ParseCsvLine(line);
-        if (headers.Count != 6)
-            throw new FormatException("CSV must have 6 columns: UserName, Email, FirstName, LastName, IsActive, Roles");
+        if (headers.Count != 5)
+            throw new FormatException("CSV must have 5 columns: UserName, Email, FirstName, LastName, Roles");
 
         while ((line = reader.ReadLine()) != null)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             var fields = ParseCsvLine(line);
-            if (fields.Count != 6)
-                throw new FormatException($"CSV row does not have 6 columns: {line}");
+            if (fields.Count != 5)
+                throw new FormatException($"CSV row does not have 5 columns: {line}");
 
             var user = new ApplicationUser
             {
@@ -83,15 +82,14 @@ public class ApplicationUserFileService : IApplicationUserFileService
                 Email = fields[1],
                 FirstName = fields[2],
                 LastName = fields[3],
-                IsActive = bool.TryParse(fields[4], out var isActive) && isActive
             };
 
             users.Add(user);
 
             // Parse roles into dictionary
-            var roles = string.IsNullOrWhiteSpace(fields[5])
+            var roles = string.IsNullOrWhiteSpace(fields[4])
                 ? new List<string>()
-                : fields[5].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                : fields[4].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
             userRoles[user.UserName ?? ""] = roles;
         }
@@ -156,95 +154,90 @@ public class ApplicationUserFileService : IApplicationUserFileService
 
     /// <inheritdoc/>
     public IEnumerable<string> ValidateCsv(string csvData)
-{
-    var errors = new List<string>();
-
-    if (string.IsNullOrWhiteSpace(csvData))
     {
-        errors.Add("CSV data is empty.");
-        return errors;
-    }
+        var errors = new List<string>();
 
-    using var reader = new StringReader(csvData);
-    string? line;
-    int rowIndex = 0;
+        if (string.IsNullOrWhiteSpace(csvData))
+        {
+            errors.Add("CSV data is empty.");
+            return errors;
+        }
 
-    // Read header
-    line = reader.ReadLine();
-    rowIndex++;
-    if (line == null)
-    {
-        errors.Add("CSV has no header row.");
-        return errors;
-    }
+        using var reader = new StringReader(csvData);
+        string? line;
+        int rowIndex = 0;
 
-    var headers = ParseCsvLine(line);
-    if (headers.Count != 6)
-    {
-        errors.Add("CSV header must have 6 columns: UserName,Email,FirstName,LastName,IsActive,Roles");
-    }
-
-    var userNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    while ((line = reader.ReadLine()) != null)
-    {
+        // Read header
+        line = reader.ReadLine();
         rowIndex++;
-        if (string.IsNullOrWhiteSpace(line)) continue;
-
-        var fields = ParseCsvLine(line);
-        if (fields.Count != 6)
+        if (line == null)
         {
-            errors.Add($"Row {rowIndex}: Expected 6 columns but found {fields.Count}.");
-            continue;
+            errors.Add("CSV has no header row.");
+            return errors;
         }
 
-        var userName = fields[0];
-        var email = fields[1];
-        var firstName = fields[2];
-        var lastName = fields[3];
-        var isActive = fields[4];
-        var roles = fields[5];
-
-        // Required field checks
-        if (string.IsNullOrWhiteSpace(userName)) errors.Add($"Row {rowIndex}: UserName is required.");
-        if (string.IsNullOrWhiteSpace(email)) errors.Add($"Row {rowIndex}: Email is required.");
-        if (string.IsNullOrWhiteSpace(firstName)) errors.Add($"Row {rowIndex}: FirstName is required.");
-        if (string.IsNullOrWhiteSpace(lastName)) errors.Add($"Row {rowIndex}: LastName is required.");
-
-        // Length checks (from your FluentValidation)
-        if (!string.IsNullOrEmpty(firstName) && firstName.Length > 1024)
-            errors.Add($"Row {rowIndex}: FirstName exceeds max length of 1024 characters.");
-        if (!string.IsNullOrEmpty(lastName) && lastName.Length > 1024)
-            errors.Add($"Row {rowIndex}: LastName exceeds max length of 1024 characters.");
-
-        // Boolean check
-        if (!bool.TryParse(isActive, out _))
-            errors.Add($"Row {rowIndex}: IsActive must be 'true' or 'false'.");
-
-        // Duplicate check within CSV
-        if (!string.IsNullOrWhiteSpace(userName))
+        var headers = ParseCsvLine(line);
+        if (headers.Count != 5)
         {
-            if (!userNames.Add(userName))
-                errors.Add($"Row {rowIndex}: Duplicate UserName '{userName}' in CSV.");
+            errors.Add("CSV header must have 5 columns: UserName,Email,FirstName,LastName,Roles");
         }
 
-        if (!string.IsNullOrWhiteSpace(email))
+        var userNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        while ((line = reader.ReadLine()) != null)
         {
-            if (!emails.Add(email))
-                errors.Add($"Row {rowIndex}: Duplicate Email '{email}' in CSV.");
+            rowIndex++;
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            var fields = ParseCsvLine(line);
+            if (fields.Count != 5)
+            {
+                errors.Add($"Row {rowIndex}: Expected 5 columns but found {fields.Count}.");
+                continue;
+            }
+
+            var userName = fields[0];
+            var email = fields[1];
+            var firstName = fields[2];
+            var lastName = fields[3];
+            var roles = fields[4];
+
+            // Required field checks
+            if (string.IsNullOrWhiteSpace(userName)) errors.Add($"Row {rowIndex}: UserName is required.");
+            if (string.IsNullOrWhiteSpace(email)) errors.Add($"Row {rowIndex}: Email is required.");
+            if (string.IsNullOrWhiteSpace(firstName)) errors.Add($"Row {rowIndex}: FirstName is required.");
+            if (string.IsNullOrWhiteSpace(lastName)) errors.Add($"Row {rowIndex}: LastName is required.");
+
+            // Length checks (from your FluentValidation)
+            if (!string.IsNullOrEmpty(firstName) && firstName.Length > 1024)
+                errors.Add($"Row {rowIndex}: FirstName exceeds max length of 1024 characters.");
+            if (!string.IsNullOrEmpty(lastName) && lastName.Length > 1024)
+                errors.Add($"Row {rowIndex}: LastName exceeds max length of 1024 characters.");
+
+            // Duplicate check within CSV
+            if (!string.IsNullOrWhiteSpace(userName))
+            {
+                if (!userNames.Add(userName))
+                    errors.Add($"Row {rowIndex}: Duplicate UserName '{userName}' in CSV.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                if (!emails.Add(email))
+                    errors.Add($"Row {rowIndex}: Duplicate Email '{email}' in CSV.");
+            }
+
+            // Optional: roles parsing validation
+            if (!string.IsNullOrWhiteSpace(roles))
+            {
+                var invalidRoles = roles.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(r => string.IsNullOrWhiteSpace(r));
+                if (invalidRoles.Any())
+                    errors.Add($"Row {rowIndex}: Roles contain empty entries.");
+            }
         }
 
-        // Optional: roles parsing validation
-        if (!string.IsNullOrWhiteSpace(roles))
-        {
-            var invalidRoles = roles.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(r => string.IsNullOrWhiteSpace(r));
-            if (invalidRoles.Any())
-                errors.Add($"Row {rowIndex}: Roles contain empty entries.");
-        }
+        return errors;
     }
-
-    return errors;
-}
 }
