@@ -13,12 +13,11 @@ public interface IApplicationUserFileService
     /// </summary>
     /// <param name="users">The collection of users to export. Each user will be represented as a CSV row.</param>
     /// <param name="userRoles">
-    /// An optional mapping of <see cref="ApplicationUser.UserName"/> to their roles. 
     /// Roles for each user will be included as a semicolon-separated list in the CSV. 
     /// If null, the Roles column will be empty for all users.
     /// </param>
     /// <returns>A CSV-formatted string representing the users, including a header row. 
-    /// The CSV includes the columns: UserName, Email, FirstName, LastName, IsActive, Roles.
+    /// The CSV includes the columns: UserName, Email, FirstName, LastName, Roles.
     /// User IDs are excluded to allow importing into different databases.</returns>
     string ExportToCsv(IEnumerable<ApplicationUser> users, IDictionary<string, IEnumerable<string>>? userRoles = null);
 
@@ -26,11 +25,11 @@ public interface IApplicationUserFileService
     /// Imports application users from a CSV-formatted string.
     /// </summary>
     /// <param name="csvData">The CSV data containing user information. 
-    /// The CSV must include the columns: UserName, Email, FirstName, LastName, IsActive, Roles.
+    /// The CSV must include the columns: UserName, Email, FirstName, LastName, Roles.
     /// The first row is expected to be a header row. User IDs in the CSV are ignored.</param>
     /// <param name="userRoles">
     /// An output dictionary that will be populated with the roles for each user. 
-    /// The key is <see cref="ApplicationUser.UserName"/>, and the value is a list of role names parsed from the Roles column. 
+    /// The key is username, and the value is a list of role names parsed from the Roles column. 
     /// Roles are expected to be semicolon-separated in the CSV. This dictionary can be used to assign roles after importing users.
     /// </param>
     /// <returns>
