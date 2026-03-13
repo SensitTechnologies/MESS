@@ -25,9 +25,21 @@ public interface IWorkInstructionFileService
     /// <summary>
     /// Exports a work instruction to an Excel (XLSX) file in the same format as import.
     /// </summary>
-    /// <param name="workInstructionToExport">The work instruction to be exported to Excel.</param>
+    /// <param name="workInstructionToExport">
+    /// The work instruction to be exported to Excel.
+    /// </param>
+    /// <param name="progress">
+    /// Optional progress reporter used to provide status updates and completion percentage
+    /// during the export process. This can be used by UI components (such as a Blazor
+    /// progress bar) to display export progress to the user.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Optional cancellation token that can be used to cancel the export operation.
+    /// If cancellation is requested, the method should attempt to stop processing and return promptly.
+    /// </param>
     /// <returns>
-    /// The file path of the generated Excel file as a string if successful; otherwise, null.
+    /// A task that resolves to the file path of the generated Excel file if successful;
+    /// otherwise, <c>null</c>.
     /// </returns>
     /// <remarks>
     /// The Excel file will include:
@@ -35,10 +47,21 @@ public interface IWorkInstructionFileService
     /// - Product information
     /// - Parts list information
     /// - A table of steps with their titles, descriptions, and references to media files
-    /// 
+    ///
     /// The file will be saved with a filename based on the work instruction title and a timestamp.
+    ///
+    /// If a progress reporter is provided, the export process will emit progress updates
+    /// describing major phases of the export, such as:
+    /// - Workbook creation
+    /// - Header generation
+    /// - Step processing
+    /// - Image embedding
+    /// - File saving
     /// </remarks>
-    public string? ExportToXlsx(WorkInstructionFileDTO workInstructionToExport);
+    Task<string?> ExportToXlsxAsync(
+        WorkInstructionFileDTO workInstructionToExport,
+        IProgress<ExportProgress>? progress = null,
+        CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Imports work instructions from an Excel file.

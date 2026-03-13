@@ -55,13 +55,34 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     }
     
     /// <inheritdoc />
-    public string? ExportToXlsx(WorkInstructionFileDTO workInstructionToExport)
+    public async Task<string?> ExportToXlsxAsync(
+        WorkInstructionFileDTO workInstructionToExport,
+        IProgress<ExportProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            progress?.Report(new ExportProgress
+            {
+                Percent = 0,
+                Message = "Starting export..."
+            });
+            
             using var workbook = new XLWorkbook();
+            progress?.Report(new ExportProgress
+            {
+                Percent = 5,
+                Message = "Creating Excel workbook..."
+            });
+            
             var worksheet = workbook.AddWorksheet("Work Instruction");
 
+            progress?.Report(new ExportProgress
+            {
+                Percent = 15,
+                Message = "Writing instruction details..."
+            });
+            
             // Set basic data in the header
             worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
@@ -98,6 +119,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             commentRange.Style.Font.FontColor = XLColor.Gray;
             commentRange.Style.Font.Italic = true;
             
+            progress?.Report(new ExportProgress
+            {
+                Percent = 20,
+                Message = "Preparing node table..."
+            });
+            
             // Step Header row. With bold.
             var currentRow = STEP_START_ROW;
             worksheet.Cell(currentRow, PART_COLUMN).Value = "Parts";
@@ -115,12 +142,28 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 .OrderBy(n => n.Position)
                 .ToList();
 
+            var totalNodes = orderedNodes.Count;
+            var processedNodes = 0;
+            
             currentRow++;
             
             var index = 0;
 
             while (index < orderedNodes.Count)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                // Loading bar logic for steps.
+                processedNodes++;
+                var percent = 20 + (int)((processedNodes / (double)totalNodes) * 60);
+                
+                progress?.Report(new ExportProgress
+                {
+                    Percent = percent,
+                    Message = $"Processing nodes ({processedNodes}/{totalNodes})..."
+                });
+                
+                await Task.Yield(); // Yield to allow UI updates during long processing
+                
                 var node = orderedNodes[index];
 
                 switch (node)
@@ -153,8 +196,25 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_BODY_COLUMN), step.Body);
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), step.DetailedBody);
 
-                        InsertImagesIntoCell(worksheet, currentRow, STEP_PRIMARY_MEDIA_COLUMN, step.PrimaryMedia);
-                        InsertImagesIntoCell(worksheet, currentRow, STEP_SECONDARY_MEDIA_COLUMN, step.SecondaryMedia);
+                        InsertImagesIntoCell(
+                            worksheet,
+                            currentRow,
+                            STEP_PRIMARY_MEDIA_COLUMN,
+                            step.PrimaryMedia,
+                            progress,
+                            cancellationToken,
+                            processedNodes,
+                            totalNodes);
+                        
+                        InsertImagesIntoCell(
+                            worksheet,
+                            currentRow,
+                            STEP_SECONDARY_MEDIA_COLUMN,
+                            step.SecondaryMedia,
+                            progress,
+                            cancellationToken,
+                            processedNodes,
+                            totalNodes);
 
                         currentRow++;
                         index++;
@@ -165,6 +225,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         break;
                 }
             }
+            
+            progress?.Report(new ExportProgress
+            {
+                Percent = 85,
+                Message = "Formatting worksheet..."
+            });
             
             //Set Column Widths
             worksheet.Column(PART_COLUMN).Width = 30;
@@ -209,6 +275,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 table.Theme = XLTableTheme.TableStyleMedium2;
             }
             
+            progress?.Report(new ExportProgress
+            {
+                Percent = 92,
+                Message = "Preparing export location..."
+            });
+            
             // Create directory for exports if it doesn't exist
             var exportDir = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionExports");
             if (!Directory.Exists(exportDir))
@@ -223,6 +295,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             var filePath = Path.Combine(exportDir, fileName);
         
             workbook.SaveAs(filePath);
+            
+            progress?.Report(new ExportProgress
+            {
+                Percent = 100,
+                Message = "Export complete"
+            });
         
             Log.Information("Successfully exported work instruction '{Title}' to '{FilePath}'", 
                 workInstructionToExport.Title, filePath);
@@ -491,10 +569,24 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         return (tagName, attributes);
     }
     
-    private void InsertImagesIntoCell(IXLWorksheet worksheet, int row, int column, List<string> mediaPaths)
+    private void InsertImagesIntoCell(
+        IXLWorksheet worksheet,
+        int row,
+        int column,
+        List<string> mediaPaths,
+        IProgress<ExportProgress>? progress = null,
+        CancellationToken cancellationToken = default,
+        int stepIndex = 0,
+        int totalSteps = 0)
     {
         if (mediaPaths.Count == 0)
             return;
+        
+        progress?.Report(new ExportProgress
+        {
+            Percent = 0, // leave percent unchanged in practice
+            Message = $"Embedding {mediaPaths.Count} image(s) for step {stepIndex}/{totalSteps}..."
+        });
 
         // Settings
         const int targetDisplayHeightPx = 100; // All images scaled to this height
@@ -512,8 +604,20 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         int lineMaxHeight = 0;
         bool anyImageInserted = false;
 
+        var imageIndex = 0;
+        
         foreach (var media in mediaPaths)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            imageIndex++;
+
+            progress?.Report(new ExportProgress
+            {
+                Percent = 0,
+                Message = $"Processing image {imageIndex}/{mediaPaths.Count} for step {stepIndex}/{totalSteps}"
+            });
+
             var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
             var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
 
