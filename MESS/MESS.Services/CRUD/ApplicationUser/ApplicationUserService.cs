@@ -298,4 +298,23 @@ public class ApplicationUserService : IApplicationUserService
 
         return (errors, importedCount);
     }
+    
+    public async Task<string> ExportUsersToCsvAsync()
+    {
+        // Step 1: Load all users from database
+        var users = await _context.Users.ToListAsync();
+
+        // Step 2: Load roles for each user
+        var userRoles = new Dictionary<string, IEnumerable<string>>();
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            userRoles[user.UserName ?? user.Email ?? user.Id] = roles;
+        }
+
+        // Step 3: Call the file service to generate CSV
+        var csv = _fileService.ExportToCsv(users, userRoles);
+
+        return csv;
+    }
 }

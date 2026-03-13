@@ -88,4 +88,11 @@ public interface IApplicationUserService
     /// - <c>ImportedCount</c>: The number of users successfully imported.
     /// </returns>
     Task<(List<string> Errors, int ImportedCount)> ImportUsersFromCsvAsync(string csvData);
+    
+    /// <summary>
+    /// Exports all application users and their roles to a CSV string.
+    /// Roles are included in a single semicolon-separated column per user.
+    /// </summary>
+    /// <returns>A CSV string representing all users and their roles.</returns>
+    Task<string> ExportUsersToCsvAsync();
 }
