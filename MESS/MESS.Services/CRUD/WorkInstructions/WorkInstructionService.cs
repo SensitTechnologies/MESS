@@ -19,6 +19,7 @@ public class WorkInstructionService : IWorkInstructionService
     private readonly IMemoryCache _cache;
     private readonly IWorkInstructionUpdater _workInstructionUpdater;
     private readonly IPartNodeResolver _partNodeResolver;
+    private readonly IPartDefinitionResolver _partDefinitionResolver;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     
     private const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -34,12 +35,14 @@ public class WorkInstructionService : IWorkInstructionService
     /// <param name="cache">The memory cache for caching work instructions.</param>
     /// <param name="workInstructionUpdater"> The service responsible for applying updates from form DTOs to existing work instruction entities.</param>
     /// <param name="partNodeResolver"> The service responsible for resolving part definitions for part nodes when updating a work instruction.</param>
+    /// <param name="partDefinitionResolver"> The service responsible for resolving part definitions.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
     public WorkInstructionService(
         IProductionLogService productionLogService, 
         IWorkInstructionImageService imageService, IMemoryCache cache, 
         IWorkInstructionUpdater workInstructionUpdater,
         IPartNodeResolver partNodeResolver,
+        IPartDefinitionResolver partDefinitionResolver,
         IDbContextFactory<ApplicationContext> contextFactory)
     {
         _productionLogService = productionLogService;
@@ -47,6 +50,7 @@ public class WorkInstructionService : IWorkInstructionService
         _imageService = imageService;
         _workInstructionUpdater = workInstructionUpdater;
         _partNodeResolver = partNodeResolver;
+        _partDefinitionResolver = partDefinitionResolver;
         _contextFactory = contextFactory;
         
     }
@@ -541,17 +545,9 @@ public class WorkInstructionService : IWorkInstructionService
             if (!validationResult.IsValid)
                 return false;
 
-            // Resolve PartProduced safely
-            if (dto.PartProducedId is > 0)
-            {
-                var partProduced = await context.PartDefinitions
-                    .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
-
-                if (partProduced == null)
-                    return false; // invalid reference
-
-                workInstruction.PartProduced = partProduced;
-            }
+            // Resolve produced part
+            workInstruction.PartProduced =
+                await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
             workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
 
@@ -630,12 +626,8 @@ public class WorkInstructionService : IWorkInstructionService
             // Ensure correct root linkage
             workInstruction.OriginalId = rootId;
 
-            // Resolve PartProduced (if any)
-            if (dto.PartProducedId.HasValue)
-            {
-                workInstruction.PartProduced = await context.PartDefinitions
-                    .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
-            }
+            workInstruction.PartProduced =
+                await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
             workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
             
@@ -662,82 +654,82 @@ public class WorkInstructionService : IWorkInstructionService
     }
     
     /// <summary>
-/// Resolves a collection of product names into <see cref="Product"/> entities.
-/// Existing products will be reused. Missing <see cref="PartDefinition"/> and
-/// <see cref="Product"/> records will be created automatically.
-/// </summary>
-/// <param name="context">The database context.</param>
-/// <param name="productNames">The product names to resolve.</param>
-/// <returns>A list of resolved <see cref="Product"/> entities.</returns>
-private async Task<List<Product>> ResolveProductsAsync(
-    ApplicationContext context,
-    IEnumerable<string> productNames)
-{
-    var normalizedNames = productNames
-        .Select(p => p.Trim())
-        .Where(p => !string.IsNullOrWhiteSpace(p))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    if (normalizedNames.Count == 0)
-        return [];
-
-    // Load existing PartDefinitions
-    var existingPartDefinitions = await context.PartDefinitions
-        .Where(p => normalizedNames.Contains(p.Name))
-        .ToListAsync();
-
-    var partLookup = existingPartDefinitions
-        .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-
-    // Create missing PartDefinitions
-    foreach (var name in normalizedNames)
+    /// Resolves a collection of product names into <see cref="Product"/> entities.
+    /// Existing products will be reused. Missing <see cref="PartDefinition"/> and
+    /// <see cref="Product"/> records will be created automatically.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="productNames">The product names to resolve.</param>
+    /// <returns>A list of resolved <see cref="Product"/> entities.</returns>
+    private async Task<List<Product>> ResolveProductsAsync(
+        ApplicationContext context,
+        IEnumerable<string> productNames)
     {
-        if (!partLookup.ContainsKey(name))
+        var normalizedNames = productNames
+            .Select(p => p.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (normalizedNames.Count == 0)
+            return [];
+
+        // Load existing PartDefinitions
+        var existingPartDefinitions = await context.PartDefinitions
+            .Where(p => normalizedNames.Contains(p.Name))
+            .ToListAsync();
+
+        var partLookup = existingPartDefinitions
+            .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+        // Create missing PartDefinitions
+        foreach (var name in normalizedNames)
         {
-            var partDefinition = new PartDefinition
+            if (!partLookup.ContainsKey(name))
             {
-                Name = name
-            };
+                var partDefinition = new PartDefinition
+                {
+                    Name = name
+                };
 
-            await context.PartDefinitions.AddAsync(partDefinition);
-            partLookup[name] = partDefinition;
-        }
-    }
-
-    var partIds = partLookup.Values.Select(p => p.Id).ToList();
-
-    // Load existing Products
-    var existingProducts = await context.Products
-        .Where(p => partIds.Contains(p.PartDefinitionId))
-        .Include(p => p.PartDefinition)
-        .ToListAsync();
-
-    var productLookup = existingProducts
-        .ToDictionary(p => p.PartDefinition.Name, StringComparer.OrdinalIgnoreCase);
-
-    var results = new List<Product>();
-
-    foreach (var name in normalizedNames)
-    {
-        if (!productLookup.TryGetValue(name, out var product))
-        {
-            var partDefinition = partLookup[name];
-
-            product = new Product
-            {
-                PartDefinition = partDefinition,
-                IsActive = true
-            };
-
-            await context.Products.AddAsync(product);
+                await context.PartDefinitions.AddAsync(partDefinition);
+                partLookup[name] = partDefinition;
+            }
         }
 
-        results.Add(product);
-    }
+        var partIds = partLookup.Values.Select(p => p.Id).ToList();
 
-    return results;
-}
+        // Load existing Products
+        var existingProducts = await context.Products
+            .Where(p => partIds.Contains(p.PartDefinitionId))
+            .Include(p => p.PartDefinition)
+            .ToListAsync();
+
+        var productLookup = existingProducts
+            .ToDictionary(p => p.PartDefinition.Name, StringComparer.OrdinalIgnoreCase);
+
+        var results = new List<Product>();
+
+        foreach (var name in normalizedNames)
+        {
+            if (!productLookup.TryGetValue(name, out var product))
+            {
+                var partDefinition = partLookup[name];
+
+                product = new Product
+                {
+                    PartDefinition = partDefinition,
+                    IsActive = true
+                };
+
+                await context.Products.AddAsync(product);
+            }
+
+            results.Add(product);
+        }
+
+        return results;
+    }
     
     /// <summary>
     /// Deletes a Work Instruction from the database if there are no Production log relationships.

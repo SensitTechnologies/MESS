@@ -5,7 +5,6 @@ using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
-using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Services.CRUD.WorkInstructions;
 
@@ -24,14 +23,17 @@ namespace MESS.Services.CRUD.WorkInstructions;
 public class WorkInstructionUpdater : IWorkInstructionUpdater
 {
     private readonly IProductResolver _productResolver;
+    private readonly IPartDefinitionResolver _partDefinitionResolver;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionUpdater"/> class.
     /// </summary>
     /// <param name="productResolver">The service used for resolving products from product names.</param>
-    public WorkInstructionUpdater(IProductResolver productResolver)
+    /// <param name="partDefinitionResolver">The service used for resolving the part definition that a work instruction produces.</param>
+    public WorkInstructionUpdater(IProductResolver productResolver, IPartDefinitionResolver partDefinitionResolver)
     {
         _productResolver = productResolver;
+        _partDefinitionResolver = partDefinitionResolver;
     }
     
     /// <summary>
@@ -94,7 +96,6 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         entity.IsActive = dto.IsActive;
         entity.ShouldGenerateQrCode = dto.ShouldGenerateQrCode;
         entity.PartProducedIsSerialized = dto.PartProducedIsSerialized;
-        entity.PartProducedId = dto.PartProducedId;
     }
 
     private async Task SyncProductsAsync(
@@ -140,20 +141,35 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         }
     }
     
-    private static async Task SyncPartProducedAsync(
+    /// <summary>
+    /// Synchronizes the produced part of the work instruction with the value
+    /// provided by the form DTO.
+    /// </summary>
+    /// <remarks>
+    /// This method resolves the produced <see cref="PartDefinition"/> using
+    /// the <see cref="IPartDefinitionResolver"/>. If the part does not exist,
+    /// a new entity will be added to the current <see cref="ApplicationContext"/>
+    /// and persisted when the caller saves change.
+    /// </remarks>
+    /// <param name="dto">
+    /// The form DTO containing the desired produced part information.
+    /// </param>
+    /// <param name="entity">
+    /// The tracked <see cref="WorkInstruction"/> entity being updated.
+    /// </param>
+    /// <param name="context">
+    /// The active <see cref="ApplicationContext"/> used for resolving
+    /// or creating the part definition.
+    /// </param>
+    private async Task SyncPartProducedAsync(
         WorkInstructionFormDTO dto,
         WorkInstruction entity,
         ApplicationContext context)
     {
-        if (dto.PartProducedId.HasValue)
-        {
-            entity.PartProduced = await context.PartDefinitions
-                .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
-        }
-        else
-        {
-            entity.PartProduced = null;
-        }
+        entity.PartProduced = await _partDefinitionResolver.ResolveAsync(
+            context,
+            dto.ProducedPartName,
+            null);
     }
     
     private void ApplyToExisting(
