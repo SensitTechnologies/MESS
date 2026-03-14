@@ -392,11 +392,9 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 rt.FontSize = token.FontSize.Value;
             }
 
-            if (token.IsLink)
-            {
-                rt.Underline = XLFontUnderlineValues.Single;
-                rt.FontColor = XLColor.FromHtml("#0000EE"); // Typical link blue
-            }
+            if (!token.IsLink) continue;
+            rt.Underline = XLFontUnderlineValues.Single;
+            rt.FontColor = XLColor.FromHtml("#0000EE"); // Typical link blue
 
             // Note: Background color can't be set on rich text runs in ClosedXML.
             // You can collect it here for whole-cell fallback if you want:
