@@ -13,15 +13,19 @@ public class PartDefinitionResolver : IPartDefinitionResolver
         string? name,
         string? number)
     {
+        // Normalize input
         var normalizedName = name?.Trim();
-        var normalizedNumber = number?.Trim() ?? string.Empty;
-
         if (string.IsNullOrWhiteSpace(normalizedName))
             return null;
 
+        var normalizedNumber = number?.Trim() ?? string.Empty;
+
+        // Use uppercase for comparison to avoid case conflicts
         var upperName = normalizedName.ToUpperInvariant();
         var upperNumber = normalizedNumber.ToUpperInvariant();
 
+        // --- FETCH FIRST ---
+        // Check if a tracked or existing entity already exists
         var existing = await context.PartDefinitions
             .FirstOrDefaultAsync(p =>
                 p.Name.ToUpper() == upperName &&
@@ -30,13 +34,15 @@ public class PartDefinitionResolver : IPartDefinitionResolver
         if (existing != null)
             return existing;
 
+        // --- CREATE NEW IF NOT FOUND ---
         var newPart = new PartDefinition
         {
             Name = normalizedName,
             Number = normalizedNumber
         };
 
-        await context.PartDefinitions.AddAsync(newPart);
+        // Add to context, but do NOT save yet
+        context.PartDefinitions.Add(newPart);
 
         return newPart;
     }
