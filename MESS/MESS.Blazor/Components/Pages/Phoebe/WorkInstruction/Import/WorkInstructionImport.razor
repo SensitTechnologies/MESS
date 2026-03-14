@@ -99,9 +99,6 @@
         // Notify parent (passing resolved form DTO)
         await OnImportComplete.InvokeAsync(resolvedFormDto);
 
-        StatusMessage = $"Successfully imported: {resolvedFormDto?.Title} v{resolvedFormDto?.Version}";
-        ToastService.ShowSuccess(StatusMessage, 3000);
-
         IsImporting = false;
         ImportComplete = true;
     }
