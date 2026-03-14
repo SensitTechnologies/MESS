@@ -38,9 +38,11 @@ public class WorkInstructionServiceTests
         var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
         var updaterMock = new Mock<IWorkInstructionUpdater>();
-        var resolverMock = new Mock<IPartNodeResolver>();
+        var nodeResolverMock = new Mock<IPartNodeResolver>();
+        var partResolverMock = new Mock<IPartDefinitionResolver>();
         
-        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, resolverMock.Object, dbFactory.Object);
+        return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, 
+            nodeResolverMock.Object, partResolverMock.Object, dbFactory.Object);
     }
     
     [Fact]
@@ -55,9 +57,11 @@ public class WorkInstructionServiceTests
         var imageMock = new Mock<IWorkInstructionImageService>();
         var memoryCacheMock = new Mock<IMemoryCache>();
         var updaterMock = new Mock<IWorkInstructionUpdater>();
-        var resolverMock = new Mock<IPartNodeResolver>();
+        var nodeResolverMock = new Mock<IPartNodeResolver>();
+        var partResolverMock = new Mock<IPartDefinitionResolver>();
     
-        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, resolverMock.Object, dbFactory.Object);
+        var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, 
+            nodeResolverMock.Object, partResolverMock.Object, dbFactory.Object);
 
         // Act
         var result = service.GetByTitle("Test Title");
@@ -75,7 +79,7 @@ public class WorkInstructionServiceTests
         var workInstruction = new WorkInstruction
         {
             Title = title,
-            Nodes = new List<WorkInstructionNode> { new Step { Name = "Test Step", Body = "Test Step" } }
+            Nodes = [new Step { Name = "Test Step", Body = "Test Step" }]
         };
 
         // Add the work instruction to the test database
