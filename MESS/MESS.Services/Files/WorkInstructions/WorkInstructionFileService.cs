@@ -307,6 +307,11 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             
             return filePath;
         }
+        catch (OperationCanceledException)
+        {
+            Log.Information("Work instruction export cancelled by user.");
+            return null;
+        }
         catch (Exception e)
         {
             Log.Warning(e, "Unable to export work instruction: {workInstructionTitle} to xlsx. Exception type: {exceptionType}", 
