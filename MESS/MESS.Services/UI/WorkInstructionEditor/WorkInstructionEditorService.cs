@@ -21,9 +21,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public WorkInstructionFormDTO? Current { get; private set; }
     
-    private string? _pendingProducedPartName;
-    
-    
     private readonly HashSet<int> _nodesQueuedForDeletionIds = [];
     
     /// <inheritdoc />
@@ -128,7 +125,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
             PartProducedIsSerialized = Current.PartProducedIsSerialized,
             ProducedPartName = Current.ProducedPartName,
-            PartProducedId = Current.PartProducedId,
             ProductNames = Current.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(Current.Nodes)
         };
@@ -233,7 +229,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = imported.ShouldGenerateQrCode,
             PartProducedIsSerialized = imported.PartProducedIsSerialized,
-            PartProducedId = imported.PartProducedId,
             ProducedPartName = imported.ProducedPartName,
             ProductNames = imported.ProductNames?.ToList() ?? new List<string>(),
             Nodes = clonedNodes
@@ -257,7 +252,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
-            PartProducedId = template.PartProducedId,
             ProducedPartName = template.ProducedPartName,
             ProductNames = template.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(template.Nodes)
@@ -346,19 +340,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     {
         if (Current == null)
             return false;
-
-        // -----------------------------
-        // Resolve pending produced part
-        // -----------------------------
-        if (!string.IsNullOrWhiteSpace(_pendingProducedPartName))
-        {
-            var part = await _partDefinitionService.GetOrCreateByNameAsync(_pendingProducedPartName);
-            if (part != null)
-            {
-                Current.PartProducedId = part.Id;
-            }
-            _pendingProducedPartName = null;
-        }
 
         bool success;
 
@@ -456,7 +437,10 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     /// <inheritdoc />
     public void SetProducedPartName(string? name, bool markDirty = true)
     {
-        _pendingProducedPartName = name;
+        if (Current == null)
+            return;
+
+        Current.ProducedPartName = name?.Trim();
 
         if (markDirty)
             MarkDirty();
