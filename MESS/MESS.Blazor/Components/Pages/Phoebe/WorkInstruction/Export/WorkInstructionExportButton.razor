@@ -14,6 +14,7 @@
 
 @code {
     private bool _isLoading;
+    private CancellationTokenSource? _cts;
     
     /// <summary>
     /// The WorkInstruction object that contains the details of the work instruction to be downloaded.
@@ -45,6 +46,8 @@
     
     private async Task DownloadWorkInstruction()
     {
+        _cts = new CancellationTokenSource();
+        
         var progress = new Progress<ExportProgress>(async p =>
         {
             if (OnProgressChanged.HasDelegate)
@@ -59,7 +62,7 @@
         try
         {
             var workInstructionPath =
-                await WorkInstructionFileService.ExportToXlsxAsync(WorkInstruction, progress);
+                await WorkInstructionFileService.ExportToXlsxAsync(WorkInstruction, progress, _cts.Token);
 
             if (string.IsNullOrEmpty(workInstructionPath))
             {
@@ -92,5 +95,15 @@
             await OnDownloadStateChanged.InvokeAsync(false); // Notify: done
         }
     }
-
+    
+    /// <summary>
+    /// Cancels the in-progress export/download, if any.
+    /// </summary>
+    public void CancelExport()
+    {
+        if (_isLoading)
+        {
+            _cts?.Cancel();
+        }
+    }
 }

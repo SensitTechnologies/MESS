@@ -23,19 +23,25 @@
                         </div>
                     </div>
 
-                    <small class="text-muted">@_progressMessage</small>
+                    @if (!string.IsNullOrEmpty(_progressMessage))
+                    {
+                        <small class="text-muted">@_progressMessage</small>
+                    }
                 </div>
             }
         </FluentDialogBody>
 
         <FluentDialogFooter>
             <WorkInstructionExportButton 
+                @ref="_exportButton"
                 WorkInstruction="WorkInstruction"
                 OnDownloadComplete="Close"
                 OnDownloadStateChanged="HandleDownloadStateChanged"
                 OnProgressChanged="HandleProgressChanged"/>
             
-            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Close">
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    @onclick="CancelExport">
                 Cancel
             </button>
         </FluentDialogFooter>
@@ -64,6 +70,7 @@
     private bool _isDownloadInProgress;
     private int _progressPercent;
     private string _progressMessage = "";
+    private WorkInstructionExportButton? _exportButton;
 
     private async Task HandleDownloadStateChanged(bool downloading)
     {
@@ -82,5 +89,10 @@
     {
         Visible = false;
         await VisibleChanged.InvokeAsync(Visible);
+    }
+    
+    private void CancelExport()
+    {
+        _exportButton?.CancelExport();
     }
 }

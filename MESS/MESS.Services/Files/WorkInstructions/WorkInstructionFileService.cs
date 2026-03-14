@@ -196,7 +196,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_BODY_COLUMN), step.Body);
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), step.DetailedBody);
 
-                        InsertImagesIntoCell(
+                        await InsertImagesIntoCell(
                             worksheet,
                             currentRow,
                             STEP_PRIMARY_MEDIA_COLUMN,
@@ -206,7 +206,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                             processedNodes,
                             totalNodes);
                         
-                        InsertImagesIntoCell(
+                        await InsertImagesIntoCell(
                             worksheet,
                             currentRow,
                             STEP_SECONDARY_MEDIA_COLUMN,
@@ -574,7 +574,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         return (tagName, attributes);
     }
     
-    private void InsertImagesIntoCell(
+    private async Task InsertImagesIntoCell(
         IXLWorksheet worksheet,
         int row,
         int column,
@@ -617,11 +617,15 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             
             imageIndex++;
 
+            int percent = (int)(((stepIndex - 1) + ((double)imageIndex / mediaPaths.Count)) / totalSteps * 100);
+            
             progress?.Report(new ExportProgress
             {
-                Percent = 0,
+                Percent = Math.Clamp(percent, 0, 100),
                 Message = $"Processing image {imageIndex}/{mediaPaths.Count} for step {stepIndex}/{totalSteps}"
             });
+            
+            await Task.Yield();
 
             var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
             var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
