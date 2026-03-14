@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;

@@ -2,7 +2,7 @@ using MESS.Data.Context;
 using MESS.Data.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MESS.Services.CRUD.WorkInstructions;
+namespace MESS.Services.CRUD.PartDefinitions;
 
 ///<inheritdoc/>
 public class PartDefinitionResolver : IPartDefinitionResolver

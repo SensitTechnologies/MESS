@@ -1,7 +1,7 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
 
-namespace MESS.Services.CRUD.WorkInstructions;
+namespace MESS.Services.CRUD.PartDefinitions;
 
 /// <summary>
 /// Provides functionality for resolving <see cref="PartDefinition"/> entities

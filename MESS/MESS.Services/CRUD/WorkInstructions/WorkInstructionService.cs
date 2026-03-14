@@ -1,8 +1,10 @@
 using MESS.Data.Context;
+using MESS.Services.CRUD.PartDefinitions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using MESS.Services.CRUD.ProductionLogs;
+using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
 using MESS.Services.DTOs.WorkInstructions.Version;
@@ -18,6 +20,7 @@ public class WorkInstructionService : IWorkInstructionService
     private readonly IWorkInstructionImageService _imageService;
     private readonly IMemoryCache _cache;
     private readonly IWorkInstructionUpdater _workInstructionUpdater;
+    private readonly IProductResolver _productResolver;
     private readonly IPartNodeResolver _partNodeResolver;
     private readonly IPartDefinitionResolver _partDefinitionResolver;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
@@ -34,6 +37,7 @@ public class WorkInstructionService : IWorkInstructionService
     /// <param name="imageService">The service for managing work instruction image-related operations.</param>
     /// <param name="cache">The memory cache for caching work instructions.</param>
     /// <param name="workInstructionUpdater"> The service responsible for applying updates from form DTOs to existing work instruction entities.</param>
+    /// <param name="productResolver"> The service responsible for resolving products.</param>
     /// <param name="partNodeResolver"> The service responsible for resolving part definitions for part nodes when updating a work instruction.</param>
     /// <param name="partDefinitionResolver"> The service responsible for resolving part definitions.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
@@ -41,6 +45,7 @@ public class WorkInstructionService : IWorkInstructionService
         IProductionLogService productionLogService, 
         IWorkInstructionImageService imageService, IMemoryCache cache, 
         IWorkInstructionUpdater workInstructionUpdater,
+        IProductResolver productResolver,
         IPartNodeResolver partNodeResolver,
         IPartDefinitionResolver partDefinitionResolver,
         IDbContextFactory<ApplicationContext> contextFactory)
@@ -49,6 +54,7 @@ public class WorkInstructionService : IWorkInstructionService
         _cache = cache;
         _imageService = imageService;
         _workInstructionUpdater = workInstructionUpdater;
+        _productResolver = productResolver;
         _partNodeResolver = partNodeResolver;
         _partDefinitionResolver = partDefinitionResolver;
         _contextFactory = contextFactory;
@@ -549,10 +555,11 @@ public class WorkInstructionService : IWorkInstructionService
             workInstruction.PartProduced =
                 await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
-            workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
+            workInstruction.Products =
+                await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
 
             // Resolve all PartNodes via PartNodeResolver
-            await _partNodeResolver.ResolvePendingNodesAsync(workInstruction.Nodes);
+            await _partNodeResolver.ResolvePendingNodesAsync(context, workInstruction.Nodes);
 
             // Default new WorkInstructions to active and latest since this is a new creation (not a version update)
             workInstruction.IsActive = true;
@@ -629,9 +636,9 @@ public class WorkInstructionService : IWorkInstructionService
             workInstruction.PartProduced =
                 await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
-            workInstruction.Products = await ResolveProductsAsync(context, dto.ProductNames);
+            workInstruction.Products = await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
             
-            await _partNodeResolver.ResolvePendingNodesAsync(workInstruction.Nodes);
+            await _partNodeResolver.ResolvePendingNodesAsync(context, workInstruction.Nodes);
 
             // Mark new version active/latest
             workInstruction.IsLatest = true;
@@ -651,84 +658,6 @@ public class WorkInstructionService : IWorkInstructionService
 
             return workInstruction;
         });
-    }
-    
-    /// <summary>
-    /// Resolves a collection of product names into <see cref="Product"/> entities.
-    /// Existing products will be reused. Missing <see cref="PartDefinition"/> and
-    /// <see cref="Product"/> records will be created automatically.
-    /// </summary>
-    /// <param name="context">The database context.</param>
-    /// <param name="productNames">The product names to resolve.</param>
-    /// <returns>A list of resolved <see cref="Product"/> entities.</returns>
-    private async Task<List<Product>> ResolveProductsAsync(
-        ApplicationContext context,
-        IEnumerable<string> productNames)
-    {
-        var normalizedNames = productNames
-            .Select(p => p.Trim())
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (normalizedNames.Count == 0)
-            return [];
-
-        // Load existing PartDefinitions
-        var existingPartDefinitions = await context.PartDefinitions
-            .Where(p => normalizedNames.Contains(p.Name))
-            .ToListAsync();
-
-        var partLookup = existingPartDefinitions
-            .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-
-        // Create missing PartDefinitions
-        foreach (var name in normalizedNames)
-        {
-            if (!partLookup.ContainsKey(name))
-            {
-                var partDefinition = new PartDefinition
-                {
-                    Name = name
-                };
-
-                await context.PartDefinitions.AddAsync(partDefinition);
-                partLookup[name] = partDefinition;
-            }
-        }
-
-        var partIds = partLookup.Values.Select(p => p.Id).ToList();
-
-        // Load existing Products
-        var existingProducts = await context.Products
-            .Where(p => partIds.Contains(p.PartDefinitionId))
-            .Include(p => p.PartDefinition)
-            .ToListAsync();
-
-        var productLookup = existingProducts
-            .ToDictionary(p => p.PartDefinition.Name, StringComparer.OrdinalIgnoreCase);
-
-        var results = new List<Product>();
-
-        foreach (var name in normalizedNames)
-        {
-            if (!productLookup.TryGetValue(name, out var product))
-            {
-                var partDefinition = partLookup[name];
-
-                product = new Product
-                {
-                    PartDefinition = partDefinition,
-                    IsActive = true
-                };
-
-                await context.Products.AddAsync(product);
-            }
-
-            results.Add(product);
-        }
-
-        return results;
     }
     
     /// <summary>
@@ -959,7 +888,7 @@ public class WorkInstructionService : IWorkInstructionService
 
                 await _workInstructionUpdater.ApplyAsync(dto, existing, context);
                 
-                await _partNodeResolver.ResolvePendingNodesAsync(existing.Nodes);
+                await _partNodeResolver.ResolvePendingNodesAsync(context, existing.Nodes);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();

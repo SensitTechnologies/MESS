@@ -27,7 +27,12 @@ namespace MESS.Services.CRUD.WorkInstructions
         /// A collection of <see cref="WorkInstructionNode"/> entities to resolve.
         /// Only nodes of type <see cref="PartNode"/> with an unresolved <see cref="PartDefinition"/> are affected.
         /// </param>
+        /// <param name="context">
+        /// The application context passed from a calling service function that needs to resolve part nodes.
+        /// </param>
         /// <returns>A <see cref="Task"/> that completes when all nodes have been resolved.</returns>
-        Task ResolvePendingNodesAsync(IEnumerable<WorkInstructionNode> nodes);
+        Task ResolvePendingNodesAsync(
+            ApplicationContext context,
+            IEnumerable<WorkInstructionNode> nodes);
     }
 }

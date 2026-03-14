@@ -1,42 +1,36 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
-using Microsoft.EntityFrameworkCore;
+using MESS.Services.CRUD.PartDefinitions;
 
 namespace MESS.Services.CRUD.WorkInstructions;
 
 /// <inheritdoc/>
 public class PartNodeResolver : IPartNodeResolver
 {
-    private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     private readonly IPartDefinitionResolver _partDefinitionResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PartNodeResolver"/> class.
     /// </summary>
-    /// <param name="contextFactory">
-    /// An <see cref="IDbContextFactory{ApplicationContext}"/> used to create
-    /// <see cref="ApplicationContext"/> instances for database access.
-    /// </param>
     /// <param name="partDefinitionResolver"> The service for resolving part definitions </param>
     /// <remarks>
     /// This resolver uses the context to look up existing <see cref="PartDefinition"/>s
     /// and create new ones as needed when resolving <see cref="PartNode"/>s
     /// prior to saving a work instruction.
     /// </remarks>
-    public PartNodeResolver(IDbContextFactory<ApplicationContext> contextFactory, IPartDefinitionResolver partDefinitionResolver)
+    public PartNodeResolver(IPartDefinitionResolver partDefinitionResolver)
     {
-        _contextFactory = contextFactory;
         _partDefinitionResolver = partDefinitionResolver;
     }
 
     /// <inheritdoc/>
-    public async Task ResolvePendingNodesAsync(IEnumerable<WorkInstructionNode> nodes)
+    public async Task ResolvePendingNodesAsync(
+        ApplicationContext context,
+        IEnumerable<WorkInstructionNode> nodes)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-
         var partNodes = nodes
             .OfType<PartNode>()
-            .Where(n => n.PartDefinitionId == 0 || n.PartDefinition != null)
+            .Where(n => n.PartDefinition != null)
             .ToList();
 
         if (partNodes.Count == 0)
@@ -45,7 +39,8 @@ public class PartNodeResolver : IPartNodeResolver
         foreach (var node in partNodes)
         {
             var pending = node.PartDefinition
-                          ?? throw new InvalidOperationException("PartNode has no pending PartDefinition.");
+                          ?? throw new InvalidOperationException(
+                              "PartNode has no pending PartDefinition.");
 
             var part = await _partDefinitionResolver.ResolveAsync(
                 context,
@@ -53,7 +48,8 @@ public class PartNodeResolver : IPartNodeResolver
                 pending.Number);
 
             if (part == null)
-                throw new InvalidOperationException("PartNode has invalid part name.");
+                throw new InvalidOperationException(
+                    "PartNode has invalid part name.");
 
             node.PartDefinitionId = part.Id;
             node.PartDefinition = part;
