@@ -57,6 +57,7 @@ builder.Services.AddScoped<IProductResolver, ProductResolver>();
 builder.Services.AddScoped<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddScoped<IWorkInstructionUpdater, WorkInstructionUpdater>();
 builder.Services.AddScoped<IPartNodeResolver, PartNodeResolver>();
+builder.Services.AddScoped<IPartDefinitionResolver, PartDefinitionResolver>();
 builder.Services.AddScoped<IProductionLogService, ProductionLogService>();
 builder.Services.AddScoped<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddScoped<ISessionManager, SessionManager>();
