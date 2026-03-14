@@ -1,6 +1,8 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.ProductionLogs;
+using MESS.Services.CRUD.Products;
 using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.Media.WorkInstructions;
 using Microsoft.EntityFrameworkCore;
@@ -40,9 +42,10 @@ public class WorkInstructionServiceTests
         var updaterMock = new Mock<IWorkInstructionUpdater>();
         var nodeResolverMock = new Mock<IPartNodeResolver>();
         var partResolverMock = new Mock<IPartDefinitionResolver>();
+        var productResolverMock = new Mock<IProductResolver>();
         
         return new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, 
-            nodeResolverMock.Object, partResolverMock.Object, dbFactory.Object);
+            productResolverMock.Object, nodeResolverMock.Object, partResolverMock.Object, dbFactory.Object);
     }
     
     [Fact]
@@ -59,9 +62,10 @@ public class WorkInstructionServiceTests
         var updaterMock = new Mock<IWorkInstructionUpdater>();
         var nodeResolverMock = new Mock<IPartNodeResolver>();
         var partResolverMock = new Mock<IPartDefinitionResolver>();
+        var productResolverMock = new Mock<IProductResolver>();
     
         var service = new WorkInstructionService(logMock.Object, imageMock.Object, memoryCacheMock.Object, updaterMock.Object, 
-            nodeResolverMock.Object, partResolverMock.Object, dbFactory.Object);
+            productResolverMock.Object, nodeResolverMock.Object, partResolverMock.Object, dbFactory.Object);
 
         // Act
         var result = service.GetByTitle("Test Title");
