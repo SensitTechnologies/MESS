@@ -47,11 +47,6 @@ public class WorkInstructionFormDTO
     /// Gets or sets whether the part produced is serialized.
     /// </summary>
     public bool PartProducedIsSerialized { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the part produced, if any.
-    /// </summary>
-    public int? PartProducedId { get; set; }
     
     /// <summary>
     /// Gets or sets the name of the part produced, if any. This is included in the form DTO for display purposes.

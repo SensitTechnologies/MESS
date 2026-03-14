@@ -37,7 +37,6 @@ public static class WorkInstructionFormDTOMapper
             IsActive = entity.IsActive,
             ShouldGenerateQrCode = entity.ShouldGenerateQrCode,
             PartProducedIsSerialized = entity.PartProducedIsSerialized,
-            PartProducedId = entity.PartProducedId,
             ProducedPartName = entity.PartProduced?.Name,
             ProductNames = entity.Products.Select(p => p.PartDefinition.Name).ToList(),
             Nodes = entity.Nodes.Select(n => n.ToFormDTO(Guid.NewGuid())).ToList()
@@ -64,8 +63,7 @@ public static class WorkInstructionFormDTOMapper
             IsActive = dto.IsActive,
             ShouldGenerateQrCode = dto.ShouldGenerateQrCode,
             PartProducedIsSerialized = dto.PartProducedIsSerialized,
-            PartProducedId = dto.PartProducedId,
-            // PartProduced and Products can be attached separately by services if needed
+            // PartProduced and Products are resolved separately.
             Nodes = dto.Nodes.Select(n => n.ToNewEntity()).ToList()
         };
     }
@@ -95,7 +93,6 @@ public static class WorkInstructionFormDTOMapper
             OriginalId = formDto.OriginalId,
             IsLatest = formDto.IsLatest,
             IsActive = formDto.IsActive,
-            PartProducedId = formDto.PartProducedId,
             PartProducedName = formDto.ProducedPartName,
             Products = allProducts
                 .Where(p => formDto.ProductNames.Contains(p.Name))
