@@ -22,36 +22,15 @@ public class ProductResolver : IProductResolver
         if (normalizedNames.Count == 0)
             return [];
 
-        var existingPartDefinitions = await context.PartDefinitions
-            .Where(p => normalizedNames.Contains(p.Name))
-            .ToListAsync();
-
-        var partLookup = existingPartDefinitions
-            .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var name in normalizedNames)
-        {
-            if (!partLookup.ContainsKey(name))
-            {
-                var partDefinition = new PartDefinition
-                {
-                    Name = name
-                };
-
-                await context.PartDefinitions.AddAsync(partDefinition);
-                partLookup[name] = partDefinition;
-            }
-        }
-
-        var partIds = partLookup.Values.Select(p => p.Id).ToList();
-
+        // Load existing products + part definitions in one query
         var existingProducts = await context.Products
-            .Where(p => partIds.Contains(p.PartDefinitionId))
             .Include(p => p.PartDefinition)
+            .Where(p => normalizedNames.Contains(p.PartDefinition.Name))
             .ToListAsync();
 
         var productLookup = existingProducts
-            .ToDictionary(p => p.PartDefinition.Name, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(p => p.PartDefinition.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var results = new List<Product>();
 
@@ -59,15 +38,14 @@ public class ProductResolver : IProductResolver
         {
             if (!productLookup.TryGetValue(name, out var product))
             {
-                var partDefinition = partLookup[name];
-
                 product = new Product
                 {
-                    PartDefinition = partDefinition,
+                    PartDefinition = new PartDefinition { Name = name },
                     IsActive = true
                 };
 
-                await context.Products.AddAsync(product);
+                context.Products.Add(product);
+                productLookup[name] = product;
             }
 
             results.Add(product);

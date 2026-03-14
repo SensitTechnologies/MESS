@@ -27,7 +27,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string PRODUCES_CELL = "B6";
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
-    private const int STEP_START_ROW = 10;
+    private const int STEP_START_ROW = 9;
     private const int PART_COLUMN = 1;
     private const int STEP_NAME_COLUMN = 2;
     private const int STEP_BODY_COLUMN = 3;
@@ -735,7 +735,8 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
             // Create all steps within instruction and add part nodes where logical
             // Start from row 10 (assuming header row is 9)
-            var currentRow = STEP_START_ROW;
+            var currentRow = STEP_START_ROW + 1;
+            
             var position = 0;
 
             while (true)
