@@ -165,13 +165,6 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasFilter("\"Number\" IS NULL OR \"Number\" = ''");
-
-                    b.HasIndex("Name", "Number")
-                        .IsUnique();
-
                     b.ToTable("PartDefinitions");
                 });
 
@@ -469,9 +462,6 @@ namespace MESS.Data.Migrations
                     b.HasIndex("OriginalId");
 
                     b.HasIndex("PartProducedId");
-
-                    b.HasIndex("Title", "Version")
-                        .IsUnique();
 
                     b.ToTable("WorkInstructions");
                 });
