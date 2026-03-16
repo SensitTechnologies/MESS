@@ -274,66 +274,6 @@ namespace MESS.Data.Migrations
                     b.ToTable("SerializableParts");
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.Tag", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("SerializablePartId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("SerializablePartId");
-
-                    b.ToTable("Tags");
-                });
-
-            modelBuilder.Entity("MESS.Data.Models.TagHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("EventType")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("SerializablePartId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TagId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SerializablePartId");
-
-                    b.HasIndex("TagId");
-
-                    b.ToTable("TagHistories");
-                });
-
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
                 {
                     b.Property<int>("Id")
@@ -416,7 +356,7 @@ namespace MESS.Data.Migrations
                     b.UseTptMappingStrategy();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<string>", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -692,32 +632,6 @@ namespace MESS.Data.Migrations
                     b.Navigation("PartDefinition");
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.Tag", b =>
-                {
-                    b.HasOne("MESS.Data.Models.SerializablePart", "SerializablePart")
-                        .WithMany()
-                        .HasForeignKey("SerializablePartId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("SerializablePart");
-                });
-
-            modelBuilder.Entity("MESS.Data.Models.TagHistory", b =>
-                {
-                    b.HasOne("MESS.Data.Models.SerializablePart", null)
-                        .WithMany()
-                        .HasForeignKey("SerializablePartId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("MESS.Data.Models.Tag", "Tag")
-                        .WithMany("History")
-                        .HasForeignKey("TagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tag");
-                });
-
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
                 {
                     b.HasOne("MESS.Data.Models.WorkInstruction", "Original")
@@ -742,7 +656,7 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<string>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -769,7 +683,7 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<string>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -845,11 +759,6 @@ namespace MESS.Data.Migrations
             modelBuilder.Entity("MESS.Data.Models.SerializablePart", b =>
                 {
                     b.Navigation("ProductionLogParts");
-                });
-
-            modelBuilder.Entity("MESS.Data.Models.Tag", b =>
-                {
-                    b.Navigation("History");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
