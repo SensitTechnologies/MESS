@@ -1,5 +1,4 @@
 @using MESS.Data.Models
-@using MESS.Services.DTOs.WorkInstructions.File
 @using MESS.Services.DTOs.WorkInstructions.Form
 
 @if (Visible)
@@ -44,10 +43,9 @@
     [Parameter]
     public EventCallback<WorkInstructionFormDTO> OnImportComplete { get; set; }
 
-    private async Task HandleImportComplete(WorkInstructionFileDTO fileDto)
+    private async Task HandleImportComplete(WorkInstructionFormDTO wi)
     {
-
-        await OnImportComplete.InvokeAsync();
+        await OnImportComplete.InvokeAsync(wi);
         await Close();
     }
 

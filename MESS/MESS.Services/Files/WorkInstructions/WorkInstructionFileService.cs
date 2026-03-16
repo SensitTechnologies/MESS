@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using MESS.Data.Models;
-using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs;
 using MESS.Services.DTOs.WorkInstructions.File;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.File;
@@ -25,6 +24,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string VERSION_CELL = "B3";
     private const string SHOULD_GENERATE_QR_CODE_CELL = "B4";
     private const string PART_PRODUCED_IS_SERIALIZED = "B5";
+    private const string PRODUCES_CELL = "B6";
     
     // Using int values here since there is an indeterminate amount of steps per Work Instruction
     private const int STEP_START_ROW = 9;
@@ -41,7 +41,6 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const string WORK_INSTRUCTION_IMAGES_DIRECTORY = "WorkInstructionImages";
     
     private readonly IWebHostEnvironment _webHostEnvironment;
-    private readonly IProductService _productService;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkInstructionFileService"/> class.
@@ -50,29 +49,48 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     /// This constructor injects all dependencies required for reading, writing, and mapping
     /// work instruction data between Excel and the database.
     /// </remarks>
-    public WorkInstructionFileService(IWebHostEnvironment webHostEnvironment, IProductService productService)
+    public WorkInstructionFileService(IWebHostEnvironment webHostEnvironment)
     {
         _webHostEnvironment = webHostEnvironment;
-        _productService = productService;
     }
     
     /// <inheritdoc />
-    public string? ExportToXlsx(WorkInstructionFileDTO workInstructionToExport)
+    public async Task<string?> ExportToXlsxAsync(
+        WorkInstructionFileDTO workInstructionToExport,
+        IProgress<ExportProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            progress?.Report(new ExportProgress
+            {
+                Percent = 0,
+                Message = "Starting export..."
+            });
+            
             using var workbook = new XLWorkbook();
+            progress?.Report(new ExportProgress
+            {
+                Percent = 5,
+                Message = "Creating Excel workbook..."
+            });
+            
             var worksheet = workbook.AddWorksheet("Work Instruction");
 
+            progress?.Report(new ExportProgress
+            {
+                Percent = 15,
+                Message = "Writing instruction details..."
+            });
+            
             // Set basic data in the header
             worksheet.Cell(INSTRUCTION_TITLE_CELL).Value = workInstructionToExport.Title;
             worksheet.Cell(VERSION_CELL).Value = workInstructionToExport.Version;
             worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).Value = workInstructionToExport.ShouldGenerateQrCode;
             worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).Value = workInstructionToExport.PartProducedIsSerialized;
-            //worksheet.Cell(ORIGINAL_ID_CELL).Value = workInstructionToExport.OriginalId ?? workInstructionToExport.Id;
+            worksheet.Cell(PRODUCES_CELL).Value = workInstructionToExport.ProducedPartName;
             
-            // Since a work instruction can be associated with multiple Products it is stored as a comma seperated list
-            
+            // Since a work instruction can be associated with multiple Products it is stored as a comma separated list
             var productNames = string.Join(", ", workInstructionToExport.AssociatedProductNames);
             worksheet.Cell(PRODUCT_NAME_CELL).Value = productNames;
             
@@ -83,7 +101,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell("A3").Value = "Version";
             worksheet.Cell("A4").Value = "QR Code";
             worksheet.Cell("A5").Value = "Serial Number";
-            //worksheet.Cell("A6").Value = "Version History ID";
+            worksheet.Cell("A6").Value = "Produces";
             worksheet.Range("A1:A6").Style.Font.Bold = true;
             
             // Setup Header Comments
@@ -94,13 +112,18 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                                          "False otherwise.";
             worksheet.Cell("C5").Value = "True if the work instruction allows the operator to input a product serial " +
                                          "number after the last step.  False otherwise.";
-            //worksheet.Cell("C6").Value = "Optional integer field that can be used to link this work instruction to an " +
-                                         //"already existing version history chain. Leave blank if unsure.";
+            worksheet.Cell("C6").Value = "The name of the part or product the work instruction produces.";
             
             //Styling the comments
-            var commentRange = worksheet.Range("C1:C5");
+            var commentRange = worksheet.Range("C1:C6");
             commentRange.Style.Font.FontColor = XLColor.Gray;
             commentRange.Style.Font.Italic = true;
+            
+            progress?.Report(new ExportProgress
+            {
+                Percent = 20,
+                Message = "Preparing node table..."
+            });
             
             // Step Header row. With bold.
             var currentRow = STEP_START_ROW;
@@ -119,12 +142,28 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 .OrderBy(n => n.Position)
                 .ToList();
 
+            var totalNodes = orderedNodes.Count;
+            var processedNodes = 0;
+            
             currentRow++;
             
             var index = 0;
 
             while (index < orderedNodes.Count)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                // Loading bar logic for steps.
+                processedNodes++;
+                var percent = 20 + (int)((processedNodes / (double)totalNodes) * 60);
+                
+                progress?.Report(new ExportProgress
+                {
+                    Percent = percent,
+                    Message = $"Processing nodes ({processedNodes}/{totalNodes})..."
+                });
+                
+                await Task.Yield(); // Yield to allow UI updates during long processing
+                
                 var node = orderedNodes[index];
 
                 switch (node)
@@ -141,7 +180,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
                         // Combine all part definitions into a single string
                         var partStrings = partGroup
-                            .Select(pn => pn.PartNameWithNumber);
+                            .Select(pn => pn.PartNameWithNumberAndInputType);
 
                         worksheet.Cell(currentRow, PART_COLUMN).Value = string.Join(", ", partStrings);
 
@@ -157,8 +196,25 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_BODY_COLUMN), step.Body);
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), step.DetailedBody);
 
-                        InsertImagesIntoCell(worksheet, currentRow, STEP_PRIMARY_MEDIA_COLUMN, step.PrimaryMedia);
-                        InsertImagesIntoCell(worksheet, currentRow, STEP_SECONDARY_MEDIA_COLUMN, step.SecondaryMedia);
+                        await InsertImagesIntoCell(
+                            worksheet,
+                            currentRow,
+                            STEP_PRIMARY_MEDIA_COLUMN,
+                            step.PrimaryMedia,
+                            progress,
+                            cancellationToken,
+                            processedNodes,
+                            totalNodes);
+                        
+                        await InsertImagesIntoCell(
+                            worksheet,
+                            currentRow,
+                            STEP_SECONDARY_MEDIA_COLUMN,
+                            step.SecondaryMedia,
+                            progress,
+                            cancellationToken,
+                            processedNodes,
+                            totalNodes);
 
                         currentRow++;
                         index++;
@@ -169,6 +225,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         break;
                 }
             }
+            
+            progress?.Report(new ExportProgress
+            {
+                Percent = 85,
+                Message = "Formatting worksheet..."
+            });
             
             //Set Column Widths
             worksheet.Column(PART_COLUMN).Width = 30;
@@ -213,6 +275,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 table.Theme = XLTableTheme.TableStyleMedium2;
             }
             
+            progress?.Report(new ExportProgress
+            {
+                Percent = 92,
+                Message = "Preparing export location..."
+            });
+            
             // Create directory for exports if it doesn't exist
             var exportDir = Path.Combine(_webHostEnvironment.WebRootPath, "WorkInstructionExports");
             if (!Directory.Exists(exportDir))
@@ -227,11 +295,22 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             var filePath = Path.Combine(exportDir, fileName);
         
             workbook.SaveAs(filePath);
+            
+            progress?.Report(new ExportProgress
+            {
+                Percent = 100,
+                Message = "Export complete"
+            });
         
             Log.Information("Successfully exported work instruction '{Title}' to '{FilePath}'", 
                 workInstructionToExport.Title, filePath);
             
             return filePath;
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Information("Work instruction export cancelled by user.");
+            return null;
         }
         catch (Exception e)
         {
@@ -313,11 +392,9 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 rt.FontSize = token.FontSize.Value;
             }
 
-            if (token.IsLink)
-            {
-                rt.Underline = XLFontUnderlineValues.Single;
-                rt.FontColor = XLColor.FromHtml("#0000EE"); // Typical link blue
-            }
+            if (!token.IsLink) continue;
+            rt.Underline = XLFontUnderlineValues.Single;
+            rt.FontColor = XLColor.FromHtml("#0000EE"); // Typical link blue
 
             // Note: Background color can't be set on rich text runs in ClosedXML.
             // You can collect it here for whole-cell fallback if you want:
@@ -495,10 +572,24 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         return (tagName, attributes);
     }
     
-    private void InsertImagesIntoCell(IXLWorksheet worksheet, int row, int column, List<string> mediaPaths)
+    private async Task InsertImagesIntoCell(
+        IXLWorksheet worksheet,
+        int row,
+        int column,
+        List<string> mediaPaths,
+        IProgress<ExportProgress>? progress = null,
+        CancellationToken cancellationToken = default,
+        int stepIndex = 0,
+        int totalSteps = 0)
     {
         if (mediaPaths.Count == 0)
             return;
+        
+        progress?.Report(new ExportProgress
+        {
+            Percent = 0, // leave percent unchanged in practice
+            Message = $"Embedding {mediaPaths.Count} image(s) for step {stepIndex}/{totalSteps}..."
+        });
 
         // Settings
         const int targetDisplayHeightPx = 100; // All images scaled to this height
@@ -516,8 +607,24 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         int lineMaxHeight = 0;
         bool anyImageInserted = false;
 
+        var imageIndex = 0;
+        
         foreach (var media in mediaPaths)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            imageIndex++;
+
+            int percent = (int)(((stepIndex - 1) + ((double)imageIndex / mediaPaths.Count)) / totalSteps * 100);
+            
+            progress?.Report(new ExportProgress
+            {
+                Percent = Math.Clamp(percent, 0, 100),
+                Message = $"Processing image {imageIndex}/{mediaPaths.Count} for step {stepIndex}/{totalSteps}"
+            });
+            
+            await Task.Yield();
+
             var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
             var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
 
@@ -579,13 +686,21 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             
             var versionString = worksheet.Cell(VERSION_CELL).GetString();
             var workInstructionTitle = worksheet.Cell(INSTRUCTION_TITLE_CELL).GetString();
+            var producedPartName = worksheet.Cell(PRODUCES_CELL).GetString();
             
             var shouldGenerateQrCode = worksheet.Cell(SHOULD_GENERATE_QR_CODE_CELL).GetValue<bool>();
             var partProducedIsSerialized = worksheet.Cell(PART_PRODUCED_IS_SERIALIZED).GetValue<bool>();
             
-            // Retrieve Product and assign relationship
-            var productString = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
-            var product = await _productService.GetByTitleAsync(productString);
+            // --- Capture product names from Excel cell ---
+            var productCell = worksheet.Cell(PRODUCT_NAME_CELL).GetString();
+            var productNames = string.IsNullOrWhiteSpace(productCell)
+                ? []
+                : productCell
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim())
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .ToList();
+
             
             var fileName = file.Name;
             var validationErrors = new List<string>();
@@ -596,36 +711,32 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             if (string.IsNullOrWhiteSpace(versionString))
                 validationErrors.Add("Version is required.");
 
-            if (string.IsNullOrWhiteSpace(productString))
+            // Validation: require at least one product name
+            if (productNames.Count == 0)
                 validationErrors.Add("Product name is required.");
+            
 
             if (validationErrors.Any())
             {
                 return WorkInstructionImportResult.ValidationFailure(fileName, validationErrors);
             }
             
-            if (product == null)
-            {
-                Log.Information("Product not found. Cannot create Work Instruction");
-                return WorkInstructionImportResult.NoProductFound(file.Name, productString);
-            }
-            
-            // Building the work instruction object with gathered data
+            // --- Build Work Instruction DTO ---
             var workInstruction = new WorkInstructionFileDTO
             {
                 Title = workInstructionTitle,
                 Version = versionString,
-                AssociatedProductNames = [],
+                AssociatedProductNames = productNames,
                 Nodes = [],
                 ShouldGenerateQrCode = shouldGenerateQrCode,
                 PartProducedIsSerialized = partProducedIsSerialized,
+                ProducedPartName = producedPartName
             };
-            
-            workInstruction.AssociatedProductNames.Add(productString);
 
             // Create all steps within instruction and add part nodes where logical
-            // Start from row 9 (assuming header row is 8)
-            var currentRow = STEP_START_ROW;
+            // Start from row 10 (assuming header row is 9)
+            var currentRow = STEP_START_ROW + 1;
+            
             var position = 0;
 
             while (true)
@@ -652,7 +763,8 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         {
                             Position = position++,
                             PartName = parsedPart.PartName,
-                            PartNumber = parsedPart.PartNumber
+                            PartNumber = parsedPart.PartNumber,
+                            InputType = ResolveInputType(parsedPart.InputType)
                         });
                     }
                 }
@@ -740,6 +852,17 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             errorResult.ImportError = error;
             return errorResult;
         }
+    }
+    
+    private static PartInputType ResolveInputType(string? input)
+    {
+        if (!string.IsNullOrWhiteSpace(input) &&
+            Enum.TryParse<PartInputType>(input, true, out var parsed))
+        {
+            return parsed;
+        }
+
+        return PartInputType.SerialNumber;
     }
     
     /// <summary>
@@ -944,32 +1067,50 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         }
     }
     
-    private List<(string PartName, string? PartNumber)> ParsePartsListFromString(string input)
+    private List<(string PartName, string? PartNumber, string? InputType)> ParsePartsListFromString(string input)
     {
-        var results = new List<(string, string?)>();
+        var results = new List<(string PartName, string? PartNumber, string? InputType)>();
 
         if (string.IsNullOrWhiteSpace(input))
             return results;
 
-        var matches = PartsListRegex().Matches(input);
+        var parts = Regex.Split(input, @",(?![^()]*\))");
 
-        foreach (Match match in matches)
+        foreach (var part in parts)
         {
-            if (!match.Success)
-                continue;
+            var trimmed = part.Trim();
 
-            var partNumber = match.Groups[1].Value.Trim();
-            var partName = match.Groups[2].Value.Trim();
+            var match = PartsListRegex().Match(trimmed);
 
-            results.Add((partName, partNumber));
+            if (match.Success)
+            {
+                var partName = match.Groups["name"].Value.Trim();
+
+                var partNumber = match.Groups["number"].Success
+                    ? match.Groups["number"].Value.Trim()
+                    : null;
+
+                var inputType = match.Groups["inputType"].Success
+                    ? match.Groups["inputType"].Value.Trim()
+                    : null;
+
+                results.Add((partName, partNumber, inputType));
+            }
+            else
+            {
+                results.Add((trimmed, null, null));
+            }
         }
 
         return results;
     }
     
     /// <summary>
-    /// Regex pattern for parsing parts list strings in the format "(PART_NUMBER, PART_NAME)"
+    /// Regex pattern for parsing parts list strings in the formats:
+    /// (PART_NAME)
+    /// (PART_NAME, PART_NUMBER)
+    /// (PART_NAME, PART_NUMBER, INPUT_TYPE)
     /// </summary>
-    [GeneratedRegex(@"\(([^,]+),\s*([^)]+)\)")]
+    [GeneratedRegex(@"\(\s*(?<name>[^,()]+?)\s*(?:,\s*(?<number>[^,()]+?)\s*(?:,\s*(?<inputType>[^)]+?))?)?\s*\)")]
     private static partial Regex PartsListRegex();
 }

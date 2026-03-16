@@ -2,7 +2,6 @@
 @using System.ComponentModel
 @using Microsoft.AspNetCore.Components.Authorization
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction
-@using Serilog
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Import
 @using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.Export
 @using MESS.Services.CRUD.PartDefinitions
@@ -163,16 +162,16 @@
     Visible="@_showExportDialog"
     VisibleChanged="@(val => _showExportDialog = val)" />
 
-<ProductAssociationDialog 
+<ProductAssociationDialog
     AllProducts="@Products"
-    SelectedProducts="@DialogSelectedProducts"
-    SelectedProductsChanged="OnDialogSelectedProductsChanged"
-    IsVisible="@_isAnyDialogVisible"
-    IsVisibleChanged="@(val => _isAnyDialogVisible = val)"
-    AllowsRenaming="@_associationDialogAllowsRenaming"
-    HeaderText="@_dialogHeaderText"
-    ConfirmButtonText="@_confirmButtonText"
-    OnConfirmed="@_onDialogConfirmed" />
+    SelectedProducts="@(ActiveDialog.SelectedProductNames)"
+    SelectedProductsChanged="OnDialogProductsChanged"
+    IsVisible="@ActiveDialog.IsVisible"
+    IsVisibleChanged="@(val => ActiveDialog.IsVisible = val)"
+    HeaderText="@ActiveDialog.HeaderText"
+    ConfirmButtonText="@ActiveDialog.ConfirmButtonText"
+    AllowsRenaming="@(ActiveDialog.Type == DialogType.SaveAs)"
+    OnConfirmed="HandleDialogConfirmed" />
 
 @code {
     private string? ActiveLineOperator { get; set; }
@@ -188,7 +187,7 @@
     /// Event callback triggered when the user selects "New" to create a new work instruction. This passes up a work
     /// instruction title and list of associated products.
     /// </summary>
-    [Parameter] public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnNewConfirmed { get; set; }
+    [Parameter] public EventCallback<(string Title, List<string> Products)> OnNewConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Save" to persist current edits to the work instruction either
@@ -201,13 +200,13 @@
     /// Callback invoked when the user confirms the "Save As" action from the dialog.
     /// The associated products and work instruction title are passed up.
     /// </summary>
-    [Parameter] public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnSaveAsConfirmed { get; set; }
+    [Parameter] public EventCallback<(string Title, List<string> Products)> OnSaveAsConfirmed { get; set; }
     
     /// <summary>
     /// Callback invoked when the user confirms the "Edit Product Associations" action from the dialog.
     /// The associated products and work instruction title are passed up.
     /// </summary>
-    [Parameter] public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnEditAssociationsConfirmed { get; set; }
+    [Parameter] public EventCallback<(string Title, List<string> Products)> OnEditAssociationsConfirmed { get; set; }
 
     /// <summary>
     /// Event callback triggered when the user selects "Delete" to completely remove a work instruction.
@@ -275,26 +274,19 @@
     [Parameter]
     public int? SelectedWorkInstructionId { get; set; }
 
-    private bool _open = false;
-    private bool _openOptions = false;
+    private bool _open;
+    private bool _openOptions;
     private string _darkModeIcon = "bi bi-moon-stars";
     private bool HasInstruction => CurrentInstruction != null;
     
     private List<WorkInstructionVersionDTO> _versionHistoryList = [];
-    private bool _isLoadingVersions = false;
+    private bool _isLoadingVersions;
     
     private bool _showImportDialog;
-    private bool _showExportDialog = false;
+    private bool _showExportDialog;
     
-    private bool _associationDialogAllowsRenaming;
+    private DialogModel ActiveDialog { get; set; } = new();
     
-    private bool _isAnyDialogVisible;
-    private string _dialogHeaderText = "";
-    private string _confirmButtonText = "";
-    private EventCallback<(string Title, List<ProductDetailDTO> Products)> _onDialogConfirmed;
-    
-    private List<ProductDetailDTO> DialogSelectedProducts { get; set; } = [];
-
     /// <summary>
     /// The list of products to show in the dropdown.
     /// </summary>
@@ -308,7 +300,7 @@
     public List<WorkInstructionSummaryDTO>? WorkInstructions { get; set; }
 
     // ** Version History Sidebar Open State **
-    private bool _isVersionHistoryOpen = false;
+    private bool _isVersionHistoryOpen;
     
     private string _partProducedName = "";
     private string PartProducedName
@@ -319,20 +311,20 @@
             if (_partProducedName != value)
             {
                 _partProducedName = value;
-                _ = OnPartProducedChangedDebounced();
+
+                // Update editor state immediately
+                EditorService.SetProducedPartName(value);
+
+                // Only debounce the lookup logic
+                _ = RunPartLookupDebounce();
             }
         }
     }
 
 
-    // called only from the input field
-    private async Task OnPartProducedInput(ChangeEventArgs e)
-    {
-        PartProducedName = CurrentInstruction?.ProducedPartName ?? "";
-        await OnPartProducedChangedDebounced();
-    }
     
-    private bool WillCreateNewPart { get; set; } = false;
+    
+    private bool WillCreateNewPart { get; set; }
     private string PartStatusTooltip => WillCreateNewPart ? "New part will be created" : "Part already exists";
     private CancellationTokenSource? _debounceCts;
     
@@ -362,10 +354,13 @@
         if (_previousInstruction != CurrentInstruction)
         {
             _previousInstruction = CurrentInstruction;
-        
-            // Update text field without triggering debounce
-            PartProducedName = CurrentInstruction?.ProducedPartName ?? "";
-            WillCreateNewPart = false;
+
+            _partProducedName = CurrentInstruction?.ProducedPartName ?? "";
+
+            // Update editor WITHOUT dirty
+            EditorService.SetProducedPartName(_partProducedName, markDirty: false);
+
+            _ = RunPartLookupDebounce();
 
             StateHasChanged();
         }
@@ -503,7 +498,7 @@
     {
         await WorkInstructionService.DeleteByIdAsync(versionId);
 
-        if (CurrentInstruction?.OriginalId is int originalId)
+        if (CurrentInstruction?.OriginalId is { } originalId)
         {
             await LoadVersionHistoryAsync(originalId); // Refresh sidebar list
         }
@@ -525,11 +520,7 @@
     
     private WorkInstructionFileDTO? GetExportFileDTO()
     {
-        if (CurrentInstruction == null || Products == null)
-            return null;
-
-        return CurrentInstruction.ToFileDTO(
-            id => Products.FirstOrDefault(p => p.ProductId == id)?.Name ?? $"Product {id}");
+        return CurrentInstruction?.ToFileDTO();
     }
 
     private async Task HandleImportComplete(WorkInstructionFormDTO wi)
@@ -555,89 +546,94 @@
         _showImportDialog = isOpen;
     }
     
-    private void ShowNewInstructionDialog()
-    {
-        _isAnyDialogVisible = true;
-        _dialogHeaderText = "Create New Work Instruction";
-        _confirmButtonText = "Open New";
-        _associationDialogAllowsRenaming = true;
-        _onDialogConfirmed = EventCallback.Factory.Create<(string, List<ProductDetailDTO>)>(this, HandleNewDialogConfirmed);
-    }
-    
-    private List<ProductDetailDTO> GetSelectedProductDetails()
+    private List<string> GetSelectedProductNames()
     {
         if (CurrentInstruction == null || Products == null)
-            return new();
+            return new List<string>();
 
         return Products
-            .Where(p => CurrentInstruction.ProductIds.Contains(p.ProductId))
+            .Where(p => CurrentInstruction.ProductNames.Contains(p.Name))
+            .Select(p => p.Name)
             .ToList();
+    }
+    
+    private void ShowNewInstructionDialog()
+    {
+        ActiveDialog.IsVisible = true;
+        ActiveDialog.Type = DialogType.NewInstruction;
+        ActiveDialog.HeaderText = "Create New Work Instruction";
+        ActiveDialog.ConfirmButtonText = "Open New";
+        // Start with empty selection instead of all products
+        ActiveDialog.SelectedProductNames = [];
     }
 
     private void ShowSaveAsDialog()
     {
-        _isAnyDialogVisible = true;
-        DialogSelectedProducts = GetSelectedProductDetails();
-        _dialogHeaderText = "Save Work Instruction As";
-        _confirmButtonText = "Save New";
-        _associationDialogAllowsRenaming = true;
-        _onDialogConfirmed = EventCallback.Factory.Create<(string, List<ProductDetailDTO>)>(this, HandleSaveAsDialogConfirmed);
+        ActiveDialog.IsVisible = true;
+        ActiveDialog.Type = DialogType.SaveAs;
+        ActiveDialog.HeaderText = "Save Work Instruction As";
+        ActiveDialog.ConfirmButtonText = "Save New";
+        
+        ActiveDialog.SelectedProductNames = Products?
+            .Where(p => CurrentInstruction?.ProductNames.Contains(p.Name) ?? false)
+            .Select(p => p.Name)
+            .ToList() ?? new List<string>();
     }
 
     private void ShowEditAssociationsDialog()
     {
-        _isAnyDialogVisible = true;
-        DialogSelectedProducts = GetSelectedProductDetails();
-        _dialogHeaderText = "Edit Instruction Associations";
-        _confirmButtonText = "Confirm Edits";
-        _associationDialogAllowsRenaming = false;
-        _onDialogConfirmed = EventCallback.Factory.Create<(string, List<ProductDetailDTO>)>(this, HandleEditAssociationsConfirmed);
+        ActiveDialog.IsVisible = true;
+        ActiveDialog.Type = DialogType.EditAssociations;
+        ActiveDialog.HeaderText = "Edit Instruction Associations";
+        ActiveDialog.ConfirmButtonText = "Confirm Edits";
+        ActiveDialog.SelectedProductNames = GetSelectedProductNames();
     }
     
-    private async Task HandleNewDialogConfirmed((string Title, List<ProductDetailDTO> Products) data)
+    private async Task HandleDialogConfirmed()
     {
-        Log.Information("[MenuBarPhoebe] HandleNewDialogConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
-        _isAnyDialogVisible = false;
-        if (OnNewConfirmed.HasDelegate)
-            await OnNewConfirmed.InvokeAsync(data);
-    }
+        ActiveDialog.IsVisible = false;
 
-    private async Task HandleSaveAsDialogConfirmed((string Title, List<ProductDetailDTO> Products) data)
-    {
-        Log.Information("[MenuBarPhoebe] HandleSaveAsDialogConfirmed called: {DataTitle}, {ProductsCount} products", data.Title, data.Products.Count);
-        _isAnyDialogVisible = false;
-        if (OnSaveAsConfirmed.HasDelegate)
-            await OnSaveAsConfirmed.InvokeAsync(data);
-    }
-    
-    private async Task HandleEditAssociationsConfirmed(
-        (string Title, List<ProductDetailDTO> Products) data)
-    {
-        if (CurrentInstruction != null)
+        var productNames = ActiveDialog.SelectedProductNames
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n.Trim())
+            .ToList();
+
+        switch (ActiveDialog.Type)
         {
-            CurrentInstruction.ProductIds = data.Products
-                .Select(p => p.ProductId)
-                .ToList();
+            case DialogType.NewInstruction:
+                if (OnNewConfirmed.HasDelegate)
+                    await OnNewConfirmed.InvokeAsync((CurrentInstruction?.Title ?? "", productNames));
+                break;
 
-            MarkDirty();
+            case DialogType.SaveAs:
+                if (OnSaveAsConfirmed.HasDelegate)
+                    await OnSaveAsConfirmed.InvokeAsync((CurrentInstruction?.Title ?? "", productNames));
+                break;
+
+            case DialogType.EditAssociations:
+                if (CurrentInstruction != null)
+                {
+                    CurrentInstruction.ProductNames = productNames;
+                    MarkDirty();
+
+                    if (OnEditAssociationsConfirmed.HasDelegate)
+                        await OnEditAssociationsConfirmed.InvokeAsync((CurrentInstruction.Title, productNames));
+                }
+                break;
         }
 
-        _isAnyDialogVisible = false;
-
-        if (OnEditAssociationsConfirmed.HasDelegate)
-            await OnEditAssociationsConfirmed.InvokeAsync(data);
+        ActiveDialog.Type = DialogType.None;
     }
     
-    private Task OnDialogSelectedProductsChanged(List<ProductDetailDTO> products)
+    
+    private Task OnDialogProductsChanged(List<string> productNames)
     {
-        DialogSelectedProducts = products;
+        ActiveDialog.SelectedProductNames = productNames;
         return Task.CompletedTask;
     }
     
-    private async Task OnPartProducedChangedDebounced()
+    private async Task RunPartLookupDebounce()
     {
-        EditorService.SetProducedPartName(PartProducedName);
-
         _debounceCts?.Cancel();
         _debounceCts = new CancellationTokenSource();
         var token = _debounceCts.Token;
@@ -648,12 +644,12 @@
 
             if (string.IsNullOrWhiteSpace(PartProducedName))
             {
-                WillCreateNewPart = false; // No icon for empty input
+                WillCreateNewPart = false;
             }
             else
             {
-                // If it doesn't exist yet OR it's different from the currently assigned part
-                WillCreateNewPart = !await PartDefinitionService.ExistsAsync(PartProducedName, null);
+                WillCreateNewPart =
+                    !await PartDefinitionService.ExistsAsync(PartProducedName);
             }
 
             StateHasChanged();
@@ -661,10 +657,23 @@
         catch (TaskCanceledException) { }
         catch (ObjectDisposedException) { }
     }
-
-
-    private void Dispose()
+    
+    private enum DialogType
     {
-        DarkModeInstance.PropertyChanged -= OnDarkModeChanged;
+        None,
+        NewInstruction,
+        SaveAs,
+        EditAssociations
+    }
+
+    private class DialogModel
+    {
+        public bool IsVisible { get; set; }
+        public string HeaderText { get; set; } = "";
+        public string ConfirmButtonText { get; set; } = "";
+        public DialogType Type { get; set; } = DialogType.None;
+
+        // For all dialogs, just store names
+        public List<string> SelectedProductNames { get; set; } = new();
     }
 }

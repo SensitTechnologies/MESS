@@ -1,7 +1,5 @@
 using MESS.Services.CRUD.PartDefinitions;
 using MESS.Services.CRUD.WorkInstructions;
-using MESS.Services.DTOs.PartDefinitions;
-using MESS.Services.DTOs.Products.Detail;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
@@ -22,9 +20,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     
     /// <inheritdoc />
     public WorkInstructionFormDTO? Current { get; private set; }
-    
-    private string? _pendingProducedPartName;
-    
     
     private readonly HashSet<int> _nodesQueuedForDeletionIds = [];
     
@@ -94,7 +89,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public void StartNew(string? title = null, List<ProductDetailDTO>? products = null)
+    public void StartNew(string? title = null, List<string>? products = null)
     {
         Current = new WorkInstructionFormDTO
         {
@@ -104,9 +99,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = false,
             PartProducedIsSerialized = false,
-            ProductIds = products?
-                .Select(p => p.ProductId)
-                .ToList() ?? new List<int>(),
+            ProductNames = products?.Select(p => p.Trim())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToList() ?? [],
             Nodes = []
         };
 
@@ -116,7 +111,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
     
     /// <inheritdoc />
-    public async Task StartNewFromCurrent(string? title = null, List<ProductDetailDTO>? products = null)
+    public async Task StartNewFromCurrent(string? title = null, List<string>? products = null)
     {
         if (Current == null)
             throw new InvalidOperationException("Cannot start a new work instruction from current because it is null.");
@@ -129,7 +124,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = Current.ShouldGenerateQrCode,
             PartProducedIsSerialized = Current.PartProducedIsSerialized,
-            ProductIds = Current.ProductIds?.ToList() ?? [],
+            ProducedPartName = Current.ProducedPartName,
+            ProductNames = Current.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(Current.Nodes)
         };
 
@@ -212,6 +208,39 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         NotifyChanged();
     }
     
+    /// <summary>
+    /// Loads an imported <see cref="WorkInstructionFormDTO"/> into the editor service.
+    /// This instruction has not been saved to the database yet.
+    /// </summary>
+    /// <param name="imported">The imported work instruction DTO.</param>
+    public async Task LoadImportedAsync(WorkInstructionFormDTO imported)
+    {
+        if (imported == null) throw new ArgumentNullException(nameof(imported));
+
+        // Optionally clone nodes to avoid accidental shared references
+        var clonedNodes = await CloneNodesAsync(imported.Nodes);
+
+        Current = new WorkInstructionFormDTO
+        {
+            Title = imported.Title,
+            Version = imported.Version,
+            OriginalId = null,
+            IsActive = imported.IsActive,
+            IsLatest = true,
+            ShouldGenerateQrCode = imported.ShouldGenerateQrCode,
+            PartProducedIsSerialized = imported.PartProducedIsSerialized,
+            ProducedPartName = imported.ProducedPartName,
+            ProductNames = imported.ProductNames?.ToList() ?? new List<string>(),
+            Nodes = clonedNodes
+        };
+
+        Mode = EditorMode.CreateNew;
+        IsDirty = true;
+
+        NotifyChanged();
+    }
+
+    
     private async Task<WorkInstructionFormDTO> CloneForNewVersion(WorkInstructionFormDTO template)
     {
         return new WorkInstructionFormDTO
@@ -223,8 +252,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             IsLatest = true,
             ShouldGenerateQrCode = template.ShouldGenerateQrCode,
             PartProducedIsSerialized = template.PartProducedIsSerialized,
-            PartProducedId = template.PartProducedId,
-            ProductIds = template.ProductIds,
+            ProducedPartName = template.ProducedPartName,
+            ProductNames = template.ProductNames?.ToList() ?? [],
             Nodes = await CloneNodesAsync(template.Nodes)
         };
     }
@@ -247,32 +276,19 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
     private async Task<WorkInstructionNodeFormDTO> CloneNodeAsync(WorkInstructionNodeFormDTO node)
     {
-        if (node is PartNodeFormDTO partNode)
+        return node switch
         {
-            return new PartNodeFormDTO
+            PartNodeFormDTO partNode => new PartNodeFormDTO
             {
                 // New unsaved node
                 ClientId = Guid.NewGuid(),
-
                 NodeType = WorkInstructionNodeType.Part,
                 Position = partNode.Position,
-
-                PartDefinitionId = partNode.PartDefinitionId,
-                InputType = partNode.InputType,
-
-                PartDefinition = partNode.PartDefinition == null
-                    ? null
-                    : new PartDefinitionDTO
-                    {
-                        PartDefinitionId = partNode.PartDefinition.PartDefinitionId,
-                        Name = partNode.PartDefinition.Name,
-                        Number = partNode.PartDefinition.Number
-                    }
-            };
-        }
-        else if (node is StepNodeFormDTO stepNode)
-        {
-            return new StepNodeFormDTO
+                Name = partNode.Name,
+                Number = partNode.Number,
+                InputType = partNode.InputType
+            },
+            StepNodeFormDTO stepNode => new StepNodeFormDTO
             {
                 ClientId = Guid.NewGuid(), // Assign a new ClientId for the cloned node
                 NodeType = WorkInstructionNodeType.Step,
@@ -280,12 +296,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Body = stepNode.Body,
                 Position = stepNode.Position,
                 DetailedBody = stepNode.DetailedBody,
-                PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? new List<string>(),
-                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? new List<string>()
-            };
-        }
-
-        throw new NotSupportedException("Unknown WorkInstructionNode type");
+                PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? [],
+                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? []
+            },
+            _ => throw new NotSupportedException("Unknown WorkInstructionNode type")
+        };
     }
 
     private async Task<List<string>> CloneImages(List<string> Images)
@@ -325,19 +340,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     {
         if (Current == null)
             return false;
-
-        // -----------------------------
-        // Resolve pending produced part
-        // -----------------------------
-        if (!string.IsNullOrWhiteSpace(_pendingProducedPartName))
-        {
-            var part = await _partDefinitionService.GetOrCreateByNameAsync(_pendingProducedPartName);
-            if (part != null)
-            {
-                Current.PartProducedId = part.Id;
-            }
-            _pendingProducedPartName = null;
-        }
 
         bool success;
 
@@ -433,10 +435,15 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
     
     /// <inheritdoc />
-    public void SetProducedPartName(string? name)
+    public void SetProducedPartName(string? name, bool markDirty = true)
     {
-        _pendingProducedPartName = name;
-        MarkDirty();
+        if (Current == null)
+            return;
+
+        Current.ProducedPartName = name?.Trim();
+
+        if (markDirty)
+            MarkDirty();
     }
 
 }

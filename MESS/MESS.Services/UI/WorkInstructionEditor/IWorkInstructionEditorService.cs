@@ -132,13 +132,20 @@ public interface IWorkInstructionEditorService
     Task LoadForNewVersionFromVersionAsync(int versionId);
 
     /// <summary>
+    /// Loads an imported <see cref="WorkInstructionFormDTO"/> into the editor service.
+    /// This instruction has not been saved to the database yet.
+    /// </summary>
+    /// <param name="imported">The imported work instruction DTO.</param>
+    public Task LoadImportedAsync(WorkInstructionFormDTO imported);
+    
+    /// <summary>
     /// Initializes a new WorkInstruction in memory for user editing.
     /// Sets the editing mode to CreateNew and marks the editing state as dirty.
     /// Optionally pre-populates the WorkInstruction with a list of products.
     /// </summary>
     /// <param name="title">An optional title for the new work instruction. If not provided, the title will be an empty string.</param>
     /// <param name="products">Optional list of product ids to prefill the WorkInstruction.</param>
-    void StartNew(string? title = null, List<ProductDetailDTO>? products = null);
+    void StartNew(string? title = null, List<string>? products = null);
 
     /// <summary>
     /// Creates a new work instruction based on the current one, resets versioning and status flags,
@@ -152,7 +159,7 @@ public interface IWorkInstructionEditorService
     /// This method deep-copies all nodes from the current instruction using the <c>CloneNode</c> method,
     /// resets the version to "1.0", and marks the instruction as inactive and the latest version.
     /// </remarks>
-    public Task StartNewFromCurrent(string? title = null, List<ProductDetailDTO>? products = null);
+    public Task StartNewFromCurrent(string? title = null, List<string>? products = null);
 
     /// <summary>
     /// Marks the current editing session as having unsaved changes.
@@ -201,19 +208,16 @@ public interface IWorkInstructionEditorService
     public void QueueNodeForDeletion(int nodeId);
     
     /// <summary>
-    /// Sets the name of the part produced by the current work instruction in the editor.
-    /// <para>
-    /// This does not immediately create or fetch a <see cref="PartDefinition"/> from the database.
-    /// The pending part name will be applied to <see cref="Current"/> when <see cref="SaveAsync"/> is called.
-    /// </para>
+    /// Sets the name of the part that the current work instruction produces.
     /// </summary>
     /// <param name="name">
-    /// The name of the part to assign to the current work instruction.
-    /// If null or empty, the current produced part will not be changed on save.
+    /// The name of the produced part. This may be <c>null</c> or empty if no part has been specified.
     /// </param>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown if there is no current work instruction loaded in the editor.
-    /// </exception>
-    void SetProducedPartName(string? name);
+    /// <param name="markDirty">
+    /// If <c>true</c>, the editor state will be marked as having unsaved changes. 
+    /// This should typically be <c>true</c> for user-initiated edits and <c>false</c> when initializing
+    /// or restoring editor state (e.g., when loading an existing work instruction).
+    /// </param>
+    void SetProducedPartName(string? name, bool markDirty = true);
 }
 

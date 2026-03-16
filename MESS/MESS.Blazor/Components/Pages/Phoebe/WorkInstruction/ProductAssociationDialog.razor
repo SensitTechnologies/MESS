@@ -1,11 +1,10 @@
-﻿@using MESS.Data.Models
-@using MESS.Services.DTOs.Products.Detail
+﻿@using MESS.Services.DTOs.Products.Detail
 
 @if (IsVisible)
 {
     <FluentDialog Open="IsVisible" OnDismiss="Close">
         <FluentDialogHeader>
-            <h5 class="fw-semibold mb-1">@HeaderText</h5>  <!-- removed text-dark -->
+            <h5 class="fw-semibold mb-1">@HeaderText</h5>
             <FluentDivider></FluentDivider>
         </FluentDialogHeader>
 
@@ -14,18 +13,17 @@
                 AllProducts="AllProducts" 
                 SelectedProducts="SelectedProducts" 
                 SelectedProductsChanged="OnSelectedProductsChanged" />
-        
+
             @if (AllowsRenaming)
             {
                 <hr />
-
                 <div class="resizable-textarea-container mt-3">
                     <label for="nameInput" class="form-label">Name:</label>
                     <textarea id="nameInput"
-                      class="form-control transparent-textarea"
-                      placeholder="Enter name here..."
-                      rows="1"
-                      @bind="WorkInstructionTitle"></textarea>
+                              class="form-control transparent-textarea"
+                              placeholder="Enter name here..."
+                              rows="1"
+                              @bind="WorkInstructionTitle"></textarea>
                 </div>
             }
         </FluentDialogBody>
@@ -46,11 +44,12 @@
     /// Indicates whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
-    
+
     /// <summary>
     /// Indicates whether the dialog should display a text box for renaming the work instruction
     /// </summary>
-    [Parameter] public bool AllowsRenaming { get; set; }
+    [Parameter]
+    public bool AllowsRenaming { get; set; }
 
     /// <summary>
     /// Event callback triggered when the dialog's visibility changes.
@@ -62,7 +61,7 @@
     /// The header text displayed at the top of the dialog.
     /// </summary>
     [Parameter] public string? HeaderText { get; set; }
-    
+
     /// <summary>
     /// The button text displayed at the bottom of the dialog.
     /// </summary>
@@ -72,35 +71,30 @@
     /// A list of all available products to display in the selector.
     /// </summary>
     [Parameter] public required List<ProductDetailDTO> AllProducts { get; set; }
-    
-    /// <summary>
-    /// The currently selected products from the dialog.
-    /// </summary>
-    [Parameter]
-    public List<ProductDetailDTO> SelectedProducts { get; set; } = new();
-    
-    /// <summary>
-    /// An event callback used to send the associated products and entered work instruction title up to the menu bar.
-    /// </summary>
-    [Parameter]
-    public EventCallback<(string Title, List<ProductDetailDTO> Products)> OnConfirmed { get; set; }
 
     /// <summary>
-    /// Gets or sets the callback that is triggered whenever the selection of products changes.
-    /// This allows the parent component to receive and react to updates to the selected products list,
-    /// such as when products are added or removed from the selection.
+    /// The currently selected product names.
     /// </summary>
-    /// <remarks>
-    /// The callback is invoked with a new list of <see cref="Product"/> instances representing the current selection.
-    /// </remarks>
     [Parameter]
-    public EventCallback<List<ProductDetailDTO>> SelectedProductsChanged { get; set; }
+    public List<string> SelectedProducts { get; set; } = new();
+
+    /// <summary>
+    /// Event callback invoked when the selected products change.
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<string>> SelectedProductsChanged { get; set; }
+
+    /// <summary>
+    /// Event callback invoked when the dialog is confirmed, passing the name and selected product names.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(string Title, List<string> ProductNames)> OnConfirmed { get; set; }
 
     /// <summary>
     /// The name of the work instruction, bound to the name text area.
     /// </summary>
     private string WorkInstructionTitle { get; set; } = string.Empty;
-    
+
     private bool ConfirmDisabled => AllowsRenaming && string.IsNullOrWhiteSpace(WorkInstructionTitle);
 
     /// <summary>
@@ -112,15 +106,22 @@
         await IsVisibleChanged.InvokeAsync(IsVisible);
     }
 
+    /// <summary>
+    /// Confirms the dialog selection and sends data to the parent component.
+    /// </summary>
     private async Task Confirm()
     {
         await OnConfirmed.InvokeAsync((WorkInstructionTitle, SelectedProducts));
         IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
     }
-    
-    private Task OnSelectedProductsChanged(List<ProductDetailDTO> products)
+
+    /// <summary>
+    /// Handles the child ProductSelector component updating selected products.
+    /// </summary>
+    private Task OnSelectedProductsChanged(List<string> productNames)
     {
-        // Instead of assigning locally, notify the parent to update
-        return SelectedProductsChanged.InvokeAsync(products);
+        SelectedProducts = productNames;
+        return SelectedProductsChanged.InvokeAsync(productNames);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Transactions;
 using MESS.Data.Context;
+using MESS.Services.Files.ApplicationUsers;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -13,16 +14,21 @@ public class ApplicationUserService : IApplicationUserService
     private readonly UserContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IApplicationUserFileService _fileService;
+
     const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
 
     /// <inheritdoc cref="IApplicationUserService"/>
     public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,  RoleManager<IdentityRole> roleManager, IApplicationUserFileService fileService)
     {
         _context = context;
         _userManager = userManager;
         _signInManager = signInManager;
+        _roleManager = roleManager;
+        _fileService = fileService;
     }
 
     /// <inheritdoc />
@@ -168,20 +174,20 @@ public class ApplicationUserService : IApplicationUserService
     }
 
     /// <inheritdoc />
-    public async Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser)
+    public async Task<IdentityResult> AddApplicationUser(ApplicationUser applicationUser)
     {
         try
         {
-            var result = await _userManager.CreateAsync(ApplicationUser);
+            var result = await _userManager.CreateAsync(applicationUser);
             
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(ApplicationUser, DEFAULT_ROLE);
-                Log.Information("Added ApplicationUser with ID {id}", ApplicationUser.Id);
+                await _userManager.AddToRoleAsync(applicationUser, DEFAULT_ROLE);
+                Log.Information("Added ApplicationUser with ID {id}", applicationUser.Id);
                 return IdentityResult.Success;
             }
             
-            Log.Warning("Unable to create ApplicationUser with ID {id}", ApplicationUser.Id);
+            Log.Warning("Unable to create ApplicationUser with ID {id}", applicationUser.Id);
             return result;
         }
         catch (Exception ex)
@@ -228,5 +234,88 @@ public class ApplicationUserService : IApplicationUserService
             Log.Error(ex, "Error updating user with ID {id}", applicationUser.Id);
             return false;
         }
+    }
+    
+    /// <inheritdoc />
+     public async Task<(List<string> Errors, int ImportedCount)> ImportUsersFromCsvAsync(string csvData)
+    {
+        var errors = new List<string>();
+        int importedCount = 0;
+
+        // Step 1: Validate CSV
+        var validationErrors = _fileService.ValidateCsv(csvData);
+        if (validationErrors.Any())
+        {
+            errors.AddRange(validationErrors);
+            return (errors, importedCount);
+        }
+
+        // Step 2: Parse CSV
+        var users = _fileService.ImportFromCsv(csvData, out var userRoles);
+
+        foreach (var user in users)
+        {
+            // Step 3: Check if user already exists
+            var existingUser = await _userManager.FindByNameAsync(user.UserName!);
+            if (existingUser != null)
+            {
+                errors.Add($"User '{user.UserName}' already exists in the database.");
+                continue;
+            }
+
+            // Step 4: Add user
+            var result = await _userManager.CreateAsync(user);
+            if (!result.Succeeded)
+            {
+                errors.Add($"Failed to create user '{user.UserName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                continue;
+            }
+
+            // Step 5: Assign default role if none provided
+            if (!userRoles.TryGetValue(user.UserName!, out var roles) || roles.Count == 0)
+            {
+                roles = new List<string> { "Operator" }; // default role
+            }
+
+            // Step 6: Ensure roles exist and assign
+            foreach (var roleName in roles)
+            {
+                if (!await _roleManager.RoleExistsAsync(roleName))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(roleName));
+                    if (!roleResult.Succeeded)
+                    {
+                        errors.Add($"Failed to create role '{roleName}' for user '{user.UserName}'.");
+                        continue;
+                    }
+                }
+
+                await _userManager.AddToRoleAsync(user, roleName);
+            }
+
+            importedCount++;
+        }
+
+        return (errors, importedCount);
+    }
+    
+    /// <inheritdoc />
+    public async Task<string> ExportUsersToCsvAsync()
+    {
+        // Step 1: Load all users from database
+        var users = await _context.Users.ToListAsync();
+
+        // Step 2: Load roles for each user
+        var userRoles = new Dictionary<string, IEnumerable<string>>();
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            userRoles[user.UserName ?? user.Email ?? user.Id] = roles;
+        }
+
+        // Step 3: Call the file service to generate CSV
+        var csv = _fileService.ExportToCsv(users, userRoles);
+
+        return csv;
     }
 }

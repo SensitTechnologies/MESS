@@ -1,8 +1,10 @@
 using MESS.Data.Context;
+using MESS.Services.CRUD.PartDefinitions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using MESS.Services.CRUD.ProductionLogs;
+using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Summary;
 using MESS.Services.DTOs.WorkInstructions.Version;
@@ -18,6 +20,9 @@ public class WorkInstructionService : IWorkInstructionService
     private readonly IWorkInstructionImageService _imageService;
     private readonly IMemoryCache _cache;
     private readonly IWorkInstructionUpdater _workInstructionUpdater;
+    private readonly IProductResolver _productResolver;
+    private readonly IPartNodeResolver _partNodeResolver;
+    private readonly IPartDefinitionResolver _partDefinitionResolver;
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
     
     private const string WORK_INSTRUCTION_CACHE_KEY = "AllWorkInstructions";
@@ -32,18 +37,28 @@ public class WorkInstructionService : IWorkInstructionService
     /// <param name="imageService">The service for managing work instruction image-related operations.</param>
     /// <param name="cache">The memory cache for caching work instructions.</param>
     /// <param name="workInstructionUpdater"> The service responsible for applying updates from form DTOs to existing work instruction entities.</param>
+    /// <param name="productResolver"> The service responsible for resolving products.</param>
+    /// <param name="partNodeResolver"> The service responsible for resolving part definitions for part nodes when updating a work instruction.</param>
+    /// <param name="partDefinitionResolver"> The service responsible for resolving part definitions.</param>
     /// <param name="contextFactory">The factory for creating database contexts.</param>
     public WorkInstructionService(
         IProductionLogService productionLogService, 
         IWorkInstructionImageService imageService, IMemoryCache cache, 
         IWorkInstructionUpdater workInstructionUpdater,
+        IProductResolver productResolver,
+        IPartNodeResolver partNodeResolver,
+        IPartDefinitionResolver partDefinitionResolver,
         IDbContextFactory<ApplicationContext> contextFactory)
     {
         _productionLogService = productionLogService;
-        _imageService = imageService;
         _cache = cache;
-        _contextFactory = contextFactory;
+        _imageService = imageService;
         _workInstructionUpdater = workInstructionUpdater;
+        _productResolver = productResolver;
+        _partNodeResolver = partNodeResolver;
+        _partDefinitionResolver = partDefinitionResolver;
+        _contextFactory = contextFactory;
+        
     }
     
     /// <inheritdoc />
@@ -277,14 +292,13 @@ public class WorkInstructionService : IWorkInstructionService
     /// </summary>
     /// <param name="title">The title of the work instruction to retrieve.</param>
     /// <returns>The work instruction if found, null otherwise.</returns>
-
     public WorkInstruction? GetByTitle(string title)
     {
         try
         {
             using var context =  _contextFactory.CreateDbContext();
             var workInstruction = context.WorkInstructions
-                .FirstOrDefault(w => w.Title.ToUpper() == title.ToUpper());
+                .FirstOrDefault(w => w.Title.ToLower() == title.ToLower());
 
             Log.Information("Successfully retrieved a WorkInstruction by title: {Title}", title);
             return workInstruction;
@@ -313,6 +327,7 @@ public class WorkInstructionService : IWorkInstructionService
             await using var context = await _contextFactory.CreateDbContextAsync();
             var workInstruction = await context.WorkInstructions
                 .Include(w => w.Products)
+                .ThenInclude(p => p.PartDefinition)
                 .Include(w => w.Nodes)
                 .ThenInclude(w => ((PartNode)w).PartDefinition)
                 .Include(w => w.PartProduced)
@@ -348,7 +363,8 @@ public class WorkInstructionService : IWorkInstructionService
 
             // Load work instruction with related entities needed for the form
             var workInstruction = await context.WorkInstructions
-                .Include(w => w.Products)      // Needed for ProductIds
+                .Include(w => w.Products)
+                .ThenInclude(p => p.PartDefinition)// Needed for ProductNames
                 .Include(w => w.Nodes)         // Needed for node DTOs
                 .ThenInclude(n => ((PartNode)n).PartDefinition) // Needed if nodes reference PartDefinition
                 .Include(w => w.PartProduced)  // Needed for PartProducedId / serialized info
@@ -357,13 +373,14 @@ public class WorkInstructionService : IWorkInstructionService
             if (workInstruction == null)
                 return null;
 
-            // Optional: Sort nodes by position if your UI expects a specific order
+            // Sort nodes by position (just in case)
             SortNodesByPosition(workInstruction);
 
             // Map to Form DTO using your existing mapper
             var dto = workInstruction.ToFormDTO();
 
-            Log.Debug("Form DTO Products: {ProductIds}", string.Join(", ", dto.ProductIds));
+            Log.Debug("Form DTO Products: {ProductNames}", string.Join(", ", dto.ProductNames));
+
             return dto;
         }
         catch (Exception e)
@@ -373,6 +390,7 @@ public class WorkInstructionService : IWorkInstructionService
                 id,
                 e.ToString()
             );
+
             return null;
         }
     }
@@ -454,67 +472,6 @@ public class WorkInstructionService : IWorkInstructionService
         await context.SaveChangesAsync();
     }
     
-    /// <summary>
-    /// Creates a new work instruction in the database.
-    /// </summary>
-    /// <param name="workInstruction">The work instruction to create.</param>
-    /// <returns>True if creation was successful, false otherwise.</returns>
-    /// <remarks>
-    /// Validates the work instruction before saving and invalidates the cache after successful creation.
-    /// </remarks>
-    public async Task<bool> Create(WorkInstruction workInstruction)
-    {
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            // Validate WorkInstruction
-            var workInstructionValidator = new WorkInstructionValidator();
-            var validationResult = await workInstructionValidator.ValidateAsync(workInstruction);
-
-            if (!validationResult.IsValid)
-            {
-                return false;
-            }
-            
-            if (workInstruction.PartProduced is { Id: > 0 })
-            {
-                context.Attach(workInstruction.PartProduced);
-                context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
-            }
-
-            // Having to refetch data since we are using DbContextFactory and the change-tracker is reset on each instantiation
-            foreach (var product in workInstruction.Products.Where(product => product.Id > 0))
-            {
-                context.Attach(product);
-                context.Entry(product).State = EntityState.Unchanged;
-            }
-            
-            // Attach PartDefinitions for PartNodes
-            foreach (var node in workInstruction.Nodes)
-            {
-                if (node is not PartNode { PartDefinition.Id: > 0 } partNode) continue;
-                context.Attach(partNode.PartDefinition);
-                context.Entry(partNode.PartDefinition).State = EntityState.Unchanged;
-            }
-            
-            workInstruction.IsActive = true;
-            await context.WorkInstructions.AddAsync(workInstruction);
-            await context.SaveChangesAsync();
-            
-            // Invalidate cache so that on next request users retrieve the latest data
-            ClearWorkInstructionCaches();
-            
-            Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception thrown when attempting to Create a work instruction, in WorkInstructionService. Exception: {Exception}", e.ToString());
-            return false;
-        }
-    }
-    
     /// <inheritdoc />
     public async Task<bool> CreateAsync(WorkInstructionFormDTO dto)
     {
@@ -532,44 +489,16 @@ public class WorkInstructionService : IWorkInstructionService
             if (!validationResult.IsValid)
                 return false;
 
-            // Resolve PartProduced safely
-            if (dto.PartProducedId is > 0)
-            {
-                var partProduced = await context.PartDefinitions
-                    .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
+            // Resolve produced part
+            workInstruction.PartProduced =
+                await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
-                if (partProduced == null)
-                    return false; // invalid reference
+            // Resolve Products (internally calls the part definition resolver)
+            workInstruction.Products =
+                await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
 
-                workInstruction.PartProduced = partProduced;
-            }
-
-            // Resolve Products safely
-            if (dto.ProductIds.Count != 0)
-            {
-                workInstruction.Products = await context.Products
-                    .Where(p => dto.ProductIds.Contains(p.Id))
-                    .ToListAsync();
-            }
-            else
-            {
-                workInstruction.Products = new List<Product>();
-            }
-
-            // Resolve PartDefinitions for PartNodes safely
-            foreach (var node in workInstruction.Nodes.OfType<PartNode>())
-            {
-                if (node.PartDefinitionId > 0)
-                {
-                    var partDefinition = await context.PartDefinitions
-                        .FirstOrDefaultAsync(p => p.Id == node.PartDefinitionId);
-
-                    if (partDefinition == null)
-                        return false; // invalid reference
-
-                    node.PartDefinition = partDefinition;
-                }
-            }
+            // Resolve all PartNodes via PartNodeResolver
+            await _partNodeResolver.ResolvePendingNodesAsync(context, workInstruction.Nodes);
 
             // Default new WorkInstructions to active and latest since this is a new creation (not a version update)
             workInstruction.IsActive = true;
@@ -637,30 +566,18 @@ public class WorkInstructionService : IWorkInstructionService
             // Build new entity from DTO
             var workInstruction = dto.ToNewEntity();
 
-            // Force insert (never reuse existing Id)
+            // Force insert (never reuse existing id)
             workInstruction.Id = 0;
 
             // Ensure correct root linkage
             workInstruction.OriginalId = rootId;
 
-            // Resolve PartProduced (if any)
-            if (dto.PartProducedId.HasValue)
-            {
-                workInstruction.PartProduced = await context.PartDefinitions
-                    .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
-            }
+            workInstruction.PartProduced =
+                await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
-            // Resolve Products (if any)
-            if (dto.ProductIds.Any())
-            {
-                workInstruction.Products = await context.Products
-                    .Where(p => dto.ProductIds.Contains(p.Id))
-                    .ToListAsync();
-            }
-            else
-            {
-                workInstruction.Products = [];
-            }
+            workInstruction.Products = await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
+            
+            await _partNodeResolver.ResolvePendingNodesAsync(context, workInstruction.Nodes);
 
             // Mark new version active/latest
             workInstruction.IsLatest = true;
@@ -909,6 +826,8 @@ public class WorkInstructionService : IWorkInstructionService
                     return false;
 
                 await _workInstructionUpdater.ApplyAsync(dto, existing, context);
+                
+                await _partNodeResolver.ResolvePendingNodesAsync(context, existing.Nodes);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -964,7 +883,7 @@ public class WorkInstructionService : IWorkInstructionService
             }
 
             // Defensive initialization to avoid null references
-            product.WorkInstructions ??= new List<WorkInstruction>();
+            product.WorkInstructions ??= [];
 
             var existingIds = product.WorkInstructions.Select(wi => wi.Id).ToHashSet();
 

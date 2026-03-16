@@ -1,5 +1,4 @@
-﻿@using MESS.Data.Models
-@using MESS.Services.DTOs.WorkInstructions.File
+﻿@using MESS.Services.DTOs.WorkInstructions.File
 @using MESS.Services.Files.WorkInstructions
 @inject IWorkInstructionFileService WorkInstructionFileService
 @inject IToastService ToastService
@@ -15,6 +14,7 @@
 
 @code {
     private bool _isLoading;
+    private CancellationTokenSource? _cts;
     
     /// <summary>
     /// The WorkInstruction object that contains the details of the work instruction to be downloaded.
@@ -38,8 +38,22 @@
     [Parameter]
     public EventCallback<bool> OnDownloadStateChanged { get; set; }
     
+    /// <summary>
+    /// An event callback for the loading bar progress to get passed up to the export dialog component.
+    /// </summary>
+    [Parameter]
+    public EventCallback<ExportProgress> OnProgressChanged { get; set; }
+    
     private async Task DownloadWorkInstruction()
     {
+        _cts = new CancellationTokenSource();
+        
+        var progress = new Progress<ExportProgress>(async p =>
+        {
+            if (OnProgressChanged.HasDelegate)
+                await OnProgressChanged.InvokeAsync(p);
+        });
+        
         _isLoading = true;
         await OnDownloadStateChanged.InvokeAsync(true); // Notify: started
         StateHasChanged(); // force UI refresh to show spinner immediately
@@ -47,7 +61,8 @@
         
         try
         {
-            var workInstructionPath = WorkInstructionFileService.ExportToXlsx(WorkInstruction);
+            var workInstructionPath =
+                await WorkInstructionFileService.ExportToXlsxAsync(WorkInstruction, progress, _cts.Token);
 
             if (string.IsNullOrEmpty(workInstructionPath))
             {
@@ -80,5 +95,15 @@
             await OnDownloadStateChanged.InvokeAsync(false); // Notify: done
         }
     }
-
+    
+    /// <summary>
+    /// Cancels the in-progress export/download, if any.
+    /// </summary>
+    public void CancelExport()
+    {
+        if (_isLoading)
+        {
+            _cts?.Cancel();
+        }
+    }
 }

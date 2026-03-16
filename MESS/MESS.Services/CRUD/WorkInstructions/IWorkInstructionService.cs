@@ -104,13 +104,6 @@ public interface IWorkInstructionService
     /// A <see cref="WorkInstructionFormDTO"/> representing the work instruction if found; otherwise, <c>null</c>.
     /// </returns>
     public Task<WorkInstructionFormDTO?> GetFormByIdAsync(int id);
-    
-    /// <summary>
-    /// Creates a WorkInstruction object and saves it to the database.
-    /// </summary>
-    /// <param name="workInstruction">An instance of WorkInstruction.</param>
-    /// <returns>A boolean value indicating true for success or false for failure.</returns>
-    public Task<bool> Create(WorkInstruction workInstruction);
 
     /// <summary>
     /// Creates a new work instruction from the provided form DTO.

@@ -12,6 +12,7 @@ using MESS.Services.CRUD.ProductionLogParts;
 using MESS.Services.CRUD.SerializableParts;
 using MESS.Services.UI.SessionManager;
 using MESS.Services.CRUD.WorkInstructions;
+using MESS.Services.Files.ApplicationUsers;
 using MESS.Services.Files.WorkInstructions;
 using MESS.Services.Media.WorkInstructions;
 using MESS.Services.UI.PartTraceability;
@@ -66,12 +67,16 @@ builder.Services.AddRazorComponents()
     
     
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductResolver, ProductResolver>();
 builder.Services.AddScoped<IWorkInstructionService, WorkInstructionService>();
 builder.Services.AddScoped<IWorkInstructionUpdater, WorkInstructionUpdater>();
+builder.Services.AddScoped<IPartNodeResolver, PartNodeResolver>();
+builder.Services.AddScoped<IPartDefinitionResolver, PartDefinitionResolver>();
 builder.Services.AddScoped<IProductionLogService, ProductionLogService>();
 builder.Services.AddScoped<ILocalCacheManager, LocalCacheManager>();
 builder.Services.AddScoped<ISessionManager, SessionManager>();
 builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
+builder.Services.AddScoped<IApplicationUserFileService, ApplicationUserFileService>();
 builder.Services.AddScoped<IPartDefinitionService, PartDefinitionService>();
 builder.Services.AddScoped<ISerializablePartService, SerializablePartService>();
 builder.Services.AddScoped<IProductionLogPartService, ProductionLogPartService>();

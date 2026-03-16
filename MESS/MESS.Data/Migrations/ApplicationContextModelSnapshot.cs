@@ -22,6 +22,55 @@ namespace MESS.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FailureAdjectiveFailureNoun", b =>
+                {
+                    b.Property<int>("AdjectivesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NounsId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AdjectivesId", "NounsId");
+
+                    b.HasIndex("NounsId");
+
+                    b.ToTable("FailureNounAdjectives", (string)null);
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.FailureAdjective", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FailureAdjective");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.FailureNoun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FailureNoun");
+                });
+
             modelBuilder.Entity("MESS.Data.Models.PartDefinition", b =>
                 {
                     b.Property<int>("Id")
@@ -197,6 +246,93 @@ namespace MESS.Data.Migrations
                     b.ToTable("SerializableParts");
                 });
 
+            modelBuilder.Entity("MESS.Data.Models.SerializablePartRelationship", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChildPartId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("LastUpdated")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("ParentPartId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildPartId")
+                        .IsUnique();
+
+                    b.HasIndex("ParentPartId");
+
+                    b.ToTable("SerializablePartRelationship");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("SerializablePartId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("SerializablePartId");
+
+                    b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.TagHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SerializablePartId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SerializablePartId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("TagHistories");
+                });
+
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
                 {
                     b.Property<int>("Id")
@@ -335,6 +471,21 @@ namespace MESS.Data.Migrations
                     b.ToTable("Steps", (string)null);
                 });
 
+            modelBuilder.Entity("FailureAdjectiveFailureNoun", b =>
+                {
+                    b.HasOne("MESS.Data.Models.FailureAdjective", null)
+                        .WithMany()
+                        .HasForeignKey("AdjectivesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MESS.Data.Models.FailureNoun", null)
+                        .WithMany()
+                        .HasForeignKey("NounsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MESS.Data.Models.Product", b =>
                 {
                     b.HasOne("MESS.Data.Models.PartDefinition", "PartDefinition")
@@ -423,6 +574,49 @@ namespace MESS.Data.Migrations
                     b.Navigation("PartDefinition");
                 });
 
+            modelBuilder.Entity("MESS.Data.Models.SerializablePartRelationship", b =>
+                {
+                    b.HasOne("MESS.Data.Models.SerializablePart", "ChildPart")
+                        .WithOne("ParentRelationship")
+                        .HasForeignKey("MESS.Data.Models.SerializablePartRelationship", "ChildPartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MESS.Data.Models.SerializablePart", "ParentPart")
+                        .WithMany("ChildrenRelationships")
+                        .HasForeignKey("ParentPartId");
+
+                    b.Navigation("ChildPart");
+
+                    b.Navigation("ParentPart");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.Tag", b =>
+                {
+                    b.HasOne("MESS.Data.Models.SerializablePart", "SerializablePart")
+                        .WithMany()
+                        .HasForeignKey("SerializablePartId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("SerializablePart");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.TagHistory", b =>
+                {
+                    b.HasOne("MESS.Data.Models.SerializablePart", null)
+                        .WithMany()
+                        .HasForeignKey("SerializablePartId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MESS.Data.Models.Tag", "Tag")
+                        .WithMany("History")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
                 {
                     b.HasOne("MESS.Data.Models.WorkInstruction", "Original")
@@ -498,7 +692,16 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.SerializablePart", b =>
                 {
+                    b.Navigation("ChildrenRelationships");
+
+                    b.Navigation("ParentRelationship");
+
                     b.Navigation("ProductionLogParts");
+                });
+
+            modelBuilder.Entity("MESS.Data.Models.Tag", b =>
+                {
+                    b.Navigation("History");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>

@@ -40,5 +40,28 @@ public class PartNodeFileDTO : WorkInstructionNodeFileDTO
     /// <summary>
     /// Gets a combined display string for the part, including both name and number if available.
     /// </summary>
-    public string PartNameWithNumber => string.IsNullOrWhiteSpace(PartNumber) ? PartName : $"({PartNumber}, {PartName})";
+    public string PartNameWithNumber => string.IsNullOrWhiteSpace(PartNumber) ? PartName : $"({PartName}, {PartNumber})";
+    
+    /// <summary>
+    /// Gets a combined string for export/import purposes, including
+    /// part name, optional part number, and optional input type.
+    /// Always preserves position of the part number for regex parsing.
+    /// </summary>
+    public string PartNameWithNumberAndInputType
+    {
+        get
+        {
+            var numberPart = PartNumber ?? string.Empty;
+
+            if (InputType == PartInputType.SerialNumber)
+            {
+                // default input type can be omitted
+                return string.IsNullOrWhiteSpace(numberPart)
+                    ? PartName
+                    : $"({PartName}, {numberPart})";
+            }
+
+            return $"({PartName}, {numberPart}, {InputType})";
+        }
+    }
 }

@@ -1,10 +1,11 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.CRUD.PartDefinitions;
+using MESS.Services.CRUD.Products;
 using MESS.Services.DTOs.WorkInstructions.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
 using MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
-using Microsoft.EntityFrameworkCore;
 
 namespace MESS.Services.CRUD.WorkInstructions;
 
@@ -22,6 +23,20 @@ namespace MESS.Services.CRUD.WorkInstructions;
 /// </remarks>
 public class WorkInstructionUpdater : IWorkInstructionUpdater
 {
+    private readonly IProductResolver _productResolver;
+    private readonly IPartDefinitionResolver _partDefinitionResolver;
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkInstructionUpdater"/> class.
+    /// </summary>
+    /// <param name="productResolver">The service used for resolving products from product names.</param>
+    /// <param name="partDefinitionResolver">The service used for resolving the part definition that a work instruction produces.</param>
+    public WorkInstructionUpdater(IProductResolver productResolver, IPartDefinitionResolver partDefinitionResolver)
+    {
+        _productResolver = productResolver;
+        _partDefinitionResolver = partDefinitionResolver;
+    }
+    
     /// <summary>
     /// Applies the values from a <see cref="WorkInstructionFormDTO"/> to an existing
     /// tracked <see cref="WorkInstruction"/> entity.
@@ -82,7 +97,6 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         entity.IsActive = dto.IsActive;
         entity.ShouldGenerateQrCode = dto.ShouldGenerateQrCode;
         entity.PartProducedIsSerialized = dto.PartProducedIsSerialized;
-        entity.PartProducedId = dto.PartProducedId;
     }
 
     private async Task SyncProductsAsync(
@@ -90,33 +104,17 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         WorkInstruction entity,
         ApplicationContext context)
     {
-        var existingIds = entity.Products.Select(p => p.Id).ToHashSet();
-        var incomingIds = dto.ProductIds.ToHashSet();
-
-        // Remove
-        entity.Products.RemoveAll(p => !incomingIds.Contains(p.Id));
-
-        // Add
-        var toAdd = incomingIds.Except(existingIds).ToList();
-
-        if (toAdd.Count > 0)
-        {
-            var products = await context.Products
-                .Where(p => toAdd.Contains(p.Id))
-                .ToListAsync();
-
-            entity.Products.AddRange(products);
-        }
+        entity.Products = await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
     }
     
     private void SyncNodes(
-        List<WorkInstructionNodeFormDTO> dtos,
+        List<WorkInstructionNodeFormDTO> formNodes,
         WorkInstruction entity,
         ApplicationContext context)
     {
         var existingById = entity.Nodes.ToDictionary(n => n.Id);
 
-        var incomingIds = dtos
+        var incomingIds = formNodes
             .Where(d => d.Id != 0)   // 0 means “new node”
             .Select(d => d.Id)
             .ToHashSet();
@@ -130,7 +128,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
             context.Remove(node);
 
         // ---- Add / Update ----
-        foreach (var dto in dtos)
+        foreach (var dto in formNodes)
         {
             if (dto.Id != 0 && existingById.TryGetValue(dto.Id, out var existing))
             {
@@ -144,20 +142,35 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         }
     }
     
+    /// <summary>
+    /// Synchronizes the produced part of the work instruction with the value
+    /// provided by the form DTO.
+    /// </summary>
+    /// <remarks>
+    /// This method resolves the produced <see cref="PartDefinition"/> using
+    /// the <see cref="IPartDefinitionResolver"/>. If the part does not exist,
+    /// a new entity will be added to the current <see cref="ApplicationContext"/>
+    /// and persisted when the caller saves change.
+    /// </remarks>
+    /// <param name="dto">
+    /// The form DTO containing the desired produced part information.
+    /// </param>
+    /// <param name="entity">
+    /// The tracked <see cref="WorkInstruction"/> entity being updated.
+    /// </param>
+    /// <param name="context">
+    /// The active <see cref="ApplicationContext"/> used for resolving
+    /// or creating the part definition.
+    /// </param>
     private async Task SyncPartProducedAsync(
         WorkInstructionFormDTO dto,
         WorkInstruction entity,
         ApplicationContext context)
     {
-        if (dto.PartProducedId.HasValue)
-        {
-            entity.PartProduced = await context.PartDefinitions
-                .FirstOrDefaultAsync(p => p.Id == dto.PartProducedId.Value);
-        }
-        else
-        {
-            entity.PartProduced = null;
-        }
+        entity.PartProduced = await _partDefinitionResolver.ResolveAsync(
+            context,
+            dto.ProducedPartName,
+            null);
     }
     
     private void ApplyToExisting(
@@ -185,7 +198,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
     {
         return dto switch
         {
-            StepNodeFormDTO stepDto => (WorkInstructionNode)new Step
+            StepNodeFormDTO stepDto => new Step
             {
                 NodeType = WorkInstructionNodeType.Step,
                 Position = stepDto.Position,
@@ -196,13 +209,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 SecondaryMedia = stepDto.SecondaryMedia.ToList()
             },
 
-            PartNodeFormDTO partDto => (WorkInstructionNode)new PartNode
-            {
-                NodeType = WorkInstructionNodeType.Part,
-                Position = partDto.Position,
-                PartDefinitionId = partDto.PartDefinitionId,
-                InputType = partDto.InputType
-            },
+            PartNodeFormDTO partDto => CreatePartNode(partDto),
 
             _ => throw new NotSupportedException()
         };
@@ -220,7 +227,32 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
     
     private void ApplyPartNode(PartNodeFormDTO dto, PartNode entity)
     {
-        entity.PartDefinitionId = dto.PartDefinitionId;
         entity.InputType = dto.InputType;
+
+        // Store part info in a "pending resolution" way
+        entity.PartDefinitionId = 0; // Leave FK unset
+        entity.PartDefinition = new PartDefinition
+        {
+            Name = dto.Name,
+            Number = dto.Number
+        };
+    }
+    
+    private PartNode CreatePartNode(PartNodeFormDTO partDto)
+    {
+        return new PartNode
+        {
+            NodeType = WorkInstructionNodeType.Part,
+            Position = partDto.Position,
+            InputType = partDto.InputType,
+
+            // Store part info without FK; will be resolved later
+            PartDefinitionId = 0,
+            PartDefinition = new PartDefinition
+            {
+                Name = partDto.Name,
+                Number = partDto.Number
+            }
+        };
     }
 }

@@ -76,4 +76,23 @@ public interface IApplicationUserService
     ///</summary>
     ///<returns>Updated ApplicationUser object</returns>
     public Task<bool> UpdateApplicationUser(ApplicationUser ApplicationUser);
+    
+    /// <summary>
+    /// Validates, imports, and assigns roles from a CSV string.
+    /// Returns a list of error messages and the count of successfully imported users.
+    /// </summary>
+    /// <param name="csvData">CSV data containing users. Columns: UserName, Email, FirstName, LastName, IsActive, Roles.</param>
+    /// <returns>
+    /// A tuple containing:
+    /// - <c>Errors</c>: A list of errors encountered during validation or import.
+    /// - <c>ImportedCount</c>: The number of users successfully imported.
+    /// </returns>
+    Task<(List<string> Errors, int ImportedCount)> ImportUsersFromCsvAsync(string csvData);
+    
+    /// <summary>
+    /// Exports all application users and their roles to a CSV string.
+    /// Roles are included in a single semicolon-separated column per user.
+    /// </summary>
+    /// <returns>A CSV string representing all users and their roles.</returns>
+    Task<string> ExportUsersToCsvAsync();
 }

@@ -8,28 +8,39 @@ namespace MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form;
 /// Represents a form DTO for editing or creating a <see cref="PartNode"/> in the Blazor UI.
 /// </summary>
 /// <remarks>
-/// A part node links a specific <see cref="PartDefinition"/> to a step or action
-/// in a work instruction, allowing operators to perform actions tied to physical parts.
+/// A part node represents a reference to a part required or produced during a work
+/// instruction step. During editing and import, the part is represented only by its
+/// identifying information (such as name and optional part number).
+///
+/// Resolution of the part to a <see cref="PartDefinition"/> entity occurs later
+/// during the work instruction save process. If the referenced part does not yet
+/// exist, it may be created at that time.
 /// </remarks>
 public class PartNodeFormDTO : WorkInstructionNodeFormDTO
 {
     /// <summary>
-    /// Gets or sets the unique identifier of the part definition associated
-    /// with this node.
-    /// </summary>
-    public int PartDefinitionId { get; set; }
-
-    /// <summary>
-    /// Gets or sets a minimal representation of the associated part definition.
+    /// Gets or sets the human-readable name of the part referenced by this node.
     /// </summary>
     /// <remarks>
-    /// This property is optional and may be null when only the
-    /// <see cref="PartDefinitionId"/> is needed for binding or updates.
+    /// This value typically originates from an imported file or user input and
+    /// is used to resolve or create a corresponding <see cref="PartDefinition"/>
+    /// when the work instruction is saved.
     /// </remarks>
-    public PartDefinitionDTO? PartDefinition { get; set; }
-    
+    public string Name { get; set; } = null!;
+
     /// <summary>
-    /// Indicates what kind of input this part node expects (e.g., serial number or production log ID).
+    /// Gets or sets the optional part number associated with the part.
+    /// </summary>
+    /// <remarks>
+    /// This value may be used to uniquely identify the part within the system.
+    /// If provided, it will be used during save operations to resolve or create
+    /// the corresponding <see cref="PartDefinition"/>.
+    /// </remarks>
+    public string? Number { get; set; }
+
+    /// <summary>
+    /// Indicates what kind of input this part node expects (for example,
+    /// a serial number or a production log identifier).
     /// </summary>
     public PartInputType InputType { get; set; } = PartInputType.SerialNumber;
 }

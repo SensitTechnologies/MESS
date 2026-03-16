@@ -47,11 +47,6 @@ public class WorkInstructionFormDTO
     /// Gets or sets whether the part produced is serialized.
     /// </summary>
     public bool PartProducedIsSerialized { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the part produced, if any.
-    /// </summary>
-    public int? PartProducedId { get; set; }
     
     /// <summary>
     /// Gets or sets the name of the part produced, if any. This is included in the form DTO for display purposes.
@@ -59,9 +54,10 @@ public class WorkInstructionFormDTO
     public string? ProducedPartName { get; set; }
 
     /// <summary>
-    /// Gets or sets the IDs of the products associated with this work instruction.
+    /// Gets or sets the list of products associated with this work instruction. Storing strings allows us to flexibly
+    /// create products on the fly.
     /// </summary>
-    public List<int> ProductIds { get; set; } = [];
+    public List<string> ProductNames { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the editable list of nodes in the instruction.

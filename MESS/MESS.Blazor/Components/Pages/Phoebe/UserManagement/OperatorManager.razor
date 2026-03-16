@@ -1,26 +1,45 @@
 ﻿@page "/users"
 @layout PhoebeLayout
 @attribute [Authorize(Roles = "Technician, Administrator")]
+@using System.Text
 @using MESS.Blazor.Components.Layout
 @using MESS.Data.Models
 @using MESS.Services.CRUD.ApplicationUser
 @using MESS.Services.DTOs
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Serilog
-@inject AuthenticationStateProvider AuthProvider
 @inject IApplicationUserService ApplicationUserService
 @inject UserManager<ApplicationUser> UserManager
 @inject IToastService ToastService
+@inject IJSRuntime JS
 
 <PageTitle>Users</PageTitle>
 
 <div class="container justify-content-center">
-    <h1 class="mb-4">
-        Users
-    </h1>
-    @* <button class="btn btn-primary" @onclick="SaveChanges">Save Changes</button> *@
+    <div class="d-flex align-items-center mb-4 justify-content-between">
+        <h1 class="m-0">Users</h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-primary" @onclick="ExportUsers" disabled="@_isLoading">
+                <i class="bi bi-download me-1"></i>
+                Export
+                @if (_isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm ms-2"></span>
+                }
+            </button>
+            
+            <!-- Hidden file input -->
+            <InputFile id="@_userImportId"
+                       OnChange="ImportUsers"
+                       accept=".csv"
+                       class="d-none" />
+
+            <label for="@_userImportId" class="btn btn-sm btn-primary">
+                <i class="bi bi-upload"></i> Import
+            </label>
+        </div>
+    </div>
     
     <div>
         <table>
@@ -58,26 +77,36 @@
 
 @code {
     private List<UserRoleDTO> ApplicationUserDtoList { get; set; } = [];
+    
+    private bool _isLoading;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
+        await LoadUsers();
+    }
+    
+    private async Task LoadUsers()
+    {
+        ApplicationUserDtoList.Clear();
+
         var applicationUsers = await ApplicationUserService.GetAllAsync();
+
         foreach (var user in applicationUsers)
         {
             var roles = await UserManager.GetRolesAsync(user);
             var lockoutEnd = await UserManager.GetLockoutEndDateAsync(user);
-            var IsLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
+            var isLockedOut = lockoutEnd != null && lockoutEnd > DateTimeOffset.UtcNow;
 
-            var userDto = new UserRoleDTO
+            ApplicationUserDtoList.Add(new UserRoleDTO
             {
                 User = user,
                 Roles = roles,
-                IsLockedOut = IsLockedOut
-            };
-            
-            ApplicationUserDtoList.Add(userDto);
+                IsLockedOut = isLockedOut
+            });
         }
+
+        StateHasChanged();
     }
 
     private async Task SaveChanges(ApplicationUser user)
@@ -138,5 +167,67 @@
         };
         
         ApplicationUserDtoList.Add(newUser);
+    }
+    
+    private async Task ExportUsers()
+    {
+        _isLoading = true;
+
+        try
+        {
+            var csvContent = await ApplicationUserService.ExportUsersToCsvAsync();
+
+            var bytes = Encoding.UTF8.GetBytes(csvContent);
+            using var stream = new MemoryStream(bytes);
+            using var streamRef = new DotNetStreamReference(stream);
+
+            var fileName = $"Users_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+            ToastService.ShowSuccess("Users exported successfully!");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error exporting users");
+            ToastService.ShowError("Failed to export users.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private readonly string _userImportId = $"userImport_{Guid.NewGuid():N}";
+
+    private async Task ImportUsers(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            using var reader = new StreamReader(stream);
+
+            var csvData = await reader.ReadToEndAsync();
+
+            var result = await ApplicationUserService.ImportUsersFromCsvAsync(csvData);
+
+            if (result.Errors.Any())
+            {
+                foreach (var error in result.Errors)
+                    ToastService.ShowError(error);
+
+                return;
+            }
+
+            ToastService.ShowSuccess($"{result.ImportedCount} users imported successfully!");
+
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Import failed: {ex.Message}");
+        }
     }
 }

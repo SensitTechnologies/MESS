@@ -1,58 +1,59 @@
 @using MESS.Data.Models
-@using MESS.Services.DTOs.PartDefinitions
 @using MESS.Services.DTOs.WorkInstructions.Nodes.Form
 @using MESS.Services.DTOs.WorkInstructions.Nodes.PartNodes.Form
 @inherits ComponentBase
 
-@if (PartNode?.PartDefinition is not null)
-{
-    <div class="d-flex align-items-start justify-content-between flex-wrap">
-        <div class="row flex-grow-1 g-2">
-            <div class="col-auto">
-                <div class="border rounded ps-2 py-2 h-100 d-flex align-items-center gap-2 shadow-sm">
-                    <!-- Part Number -->
-                    <div class="d-flex flex-column">
-                        <label class="form-label mb-1">Part Number</label>
-                        <input type="text"
-                               class="form-control form-control-sm"
-                               value="@PartNode.PartDefinition.Number"
-                               @oninput="e => OnPartChanged(e, nameof(PartDefinition.Number))" />
-                    </div>
+<div class="d-flex align-items-start justify-content-between flex-wrap">
+    <div class="row flex-grow-1 g-2">
+        <div class="col-auto">
+            <div class="border rounded ps-2 py-2 h-100 d-flex align-items-center gap-2 shadow-sm">
 
-                    <!-- Part Name -->
-                    <div class="d-flex flex-column">
-                        <label class="form-label mb-1">Part Name</label>
-                        <input type="text"
-                               class="form-control form-control-sm"
-                               value="@PartNode.PartDefinition.Name"
-                               @oninput="e => OnPartChanged(e, nameof(PartDefinition.Name))" />
-                    </div>
+                <!-- Part Name -->
+                <div class="d-flex flex-column">
+                    <label class="form-label mb-1">Part Name</label>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           @bind="PartNode!.Name"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChangedAsync" />
+                </div>
+                
+                <!-- Part Number -->
+                <div class="d-flex flex-column">
+                    <label class="form-label mb-1">Part Number</label>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           @bind="PartNode!.Number"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChangedAsync" />
+                </div>
 
-                    <!-- InputType Toggle -->
-                    <div class="d-flex flex-column align-items-start ms-3 me-3">
-                        <label class="form-label mb-1">Input Type</label>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input toggle-switch" type="checkbox"
-                                   role="switch"
-                                   id="inputTypeSwitch_@PartNode.Id"
-                                   checked="@(PartNode.InputType == PartInputType.ProductionLogId)"
-                                   @onclick="ToggleInputType" />
-                            <label class="form-check-label toggle-label" for="inputTypeSwitch_@PartNode.Id">
-                                @((PartNode.InputType == PartInputType.SerialNumber) ? "Serial" : "Production Log")
-                            </label>
-                        </div>
+                <!-- InputType Toggle -->
+                <div class="d-flex flex-column align-items-start ms-3 me-3">
+                    <label class="form-label mb-1">Input Type</label>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input toggle-switch"
+                               type="checkbox"
+                               role="switch"
+                               id="inputTypeSwitch_@PartNode!.ClientId"
+                               checked="@(PartNode.InputType == PartInputType.ProductionLogId)"
+                               @onclick="ToggleInputType" />
+
+                        <label class="form-check-label toggle-label"
+                               for="inputTypeSwitch_@PartNode.ClientId">
+                            @(PartNode.InputType == PartInputType.SerialNumber
+                                ? "Serial"
+                                : "Production Log")
+                        </label>
                     </div>
                 </div>
+
             </div>
         </div>
-
-        <NodeActionMenu OnAction="HandleNodeAction" />
     </div>
-}
-else
-{
-    <div class="alert alert-warning">No part data available.</div>
-}
+
+    <NodeActionMenu OnAction="HandleNodeAction" />
+</div>
 
 @code {
 
@@ -76,27 +77,12 @@ else
         await NotifyChangedAsync();
     }
 
-    private async Task OnPartChanged(ChangeEventArgs e, string propertyName)
-    {
-        if (PartNode?.PartDefinition is null)
-            return;
-
-        var newValue = e.Value?.ToString() ?? string.Empty;
-
-        if (propertyName == nameof(PartDefinitionDTO.Number))
-            PartNode.PartDefinition.Number = newValue;
-        else if (propertyName == nameof(PartDefinitionDTO.Name))
-            PartNode.PartDefinition.Name = newValue;
-
-        await NotifyChangedAsync();
-    }
-
     private async Task NotifyChangedAsync()
     {
         if (OnChanged.HasDelegate)
             await OnChanged.InvokeAsync();
     }
-    
+
     private async Task ToggleInputType()
     {
         if (PartNode is null)

@@ -181,7 +181,7 @@ public class WorkInstructionEditorServiceTests
         Assert.False(_sut.CurrentHasParts());
         Assert.False(_sut.CurrentHasSteps());
 
-        _sut.Current!.Nodes.Add(new PartNodeFormDTO{ PartDefinition = new PartDefinitionDTO { Name = "Some Part", Number = "Some Number"}});
+        _sut.Current!.Nodes.Add(new PartNodeFormDTO{ Name = "Some Part", Number = "Some Number"});
         _sut.Current!.Nodes.Add(new StepNodeFormDTO { Name = "Some name", Body = "Some body" });
 
         Assert.True(_sut.CurrentHasParts());
