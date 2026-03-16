@@ -84,6 +84,10 @@ public class ApplicationContext
             .HasForeignKey<Product>(p => p.PartDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<WorkInstruction>()
+            .HasIndex(w => new { w.Title, w.Version })
+            .IsUnique();
+        
         modelBuilder.Entity<WorkInstructionNode>()
             .UseTptMappingStrategy();
 
@@ -93,7 +97,16 @@ public class ApplicationContext
             .WithMany()
             .HasForeignKey(p => p.PartDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<PartDefinition>()
+            .HasIndex(p => new { p.Name, p.Number })
+            .IsUnique();
 
+        modelBuilder.Entity<PartDefinition>()
+            .HasIndex(p => p.Name)
+            .IsUnique()
+            .HasFilter("\"Number\" IS NULL OR \"Number\" = ''");
+        
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
         
