@@ -180,7 +180,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
 
                         // Combine all part definitions into a single string
                         var partStrings = partGroup
-                            .Select(pn => pn.PartNameWithNumber);
+                            .Select(pn => pn.PartNameWithNumberAndInputType);
 
                         worksheet.Cell(currentRow, PART_COLUMN).Value = string.Join(", ", partStrings);
 
@@ -763,7 +763,8 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         {
                             Position = position++,
                             PartName = parsedPart.PartName,
-                            PartNumber = parsedPart.PartNumber
+                            PartNumber = parsedPart.PartNumber,
+                            InputType = ResolveInputType(parsedPart.InputType)
                         });
                     }
                 }
@@ -851,6 +852,17 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             errorResult.ImportError = error;
             return errorResult;
         }
+    }
+    
+    private static PartInputType ResolveInputType(string? input)
+    {
+        if (!string.IsNullOrWhiteSpace(input) &&
+            Enum.TryParse<PartInputType>(input, true, out var parsed))
+        {
+            return parsed;
+        }
+
+        return PartInputType.SerialNumber;
     }
     
     /// <summary>
@@ -1055,9 +1067,9 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         }
     }
     
-    private List<(string PartName, string? PartNumber)> ParsePartsListFromString(string input)
+    private List<(string PartName, string? PartNumber, string? InputType)> ParsePartsListFromString(string input)
     {
-        var results = new List<(string PartName, string? PartNumber)>();
+        var results = new List<(string PartName, string? PartNumber, string? InputType)>();
 
         if (string.IsNullOrWhiteSpace(input))
             return results;
@@ -1073,15 +1085,20 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             if (match.Success)
             {
                 var partName = match.Groups["name"].Value.Trim();
+
                 var partNumber = match.Groups["number"].Success
                     ? match.Groups["number"].Value.Trim()
                     : null;
 
-                results.Add((partName, partNumber));
+                var inputType = match.Groups["inputType"].Success
+                    ? match.Groups["inputType"].Value.Trim()
+                    : null;
+
+                results.Add((partName, partNumber, inputType));
             }
             else
             {
-                results.Add((trimmed, null));
+                results.Add((trimmed, null, null));
             }
         }
 
@@ -1090,8 +1107,10 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     
     /// <summary>
     /// Regex pattern for parsing parts list strings in the formats:
-    /// (PART_NAME, PART_NUMBER) or (PART_NAME)
+    /// (PART_NAME)
+    /// (PART_NAME, PART_NUMBER)
+    /// (PART_NAME, PART_NUMBER, INPUT_TYPE)
     /// </summary>
-    [GeneratedRegex(@"\(\s*(?<name>[^,()]+?)\s*(?:,\s*(?<number>[^)]+?))?\s*\)")]
+    [GeneratedRegex(@"\(\s*(?<name>[^,()]+?)\s*(?:,\s*(?<number>[^,()]+?)\s*(?:,\s*(?<inputType>[^)]+?))?)?\s*\)")]
     private static partial Regex PartsListRegex();
 }
