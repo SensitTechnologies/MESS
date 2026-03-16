@@ -292,14 +292,13 @@ public class WorkInstructionService : IWorkInstructionService
     /// </summary>
     /// <param name="title">The title of the work instruction to retrieve.</param>
     /// <returns>The work instruction if found, null otherwise.</returns>
-
     public WorkInstruction? GetByTitle(string title)
     {
         try
         {
             using var context =  _contextFactory.CreateDbContext();
             var workInstruction = context.WorkInstructions
-                .FirstOrDefault(w => w.Title.Equals(title, StringComparison.CurrentCultureIgnoreCase));
+                .FirstOrDefault(w => w.Title.ToLower() == title.ToLower());
 
             Log.Information("Successfully retrieved a WorkInstruction by title: {Title}", title);
             return workInstruction;
