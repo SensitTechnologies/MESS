@@ -274,33 +274,6 @@ namespace MESS.Data.Migrations
                     b.ToTable("SerializableParts");
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.SerializablePartRelationship", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ChildPartId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset>("LastUpdated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("ParentPartId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChildPartId")
-                        .IsUnique();
-
-                    b.HasIndex("ParentPartId");
-
-                    b.ToTable("SerializablePartRelationship");
-                });
-
             modelBuilder.Entity("MESS.Data.Models.Tag", b =>
                 {
                     b.Property<int>("Id")
@@ -719,23 +692,6 @@ namespace MESS.Data.Migrations
                     b.Navigation("PartDefinition");
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.SerializablePartRelationship", b =>
-                {
-                    b.HasOne("MESS.Data.Models.SerializablePart", "ChildPart")
-                        .WithOne("ParentRelationship")
-                        .HasForeignKey("MESS.Data.Models.SerializablePartRelationship", "ChildPartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MESS.Data.Models.SerializablePart", "ParentPart")
-                        .WithMany("ChildrenRelationships")
-                        .HasForeignKey("ParentPartId");
-
-                    b.Navigation("ChildPart");
-
-                    b.Navigation("ParentPart");
-                });
-
             modelBuilder.Entity("MESS.Data.Models.Tag", b =>
                 {
                     b.HasOne("MESS.Data.Models.SerializablePart", "SerializablePart")
@@ -888,10 +844,6 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.SerializablePart", b =>
                 {
-                    b.Navigation("ChildrenRelationships");
-
-                    b.Navigation("ParentRelationship");
-
                     b.Navigation("ProductionLogParts");
                 });
 
