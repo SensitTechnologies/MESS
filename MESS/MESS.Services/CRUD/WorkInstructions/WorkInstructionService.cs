@@ -473,67 +473,6 @@ public class WorkInstructionService : IWorkInstructionService
         await context.SaveChangesAsync();
     }
     
-    /// <summary>
-    /// Creates a new work instruction in the database.
-    /// </summary>
-    /// <param name="workInstruction">The work instruction to create.</param>
-    /// <returns>True if creation was successful, false otherwise.</returns>
-    /// <remarks>
-    /// Validates the work instruction before saving and invalidates the cache after successful creation.
-    /// </remarks>
-    public async Task<bool> Create(WorkInstruction workInstruction)
-    {
-        try
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            // Validate WorkInstruction
-            var workInstructionValidator = new WorkInstructionValidator();
-            var validationResult = await workInstructionValidator.ValidateAsync(workInstruction);
-
-            if (!validationResult.IsValid)
-            {
-                return false;
-            }
-            
-            if (workInstruction.PartProduced is { Id: > 0 })
-            {
-                context.Attach(workInstruction.PartProduced);
-                context.Entry(workInstruction.PartProduced).State = EntityState.Unchanged;
-            }
-
-            // Having to refetch data since we are using DbContextFactory and the change-tracker is reset on each instantiation
-            foreach (var product in workInstruction.Products.Where(product => product.Id > 0))
-            {
-                context.Attach(product);
-                context.Entry(product).State = EntityState.Unchanged;
-            }
-            
-            // Attach PartDefinitions for PartNodes
-            foreach (var node in workInstruction.Nodes)
-            {
-                if (node is not PartNode { PartDefinition.Id: > 0 } partNode) continue;
-                context.Attach(partNode.PartDefinition);
-                context.Entry(partNode.PartDefinition).State = EntityState.Unchanged;
-            }
-            
-            workInstruction.IsActive = true;
-            await context.WorkInstructions.AddAsync(workInstruction);
-            await context.SaveChangesAsync();
-            
-            // Invalidate cache so that on next request users retrieve the latest data
-            ClearWorkInstructionCaches();
-            
-            Log.Information("Successfully created WorkInstruction with ID: {workInstructionID}", workInstruction.Id);
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Exception thrown when attempting to Create a work instruction, in WorkInstructionService. Exception: {Exception}", e.ToString());
-            return false;
-        }
-    }
-    
     /// <inheritdoc />
     public async Task<bool> CreateAsync(WorkInstructionFormDTO dto)
     {
@@ -555,6 +494,7 @@ public class WorkInstructionService : IWorkInstructionService
             workInstruction.PartProduced =
                 await _partDefinitionResolver.ResolveAsync(context, dto.ProducedPartName, null);
 
+            // Resolve Products (internally calls the part definition resolver)
             workInstruction.Products =
                 await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
 

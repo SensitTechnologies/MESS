@@ -24,26 +24,26 @@ public class PartDefinitionResolver : IPartDefinitionResolver
         var upperName = normalizedName.ToUpperInvariant();
         var upperNumber = normalizedNumber.ToUpperInvariant();
 
-        // --- FETCH FIRST ---
-        // Check if a tracked or existing entity already exists
-        var existing = await context.PartDefinitions
-            .FirstOrDefaultAsync(p =>
-                p.Name.ToUpper() == upperName &&
-                (p.Number ?? "").ToUpper() == upperNumber);
+        var existing = context.PartDefinitions
+                           .Local
+                           .FirstOrDefault(p =>
+                               p.Name.ToUpper() == upperName &&
+                               (p.Number ?? "").ToUpper() == upperNumber)
+                       ?? await context.PartDefinitions
+                           .FirstOrDefaultAsync(p =>
+                               p.Name.ToUpper() == upperName &&
+                               (p.Number ?? "").ToUpper() == upperNumber);
 
         if (existing != null)
             return existing;
 
-        // --- CREATE NEW IF NOT FOUND ---
         var newPart = new PartDefinition
         {
             Name = normalizedName,
             Number = normalizedNumber
         };
 
-        // Add to context, but do NOT save yet
         context.PartDefinitions.Add(newPart);
-
         return newPart;
     }
 }
