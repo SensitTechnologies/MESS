@@ -33,15 +33,29 @@ builder.Services.AddDbContextFactory<ApplicationContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
 
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+    options.UseSqlServer(connectionString, sqlOptions =>
     {
-        // Retry on transient failures (supported by Npgsql)
-        npgsqlOptions.EnableRetryOnFailure(
+        sqlOptions.EnableRetryOnFailure(
             maxRetryCount: 3,
             maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorCodesToAdd: null);
-        
-        npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+            errorNumbersToAdd: null);
+
+        // Use split queries to avoid Cartesian explosion when loading multiple collections
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
+});
+
+// Adding Separate DbContext for Identity
+builder.Services.AddDbContext<UserContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("MESSConnection");
+    
+    options.UseSqlServer(connectionString, options =>
+    {
+        options.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
     });
 });
 
@@ -98,7 +112,7 @@ builder.Services.Configure<IdentityOptions>(options =>
 
 // Adding Services for Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationContext>()
+    .AddEntityFrameworkStores<UserContext>()
     .AddDefaultTokenProviders();
 
 // Roles

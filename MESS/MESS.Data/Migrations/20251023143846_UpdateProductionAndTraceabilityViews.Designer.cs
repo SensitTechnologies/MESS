@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,13 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20251023143846_UpdateProductionAndTraceabilityViews")]
+    partial class UpdateProductionAndTraceabilityViews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -35,6 +38,7 @@ namespace MESS.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Number")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -118,7 +122,12 @@ namespace MESS.Data.Migrations
                     b.Property<int>("OperationType")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ParentPartId")
+                        .HasColumnType("int");
+
                     b.HasKey("ProductionLogId", "SerializablePartId", "OperationType");
+
+                    b.HasIndex("ParentPartId");
 
                     b.HasIndex("SerializablePartId");
 
@@ -298,9 +307,6 @@ namespace MESS.Data.Migrations
                 {
                     b.HasBaseType("MESS.Data.Models.WorkInstructionNode");
 
-                    b.Property<int>("InputType")
-                        .HasColumnType("int");
-
                     b.Property<int>("PartDefinitionId")
                         .HasColumnType("int");
 
@@ -365,6 +371,11 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogPart", b =>
                 {
+                    b.HasOne("MESS.Data.Models.SerializablePart", "ParentPart")
+                        .WithMany()
+                        .HasForeignKey("ParentPartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("MESS.Data.Models.ProductionLog", "ProductionLog")
                         .WithMany()
                         .HasForeignKey("ProductionLogId")
@@ -376,6 +387,8 @@ namespace MESS.Data.Migrations
                         .HasForeignKey("SerializablePartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ParentPart");
 
                     b.Navigation("ProductionLog");
 

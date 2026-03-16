@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 /// <inheritdoc cref="IApplicationUserService"/>
 public class ApplicationUserService : IApplicationUserService
 {
-    private readonly ApplicationContext _context;
+    private readonly UserContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RoleManager<IdentityRole> _roleManager;
@@ -21,7 +21,7 @@ public class ApplicationUserService : IApplicationUserService
     const string DEFAULT_ROLE = "Operator";
 
     /// <inheritdoc cref="IApplicationUserService"/>
-    public ApplicationUserService(ApplicationContext context, UserManager<ApplicationUser> userManager,
+    public ApplicationUserService(UserContext context, UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,  RoleManager<IdentityRole> roleManager, IApplicationUserFileService fileService)
     {
         _context = context;

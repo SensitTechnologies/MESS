@@ -4,6 +4,7 @@ using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,13 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20251021143443_RemoveSerializablePartParent")]
+    partial class RemoveSerializablePartParent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -35,6 +38,7 @@ namespace MESS.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Number")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -53,13 +57,11 @@ namespace MESS.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<int>("PartDefinitionId")
-                        .HasColumnType("int");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("PartDefinitionId")
-                        .IsUnique();
 
                     b.ToTable("Products");
                 });
@@ -95,6 +97,9 @@ namespace MESS.Data.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProductSerialNumber")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("WorkInstructionId")
                         .HasColumnType("int");
 
@@ -118,7 +123,12 @@ namespace MESS.Data.Migrations
                     b.Property<int>("OperationType")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ParentPartId")
+                        .HasColumnType("int");
+
                     b.HasKey("ProductionLogId", "SerializablePartId", "OperationType");
+
+                    b.HasIndex("ParentPartId");
 
                     b.HasIndex("SerializablePartId");
 
@@ -184,7 +194,7 @@ namespace MESS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("PartDefinitionId")
+                    b.Property<int>("PartId")
                         .HasColumnType("int");
 
                     b.Property<string>("SerialNumber")
@@ -192,7 +202,7 @@ namespace MESS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PartDefinitionId");
+                    b.HasIndex("PartId");
 
                     b.ToTable("SerializableParts");
                 });
@@ -204,6 +214,9 @@ namespace MESS.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CollectsProductSerialNumber")
+                        .HasColumnType("bit");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -228,12 +241,6 @@ namespace MESS.Data.Migrations
                     b.Property<int?>("OriginalId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PartProducedId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("PartProducedIsSerialized")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("ShouldGenerateQrCode")
                         .HasColumnType("bit");
 
@@ -247,8 +254,6 @@ namespace MESS.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OriginalId");
-
-                    b.HasIndex("PartProducedId");
 
                     b.ToTable("WorkInstructions");
                 });
@@ -279,6 +284,21 @@ namespace MESS.Data.Migrations
                     b.UseTptMappingStrategy();
                 });
 
+            modelBuilder.Entity("PartNodeParts", b =>
+                {
+                    b.Property<int>("PartNodeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartsId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PartNodeId", "PartsId");
+
+                    b.HasIndex("PartsId");
+
+                    b.ToTable("PartNodeParts");
+                });
+
             modelBuilder.Entity("ProductWorkInstruction", b =>
                 {
                     b.Property<int>("ProductsId")
@@ -297,14 +317,6 @@ namespace MESS.Data.Migrations
             modelBuilder.Entity("MESS.Data.Models.PartNode", b =>
                 {
                     b.HasBaseType("MESS.Data.Models.WorkInstructionNode");
-
-                    b.Property<int>("InputType")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PartDefinitionId")
-                        .HasColumnType("int");
-
-                    b.HasIndex("PartDefinitionId");
 
                     b.ToTable("PartNodes", (string)null);
                 });
@@ -335,17 +347,6 @@ namespace MESS.Data.Migrations
                     b.ToTable("Steps", (string)null);
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.Product", b =>
-                {
-                    b.HasOne("MESS.Data.Models.PartDefinition", "PartDefinition")
-                        .WithOne()
-                        .HasForeignKey("MESS.Data.Models.Product", "PartDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("PartDefinition");
-                });
-
             modelBuilder.Entity("MESS.Data.Models.ProductionLog", b =>
                 {
                     b.HasOne("MESS.Data.Models.Product", "Product")
@@ -365,6 +366,11 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogPart", b =>
                 {
+                    b.HasOne("MESS.Data.Models.SerializablePart", "ParentPart")
+                        .WithMany()
+                        .HasForeignKey("ParentPartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("MESS.Data.Models.ProductionLog", "ProductionLog")
                         .WithMany()
                         .HasForeignKey("ProductionLogId")
@@ -376,6 +382,8 @@ namespace MESS.Data.Migrations
                         .HasForeignKey("SerializablePartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ParentPart");
 
                     b.Navigation("ProductionLog");
 
@@ -414,13 +422,13 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.SerializablePart", b =>
                 {
-                    b.HasOne("MESS.Data.Models.PartDefinition", "PartDefinition")
+                    b.HasOne("MESS.Data.Models.PartDefinition", "Part")
                         .WithMany()
-                        .HasForeignKey("PartDefinitionId")
+                        .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("PartDefinition");
+                    b.Navigation("Part");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
@@ -429,13 +437,7 @@ namespace MESS.Data.Migrations
                         .WithMany()
                         .HasForeignKey("OriginalId");
 
-                    b.HasOne("MESS.Data.Models.PartDefinition", "PartProduced")
-                        .WithMany()
-                        .HasForeignKey("PartProducedId");
-
                     b.Navigation("Original");
-
-                    b.Navigation("PartProduced");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstructionNode", b =>
@@ -443,6 +445,21 @@ namespace MESS.Data.Migrations
                     b.HasOne("MESS.Data.Models.WorkInstruction", null)
                         .WithMany("Nodes")
                         .HasForeignKey("WorkInstructionId");
+                });
+
+            modelBuilder.Entity("PartNodeParts", b =>
+                {
+                    b.HasOne("MESS.Data.Models.PartNode", null)
+                        .WithMany()
+                        .HasForeignKey("PartNodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MESS.Data.Models.PartDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("PartsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProductWorkInstruction", b =>
@@ -467,14 +484,6 @@ namespace MESS.Data.Migrations
                         .HasForeignKey("MESS.Data.Models.PartNode", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("MESS.Data.Models.PartDefinition", "PartDefinition")
-                        .WithMany()
-                        .HasForeignKey("PartDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("PartDefinition");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Step", b =>
