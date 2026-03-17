@@ -24,6 +24,7 @@ namespace MESS.Services.CRUD.WorkInstructions;
 public class WorkInstructionUpdater : IWorkInstructionUpdater
 {
     private readonly IProductResolver _productResolver;
+    private readonly IPartNodeResolver _partNodeResolver;
     private readonly IPartDefinitionResolver _partDefinitionResolver;
     
     /// <summary>
@@ -31,10 +32,13 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
     /// </summary>
     /// <param name="productResolver">The service used for resolving products from product names.</param>
     /// <param name="partDefinitionResolver">The service used for resolving the part definition that a work instruction produces.</param>
-    public WorkInstructionUpdater(IProductResolver productResolver, IPartDefinitionResolver partDefinitionResolver)
+    /// <param name="partNodeResolver">The service used for resolving part nodes in a work instruction.</param>
+    public WorkInstructionUpdater(IProductResolver productResolver, IPartDefinitionResolver partDefinitionResolver,
+        IPartNodeResolver partNodeResolver)
     {
         _productResolver = productResolver;
         _partDefinitionResolver = partDefinitionResolver;
+        _partNodeResolver = partNodeResolver;
     }
     
     /// <summary>
@@ -88,6 +92,8 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         await SyncProductsAsync(dto, entity, context);
 
         SyncNodes(dto.Nodes, entity, context);
+        
+        await _partNodeResolver.ResolvePendingNodesAsync(context, entity.Nodes);
     }
     
     private void ApplyScalars(WorkInstructionFormDTO dto, WorkInstruction entity)
