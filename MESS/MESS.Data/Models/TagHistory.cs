@@ -70,5 +70,10 @@ public enum TagEventType
     /// The tag has been permanently removed from use.
     /// This could be due to being lost, damaged, replaced, or otherwise retired.
     /// </summary>
-    Retired
+    Retired,
+    
+    /// <summary>
+    /// This tag was deleted before it could ever be assigned or retired.
+    /// </summary>
+    Deleted
 }
