@@ -824,9 +824,9 @@ public class WorkInstructionService : IWorkInstructionService
 
                 if (!await ValidateUniquenessAsync(dto, existing))
                     return false;
-
+                
                 await _workInstructionUpdater.ApplyAsync(dto, existing, context);
-
+                
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
