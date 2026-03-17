@@ -376,7 +376,7 @@ public class TagService : ITagService
             .Include(t => t.SerializablePart)
             .ThenInclude(sp => sp!.ProductionLogParts)
             .ThenInclude(plp => plp.ProductionLog)
-            .ThenInclude(pl => pl!.WorkInstruction)
+            .ThenInclude(pl => pl!.WorkInstruction).Include(tag => tag.History)
             .FirstOrDefaultAsync(t => t.Code == code);
 
         if (tag == null)
@@ -403,7 +403,8 @@ public class TagService : ITagService
             SerializablePartId = tag.SerializablePartId,
             PartSerialNumber = tag.SerializablePart?.SerialNumber,
             PartName = tag.SerializablePart?.PartDefinition?.Name,
-            WorkInstructionTitle = workInstructionTitle
+            WorkInstructionTitle = workInstructionTitle,
+            HasBeenPrinted = tag.History.Any(h => h.EventType == TagEventType.Printed)
         };
     }
 
@@ -419,7 +420,7 @@ public class TagService : ITagService
             .Include(t => t.SerializablePart)
             .ThenInclude(sp => sp!.ProductionLogParts)
             .ThenInclude(plp => plp.ProductionLog!)
-            .ThenInclude(pl => pl.WorkInstruction)
+            .ThenInclude(pl => pl.WorkInstruction).Include(tag => tag.History)
             .FirstOrDefaultAsync(t => t.Id == id);
 
         if (tag == null)
@@ -441,7 +442,8 @@ public class TagService : ITagService
             SerializablePartId = tag.SerializablePartId,
             PartSerialNumber = tag.SerializablePart?.SerialNumber,
             PartName = tag.SerializablePart?.PartDefinition?.Name,
-            WorkInstructionTitle = lastWorkInstructionTitle
+            WorkInstructionTitle = lastWorkInstructionTitle,
+            HasBeenPrinted = tag.History.Any(h => h.EventType == TagEventType.Printed)
         };
     }
 
@@ -459,6 +461,7 @@ public class TagService : ITagService
             .ThenInclude(sp => sp!.ProductionLogParts)
             .ThenInclude(plp => plp.ProductionLog!)
             .ThenInclude(pl => pl.WorkInstruction)
+            .Include(tag => tag.History)
             .ToListAsync();
 
         // Map to DTOs
@@ -480,7 +483,8 @@ public class TagService : ITagService
                 SerializablePartId = tag.SerializablePartId,
                 PartSerialNumber = tag.SerializablePart?.SerialNumber,
                 PartName = tag.SerializablePart?.PartDefinition?.Name,
-                WorkInstructionTitle = lastWorkInstructionTitle
+                WorkInstructionTitle = lastWorkInstructionTitle,
+                HasBeenPrinted = tag.History.Any(h => h.EventType == TagEventType.Printed)
             };
         }).ToList();
 
@@ -501,6 +505,7 @@ public class TagService : ITagService
             .ThenInclude(sp => sp!.ProductionLogParts)
             .ThenInclude(plp => plp.ProductionLog!)
             .ThenInclude(pl => pl.WorkInstruction)
+            .Include(tag => tag.History)
             .ToListAsync();
 
         // Map to DTOs
@@ -521,11 +526,46 @@ public class TagService : ITagService
                 SerializablePartId = tag.SerializablePartId,
                 PartSerialNumber = tag.SerializablePart?.SerialNumber,
                 PartName = tag.SerializablePart?.PartDefinition?.Name,
-                WorkInstructionTitle = lastWorkInstructionTitle
+                WorkInstructionTitle = lastWorkInstructionTitle,
+                HasBeenPrinted = tag.History.Any(h => h.EventType == TagEventType.Printed)
             };
         }).ToList();
 
         return tagDtos;
+    }
+    
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TagDTO>> GetAllAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var tags = await context.Tags
+            .Include(t => t.SerializablePart)
+            .ThenInclude(sp => sp!.PartDefinition)
+            .Include(t => t.SerializablePart)
+            .ThenInclude(sp => sp!.ProductionLogParts)
+            .ThenInclude(plp => plp.ProductionLog)
+            .ThenInclude(pl => pl!.WorkInstruction)
+            .Include(tag => tag.History)
+            .ToListAsync();
+
+        return tags.Select(tag => new TagDTO
+        {
+            Id = tag.Id,
+            Code = tag.Code,
+            Status = tag.Status,
+            CreatedAt = tag.CreatedAt,
+            SerializablePartId = tag.SerializablePartId,
+            PartSerialNumber = tag.SerializablePart?.SerialNumber,
+            PartName = tag.SerializablePart?.PartDefinition?.Name,
+            WorkInstructionTitle = tag.SerializablePart?
+                .ProductionLogParts
+                .OrderByDescending(plp => plp.ProductionLog?.CreatedOn)
+                .FirstOrDefault()?
+                .ProductionLog?
+                .WorkInstruction?.Title,
+            HasBeenPrinted = tag.History.Any(h => h.EventType == TagEventType.Printed)
+        }).ToList();
     }
 
     /// <inheritdoc />
@@ -540,7 +580,6 @@ public class TagService : ITagService
         return await context.Tags
             .AnyAsync(t => t.Code == code && t.Status == TagStatus.Available);
     }
-
 
     // ---------------------------
     // History
@@ -558,5 +597,41 @@ public class TagService : ITagService
             .ToListAsync();
 
         return history;
+    }
+    
+    /// <inheritdoc />
+    public async Task DeleteAsync(int tagId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Load the tag with its history and assignment info
+        var tag = await context.Tags
+            .Include(t => t.History)
+            .FirstOrDefaultAsync(t => t.Id == tagId);
+
+        if (tag == null)
+            throw new KeyNotFoundException($"Tag with ID {tagId} was not found.");
+
+        // Prevent deletion if the tag is assigned, retired, or has been printed
+        var hasPrinted = tag.History.Any(h => h.EventType == TagEventType.Printed);
+        if (tag.Status != TagStatus.Available || hasPrinted)
+        {
+            throw new InvalidOperationException(
+                "Cannot delete a tag that is assigned, retired, or has already been printed.");
+        }
+
+        // Optional: record a deletion history event (audit purposes)
+        context.TagHistories.Add(new TagHistory
+        {
+            TagId = tag.Id,
+            EventType = TagEventType.Deleted,
+            Timestamp = DateTimeOffset.UtcNow
+        });
+
+        // Remove the tag
+        context.Tags.Remove(tag);
+
+        // Commit changes
+        await context.SaveChangesAsync();
     }
 }

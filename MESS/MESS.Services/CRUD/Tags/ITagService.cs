@@ -125,6 +125,13 @@ public interface ITagService
     /// Retrieves tags that are currently available for assignment.
     /// </summary>
     Task<IReadOnlyList<TagDTO>> GetAvailableAsync();
+
+    /// <summary>
+    /// Retrieves all tags in the system, including assignment and part information.
+    /// Populates the <see cref="TagDTO"/> fully where data exists.
+    /// </summary>
+    /// <returns>A read-only list of <see cref="TagDTO"/> representing all tags.</returns>
+    public Task<IReadOnlyList<TagDTO>> GetAllAsync();
     
     /// <summary>
     /// Determines whether a tag with the specified code exists and is currently available for use.
@@ -144,4 +151,16 @@ public interface ITagService
     /// Retrieves the history for a specific tag.
     /// </summary>
     Task<IReadOnlyList<TagHistory>> GetHistoryAsync(int tagId);
+
+    /// <summary>
+    /// Deletes a tag permanently if it has never been printed.
+    /// Throws an exception if the tag has been printed, assigned, or retired.
+    /// </summary>
+    /// <param name="tagId">The ID of the tag to delete.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown if the tag does not exist.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the tag has been printed, assigned, or retired.
+    /// </exception>
+    public Task DeleteAsync(int tagId);
 }
