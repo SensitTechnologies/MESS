@@ -87,7 +87,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         await SyncPartProducedAsync(dto, entity, context);
         await SyncProductsAsync(dto, entity, context);
 
-        SyncNodes(dto.Nodes, entity, context);
+        await SyncNodes(dto.Nodes, entity, context);
     }
     
     private void ApplyScalars(WorkInstructionFormDTO dto, WorkInstruction entity)
@@ -107,7 +107,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         entity.Products = await _productResolver.ResolveProductsAsync(context, dto.ProductNames);
     }
     
-    private void SyncNodes(
+    private async Task SyncNodes(
         List<WorkInstructionNodeFormDTO> formNodes,
         WorkInstruction entity,
         ApplicationContext context)
@@ -132,11 +132,11 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         {
             if (dto.Id != 0 && existingById.TryGetValue(dto.Id, out var existing))
             {
-                ApplyToExisting(dto, existing);
+                await ApplyToExistingAsync(dto, existing, context);
             }
             else
             {
-                var newNode = CreateNew(dto);
+                var newNode = await CreateNewAsync(dto, context);
                 entity.Nodes.Add(newNode);
             }
         }
@@ -173,9 +173,10 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
             null);
     }
     
-    private void ApplyToExisting(
+    private async Task ApplyToExistingAsync(
         WorkInstructionNodeFormDTO dto,
-        WorkInstructionNode entity)
+        WorkInstructionNode entity,
+        ApplicationContext context)
     {
         entity.Position = dto.Position;
 
@@ -186,7 +187,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 break;
 
             case PartNodeFormDTO partDto when entity is PartNode part:
-                ApplyPartNode(partDto, part);
+                await ApplyPartNodeAsync(partDto, part, context);
                 break;
 
             default:
@@ -194,7 +195,9 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         }
     }
     
-    private WorkInstructionNode CreateNew(WorkInstructionNodeFormDTO dto)
+    private async Task<WorkInstructionNode> CreateNewAsync(
+        WorkInstructionNodeFormDTO dto,
+        ApplicationContext context)
     {
         return dto switch
         {
@@ -209,7 +212,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 SecondaryMedia = stepDto.SecondaryMedia.ToList()
             },
 
-            PartNodeFormDTO partDto => CreatePartNode(partDto),
+            PartNodeFormDTO partDto => await CreatePartNodeAsync(partDto, context),
 
             _ => throw new NotSupportedException()
         };
@@ -225,34 +228,42 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         entity.SecondaryMedia = dto.SecondaryMedia.ToList();
     }
     
-    private void ApplyPartNode(PartNodeFormDTO dto, PartNode entity)
+    private async Task ApplyPartNodeAsync(
+        PartNodeFormDTO dto,
+        PartNode entity,
+        ApplicationContext context)
     {
         entity.InputType = dto.InputType;
 
-        // Store part info in a "pending resolution" way
-        entity.PartDefinitionId = 0; // Leave FK unset
-        entity.PartDefinition = new PartDefinition
-        {
-            Name = dto.Name,
-            Number = dto.Number
-        };
+        var part = await _partDefinitionResolver.ResolveAsync(
+                       context,
+                       dto.Name,
+                       dto.Number)
+                   ?? throw new InvalidOperationException(
+                       $"Failed to resolve PartDefinition '{dto.Name}' '{dto.Number}'.");
+
+        entity.PartDefinitionId = part.Id;
+        entity.PartDefinition = part;
     }
     
-    private PartNode CreatePartNode(PartNodeFormDTO partDto)
+    private async Task<PartNode> CreatePartNodeAsync(
+        PartNodeFormDTO dto,
+        ApplicationContext context)
     {
+        var part = await _partDefinitionResolver.ResolveAsync(
+                       context,
+                       dto.Name,
+                       dto.Number)
+                   ?? throw new InvalidOperationException(
+                       $"Failed to resolve PartDefinition '{dto.Name}' '{dto.Number}'.");
+
         return new PartNode
         {
             NodeType = WorkInstructionNodeType.Part,
-            Position = partDto.Position,
-            InputType = partDto.InputType,
-
-            // Store part info without FK; will be resolved later
-            PartDefinitionId = 0,
-            PartDefinition = new PartDefinition
-            {
-                Name = partDto.Name,
-                Number = partDto.Number
-            }
+            Position = dto.Position,
+            InputType = dto.InputType,
+            PartDefinitionId = part.Id,
+            PartDefinition = part
         };
     }
 }
