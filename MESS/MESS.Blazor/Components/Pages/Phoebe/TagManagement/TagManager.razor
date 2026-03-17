@@ -48,6 +48,14 @@
                 Bulk Create
             </button>
         </div>
+        
+        <!-- Show only non-printed toggle -->
+        <div class="col-auto ms-auto">
+            <button class="btn btn-outline-secondary"
+                    @onclick="ToggleNonPrinted">
+                @(_showOnlyNonPrinted ? "Showing Non-Printed" : "Show Only Non-Printed")
+            </button>
+        </div>
     </div>
 </div>
 
@@ -119,6 +127,7 @@
     private TagNumberingScheme _bulkScheme = TagNumberingScheme.Decimal;
     private int _bulkCount = 10;
     private bool _isBulkSaving;
+    private bool _showOnlyNonPrinted = false;
 
     private List<TagDTO> Tags { get; set; } = new();
     private TagDTO _newTag = new() { Code = "" };
@@ -176,6 +185,12 @@
         if (!string.IsNullOrWhiteSpace(SearchString))
         {
             data = data.Where(t => t.Code.Contains(SearchString, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Filter by non-printed if toggle is on
+        if (_showOnlyNonPrinted)
+        {
+            data = data.Where(t => !t.HasBeenPrinted);
         }
 
         _totalItems = data.Count();
@@ -278,5 +293,11 @@
     {
         if (e.Value != null)
             _bulkScheme = Enum.Parse<TagNumberingScheme>(e.Value.ToString() ?? string.Empty);
+    }
+    
+    private void ToggleNonPrinted()
+    {
+        _showOnlyNonPrinted = !_showOnlyNonPrinted;
+        _table.ReloadServerData();
     }
 }
