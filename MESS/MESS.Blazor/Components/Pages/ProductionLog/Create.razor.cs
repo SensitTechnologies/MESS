@@ -3,7 +3,6 @@ using MESS.Services.DTOs.ProductionLogs.Form;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Form;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using QRCoder;
 using Serilog;
 namespace MESS.Blazor.Components.Pages.ProductionLog;
 
@@ -43,10 +42,8 @@ public partial class Create : ComponentBase, IAsyncDisposable
     
     private string? ActiveLineOperator { get; set; }
     private string? ProductSerialNumber { get; set; }
-    private string? QRCodeDataUrl;
     
     private IJSObjectReference? scrollToModule;
-    private IJSObjectReference? qrModule;
     
     private Func<List<ProductionLogFormDTO>, Task>? _autoSaveHandler;
     
@@ -139,8 +136,6 @@ public partial class Create : ComponentBase, IAsyncDisposable
         {
             scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
                 "./Scripts/ScrollTo.js");
-            qrModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
-                "./Components/Pages/ProductionLog/Create.razor.js");
         }
     }
     
@@ -512,28 +507,10 @@ public partial class Create : ComponentBase, IAsyncDisposable
         InvokeAsync(StateHasChanged);
     }
     
-    private void GenerateQRCode(int productionLogId)
-    {
-        var productionLogIdString = productionLogId.ToString();
-        using var qrGenerator = new QRCodeGenerator();
-        using var qrCodeData = qrGenerator.CreateQrCode(productionLogIdString, QRCodeGenerator.ECCLevel.Q);
-        using var qrCode = new BitmapByteQRCode(qrCodeData);
-        var qrCodeImageArr = qrCode.GetGraphic(20);
-    
-        QRCodeDataUrl = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImageArr)}";
-    }
-    
     private async Task PrintQrCode(int productionLogId, int index)
     {
-        GenerateQRCode(productionLogId);
-        if (string.IsNullOrEmpty(QRCodeDataUrl))
-            return;
-
-        if (qrModule == null)
-        {
-            return;
-        }
-        await qrModule.InvokeVoidAsync("printQRCode", QRCodeDataUrl, index + 1);
+        // Just one line—service handles generation + JS interop
+        await QrPrinter.PrintAsync(productionLogId.ToString(), $"#{index + 1}");
     }
 
     private async Task ResetFormState()
@@ -650,25 +627,21 @@ public partial class Create : ComponentBase, IAsyncDisposable
         ProductionLogEventService.DbSaveTriggered -= SaveLogsToDatabaseHandler;
         await ProductionLogEventService.StopDbSaveTimerAsync();
         
-        try
+        if (scrollToModule is not null)
         {
-            if (qrModule is not null)
-            {
-                await qrModule.DisposeAsync();
-            }
-            if (scrollToModule is not null)
+            try
             {
                 await scrollToModule.DisposeAsync();
             }
-        }
-        catch (JSDisconnectedException)
-        {
-            // Deliberately not acting on the JSDisconnectedException since it is the preferred
-            // way to handle disposed JS scripts without logging: https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-9.0
-        }
-        catch (JSException jsException)
-        {
-            Log.Warning("JS Interop Exception thrown, {Message}", jsException.Message);
+            catch (JSDisconnectedException)
+            {
+                // Deliberately not acting on the JSDisconnectedException since it is the preferred
+                // way to handle disposed JS scripts without logging: https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-9.0
+            }
+            catch (JSException jsException)
+            {
+                Log.Warning("JS Interop Exception thrown, {Message}", jsException.Message);
+            }
         }
     }
     

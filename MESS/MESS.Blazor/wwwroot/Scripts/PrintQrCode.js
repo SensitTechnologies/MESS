@@ -1,4 +1,4 @@
-export function printQRCode(value, index = null) {
+window.printQRCode = (dataUrl, label = null) => {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
@@ -19,10 +19,11 @@ export function printQRCode(value, index = null) {
                     height: 100vh;
                     font-family: sans-serif;
                 }
-                .qr-index {
-                    margin-top: 8px;
-                    font-size: 72px;
+                .qr-label {
+                    margin-top: 12px;
+                    font-size: 48px;
                     font-weight: bold;
+                    text-align: center;
                 }
                 @media print {
                     @page { margin: 0.5cm; }
@@ -30,8 +31,8 @@ export function printQRCode(value, index = null) {
             </style>
         </head>
         <body>
-            <img id="qr-img" src="${value}" alt="QR Code" />
-            ${index !== null ? `<div class="qr-index">#${index}</div>` : ''}
+            <img id="qr-img" src="${dataUrl}" alt="QR Code" />
+            ${label ? `<div class="qr-label">${label}</div>` : ''}
             <script>
                 const img = document.getElementById('qr-img');
                 img.onload = function () {
