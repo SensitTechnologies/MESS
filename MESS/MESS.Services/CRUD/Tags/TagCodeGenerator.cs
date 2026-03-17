@@ -1,3 +1,5 @@
+using MESS.Services.DTOs.Tags;
+
 namespace MESS.Services.CRUD.Tags;
 
 /// <summary>
@@ -7,41 +9,62 @@ namespace MESS.Services.CRUD.Tags;
 public static class TagCodeGenerator
 {
     /// <summary>
+    /// Generates a sequence of tag codes from a batch request.
+    /// </summary>
+    public static IEnumerable<string> Generate(TagBatchCreateRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return Generate(
+            request.Scheme,
+            request.Prefix,
+            request.Start,
+            request.Count,
+            request.Padding);
+    }
+
+    /// <summary>
     /// Generates a sequence of tag codes.
     /// </summary>
-    /// <param name="scheme">The numbering scheme used to generate tag codes.</param>
-    /// <param name="prefix">Optional prefix applied to each tag code (e.g., "TAG-").</param>
-    /// <param name="start">The starting index for generation. Zero-based.</param>
-    /// <param name="count">Number of tag codes to generate.</param>
-    /// <param name="padding">Optional numeric padding (for decimal scheme).</param>
-    public static IEnumerable<string> Generate(
+    private static IEnumerable<string> Generate(
         TagNumberingScheme scheme,
         string? prefix,
         int start,
         int count,
         int padding = 0)
     {
-        prefix ??= "";
+        if (count <= 0)
+            throw new ArgumentException("Count must be greater than zero.", nameof(count));
 
-        switch (scheme)
+        if (start < 0)
+            throw new ArgumentException("Start must be non-negative.", nameof(start));
+
+        if (padding < 0)
+            throw new ArgumentException("Padding must be non-negative.", nameof(padding));
+
+        prefix ??= string.Empty;
+
+        // Prevent overflow
+        checked
         {
-            case TagNumberingScheme.Decimal:
-                for (int i = start; i < start + count; i++)
-                    yield return prefix + i.ToString($"D{padding}");
-                break;
+            var end = start + count;
 
-            case TagNumberingScheme.Hexadecimal:
-                for (int i = start; i < start + count; i++)
-                    yield return prefix + i.ToString("X");
-                break;
+            for (var i = start; i < end; i++)
+            {
+                yield return scheme switch
+                {
+                    TagNumberingScheme.Decimal =>
+                        prefix + i.ToString($"D{padding}"),
 
-            case TagNumberingScheme.Alphanumeric:
-                for (int i = start; i < start + count; i++)
-                    yield return prefix + ToAlpha(i);
-                break;
+                    TagNumberingScheme.Hexadecimal =>
+                        prefix + i.ToString(padding > 0 ? $"X{padding}" : "X"),
 
-            default:
-                throw new ArgumentOutOfRangeException(nameof(scheme), scheme, null);
+                    TagNumberingScheme.Alphanumeric =>
+                        prefix + ToAlpha(i),
+
+                    _ => throw new ArgumentOutOfRangeException(nameof(scheme), scheme, null)
+                };
+            }
         }
     }
 
@@ -50,7 +73,10 @@ public static class TagCodeGenerator
     /// </summary>
     private static string ToAlpha(int number)
     {
-        string result = "";
+        if (number < 0)
+            throw new ArgumentException("Value must be non-negative.", nameof(number));
+
+        var result = string.Empty;
         number++;
 
         while (number > 0)
