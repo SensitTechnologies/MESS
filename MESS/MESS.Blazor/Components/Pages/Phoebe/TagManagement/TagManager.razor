@@ -1,0 +1,262 @@
+@page "/tags"
+@layout PhoebeLayout
+@attribute [Authorize(Roles = "Technician, Administrator")]
+@using MESS.Blazor.Components.Layout
+@using MESS.Data.Models
+@using MESS.Services.CRUD.Tags
+@using MESS.Services.DTOs.Tags
+@using Microsoft.AspNetCore.Authorization
+@inject ITagService TagService
+@inject IToastService ToastService
+
+<PageTitle>Tags</PageTitle>
+
+<h3>Reusable Tags</h3>
+
+<div class="card mb-3 p-3">
+    <div class="row g-2 align-items-end">
+
+        <!-- Prefix input -->
+        <div class="col-auto">
+            <label for="bulkPrefix" class="form-label">Prefix (optional)</label>
+            <input type="text" id="bulkPrefix" class="form-control" @bind="_bulkPrefix" />
+        </div>
+
+        <!-- Numbering scheme select -->
+        <div class="col-auto">
+            <label for="bulkScheme" class="form-label">Numbering Scheme</label>
+            <select id="bulkScheme" class="form-select" @onchange="BulkSchemeChanged">
+                <option value="Decimal">Decimal</option>
+                <option value="Hexadecimal">Hexadecimal</option>
+                <option value="Alphanumeric">Alphanumeric</option>
+            </select>
+        </div>
+
+        <!-- Count input -->
+        <div class="col-auto">
+            <label for="bulkCount" class="form-label">Count</label>
+            <input type="number" id="bulkCount" class="form-control" min="1" max="1000" @bind="_bulkCount" />
+        </div>
+
+        <!-- Bulk create button -->
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="HandleBulkCreateAsync" disabled="@(_isBulkSaving || _bulkCount <= 0)">
+                @if (_isBulkSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                }
+                Bulk Create
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between my-2" style="flex-direction: row">
+    <div class="flex-grow-1"/>
+    <input type="text" class="form-control w-auto" placeholder="Search..." @bind="SearchString" @bind:event="oninput" />
+</div>
+
+<MudTable @ref="_table"
+          T="TagDTO"
+          ServerData="ServerReload"
+          Loading="_isLoading"
+          FixedHeader="true"
+          Class="border rounded-3 pt-1"
+          TableClass="table table-striped table-hover align-top"
+          CellClass="align-top">
+
+    <HeaderContent>
+        <MudTh>
+            <MudTableSortLabel SortLabel="code" SortBy="new Func<TagDTO, object>(x => x.Code)">
+                <strong>Code</strong>
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh><strong>Status</strong></MudTh>
+        <MudTh><strong>Created</strong></MudTh>
+        <MudTh><strong>Part</strong></MudTh>
+        <MudTh><strong>Work Instruction</strong></MudTh>
+        <MudTh><strong>Actions</strong></MudTh>
+    </HeaderContent>
+
+    <RowTemplate Context="tag">
+        <TagTableRow 
+            Tag="tag"
+            OnSubmit="@HandleTagSubmitAsync"
+            OnDeleteRequested="@HandleDeleteTagAsync" />
+    </RowTemplate>
+
+    <NoRecordsContent>
+        <MudTr>
+            <MudTd Class="text-center text-muted" Style="width:100%" ColSpan="6">
+                No tags currently available.
+            </MudTd>
+        </MudTr>
+    </NoRecordsContent>
+
+    <FooterContent>
+        <TagTableRow
+            Tag="_newTag"
+            OnSubmit="@HandleTagSubmitAsync" />
+    </FooterContent>
+
+    <PagerContent>
+        <MudTablePager InfoFormat="@InfoFormat()" HorizontalAlignment="MudBlazor.HorizontalAlignment.Center" RowsPerPageString="Rows per Page" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private string _bulkPrefix = "";
+    private TagNumberingScheme _bulkScheme = TagNumberingScheme.Decimal;
+    private int _bulkCount = 10;
+    private bool _isBulkSaving;
+
+    private List<TagDTO> Tags { get; set; } = new();
+    private TagDTO _newTag = new() { Code = "" };
+    private MudTable<TagDTO> _table = new();
+    private bool _isLoading;
+    private int _totalItems;
+
+    private string _searchString = "";
+    private string SearchString
+    {
+        get => _searchString;
+        set
+        {
+            _searchString = value;
+            _table.ReloadServerData();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTagsAsync();
+    }
+
+    private async Task LoadTagsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            Tags = (await TagService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to load tags: {ex.Message}");
+            Tags = new List<TagDTO>();
+        }
+
+        _newTag = new TagDTO { Code = "" };
+        _isLoading = false;
+    }
+
+    private Task<TableData<TagDTO>> ServerReload(TableState state, CancellationToken token)
+    {
+        var data = Tags.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(SearchString))
+        {
+            data = data.Where(t => t.Code.Contains(SearchString, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _totalItems = data.Count();
+
+        data = state.SortLabel switch
+        {
+            "code" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(t => t.Code)
+                : data.OrderByDescending(t => t.Code),
+            _ => data
+        };
+
+        var paged = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
+        return Task.FromResult(new TableData<TagDTO> { TotalItems = _totalItems, Items = paged });
+    }
+
+    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_totalItems / _table.RowsPerPage) + 1}";
+
+    private async Task HandleTagSubmitAsync(TagDTO tag)
+    {
+        if (tag.Id == 0)
+        {
+            try
+            {
+                var request = new TagCreateRequest { Code = tag.Code };
+                var created = await TagService.CreateAsync(request);
+                ToastService.ShowSuccess($"Created tag '{created.Code}'.");
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Failed to create tag '{tag.Code}': {ex.Message}");
+            }
+        }
+
+        await LoadTagsAsync();
+        await _table.ReloadServerData();
+    }
+
+    private async Task HandleDeleteTagAsync(TagDTO tag)
+    {
+        if (tag is { HasBeenPrinted: false, Status: TagStatus.Available })
+        {
+            try
+            {
+                await TagService.DeleteAsync(tag.Id);
+                ToastService.ShowSuccess($"Deleted tag '{tag.Code}'.");
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Failed to delete tag '{tag.Code}': {ex.Message}");
+            }
+
+            await LoadTagsAsync();
+            await _table.ReloadServerData();
+        }
+        else
+        {
+            ToastService.ShowWarning($"Cannot delete tag '{tag.Code}' because it has been printed, assigned, or retired.");
+        }
+    }
+
+    private async Task HandleBulkCreateAsync()
+    {
+        if (_bulkCount <= 0) 
+        {
+            ToastService.ShowWarning("Please enter a valid number of tags to create.");
+            return;
+        }
+
+        _isBulkSaving = true;
+        try
+        {
+            var request = new TagBatchCreateRequest
+            {
+                Prefix = _bulkPrefix,
+                Scheme = _bulkScheme,
+                Count = _bulkCount
+            };
+
+            var createdTags = await TagService.BulkCreateAsync(request);
+            ToastService.ShowSuccess($"Created {createdTags.Count} tags successfully.");
+
+            await LoadTagsAsync();
+            await _table.ReloadServerData();
+
+            _bulkCount = 10;
+            _bulkPrefix = "";
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to create tags: {ex.Message}");
+        }
+        finally
+        {
+            _isBulkSaving = false;
+        }
+    }
+
+    private void BulkSchemeChanged(ChangeEventArgs e)
+    {
+        if (e.Value != null)
+            _bulkScheme = Enum.Parse<TagNumberingScheme>(e.Value.ToString() ?? string.Empty);
+    }
+}

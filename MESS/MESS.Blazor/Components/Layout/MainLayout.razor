@@ -88,7 +88,7 @@
         var relativeUri = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
 
         // Hide toggle button on the WorkInstructionManager page
-        ShowSidebarToggle = !relativeUri.Equals("WorkInstructionEditor", StringComparison.OrdinalIgnoreCase);
+        ShowSidebarToggle = !relativeUri.Equals("work-instruction-editor", StringComparison.OrdinalIgnoreCase);
 
         // Also hide dark mode toggle on WorkInstructionManager page
         ShowDarkModeToggle = ShowSidebarToggle;
