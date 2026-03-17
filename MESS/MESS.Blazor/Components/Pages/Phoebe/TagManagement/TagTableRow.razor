@@ -15,20 +15,46 @@
     }
 </MudTd>
 
-<MudTd DataLabel="Status">@Tag.StatusDisplay</MudTd>
-<MudTd DataLabel="Created">@Tag.CreatedAt.ToLocalTime().ToString("g")</MudTd>
-<MudTd DataLabel="Part">
-    @if (!string.IsNullOrWhiteSpace(Tag.PartName))
+<MudTd DataLabel="Status">
+    @if (!IsNewTag)
     {
-        <span>@Tag.PartName (@Tag.PartSerialNumber)</span>
-    }
-    else
-    {
-        <span class="text-muted">—</span>
+        <span>@Tag.StatusDisplay</span>
     }
 </MudTd>
+
+<MudTd DataLabel="Created">
+    @if (!IsNewTag)
+    {
+        <span>@Tag.CreatedAt.ToLocalTime().ToString("g")</span>
+    }
+</MudTd>
+
+<MudTd DataLabel="Part">
+    @if (!IsNewTag)
+    {
+        @if (!string.IsNullOrWhiteSpace(Tag.PartName))
+        {
+            <span>@Tag.PartName (@Tag.PartSerialNumber)</span>
+        }
+        else
+        {
+            <span class="text-muted">—</span>
+        }
+    }
+</MudTd>
+
 <MudTd DataLabel="Work Instruction">
-    @Tag.WorkInstructionTitle ?? "N/A"
+    @if (!IsNewTag)
+    {
+        @if (!string.IsNullOrWhiteSpace(Tag.WorkInstructionTitle))
+        {
+            <span>@Tag.WorkInstructionTitle</span>
+        }
+        else
+        {
+            <span class="text-muted">—</span>
+        }
+    }
 </MudTd>
 
 <MudTd DataLabel="Actions">
