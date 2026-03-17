@@ -826,8 +826,6 @@ public class WorkInstructionService : IWorkInstructionService
                     return false;
 
                 await _workInstructionUpdater.ApplyAsync(dto, existing, context);
-                
-                await _partNodeResolver.ResolvePendingNodesAsync(context, existing.Nodes);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
