@@ -11,14 +11,14 @@ public static class TagCodeGenerator
     /// <summary>
     /// Generates a sequence of tag codes from a batch request.
     /// </summary>
-    public static IEnumerable<string> Generate(TagBatchCreateRequest request)
+    public static IEnumerable<string> Generate(TagBatchCreateRequest request, int start)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         return Generate(
             request.Scheme,
             request.Prefix,
-            request.Start,
+            start,
             request.Count,
             request.Padding);
     }
@@ -60,7 +60,9 @@ public static class TagCodeGenerator
                         prefix + i.ToString(padding > 0 ? $"X{padding}" : "X"),
 
                     TagNumberingScheme.Alphanumeric =>
-                        prefix + ToAlpha(i),
+                        prefix + (padding > 0
+                            ? ToAlpha(i).PadLeft(padding, 'A')
+                            : ToAlpha(i)),
 
                     _ => throw new ArgumentOutOfRangeException(nameof(scheme), scheme, null)
                 };

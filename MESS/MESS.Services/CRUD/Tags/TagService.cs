@@ -89,14 +89,19 @@ public class TagService : ITagService
             throw new ArgumentException("Count must be greater than zero.", nameof(request));
 
         await using var context = await _contextFactory.CreateDbContextAsync();
+        
+        // Get existing codes from DB
+        var existingCodes = await context.Tags
+            .Select(t => t.Code)
+            .ToListAsync();
 
-        // Generate codes using your generator
-        var codes = TagCodeGenerator.Generate(request).ToList();
+        // Determine starting index
+        var startIndex = DetectNextIndex(existingCodes, request.Scheme, request.Prefix);
 
-        if (codes.Count != request.Count)
-            throw new InvalidOperationException("Generated code count does not match requested count.");
+        // Generate codes
+        var codes = TagCodeGenerator.Generate(request, startIndex).ToList();
 
-        // Check for duplicates within the batch itself
+        // Check for duplicates within batch
         var duplicateCodes = codes
             .GroupBy(c => c)
             .Where(g => g.Count() > 1)
@@ -106,15 +111,16 @@ public class TagService : ITagService
         if (duplicateCodes.Count != 0)
             throw new InvalidOperationException("Duplicate tag codes were generated in the batch.");
 
-        // Check for existing codes in database
-        var existingCodes = await context.Tags
-            .Where(t => codes.Contains(t.Code))
-            .Select(t => t.Code)
-            .ToListAsync();
+        // Check against existing (no DB hit)
+        var existingCodeSet = existingCodes.ToHashSet();
 
-        if (existingCodes.Any())
+        var conflictingCodes = codes
+            .Where(c => existingCodeSet.Contains(c))
+            .ToList();
+
+        if (conflictingCodes.Any())
             throw new InvalidOperationException(
-                $"The following tag codes already exist: {string.Join(", ", existingCodes)}");
+                $"The following tag codes already exist: {string.Join(", ", conflictingCodes)}");
 
         var now = DateTimeOffset.UtcNow;
 
@@ -633,5 +639,59 @@ public class TagService : ITagService
 
         // Commit changes
         await context.SaveChangesAsync();
+    }
+    
+    private int DetectNextIndex(
+        List<string> codes,
+        TagNumberingScheme scheme,
+        string? prefix)
+    {
+        IEnumerable<string> working = codes;
+
+        if (!string.IsNullOrWhiteSpace(prefix))
+        {
+            working = working
+                .Where(c => c.StartsWith(prefix))
+                .Select(c => c.Substring(prefix.Length));
+        }
+
+        return scheme switch
+        {
+            TagNumberingScheme.Decimal =>
+                working.Select(c => int.TryParse(c, out var x) ? x : -1)
+                    .DefaultIfEmpty(-1)
+                    .Max() + 1,
+
+            TagNumberingScheme.Hexadecimal =>
+                working.Select(c => int.TryParse(c, System.Globalization.NumberStyles.HexNumber, null, out var x) ? x : -1)
+                    .DefaultIfEmpty(-1)
+                    .Max() + 1,
+
+            TagNumberingScheme.Alphanumeric =>
+                working.Select(TryFromAlphaSafe)
+                    .DefaultIfEmpty(-1)
+                    .Max() + 1,
+
+            _ => 0
+        };
+    }
+    
+    private static int TryFromAlphaSafe(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return -1;
+
+        int result = 0;
+
+        foreach (var c in value.ToUpperInvariant())
+        {
+            if (c < 'A' || c > 'Z')
+                return -1;
+
+            result *= 26;
+            result += (c - 'A' + 1);
+        }
+
+        return result - 1;
     }
 }

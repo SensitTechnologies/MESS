@@ -21,12 +21,6 @@ public class TagBatchCreateRequest
     public string? Prefix { get; set; }
 
     /// <summary>
-    /// The starting index for tag generation.
-    /// This value is zero-based and determines the first generated tag in the sequence.
-    /// </summary>
-    public int Start { get; set; }
-
-    /// <summary>
     /// The total number of tags to generate.
     /// </summary>
     public int Count { get; set; }
