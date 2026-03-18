@@ -46,8 +46,14 @@
                 {
                     <span class="spinner-border spinner-border-sm me-1"></span>
                 }
-                Create
+                <i class="bi bi-plus-circle me-1"></i> Create
             </button>
+        </div>
+        
+        <div class="col-auto ms-auto">
+            <a class="btn btn-danger" href="/tags/unassign">
+                <i class="bi bi-dash-circle"></i> Unassign Tags for Reuse
+            </a>
         </div>
     </div>
 
@@ -75,7 +81,7 @@
                 {
                     <span class="spinner-border spinner-border-sm me-1"></span>
                 }
-                Print
+                <i class="bi bi-printer me-1"></i> Print
             </button>
         </div>
 
@@ -83,7 +89,8 @@
         <div class="col-auto ms-auto">
             <button class="btn btn-outline-secondary"
                     @onclick="ToggleNonPrinted">
-                @(_showOnlyNonPrinted ? "Showing Non-Printed" : "Show Non-Printed")
+                <i class="bi @( _showOnlyNonPrinted ? "bi-eye" : "bi-eye-slash") me-1"></i>
+                @(_showOnlyNonPrinted ? "Show All" : "Hide Printed")
             </button>
         </div>
     </div>
