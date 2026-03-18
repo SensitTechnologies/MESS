@@ -14,6 +14,7 @@ using MESS.Services.UI.SessionManager;
 using MESS.Services.UI.LocalCacheManager;
 using MESS.Services.UI.PartTraceability;
 using MESS.Services.UI.ProductionLogEvent;
+using MESS.Services.UI.QrCodes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
@@ -45,6 +46,7 @@ public class ProductionLogCreationTests : BunitContext
     private readonly Mock<IJSRuntime> _jsRuntimeMock;
     private readonly Mock<IJSObjectReference> _jsModuleMock;
     private readonly Mock<IToastService> _toastServiceMock;
+    private readonly Mock<IQrCodeService> _qrCodeServiceMock;
     
 
     public ProductionLogCreationTests(ITestOutputHelper testOutputHelper)
@@ -64,6 +66,7 @@ public class ProductionLogCreationTests : BunitContext
         _jsRuntimeMock = new Mock<IJSRuntime>();
         _jsModuleMock = new Mock<IJSObjectReference>();
         _toastServiceMock = new Mock<IToastService>();
+        _qrCodeServiceMock = new Mock<IQrCodeService>();
             
         Services.AddSingleton(_productionLogServiceMock.Object);
         Services.AddSingleton(_partTraceabilityServiceMock.Object);
@@ -78,6 +81,7 @@ public class ProductionLogCreationTests : BunitContext
         Services.AddSingleton(_sessionManagerMock.Object);
         Services.AddSingleton(_jsRuntimeMock.Object);
         Services.AddSingleton(_toastServiceMock.Object);
+        Services.AddSingleton(_qrCodeServiceMock.Object);
             
         _jsRuntimeMock.Setup(js => js.InvokeAsync<IJSObjectReference>(
             "import", It.IsAny<object[]>())).ReturnsAsync(_jsModuleMock.Object);
