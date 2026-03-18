@@ -119,19 +119,29 @@
         switch (updatedValue)
         {
             case SerializablePart part:
+                // Directly assigned serializable part (from SerialNumber input)
                 PartTraceabilityService.SetSerializablePart(logIndex, partNode, part);
                 break;
 
             case int productionLogId:
+                // Lookup by production log ID
                 var producedPart = await SerializablePartService.GetProducedForProductionLogAsync(productionLogId);
                 if (producedPart != null)
                 {
                     PartTraceabilityService.SetSerializablePart(logIndex, partNode, producedPart);
                 }
                 break;
+
+            case string tagCode when !string.IsNullOrWhiteSpace(tagCode):
+                // Lookup by tag code
+                var taggedPart = await SerializablePartService.GetByTagCodeAsync(tagCode);
+                if (taggedPart != null)
+                {
+                    PartTraceabilityService.SetSerializablePart(logIndex, partNode, taggedPart);
+                }
+                break;
         }
     }
-
     
     /// <summary>
     /// Increments the selected log number when multiple production logs are present.

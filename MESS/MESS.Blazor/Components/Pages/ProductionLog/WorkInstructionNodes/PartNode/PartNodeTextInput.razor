@@ -27,6 +27,18 @@
                 @(PartNode.PartDefinition!.Name)
             </label>
             break;
+            
+        case PartInputType.Tag:
+            <InputText
+                id="tagInput"
+                class="form-control tall-input text-lightweight"
+                placeholder="Enter tag code"
+                @bind-Value="_tagCode"
+                @bind-Value:after="OnInputChanged" />
+            <label for="tagInput" class="form-label subtle-label">
+                Tag Code
+            </label>
+            break;
         default:
             throw new ArgumentOutOfRangeException();
     }
@@ -49,6 +61,7 @@
     public EventCallback<(PartNode node, object? value)> AfterInputChanged { get; set; }
 
     private string? _serialNumber;
+    private string? _tagCode;
     private int? _productionLogId;
 
     /// <summary>
@@ -84,6 +97,7 @@
         {
             PartInputType.SerialNumber => UpdateSerialNumber(),
             PartInputType.ProductionLogId => _productionLogId,
+            PartInputType.Tag => _tagCode,
             _ => throw new InvalidOperationException("Unknown PartNode input type.")
         };
 

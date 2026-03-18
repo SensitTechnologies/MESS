@@ -1,4 +1,5 @@
 using MESS.Data.Models;
+using MESS.Services.CRUD.Tags;
 using MESS.Services.DTOs;
 
 namespace MESS.Services.CRUD.SerializableParts;
@@ -157,4 +158,24 @@ public interface ISerializablePartService
     /// <see cref="SerializablePart"/> exists; otherwise, <c>false</c>.
     /// </returns>
     Task<bool> ExistsAsync(int partDefinitionId, string serialNumber);
+
+    /// <summary>
+    /// Retrieves the <see cref="SerializablePart"/> assigned to a tag identified by its code.
+    /// </summary>
+    /// <param name="tagCode">
+    /// The unique human-readable code of the tag.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains:
+    /// <list type="bullet">
+    /// <item>The <see cref="SerializablePart"/> assigned to the tag, including its <see cref="PartDefinition"/>.</item>
+    /// <item><c>null</c> if the tag does not exist or has no part assigned.</item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method resolves the tag code via <see cref="ITagService"/> and then retrieves the
+    /// associated <see cref="SerializablePart"/> using the database context.  
+    /// The returned entity is detached from tracking.
+    /// </remarks>
+    public Task<SerializablePart?> GetByTagCodeAsync(string tagCode);
 }

@@ -1,5 +1,6 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.CRUD.Tags;
 using MESS.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -12,6 +13,7 @@ namespace MESS.Services.CRUD.SerializableParts;
 public class SerializablePartService : ISerializablePartService
 {
     private readonly IDbContextFactory<ApplicationContext> _contextFactory;
+    private readonly ITagService _tagService;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="SerializablePartService"/> class.
@@ -20,9 +22,13 @@ public class SerializablePartService : ISerializablePartService
     /// The <see cref="IDbContextFactory{TContext}"/> used to create instances of the <see cref="ApplicationContext"/>.
     /// This factory provides scoped database contexts for performing CRUD operations on <see cref="SerializablePart"/> entities.
     /// </param>
-    public SerializablePartService(IDbContextFactory<ApplicationContext> contextFactory)
+    /// <param name ="tagService">
+    /// The <see cref="ITagService"/> used to resolve tags when retrieving <see cref="SerializablePart"/> entities by tag code.
+    /// </param>
+    public SerializablePartService(IDbContextFactory<ApplicationContext> contextFactory, ITagService tagService)
     {
         _contextFactory = contextFactory;
+        _tagService = tagService;
     }
     
     /// <summary>
@@ -431,6 +437,57 @@ public class SerializablePartService : ISerializablePartService
             Log.Error(ex, "Error checking existence of SerializablePart with PartDefinitionId {PartDefinitionId} and SerialNumber {SerialNumber}.",
                 partDefinitionId, serialNumber);
             return false;
+        }
+    }
+    
+    /// <inheritdoc/>
+    public async Task<SerializablePart?> GetByTagCodeAsync(string tagCode)
+    {
+        if (string.IsNullOrWhiteSpace(tagCode))
+        {
+            Log.Warning("GetByTagCodeAsync called with null or empty tag code.");
+            return null;
+        }
+
+        try
+        {
+            // Resolve the tag
+            var tag = await _tagService.GetByCodeAsync(tagCode);
+            if (tag == null)
+            {
+                Log.Information("No tag found with code {TagCode}.", tagCode);
+                return null;
+            }
+
+            if (tag.SerializablePartId == null)
+            {
+                Log.Information("Tag {TagCode} exists but has no assigned SerializablePart.", tagCode);
+                return null;
+            }
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Load the SerializablePart with PartDefinition included
+            var part = await context.SerializableParts
+                .AsNoTracking()
+                .Include(sp => sp.PartDefinition)
+                .FirstOrDefaultAsync(sp => sp.Id == tag.SerializablePartId);
+
+            if (part == null)
+            {
+                Log.Warning("SerializablePart with ID {SerializablePartId} referenced by tag {TagCode} was not found.", tag.SerializablePartId, tagCode);
+            }
+            else
+            {
+                Log.Information("Retrieved SerializablePart ID {SerializablePartId} for tag {TagCode}.", part.Id, tagCode);
+            }
+
+            return part;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving SerializablePart for tag code {TagCode}.", tagCode);
+            return null;
         }
     }
 }
