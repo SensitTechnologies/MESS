@@ -5,9 +5,11 @@
 @using MESS.Data.Models
 @using MESS.Services.CRUD.Tags
 @using MESS.Services.DTOs.Tags
+@using MESS.Services.UI.QrCodes
 @using Microsoft.AspNetCore.Authorization
 @inject ITagService TagService
 @inject IToastService ToastService
+@inject IQrCodeService QrCodeService
 
 <PageTitle>Tags</PageTitle>
 
@@ -90,12 +92,23 @@
 
             <HeaderContent>
                 <MudTh>
-                    <MudTableSortLabel SortLabel="code" SortBy="new Func<TagDTO, object>(x => x.Code)">
+                    <MudTableSortLabel T="TagDTO" SortLabel="code" SortBy="x => x.Code">
                         <strong>Code</strong>
                     </MudTableSortLabel>
                 </MudTh>
-                <MudTh><strong>Status</strong></MudTh>
-                <MudTh><strong>Created</strong></MudTh>
+
+                <MudTh>
+                    <MudTableSortLabel T="TagDTO" SortLabel="status" SortBy="x => x.Status">
+                        <strong>Status</strong>
+                    </MudTableSortLabel>
+                </MudTh>
+
+                <MudTh>
+                    <MudTableSortLabel T="TagDTO" SortLabel="created" SortBy="x => x.CreatedAt">
+                        <strong>Created</strong>
+                    </MudTableSortLabel>
+                </MudTh>
+
                 <MudTh><strong>Part</strong></MudTh>
                 <MudTh><strong>Work Instruction</strong></MudTh>
                 <MudTh><strong>Actions</strong></MudTh>
@@ -105,7 +118,9 @@
                 <TagTableRow 
                     Tag="tag"
                     OnSubmit="@HandleTagSubmitAsync"
-                    OnDeleteRequested="@HandleDeleteTagAsync" />
+                    OnDeleteRequested="@HandleDeleteTagAsync"
+                    OnPrintRequested="@HandlePrintTagAsync"
+                    OnRetireRequested="@HandleRetireTagAsync" />
             </RowTemplate>
 
             <NoRecordsContent>
@@ -171,6 +186,8 @@
 
         _newTag = new TagDTO { Code = "" };
         _isLoading = false;
+
+        await InvokeAsync(() => _table.ReloadServerData());
     }
 
     private Task<TableData<TagDTO>> ServerReload(TableState state, CancellationToken token)
@@ -195,6 +212,15 @@
             "code" => state.SortDirection == MudBlazor.SortDirection.Ascending
                 ? data.OrderBy(t => t.Code)
                 : data.OrderByDescending(t => t.Code),
+
+            "status" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(t => t.Status)
+                : data.OrderByDescending(t => t.Status),
+
+            "created" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(t => t.CreatedAt)
+                : data.OrderByDescending(t => t.CreatedAt),
+                
             _ => data
         };
 
@@ -239,7 +265,6 @@
             }
 
             await LoadTagsAsync();
-            await _table.ReloadServerData();
         }
         else
         {
@@ -269,7 +294,6 @@
             ToastService.ShowSuccess($"Created {createdTags.Count} tags successfully.");
 
             await LoadTagsAsync();
-            await _table.ReloadServerData();
 
             _bulkCount = 10;
             _bulkPrefix = "";
@@ -294,5 +318,57 @@
     {
         _showOnlyNonPrinted = !_showOnlyNonPrinted;
         _table.ReloadServerData();
+    }
+    
+    private async Task HandlePrintTagAsync(TagDTO tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag.Code))
+        {
+            ToastService.ShowWarning("Tag code is empty.");
+            return;
+        }
+
+        try
+        {
+            // 1. Print first
+            try
+            {
+                await QrCodeService.PrintAsync(tag.Code, tag.Code);
+            }
+            catch
+            {
+                ToastService.ShowError("Printer failed. Tag was NOT marked as printed.");
+                return;
+            }
+
+
+            // 2. Mark as printed in DB
+            var updatedTag = await TagService.MarkPrintedAsync(tag.Id);
+
+            // 3. Update UI state
+            await LoadTagsAsync();
+
+            ToastService.ShowSuccess($"Printed tag '{tag.Code}'.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to print tag '{tag.Code}': {ex.Message}");
+        }
+    }
+    
+    private async Task HandleRetireTagAsync(TagDTO tag)
+    {
+        try
+        {
+            await TagService.RetireAsync(tag.Id);
+
+            await LoadTagsAsync();
+
+            ToastService.ShowSuccess($"Retired tag '{tag.Code}'.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to retire tag '{tag.Code}': {ex.Message}");
+        }
     }
 }

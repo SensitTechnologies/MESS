@@ -18,7 +18,9 @@
 <MudTd DataLabel="Status">
     @if (!IsNewTag)
     {
-        <span>@Tag.StatusDisplay</span>
+        <span class="badge @GetStatusBadgeClass(Tag.Status)">
+            @Tag.StatusDisplay
+        </span>
     }
 </MudTd>
 
@@ -69,18 +71,40 @@
     }
     else
     {
-        <button class="btn btn-sm btn-danger ms-2"
-                @onclick="HandleDelete"
-                disabled="@(!CanDelete || _isDeleting)"
-                title="@(!CanDelete 
-                           ? "Cannot delete a tag that has been printed, assigned, or retired"
-                           : "Delete tag")">
-            <i class="bi bi-trash"></i>
-            @if (_isDeleting)
-            {
-                <span class="spinner-border spinner-border-sm ms-1" role="status"></span>
-            }
-        </button>
+        <!-- PRINT (only before printed) -->
+        @if (!Tag.HasBeenPrinted)
+        {
+            <button class="btn btn-sm btn-outline-secondary"
+                    @onclick="HandlePrint"
+                    title="Print tag">
+                <i class="bi bi-printer"></i>
+            </button>
+        }
+
+        <!-- DELETE (only before printed & available) -->
+        @if (CanDelete)
+        {
+            <button class="btn btn-sm btn-danger ms-2"
+                    @onclick="HandleDelete"
+                    disabled="@_isDeleting"
+                    title="Delete tag">
+                <i class="bi bi-trash"></i>
+                @if (_isDeleting)
+                {
+                    <span class="spinner-border spinner-border-sm ms-1"></span>
+                }
+            </button>
+        }
+
+        <!-- RETIRE (only after printed) -->
+        @if (CanRetire)
+        {
+            <button class="btn btn-sm btn-danger ms-2"
+                    @onclick="HandleRetire"
+                    title="Retire tag">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        }
     }
 </MudTd>
 
@@ -92,7 +116,13 @@
     public EventCallback<TagDTO> OnSubmit { get; set; }
 
     [Parameter]
+    public EventCallback<TagDTO> OnPrintRequested { get; set; }
+    
+    [Parameter]
     public EventCallback<TagDTO> OnDeleteRequested { get; set; }
+    
+    [Parameter]
+    public EventCallback<TagDTO> OnRetireRequested { get; set; }
 
     private bool IsNewTag => Tag.Id == 0;
     private bool _isSaving;
@@ -103,6 +133,11 @@
     private bool CanDelete =>
         !IsNewTag &&
         Tag is { Status: TagStatus.Available, HasBeenPrinted: false };
+    
+    private bool CanRetire =>
+        !IsNewTag &&
+        Tag.HasBeenPrinted &&
+        Tag.Status != TagStatus.Retired;
 
     private async Task HandleSubmit()
     {
@@ -118,6 +153,14 @@
             _isSaving = false;
         }
     }
+    
+    private async Task HandlePrint()
+    {
+        if (string.IsNullOrWhiteSpace(Tag.Code))
+            return;
+
+        await OnPrintRequested.InvokeAsync(Tag);
+    }
 
     private async Task HandleDelete()
     {
@@ -132,5 +175,23 @@
         {
             _isDeleting = false;
         }
+    }
+    
+    private async Task HandleRetire()
+    {
+        if (!CanRetire) return;
+
+        await OnRetireRequested.InvokeAsync(Tag);
+    }
+    
+    private string GetStatusBadgeClass(TagStatus status)
+    {
+        return status switch
+        {
+            TagStatus.Available => "bg-success",   // Green
+            TagStatus.Assigned  => "bg-primary",   // Blue
+            TagStatus.Retired   => "bg-secondary", // Gray
+            _ => "bg-light text-dark"
+        };
     }
 }
