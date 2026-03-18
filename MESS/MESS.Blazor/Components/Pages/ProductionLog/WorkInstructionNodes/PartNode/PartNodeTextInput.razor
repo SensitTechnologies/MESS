@@ -35,6 +35,30 @@
         default:
             throw new ArgumentOutOfRangeException();
     }
+    
+    @if (_isSearching)
+    {
+        <div class="form-text text-muted small">
+            Searching...
+        </div>
+    }
+    
+    @if (SerializablePart?.PartDefinition?.Name is not null)
+    {
+        <div class="form-text text-success small">
+            Found @SerializablePart.PartDefinition.Name!
+        </div>
+    }
+    
+    @if (PartNode.InputType == PartInputType.Tag && !string.IsNullOrWhiteSpace(_tagCode))
+    {
+        if (SerializablePart is null)
+        {
+            <div class="form-text text-danger small">
+                No part found
+            </div>
+        }
+    }
 </div>
 
 @code {
@@ -55,6 +79,10 @@
 
     private string? _serialNumber;
     private string? _tagCode;
+    
+    private CancellationTokenSource? _debounceCts;
+    
+    private bool _isSearching;
 
     /// <summary>
     /// Synchronizes the component's internal input fields with the latest parameter values.
@@ -85,6 +113,18 @@
 
     private async Task OnInputChanged()
     {
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, _debounceCts.Token); // 300ms debounce
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
         object? updatedValue = PartNode.InputType switch
         {
             PartInputType.SerialNumber => UpdateSerialNumber(),
@@ -93,9 +133,17 @@
         };
 
         if (AfterInputChanged.HasDelegate)
-            await AfterInputChanged.InvokeAsync((PartNode, updatedValue));
-    }
+        {
+            _isSearching = true;
+            StateHasChanged();
 
+            await AfterInputChanged.InvokeAsync((PartNode, updatedValue));
+
+            _isSearching = false;
+            StateHasChanged();
+        }
+    }
+    
     private string? UpdateSerialNumber()
     {
         if (SerializablePart is null)

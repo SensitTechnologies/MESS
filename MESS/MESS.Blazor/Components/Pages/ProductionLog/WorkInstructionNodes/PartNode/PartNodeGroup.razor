@@ -129,6 +129,7 @@
                 if (taggedPart != null)
                 {
                     PartTraceabilityService.SetSerializablePart(logIndex, partNode, taggedPart);
+                    await InvokeAsync(StateHasChanged);
                 }
                 break;
         }
