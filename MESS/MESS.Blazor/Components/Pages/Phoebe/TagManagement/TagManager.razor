@@ -16,49 +16,78 @@
 <h3>Reusable Tags</h3>
 
 <div class="card mb-3 p-3">
-    <div class="row g-2 align-items-end">
 
-        <!-- Prefix input -->
+    <!-- BULK CREATE -->
+    <div class="row g-3 align-items-end mb-2">
         <div class="col-auto">
-            <label for="bulkPrefix" class="form-label">Prefix (optional)</label>
-            <input type="text" id="bulkPrefix" class="form-control" @bind="_bulkPrefix" />
+            <label class="form-label">Prefix</label>
+            <input type="text" class="form-control" @bind="_bulkPrefix" />
         </div>
 
-        <!-- Numbering scheme select -->
         <div class="col-auto">
-            <label for="bulkScheme" class="form-label">Numbering Scheme</label>
-            <select id="bulkScheme" class="form-select" @onchange="BulkSchemeChanged">
+            <label class="form-label">Numbering</label>
+            <select class="form-select" @onchange="BulkSchemeChanged">
                 <option value="Decimal">Decimal</option>
                 <option value="Hexadecimal">Hexadecimal</option>
                 <option value="Alphanumeric">Alphanumeric</option>
             </select>
         </div>
 
-        <!-- Count input -->
         <div class="col-auto">
-            <label for="bulkCount" class="form-label">Count</label>
-            <input type="number" id="bulkCount" class="form-control" min="1" max="1000" @bind="_bulkCount" />
+            <label class="form-label">Count</label>
+            <input type="number" class="form-control" min="1" max="1000" @bind="_bulkCount" />
         </div>
 
-        <!-- Bulk create button -->
         <div class="col-auto">
-            <button class="btn btn-primary" @onclick="HandleBulkCreateAsync" disabled="@(_isBulkSaving || _bulkCount <= 0)">
+            <button class="btn btn-primary"
+                    @onclick="HandleBulkCreateAsync"
+                    disabled="@(_isBulkSaving || _bulkCount <= 0)">
                 @if (_isBulkSaving)
                 {
-                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <span class="spinner-border spinner-border-sm me-1"></span>
                 }
-                Bulk Create
-            </button>
-        </div>
-        
-        <!-- Show only non-printed toggle -->
-        <div class="col-auto ms-auto">
-            <button class="btn btn-outline-secondary"
-                    @onclick="ToggleNonPrinted">
-                @(_showOnlyNonPrinted ? "Showing Non-Printed" : "Show Only Non-Printed")
+                Create
             </button>
         </div>
     </div>
+
+    <hr class="my-2" />
+
+    <!-- BULK PRINT + FILTER -->
+    <div class="row g-3 align-items-end">
+
+        <div class="col-auto">
+            <label class="form-label">Print Count</label>
+            <input type="number"
+                   class="form-control"
+                   min="1"
+                   @bind="_bulkPrintCount" />
+            <div class="form-text">
+                @GetAvailablePrintCount() available
+            </div>
+        </div>
+
+        <div class="col-auto">
+            <button class="btn btn-success"
+                    @onclick="HandleBulkPrintAsync"
+                    disabled="@(_isBulkPrinting || _bulkPrintCount <= 0)">
+                @if (_isBulkPrinting)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Print
+            </button>
+        </div>
+
+        <!-- Push toggle to far right -->
+        <div class="col-auto ms-auto">
+            <button class="btn btn-outline-secondary"
+                    @onclick="ToggleNonPrinted">
+                @(_showOnlyNonPrinted ? "Showing Non-Printed" : "Show Non-Printed")
+            </button>
+        </div>
+    </div>
+
 </div>
 
 <div class="d-flex justify-content-between my-2" style="flex-direction: row">
@@ -148,6 +177,14 @@
     private int _bulkCount = 10;
     private bool _isBulkSaving;
     private bool _showOnlyNonPrinted = false;
+    
+    private int _bulkPrintCount = 1;
+    private bool _isBulkPrinting;
+    
+    private int GetAvailablePrintCount()
+    {
+        return Tags.Count(t => t is { HasBeenPrinted: false, Status: TagStatus.Available });
+    }
 
     private List<TagDTO> Tags { get; set; } = new();
     private TagDTO _newTag = new() { Code = "" };
@@ -353,6 +390,71 @@
         catch (Exception ex)
         {
             ToastService.ShowError($"Failed to print tag '{tag.Code}': {ex.Message}");
+        }
+    }
+    
+    private async Task HandleBulkPrintAsync()
+    {
+        if (_bulkPrintCount <= 0)
+        {
+            ToastService.ShowWarning("Enter a valid number of tags to print.");
+            return;
+        }
+
+        _isBulkPrinting = true;
+
+        try
+        {
+            // Get printable tags
+            var printableTags = Tags
+                .Where(t => !t.HasBeenPrinted && t.Status == TagStatus.Available)
+                .OrderBy(t => t.CreatedAt) // deterministic order
+                .ToList();
+
+            var availableCount = printableTags.Count;
+
+            if (availableCount == 0)
+            {
+                ToastService.ShowWarning("No tags available to print.");
+                return;
+            }
+
+            if (_bulkPrintCount > availableCount)
+            {
+                ToastService.ShowWarning(
+                    $"Only {availableCount} tags available to print, but {_bulkPrintCount} requested.");
+                return;
+            }
+
+            var tagsToPrint = printableTags.Take(_bulkPrintCount).ToList();
+
+            var successCount = 0;
+
+            foreach (var tag in tagsToPrint)
+            {
+                try
+                {
+                    await HandlePrintTagAsync(tag);
+                    successCount++;
+                }
+                catch
+                {
+                    // Individual failures already handled in HandlePrintTagAsync
+                    break;
+                }
+            }
+
+            ToastService.ShowSuccess($"Printed {successCount} tag(s).");
+
+            await LoadTagsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Bulk print failed: {ex.Message}");
+        }
+        finally
+        {
+            _isBulkPrinting = false;
         }
     }
     
