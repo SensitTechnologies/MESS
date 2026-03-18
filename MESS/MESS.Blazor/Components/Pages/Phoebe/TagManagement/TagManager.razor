@@ -65,62 +65,67 @@
 </div>
 
 <div class="position-relative">
-
     @if (_isLoading)
     {
-        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-             style="background-color: rgba(255,255,255,0.6); z-index: 10;">
-            <div class="spinner-border text-primary" role="status"></div>
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary"></div>
         </div>
     }
+    else if (Tags.Count == 0)
+    {
+        <div class="text-center text-muted py-3">
+            No tags currently available.
+        </div>
+    }
+    else
+    {
+        <MudTable @ref="_table"
+                  T="TagDTO"
+                  ServerData="ServerReload"
+                  Loading="_isLoading"
+                  FixedHeader="true"
+                  Class="border rounded-3 pt-1"
+                  TableClass="table table-striped table-hover align-top"
+                  CellClass="align-top">
 
-    <MudTable @ref="_table"
-              T="TagDTO"
-              ServerData="ServerReload"
-              Loading="_isLoading"
-              FixedHeader="true"
-              Class="border rounded-3 pt-1"
-              TableClass="table table-striped table-hover align-top"
-              CellClass="align-top">
+            <HeaderContent>
+                <MudTh>
+                    <MudTableSortLabel SortLabel="code" SortBy="new Func<TagDTO, object>(x => x.Code)">
+                        <strong>Code</strong>
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh><strong>Status</strong></MudTh>
+                <MudTh><strong>Created</strong></MudTh>
+                <MudTh><strong>Part</strong></MudTh>
+                <MudTh><strong>Work Instruction</strong></MudTh>
+                <MudTh><strong>Actions</strong></MudTh>
+            </HeaderContent>
 
-        <HeaderContent>
-            <MudTh>
-                <MudTableSortLabel SortLabel="code" SortBy="new Func<TagDTO, object>(x => x.Code)">
-                    <strong>Code</strong>
-                </MudTableSortLabel>
-            </MudTh>
-            <MudTh><strong>Status</strong></MudTh>
-            <MudTh><strong>Created</strong></MudTh>
-            <MudTh><strong>Part</strong></MudTh>
-            <MudTh><strong>Work Instruction</strong></MudTh>
-            <MudTh><strong>Actions</strong></MudTh>
-        </HeaderContent>
+            <RowTemplate Context="tag">
+                <TagTableRow 
+                    Tag="tag"
+                    OnSubmit="@HandleTagSubmitAsync"
+                    OnDeleteRequested="@HandleDeleteTagAsync" />
+            </RowTemplate>
 
-        <RowTemplate Context="tag">
-            <TagTableRow 
-                Tag="tag"
-                OnSubmit="@HandleTagSubmitAsync"
-                OnDeleteRequested="@HandleDeleteTagAsync" />
-        </RowTemplate>
+            <NoRecordsContent>
+                <div class="text-center text-muted py-3 w-100">
+                    No tags currently available.
+                </div>
+            </NoRecordsContent>
 
-        <NoRecordsContent>
-            <div class="text-center text-muted py-3 w-100">
-                No tags currently available.
-            </div>
-        </NoRecordsContent>
+            <FooterContent>
+                <TagTableRow
+                    Tag="_newTag"
+                    OnSubmit="@HandleTagSubmitAsync" />
+            </FooterContent>
 
-        <FooterContent>
-            <TagTableRow
-                Tag="_newTag"
-                OnSubmit="@HandleTagSubmitAsync" />
-        </FooterContent>
-
-        <PagerContent>
-            <MudTablePager InfoFormat="@InfoFormat()" HorizontalAlignment="MudBlazor.HorizontalAlignment.Center" RowsPerPageString="Rows per Page" />
-        </PagerContent>
-    </MudTable>
+            <PagerContent>
+                <MudTablePager InfoFormat="@InfoFormat()" HorizontalAlignment="MudBlazor.HorizontalAlignment.Center" RowsPerPageString="Rows per Page" />
+            </PagerContent>
+        </MudTable>
+    }
 </div>
-
 
 @code {
     private string _bulkPrefix = "";
@@ -149,16 +154,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadTagsAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if ((firstRender || (!Tags.Any() && !_isLoading)))
-        {
-            await LoadTagsAsync();
-            await _table.ReloadServerData();
-            await InvokeAsync(StateHasChanged);
-        }
     }
     
     private async Task LoadTagsAsync()
