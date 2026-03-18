@@ -15,13 +15,6 @@
                 @(PartNode.PartDefinition!.Name)
             </label>
             break;
-        case PartInputType.ProductionLogId:
-            <InputNumber TValue="int?" 
-                         id="logInput"
-                         class="form-control tall-input text-lightweight"
-                         placeholder="@PartNode.PartDefinition!.Number"
-                         @bind-Value="_productionLogId"
-                         @bind-Value:after="OnInputChanged" />
 
             <label for="logInput" class="form-label subtle-label">
                 @(PartNode.PartDefinition!.Name)
@@ -62,14 +55,13 @@
 
     private string? _serialNumber;
     private string? _tagCode;
-    private int? _productionLogId;
 
     /// <summary>
     /// Synchronizes the component's internal input fields with the latest parameter values.
     /// <para>
     /// If the <see cref="PartNode"/> requires a serial number, this method initializes the
     /// backing field (<c>_serialNumber</c>) from the provided <see cref="SerializablePart"/>.
-    /// For <see cref="PartInputType.ProductionLogId"/>, no initial value is populated and the
+    /// For <see cref="PartInputType.Tag"/>, no initial value is populated and the
     /// input starts empty.
     /// </para>
     /// <remarks>
@@ -96,7 +88,6 @@
         object? updatedValue = PartNode.InputType switch
         {
             PartInputType.SerialNumber => UpdateSerialNumber(),
-            PartInputType.ProductionLogId => _productionLogId,
             PartInputType.Tag => _tagCode,
             _ => throw new InvalidOperationException("Unknown PartNode input type.")
         };

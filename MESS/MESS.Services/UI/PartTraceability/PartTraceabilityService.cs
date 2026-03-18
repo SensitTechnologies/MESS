@@ -89,10 +89,6 @@ public class PartTraceabilityService : IPartTraceabilityService
     }
 
     /// <inheritdoc />
-    public void SetLinkedProductionLog(int logIndex, PartNode node, ProductionLog log)
-        => GetOrCreateGroup(logIndex).SetLinkedProductionLog(node, log);
-
-    /// <inheritdoc />
     public void ClearEntry(int logIndex, PartNode node)
     {
         if (_entryGroups.TryGetValue(logIndex, out var group))
@@ -431,9 +427,6 @@ public class PartTraceabilityService : IPartTraceabilityService
 
             if (inputType == PartInputType.SerialNumber &&
                 (part == null || string.IsNullOrWhiteSpace(part.SerialNumber)))
-                continue;
-
-            if (inputType == PartInputType.ProductionLogId && part == null)
                 continue;
 
             if (part != null)

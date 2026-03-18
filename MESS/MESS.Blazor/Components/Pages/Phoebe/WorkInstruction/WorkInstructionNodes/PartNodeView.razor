@@ -36,7 +36,7 @@
                                type="checkbox"
                                role="switch"
                                id="inputTypeSwitch_@PartNode!.ClientId"
-                               checked="@(PartNode.InputType == PartInputType.ProductionLogId)"
+                               checked="@(PartNode.InputType == PartInputType.Tag)"
                                @onclick="ToggleInputType" />
 
                         <label class="form-check-label toggle-label"
@@ -89,7 +89,7 @@
             return;
 
         PartNode.InputType = PartNode.InputType == PartInputType.SerialNumber
-            ? PartInputType.ProductionLogId
+            ? PartInputType.Tag
             : PartInputType.SerialNumber;
 
         await NotifyChangedAsync();

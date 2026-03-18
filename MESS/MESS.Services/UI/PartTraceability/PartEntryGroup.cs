@@ -84,18 +84,6 @@ public class PartEntryGroup
     }
 
     /// <summary>
-    /// Assigns a production log reference to a node whose input type expects a production log ID.
-    /// </summary>
-    public void SetLinkedProductionLog(PartNode node, ProductionLog productionLog)
-    {
-        var entry = GetOrCreateEntry(node);
-        if (node.InputType != PartInputType.ProductionLogId)
-            throw new InvalidOperationException($"Node {node.Id} does not accept production log input.");
-        entry.LinkedProductionLog = productionLog;
-        entry.SerializablePart = null;
-    }
-
-    /// <summary>
     /// Retrieves all active inputs (parts or logs) across this group.
     /// </summary>
     public IEnumerable<object> GetAllInputs()

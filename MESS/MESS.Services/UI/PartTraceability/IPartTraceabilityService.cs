@@ -76,12 +76,6 @@ public interface IPartTraceabilityService
     void SetSerializablePart(int logIndex, PartNode node, SerializablePart part);
 
     /// <summary>
-    /// Assigns a <see cref="ProductionLog"/> reference to the specified <see cref="PartNode"/>
-    /// within a given production log group.
-    /// </summary>
-    void SetLinkedProductionLog(int logIndex, PartNode node, ProductionLog log);
-
-    /// <summary>
     /// Clears any existing part or linked production log entry for a given node
     /// within a specific production log group.
     /// </summary>

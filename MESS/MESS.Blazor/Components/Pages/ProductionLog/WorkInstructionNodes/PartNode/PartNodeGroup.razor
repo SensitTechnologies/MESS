@@ -123,15 +123,6 @@
                 PartTraceabilityService.SetSerializablePart(logIndex, partNode, part);
                 break;
 
-            case int productionLogId:
-                // Lookup by production log ID
-                var producedPart = await SerializablePartService.GetProducedForProductionLogAsync(productionLogId);
-                if (producedPart != null)
-                {
-                    PartTraceabilityService.SetSerializablePart(logIndex, partNode, producedPart);
-                }
-                break;
-
             case string tagCode when !string.IsNullOrWhiteSpace(tagCode):
                 // Lookup by tag code
                 var taggedPart = await SerializablePartService.GetByTagCodeAsync(tagCode);
