@@ -490,4 +490,40 @@ public class SerializablePartService : ISerializablePartService
             return null;
         }
     }
+    
+    ///<inheritdoc/>
+    public async Task<int?> TryResolveTagAsync(string tagCode)
+    {
+        if (string.IsNullOrWhiteSpace(tagCode))
+        {
+            Log.Warning("TryResolveTagAsync called with null or empty tag code.");
+            return null;
+        }
+
+        try
+        {
+            // Attempt to retrieve the tag object
+            var tag = await _tagService.GetByCodeAsync(tagCode);
+            if (tag == null)
+            {
+                Log.Information("No tag found with code {TagCode}.", tagCode);
+                return null;
+            }
+
+            if (tag.SerializablePartId == null)
+            {
+                Log.Information("Tag {TagCode} exists but has no assigned SerializablePart.", tagCode);
+                return null;
+            }
+
+            // Just return the ID, no need to load the full SerializablePart entity
+            Log.Information("Resolved tag {TagCode} to SerializablePart ID {SerializablePartId}.", tagCode, tag.SerializablePartId);
+            return tag.SerializablePartId;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error resolving SerializablePart ID for tag code {TagCode}.", tagCode);
+            return null;
+        }
+    }
 }
