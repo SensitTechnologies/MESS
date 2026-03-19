@@ -30,6 +30,15 @@ namespace MESS.Services.UI.PartTraceability
         /// Thrown if the log or entry does not exist.
         /// </exception>
         PartEntryState GetEntry(int logIndex, int partNodeId);
+        
+        /// <summary>
+        /// Ensures a <see cref="PartEntryState"/> exists for the specified log index and part node.
+        /// If no entry exists, a new one is created and stored.
+        /// </summary>
+        /// <param name="logIndex">The production log index.</param>
+        /// <param name="partNodeId">The unique identifier of the part node.</param>
+        /// <returns>The existing or newly created <see cref="PartEntryState"/>.</returns>
+        PartEntryState AddOrGetEntry(int logIndex, int partNodeId);
 
         /// <summary>
         /// Attempts to retrieve a specific <see cref="PartEntryState"/> by log index and part node identifier.

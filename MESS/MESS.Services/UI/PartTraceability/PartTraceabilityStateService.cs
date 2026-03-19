@@ -63,6 +63,37 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
 
         return entry;
     }
+    
+    /// <inheritdoc/>
+    public PartEntryState AddOrGetEntry(int logIndex, int partNodeId)
+    {
+        // Try to get the dictionary of entries for this log
+        if (!_entriesByLogIndex.TryGetValue(logIndex, out var entries))
+        {
+            // Log index not found → create a new dictionary for this log
+            entries = new Dictionary<int, PartEntryState>();
+            _entriesByLogIndex[logIndex] = entries;
+
+            // Ensure a produced part serial number slot exists
+            _producedPartSerialNumbers.TryAdd(logIndex, null);
+        }
+
+        // Try to get the entry itself
+        if (!entries.TryGetValue(partNodeId, out var entry))
+        {
+            // Entry does not exist → create and store it
+            entry = new PartEntryState
+            {
+                PartNodeId = partNodeId,
+                SerialNumber = null,
+                TagCode = null,
+                SerializablePartId = null
+            };
+            entries[partNodeId] = entry;
+        }
+
+        return entry;
+    }
 
     /// <inheritdoc/>
     public bool TryGetEntry(int logIndex, int partNodeId, out PartEntryState? entry)
