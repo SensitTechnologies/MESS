@@ -5,7 +5,7 @@
 @using MESS.Services.DTOs.ProductionLogs.Form
 @using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
 @using MESS.Services.UI.PartTraceability
-@inject IPartTraceabilityService PartTraceabilityService;
+@inject IPartTraceabilityStateService PartTraceabilityService
 
 @if (ProductionLogs.Any())
 {
@@ -140,8 +140,10 @@
     
     private void OnProducedSerialInput(int logIndex, string? value)
     {
-        // Input cleared → keep the produced part, but remove the serial number
-        //Under normal circumstances, add the produced part serial number.
-        PartTraceabilityService.SetProducedPartSerialNumber(logIndex, !string.IsNullOrWhiteSpace(value) ? value : null);
+        // Normalize empty input to null
+        var serialNumber = string.IsNullOrWhiteSpace(value) ? null : value;
+
+        // Update the state service
+        PartTraceabilityService.SetProducedPartSerialNumber(logIndex, serialNumber);
     }
 }
