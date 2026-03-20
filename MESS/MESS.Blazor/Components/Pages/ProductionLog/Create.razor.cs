@@ -456,12 +456,11 @@ public partial class Create : ComponentBase, IAsyncDisposable
             // Add the new log to the session
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
-
-        //TODO
+        
         // Part Traceability Persistence Calls.
-        //await PartTraceabilityService.PersistAsync(ProductionLogBatch.Logs);
-        PartTraceabilityService.DumpToConsole();
-
+       
+        
+        
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();
         
