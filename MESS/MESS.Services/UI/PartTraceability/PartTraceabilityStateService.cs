@@ -201,10 +201,29 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <inheritdoc/>
     public void SetProducedPartSerialNumber(int logIndex, string? serialNumber)
     {
-        if (!_logs.TryGetValue(logIndex, out var log))
-            throw new KeyNotFoundException($"Log index {logIndex} does not exist.");
-
+        var log = EnsureLogExists(logIndex);
         log.ProducedPartSerialNumber = serialNumber;
+    }
+    
+    /// <summary>
+    /// Ensures that a <see cref="LogState"/> exists for the given log index.
+    /// If it does not exist, it is created.
+    /// </summary>
+    /// <param name="logIndex">The log index to ensure.</param>
+    /// <returns>The existing or newly created <see cref="LogState"/>.</returns>
+    private LogState EnsureLogExists(int logIndex)
+    {
+        if (!_logs.TryGetValue(logIndex, out var log))
+        {
+            log = new LogState
+            {
+                LogIndex = logIndex
+            };
+
+            _logs[logIndex] = log;
+        }
+
+        return log;
     }
     
     /// <inheritdoc/>
