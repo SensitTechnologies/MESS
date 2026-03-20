@@ -34,7 +34,7 @@
             <!-- Available to Technicians & Admins -->
             <AuthorizeView Roles="Technician, Administrator">
                 <NavLink class="btn btn-sm btn-outline-secondary text-start"
-                         href="/WorkInstructionEditor" @onclick="OnToggleClicked">
+                         href="/work-instruction-editor" @onclick="OnToggleClicked">
                     Instructions
                 </NavLink>
                 <NavLink class="btn btn-sm btn-outline-secondary text-start"
@@ -48,6 +48,10 @@
                 <NavLink class="btn btn-sm btn-outline-secondary text-start"
                          href="/parts" @onclick="OnToggleClicked">
                     Parts
+                </NavLink>
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/tags" @onclick="OnToggleClicked">
+                    Tags
                 </NavLink>
             </AuthorizeView>
 

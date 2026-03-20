@@ -102,7 +102,7 @@
             try
             {
                 selfReference = DotNetObjectReference.Create(this);
-                moduleRef = await JS.InvokeAsync<IJSObjectReference>("import", "/SortableList.js");
+                moduleRef = await JS.InvokeAsync<IJSObjectReference>("import", "./Scripts/SortableList.js");
 
                 // Pass the ElementReference so JS receives the actual element (preferred).
                 await moduleRef.InvokeVoidAsync("init", containerRef, Group, Pull, Put, Sort, Handle, Filter, selfReference, ForceFallback);

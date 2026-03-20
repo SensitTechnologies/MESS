@@ -1,0 +1,483 @@
+@page "/tags"
+@layout PhoebeLayout
+@attribute [Authorize(Roles = "Technician, Administrator")]
+@using MESS.Blazor.Components.Layout
+@using MESS.Data.Models
+@using MESS.Services.CRUD.Tags
+@using MESS.Services.DTOs.Tags
+@using MESS.Services.UI.QrCodes
+@using Microsoft.AspNetCore.Authorization
+@inject ITagService TagService
+@inject IToastService ToastService
+@inject IQrCodeService QrCodeService
+
+<PageTitle>Tags</PageTitle>
+
+<h3>Reusable Tags</h3>
+
+<div class="card mb-3 p-3">
+
+    <!-- BULK CREATE -->
+    <div class="row g-3 align-items-end mb-2">
+        <div class="col-auto">
+            <label class="form-label">Prefix</label>
+            <input type="text" class="form-control" @bind="_bulkPrefix" />
+        </div>
+
+        <div class="col-auto">
+            <label class="form-label">Numbering</label>
+            <select class="form-select" @onchange="BulkSchemeChanged">
+                <option value="Decimal">Decimal</option>
+                <option value="Hexadecimal">Hexadecimal</option>
+                <option value="Alphanumeric">Alphanumeric</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <label class="form-label">Count</label>
+            <input type="number" class="form-control" min="1" max="1000" @bind="_bulkCount" />
+        </div>
+
+        <div class="col-auto">
+            <button class="btn btn-primary"
+                    @onclick="HandleBulkCreateAsync"
+                    disabled="@(_isBulkSaving || _bulkCount <= 0)">
+                @if (_isBulkSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-plus-circle me-1"></i> Create
+            </button>
+        </div>
+        
+        <div class="col-auto ms-auto">
+            <a class="btn btn-danger" href="/tags/unassign">
+                <i class="bi bi-dash-circle"></i> Unassign Tags for Reuse
+            </a>
+        </div>
+    </div>
+
+    <hr class="my-2" />
+
+    <!-- BULK PRINT + FILTER -->
+    <div class="row g-3 align-items-end">
+
+        <div class="col-auto">
+            <label class="form-label">Print Count</label>
+            <input type="number"
+                   class="form-control"
+                   min="1"
+                   @bind="_bulkPrintCount" />
+            <div class="form-text">
+                @GetAvailablePrintCount() available
+            </div>
+        </div>
+
+        <div class="col-auto">
+            <button class="btn btn-success"
+                    @onclick="HandleBulkPrintAsync"
+                    disabled="@(_isBulkPrinting || _bulkPrintCount <= 0)">
+                @if (_isBulkPrinting)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-printer me-1"></i> Print
+            </button>
+        </div>
+
+        <!-- Push toggle to far right -->
+        <div class="col-auto ms-auto">
+            <button class="btn btn-outline-secondary"
+                    @onclick="ToggleNonPrinted">
+                <i class="bi @( _showOnlyNonPrinted ? "bi-eye" : "bi-eye-slash") me-1"></i>
+                @(_showOnlyNonPrinted ? "Show All" : "Hide Printed")
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<div class="d-flex justify-content-between my-2" style="flex-direction: row">
+    <div class="flex-grow-1"/>
+    <input type="text" class="form-control w-auto" placeholder="Search..." @bind="SearchString" @bind:event="oninput" />
+</div>
+
+<div class="position-relative">
+    @if (_isLoading)
+    {
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (Tags.Count == 0)
+    {
+        <div class="text-center text-muted py-3">
+            No tags currently available.
+        </div>
+    }
+    else
+    {
+        <MudTable @ref="_table"
+                  T="TagDTO"
+                  ServerData="ServerReload"
+                  Loading="_isLoading"
+                  FixedHeader="true"
+                  Class="border rounded-3 pt-1"
+                  TableClass="table table-striped table-hover align-top"
+                  CellClass="align-top">
+
+            <HeaderContent>
+                <MudTh>
+                    <MudTableSortLabel T="TagDTO" SortLabel="code" SortBy="x => x.Code">
+                        <strong>Code</strong>
+                    </MudTableSortLabel>
+                </MudTh>
+
+                <MudTh>
+                    <MudTableSortLabel T="TagDTO" SortLabel="status" SortBy="x => x.Status">
+                        <strong>Status</strong>
+                    </MudTableSortLabel>
+                </MudTh>
+
+                <MudTh>
+                    <MudTableSortLabel T="TagDTO" SortLabel="created" SortBy="x => x.CreatedAt">
+                        <strong>Created</strong>
+                    </MudTableSortLabel>
+                </MudTh>
+
+                <MudTh><strong>Part</strong></MudTh>
+                <MudTh><strong>Work Instruction</strong></MudTh>
+                <MudTh><strong>Actions</strong></MudTh>
+            </HeaderContent>
+
+            <RowTemplate Context="tag">
+                <TagTableRow 
+                    Tag="tag"
+                    OnSubmit="@HandleTagSubmitAsync"
+                    OnDeleteRequested="@HandleDeleteTagAsync"
+                    OnPrintRequested="@HandlePrintTagAsync"
+                    OnRetireRequested="@HandleRetireTagAsync" />
+            </RowTemplate>
+
+            <NoRecordsContent>
+                <div class="text-center text-muted py-3 w-100">
+                    No tags currently available.
+                </div>
+            </NoRecordsContent>
+
+            <FooterContent>
+                <TagTableRow
+                    Tag="_newTag"
+                    OnSubmit="@HandleTagSubmitAsync" />
+            </FooterContent>
+
+            <PagerContent>
+                <MudTablePager InfoFormat="@InfoFormat()" HorizontalAlignment="MudBlazor.HorizontalAlignment.Center" RowsPerPageString="Rows per Page" />
+            </PagerContent>
+        </MudTable>
+    }
+</div>
+
+@code {
+    private string _bulkPrefix = "";
+    private TagNumberingScheme _bulkScheme = TagNumberingScheme.Decimal;
+    private int _bulkCount = 10;
+    private bool _isBulkSaving;
+    private bool _showOnlyNonPrinted = false;
+    
+    private int _bulkPrintCount = 1;
+    private bool _isBulkPrinting;
+    
+    private int GetAvailablePrintCount()
+    {
+        return Tags.Count(t => t is { HasBeenPrinted: false, Status: TagStatus.Available });
+    }
+
+    private List<TagDTO> Tags { get; set; } = new();
+    private TagDTO _newTag = new() { Code = "" };
+    private MudTable<TagDTO> _table = new();
+    private bool _isLoading;
+    private int _totalItems;
+
+    private string _searchString = "";
+    private string SearchString
+    {
+        get => _searchString;
+        set
+        {
+            _searchString = value;
+            _table.ReloadServerData();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTagsAsync();
+    }
+    
+    private async Task LoadTagsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            Tags = (await TagService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to load tags: {ex.Message}");
+            Tags = new List<TagDTO>();
+        }
+
+        _newTag = new TagDTO { Code = "" };
+        _isLoading = false;
+
+        await InvokeAsync(() => _table.ReloadServerData());
+    }
+
+    private Task<TableData<TagDTO>> ServerReload(TableState state, CancellationToken token)
+    {
+        var data = Tags.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(SearchString))
+        {
+            data = data.Where(t => t.Code.Contains(SearchString, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Filter by non-printed if toggle is on
+        if (_showOnlyNonPrinted)
+        {
+            data = data.Where(t => !t.HasBeenPrinted);
+        }
+
+        _totalItems = data.Count();
+
+        data = state.SortLabel switch
+        {
+            "code" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(t => t.Code)
+                : data.OrderByDescending(t => t.Code),
+
+            "status" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(t => t.Status)
+                : data.OrderByDescending(t => t.Status),
+
+            "created" => state.SortDirection == MudBlazor.SortDirection.Ascending
+                ? data.OrderBy(t => t.CreatedAt)
+                : data.OrderByDescending(t => t.CreatedAt),
+                
+            _ => data
+        };
+
+        var paged = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
+        return Task.FromResult(new TableData<TagDTO> { TotalItems = _totalItems, Items = paged });
+    }
+
+    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_totalItems / _table.RowsPerPage) + 1}";
+
+    private async Task HandleTagSubmitAsync(TagDTO tag)
+    {
+        if (tag.Id == 0)
+        {
+            try
+            {
+                var request = new TagCreateRequest { Code = tag.Code };
+                var created = await TagService.CreateAsync(request);
+                ToastService.ShowSuccess($"Created tag '{created.Code}'.");
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Failed to create tag '{tag.Code}': {ex.Message}");
+            }
+        }
+
+        await LoadTagsAsync();
+        await _table.ReloadServerData();
+    }
+
+    private async Task HandleDeleteTagAsync(TagDTO tag)
+    {
+        if (tag is { HasBeenPrinted: false, Status: TagStatus.Available })
+        {
+            try
+            {
+                await TagService.DeleteAsync(tag.Id);
+                ToastService.ShowSuccess($"Deleted tag '{tag.Code}'.");
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Failed to delete tag '{tag.Code}': {ex.Message}");
+            }
+
+            await LoadTagsAsync();
+        }
+        else
+        {
+            ToastService.ShowWarning($"Cannot delete tag '{tag.Code}' because it has been printed, assigned, or retired.");
+        }
+    }
+
+    private async Task HandleBulkCreateAsync()
+    {
+        if (_bulkCount <= 0) 
+        {
+            ToastService.ShowWarning("Please enter a valid number of tags to create.");
+            return;
+        }
+
+        _isBulkSaving = true;
+        try
+        {
+            var request = new TagBatchCreateRequest
+            {
+                Prefix = _bulkPrefix,
+                Scheme = _bulkScheme,
+                Count = _bulkCount
+            };
+
+            var createdTags = await TagService.BulkCreateAsync(request);
+            ToastService.ShowSuccess($"Created {createdTags.Count} tags successfully.");
+
+            await LoadTagsAsync();
+
+            _bulkCount = 10;
+            _bulkPrefix = "";
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to create tags: {ex.Message}");
+        }
+        finally
+        {
+            _isBulkSaving = false;
+        }
+    }
+
+    private void BulkSchemeChanged(ChangeEventArgs e)
+    {
+        if (e.Value != null)
+            _bulkScheme = Enum.Parse<TagNumberingScheme>(e.Value.ToString() ?? string.Empty);
+    }
+    
+    private void ToggleNonPrinted()
+    {
+        _showOnlyNonPrinted = !_showOnlyNonPrinted;
+        _table.ReloadServerData();
+    }
+    
+    private async Task HandlePrintTagAsync(TagDTO tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag.Code))
+        {
+            ToastService.ShowWarning("Tag code is empty.");
+            return;
+        }
+
+        try
+        {
+            // 1. Print first
+            try
+            {
+                await QrCodeService.PrintAsync(tag.Code, tag.Code);
+            }
+            catch
+            {
+                ToastService.ShowError("Printer failed. Tag was NOT marked as printed.");
+                return;
+            }
+
+
+            // 2. Mark as printed in DB
+            var updatedTag = await TagService.MarkPrintedAsync(tag.Id);
+
+            // 3. Update UI state
+            await LoadTagsAsync();
+
+            ToastService.ShowSuccess($"Printed tag '{tag.Code}'.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to print tag '{tag.Code}': {ex.Message}");
+        }
+    }
+    
+    private async Task HandleBulkPrintAsync()
+    {
+        if (_bulkPrintCount <= 0)
+        {
+            ToastService.ShowWarning("Enter a valid number of tags to print.");
+            return;
+        }
+
+        _isBulkPrinting = true;
+
+        try
+        {
+            // Get printable tags
+            var printableTags = Tags
+                .Where(t => !t.HasBeenPrinted && t.Status == TagStatus.Available)
+                .OrderBy(t => t.CreatedAt) // deterministic order
+                .ToList();
+
+            var availableCount = printableTags.Count;
+
+            if (availableCount == 0)
+            {
+                ToastService.ShowWarning("No tags available to print.");
+                return;
+            }
+
+            if (_bulkPrintCount > availableCount)
+            {
+                ToastService.ShowWarning(
+                    $"Only {availableCount} tags available to print, but {_bulkPrintCount} requested.");
+                return;
+            }
+
+            var tagsToPrint = printableTags.Take(_bulkPrintCount).ToList();
+
+            var successCount = 0;
+
+            foreach (var tag in tagsToPrint)
+            {
+                try
+                {
+                    await HandlePrintTagAsync(tag);
+                    successCount++;
+                }
+                catch
+                {
+                    // Individual failures already handled in HandlePrintTagAsync
+                    break;
+                }
+            }
+
+            ToastService.ShowSuccess($"Printed {successCount} tag(s).");
+
+            await LoadTagsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Bulk print failed: {ex.Message}");
+        }
+        finally
+        {
+            _isBulkPrinting = false;
+        }
+    }
+    
+    private async Task HandleRetireTagAsync(TagDTO tag)
+    {
+        try
+        {
+            await TagService.RetireAsync(tag.Id);
+
+            await LoadTagsAsync();
+
+            ToastService.ShowSuccess($"Retired tag '{tag.Code}'.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to retire tag '{tag.Code}': {ex.Message}");
+        }
+    }
+}

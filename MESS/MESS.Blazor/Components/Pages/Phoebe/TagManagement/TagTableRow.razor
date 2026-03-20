@@ -1,0 +1,197 @@
+@using MESS.Data.Models
+@using MESS.Services.DTOs.Tags
+
+<MudTd DataLabel="Code">
+    @if (IsNewTag)
+    {
+        <InputText id="code"
+                   @bind-Value="Tag.Code"
+                   class="form-control"
+                   placeholder="Enter tag code" />
+    }
+    else
+    {
+        <span>@Tag.Code</span>
+    }
+</MudTd>
+
+<MudTd DataLabel="Status">
+    @if (!IsNewTag)
+    {
+        <span class="badge @GetStatusBadgeClass(Tag.Status)">
+            @Tag.StatusDisplay
+        </span>
+    }
+</MudTd>
+
+<MudTd DataLabel="Created">
+    @if (!IsNewTag)
+    {
+        <span>@Tag.CreatedAt.ToLocalTime().ToString("g")</span>
+    }
+</MudTd>
+
+<MudTd DataLabel="Part">
+    @if (!IsNewTag)
+    {
+        @if (!string.IsNullOrWhiteSpace(Tag.PartName))
+        {
+            <span>@Tag.PartName (@Tag.PartSerialNumber)</span>
+        }
+        else
+        {
+            <span class="text-muted">—</span>
+        }
+    }
+</MudTd>
+
+<MudTd DataLabel="Work Instruction">
+    @if (!IsNewTag)
+    {
+        @if (!string.IsNullOrWhiteSpace(Tag.WorkInstructionTitle))
+        {
+            <span>@Tag.WorkInstructionTitle</span>
+        }
+        else
+        {
+            <span class="text-muted">—</span>
+        }
+    }
+</MudTd>
+
+<MudTd DataLabel="Actions">
+    @if (IsNewTag)
+    {
+        <button class="btn btn-sm btn-primary"
+                @onclick="HandleSubmit"
+                disabled="@(!CanSubmit)"
+                title="Create tag">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    }
+    else
+    {
+        <!-- PRINT (only before printed) -->
+        @if (!Tag.HasBeenPrinted)
+        {
+            <button class="btn btn-sm btn-outline-secondary"
+                    @onclick="HandlePrint"
+                    title="Print tag">
+                <i class="bi bi-printer"></i>
+            </button>
+        }
+
+        <!-- DELETE (only before printed & available) -->
+        @if (CanDelete)
+        {
+            <button class="btn btn-sm btn-danger ms-2"
+                    @onclick="HandleDelete"
+                    disabled="@_isDeleting"
+                    title="Delete tag">
+                <i class="bi bi-trash"></i>
+                @if (_isDeleting)
+                {
+                    <span class="spinner-border spinner-border-sm ms-1"></span>
+                }
+            </button>
+        }
+
+        <!-- RETIRE (only after printed) -->
+        @if (CanRetire)
+        {
+            <button class="btn btn-sm btn-danger ms-2"
+                    @onclick="HandleRetire"
+                    title="Retire tag">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        }
+    }
+</MudTd>
+
+@code {
+    [Parameter, EditorRequired]
+    public required TagDTO Tag { get; set; }
+
+    [Parameter]
+    public EventCallback<TagDTO> OnSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback<TagDTO> OnPrintRequested { get; set; }
+    
+    [Parameter]
+    public EventCallback<TagDTO> OnDeleteRequested { get; set; }
+    
+    [Parameter]
+    public EventCallback<TagDTO> OnRetireRequested { get; set; }
+
+    private bool IsNewTag => Tag.Id == 0;
+    private bool _isSaving;
+    private bool _isDeleting;
+
+    private bool CanSubmit => !_isSaving && !string.IsNullOrWhiteSpace(Tag.Code);
+
+    private bool CanDelete =>
+        !IsNewTag &&
+        Tag is { Status: TagStatus.Available, HasBeenPrinted: false };
+    
+    private bool CanRetire =>
+        !IsNewTag &&
+        Tag.HasBeenPrinted &&
+        Tag.Status != TagStatus.Retired;
+
+    private async Task HandleSubmit()
+    {
+        if (!CanSubmit) return;
+
+        _isSaving = true;
+        try
+        {
+            await OnSubmit.InvokeAsync(Tag);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+    
+    private async Task HandlePrint()
+    {
+        if (string.IsNullOrWhiteSpace(Tag.Code))
+            return;
+
+        await OnPrintRequested.InvokeAsync(Tag);
+    }
+
+    private async Task HandleDelete()
+    {
+        if (!CanDelete || _isDeleting) return;
+
+        _isDeleting = true;
+        try
+        {
+            await OnDeleteRequested.InvokeAsync(Tag);
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+    
+    private async Task HandleRetire()
+    {
+        if (!CanRetire) return;
+
+        await OnRetireRequested.InvokeAsync(Tag);
+    }
+    
+    private string GetStatusBadgeClass(TagStatus status)
+    {
+        return status switch
+        {
+            TagStatus.Available => "bg-success",   // Green
+            TagStatus.Assigned  => "bg-primary",   // Blue
+            TagStatus.Retired   => "bg-secondary", // Gray
+            _ => "bg-light text-dark"
+        };
+    }
+}

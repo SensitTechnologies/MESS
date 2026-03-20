@@ -54,4 +54,10 @@ public class TagDTO
     /// recent production step related to the tag.
     /// </summary>
     public string? WorkInstructionTitle { get; set; }
+    
+    /// <summary>
+    /// True if this tag has ever been printed according to its history.
+    /// Used to enforce deletion rules.
+    /// </summary>
+    public bool HasBeenPrinted { get; set; }
 }

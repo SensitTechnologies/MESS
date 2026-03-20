@@ -1,0 +1,170 @@
+@page "/tags/unassign"
+@layout PhoebeLayout
+@attribute [Authorize(Roles = "Technician, Administrator")]
+@using MESS.Blazor.Components.Layout
+@using MESS.Services.CRUD.Tags
+@using Microsoft.AspNetCore.Authorization
+@inject ITagService TagService
+@inject IToastService ToastService
+
+<PageTitle>Unassign Tags</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Unassign Tags</h3>
+    <a class="btn btn-outline-primary" href="/tags">
+        ← Back to Tags
+    </a>
+</div>
+
+<div class="card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <!-- Scan input -->
+        <div class="col">
+            <label class="form-label">Scan Tag Code</label>
+            <input type="text" 
+                   class="form-control"
+                   placeholder="Scan tag here..."
+                   @bind="_scanInput"
+                   @bind:event="oninput"
+                   @onkeydown="HandleScanKeyDown"
+                   autofocus />
+            <div class="form-text">
+                Scanned tags: @_scannedTags.Count
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="col-auto">
+            <button class="btn btn-danger"
+                    @onclick="UnassignScannedTags"
+                    disabled="@IsUnassignAllDisabled">
+                Unassign All
+            </button>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" @onclick="ClearScannedTags">Clear</button>
+        </div>
+    </div>
+
+    <!-- Scanned tag list -->
+    <div class="mt-3">
+        <ul class="list-group">
+            @foreach (var tag in _scannedTags)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    @tag.Code
+                    @if (tag.Success)
+                    {
+                        <span class="badge bg-success">✔</span>
+                    }
+                    else if (!string.IsNullOrEmpty(tag.Message))
+                    {
+                        <span class="badge bg-danger">✖ @tag.Message</span>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    private string _scanInput = "";
+    private readonly List<ScannedTag> _scannedTags = [];
+    private bool CanUnassignAll => _scannedTags.Any(t => !t.Success);
+    private bool IsUnassignAllDisabled => !CanUnassignAll;
+
+    private class ScannedTag
+    {
+        public string Code { get; set; } = "";
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
+
+    /// <summary>
+    /// Handle Enter key on scan input
+    /// </summary>
+    private async Task HandleScanKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_scanInput))
+        {
+            await AddScannedTagAsync(_scanInput.Trim());
+            _scanInput = "";
+        }
+    }
+
+    /// <summary>
+    /// Adds scanned tag and unassigns part immediately
+    /// </summary>
+    private async Task AddScannedTagAsync(string code)
+    {
+        // Prevent duplicate scans
+        if (_scannedTags.Any(t => t.Code.Equals(code, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        try
+        {
+            // Lookup tag by code
+            var tag = (await TagService.GetAllAsync())
+                .FirstOrDefault(t => t.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+
+            if (tag == null)
+            {
+                _scannedTags.Add(new ScannedTag { Code = code, Success = false, Message = "Not found" });
+                return;
+            }
+
+            // Call UnassignAsync
+            await TagService.UnassignAsync(tag.Id);
+            _scannedTags.Add(new ScannedTag { Code = code, Success = true });
+        }
+        catch (Exception ex)
+        {
+            _scannedTags.Add(new ScannedTag { Code = code, Success = false, Message = ex.Message });
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Unassign all scanned tags that have not succeeded yet
+    /// </summary>
+    private async Task UnassignScannedTags()
+    {
+        foreach (var scanned in _scannedTags.Where(t => !t.Success))
+        {
+            try
+            {
+                var tag = (await TagService.GetAllAsync())
+                    .FirstOrDefault(t => t.Code.Equals(scanned.Code, StringComparison.OrdinalIgnoreCase));
+
+                if (tag != null)
+                {
+                    await TagService.UnassignAsync(tag.Id);
+                    scanned.Success = true;
+                    scanned.Message = "";
+                }
+                else
+                {
+                    scanned.Message = "Not found";
+                }
+            }
+            catch (Exception ex)
+            {
+                scanned.Message = ex.Message;
+            }
+        }
+
+        StateHasChanged();
+
+        var successCount = _scannedTags.Count(t => t.Success);
+        ToastService.ShowSuccess($"Unassigned {successCount} tag(s).");
+    }
+
+    private void ClearScannedTags()
+    {
+        _scannedTags.Clear();
+        StateHasChanged();
+    }
+}
