@@ -62,6 +62,11 @@ public class ApplicationContext
     /// DbSet for SerializableParts.
     /// </summary>
     public virtual DbSet<SerializablePart> SerializableParts { get; set; } = null!;
+
+    /// <summary>
+    /// DbSet for SerializablePartRelationships
+    /// </summary>
+    public virtual DbSet<SerializablePartRelationship> SerializablePartRelationships { get; set; } = null!;
     
     /// <summary>
     /// DbSet for Tags.
