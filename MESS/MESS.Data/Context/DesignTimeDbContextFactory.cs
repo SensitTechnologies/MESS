@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using System.IO;
 
 namespace MESS.Data.Context
 {
@@ -18,7 +17,7 @@ namespace MESS.Data.Context
         public ApplicationContext CreateDbContext(string[] args)
         {
             var basePath = Directory.GetCurrentDirectory();
-            
+
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(basePath)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -28,15 +27,17 @@ namespace MESS.Data.Context
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationContext>();
             var connectionString = configuration.GetConnectionString("MESSConnection");
 
-            optionsBuilder.UseSqlServer(connectionString, options =>
+            optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                options.EnableRetryOnFailure(
+                // Optional but recommended
+                npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 3,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
-                    errorNumbersToAdd: null);
+                    errorCodesToAdd: null);
             });
 
             return new ApplicationContext(optionsBuilder.Options);
         }
+
     }
 }

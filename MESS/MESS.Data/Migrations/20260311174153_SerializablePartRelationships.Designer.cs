@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20260311174153_SerializablePartRelationships")]
+    partial class SerializablePartRelationships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,21 +25,6 @@ namespace MESS.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("FailureAdjectiveFailureNoun", b =>
-                {
-                    b.Property<int>("AdjectivesId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NounsId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("AdjectivesId", "NounsId");
-
-                    b.HasIndex("NounsId");
-
-                    b.ToTable("FailureNounAdjectives", (string)null);
-                });
 
             modelBuilder.Entity("MESS.Data.Models.ApplicationUser", b =>
                 {
@@ -114,40 +102,6 @@ namespace MESS.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("MESS.Data.Models.FailureAdjective", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("FailureAdjective");
-                });
-
-            modelBuilder.Entity("MESS.Data.Models.FailureNoun", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("FailureNoun");
-                });
-
             modelBuilder.Entity("MESS.Data.Models.PartDefinition", b =>
                 {
                     b.Property<int>("Id")
@@ -164,13 +118,6 @@ namespace MESS.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasFilter("\"Number\" IS NULL OR \"Number\" = ''");
-
-                    b.HasIndex("Name", "Number")
-                        .IsUnique();
 
                     b.ToTable("PartDefinitions");
                 });
@@ -470,9 +417,6 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("PartProducedId");
 
-                    b.HasIndex("Title", "Version")
-                        .IsUnique();
-
                     b.ToTable("WorkInstructions");
                 });
 
@@ -688,21 +632,6 @@ namespace MESS.Data.Migrations
                         .HasColumnType("text[]");
 
                     b.ToTable("Steps", (string)null);
-                });
-
-            modelBuilder.Entity("FailureAdjectiveFailureNoun", b =>
-                {
-                    b.HasOne("MESS.Data.Models.FailureAdjective", null)
-                        .WithMany()
-                        .HasForeignKey("AdjectivesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MESS.Data.Models.FailureNoun", null)
-                        .WithMany()
-                        .HasForeignKey("NounsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Product", b =>

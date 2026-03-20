@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20260311182142_FailureNounsAndAdjectives")]
+    partial class FailureNounsAndAdjectives
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -164,13 +167,6 @@ namespace MESS.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasFilter("\"Number\" IS NULL OR \"Number\" = ''");
-
-                    b.HasIndex("Name", "Number")
-                        .IsUnique();
 
                     b.ToTable("PartDefinitions");
                 });
@@ -469,9 +465,6 @@ namespace MESS.Data.Migrations
                     b.HasIndex("OriginalId");
 
                     b.HasIndex("PartProducedId");
-
-                    b.HasIndex("Title", "Version")
-                        .IsUnique();
 
                     b.ToTable("WorkInstructions");
                 });
