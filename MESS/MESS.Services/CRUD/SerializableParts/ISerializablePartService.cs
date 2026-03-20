@@ -78,31 +78,6 @@ public interface ISerializablePartService
     Task<List<SerializablePart>> GetInstalledForProductionLogAsync(int productionLogId);
     
     /// <summary>
-    /// Retrieves all <see cref="SerializablePart"/> entities that were installed during the specified production logs,
-    /// filtered to only include parts whose <see cref="PartDefinition.Id"/> exists in the provided set of expected part definitions.
-    /// </summary>
-    /// <param name="productionLogIds">
-    /// A list of production log IDs to query. Each ID represents a prior production event to consider for installed parts.
-    /// </param>
-    /// <param name="expectedPartDefinitionIds">
-    /// A set of <see cref="PartDefinition.Id"/> values representing the part definitions expected for the current work instruction.
-    /// Only installed parts matching these definitions will be returned.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation. The result is a list of <see cref="InstalledPartResult"/> records,
-    /// each containing the <see cref="SerializablePart"/> and its associated <c>ProductionLogId</c>.
-    /// The order of results is not guaranteed.
-    /// </returns>
-    /// <remarks>
-    /// This method is used to efficiently fetch only relevant installed parts from multiple production logs
-    /// without performing a separate query per production log. It is optimized for batch loading of serializable parts
-    /// to populate in-memory data structures for traceability or work instruction editing.
-    /// </remarks>
-    Task<List<InstalledPartResult>> GetInstalledForProductionLogsAsync(
-        List<int> productionLogIds,
-        HashSet<int> expectedPartDefinitionIds);
-    
-    /// <summary>
     /// Retrieves the <see cref="SerializablePart"/> that was <b>produced</b> during
     /// the specified <see cref="ProductionLog"/>.
     /// </summary>

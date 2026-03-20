@@ -260,32 +260,6 @@ public class SerializablePartService : ISerializablePartService
             return [];
         }
     }
-
-    
-    /// <inheritdoc />
-    public async Task<List<InstalledPartResult>> GetInstalledForProductionLogsAsync(
-        List<int> productionLogIds,
-        HashSet<int> expectedPartDefinitionIds)
-    {
-        if (productionLogIds.Count == 0)
-            return [];
-
-        await using var context = await _contextFactory.CreateDbContextAsync();
-
-        var results = await (
-            from plp in context.ProductionLogParts.AsNoTracking()
-            where productionLogIds.Contains(plp.ProductionLogId)
-                  && plp.OperationType == PartOperationType.Installed
-                  && plp.SerializablePart != null
-                  && expectedPartDefinitionIds.Contains(plp.SerializablePart.PartDefinitionId)
-            select new InstalledPartResult(
-                plp.ProductionLogId,
-                plp.SerializablePart!
-            )
-        ).ToListAsync();
-
-        return results;
-    }
     
     /// <inheritdoc/>
     public async Task<SerializablePart?> GetProducedForProductionLogAsync(int productionLogId)
