@@ -15,6 +15,14 @@ namespace MESS.Services.UI.PartTraceability
         /// Gets the serial number of the produced part, if any.
         /// </summary>
         public string? ProducedPartSerialNumber { get; init; }
+        
+        /// <summary>
+        /// Gets a value indicating whether this log is expected to produce a part.
+        /// When set to <c>false</c>, the persistence layer should not create a produced part
+        /// even if other data (such as serial numbers) is present.
+        /// This is typically controlled by an operator when failures occur.
+        /// </summary>
+        public bool ShouldProducePart { get; init; }
 
         /// <summary>
         /// Gets all part entries for this log.

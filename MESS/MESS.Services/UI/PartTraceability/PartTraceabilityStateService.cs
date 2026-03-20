@@ -1,3 +1,4 @@
+using System.Text;
 using MESS.Services.CRUD.SerializableParts;
 
 namespace MESS.Services.UI.PartTraceability;
@@ -7,11 +8,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
 {
     private readonly ISerializablePartService _serializablePartService;
     
-    // Fast lookup: logIndex → (partNodeId → entry)
-    private readonly Dictionary<int, Dictionary<int, PartEntryState>> _entriesByLogIndex = new();
-
-    // Produced part serial numbers per log
-    private readonly Dictionary<int, string?> _producedPartSerialNumbers = new();
+    private readonly Dictionary<int, LogState> _logs = new();
 
     
     /// <summary>
@@ -28,34 +25,40 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <inheritdoc/>
     public void Initialize(IEnumerable<int> logIndexes, IEnumerable<List<int>> nodeBlocks)
     {
-        _entriesByLogIndex.Clear();
-        _producedPartSerialNumbers.Clear();
+        _logs.Clear();
 
         var blocks = nodeBlocks.ToList();
 
         foreach (var logIndex in logIndexes)
         {
-            var entries = new Dictionary<int, PartEntryState>();
+            var logState = new LogState
+            {
+                LogIndex = logIndex
+            };
 
             foreach (var block in blocks)
             {
                 foreach (var partNodeId in block)
                 {
-                    if (!entries.ContainsKey(partNodeId))
-                        entries[partNodeId] = new PartEntryState { PartNodeId = partNodeId };
+                    if (!logState.Entries.ContainsKey(partNodeId))
+                    {
+                        logState.Entries[partNodeId] = new PartEntryState
+                        {
+                            PartNodeId = partNodeId
+                        };
+                    }
                 }
             }
 
-            _entriesByLogIndex[logIndex] = entries;
-            _producedPartSerialNumbers[logIndex] = null;
+            _logs[logIndex] = logState;
         }
     }
 
     /// <inheritdoc/>
     public PartEntryState GetEntry(int logIndex, int partNodeId)
     {
-        if (!_entriesByLogIndex.TryGetValue(logIndex, out var entries) ||
-            !entries.TryGetValue(partNodeId, out var entry))
+        if (!_logs.TryGetValue(logIndex, out var log) ||
+            !log.Entries.TryGetValue(partNodeId, out var entry))
         {
             throw new KeyNotFoundException(
                 $"Entry not found for logIndex {logIndex}, partNodeId {partNodeId}");
@@ -67,29 +70,24 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <inheritdoc/>
     public PartEntryState AddOrGetEntry(int logIndex, int partNodeId)
     {
-        // Try to get the dictionary of entries for this log
-        if (!_entriesByLogIndex.TryGetValue(logIndex, out var entries))
+        if (!_logs.TryGetValue(logIndex, out var log))
         {
-            // Log index not found → create a new dictionary for this log
-            entries = new Dictionary<int, PartEntryState>();
-            _entriesByLogIndex[logIndex] = entries;
+            log = new LogState
+            {
+                LogIndex = logIndex
+            };
 
-            // Ensure a produced part serial number slot exists
-            _producedPartSerialNumbers.TryAdd(logIndex, null);
+            _logs[logIndex] = log;
         }
 
-        // Try to get the entry itself
-        if (!entries.TryGetValue(partNodeId, out var entry))
+        if (!log.Entries.TryGetValue(partNodeId, out var entry))
         {
-            // Entry does not exist → create and store it
             entry = new PartEntryState
             {
-                PartNodeId = partNodeId,
-                SerialNumber = null,
-                TagCode = null,
-                SerializablePartId = null
+                PartNodeId = partNodeId
             };
-            entries[partNodeId] = entry;
+
+            log.Entries[partNodeId] = entry;
         }
 
         return entry;
@@ -99,20 +97,17 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     public bool TryGetEntry(int logIndex, int partNodeId, out PartEntryState? entry)
     {
         entry = null;
-        if (_entriesByLogIndex.TryGetValue(logIndex, out var entries))
-        {
-            return entries.TryGetValue(partNodeId, out entry);
-        }
-        return false;
+
+        return _logs.TryGetValue(logIndex, out var log) && log.Entries.TryGetValue(partNodeId, out entry);
     }
 
     /// <inheritdoc/>
     public IReadOnlyCollection<PartEntryState> GetEntries(int logIndex)
     {
-        if (!_entriesByLogIndex.TryGetValue(logIndex, out var entries))
+        if (!_logs.TryGetValue(logIndex, out var log))
             throw new KeyNotFoundException($"No entries found for logIndex {logIndex}");
 
-        return entries.Values.ToList().AsReadOnly();
+        return log.Entries.Values.ToList().AsReadOnly();
     }
 
 
@@ -120,11 +115,13 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     public bool TryGetEntries(int logIndex, out IReadOnlyCollection<PartEntryState>? entries)
     {
         entries = null;
-        if (_entriesByLogIndex.TryGetValue(logIndex, out var dict))
+
+        if (_logs.TryGetValue(logIndex, out var log))
         {
-            entries = dict.Values.ToList().AsReadOnly();
+            entries = log.Entries.Values.ToList().AsReadOnly();
             return true;
         }
+
         return false;
     }
 
@@ -161,39 +158,62 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     }
     
     /// <inheritdoc/>
+    public void SetShouldProducePart(int logIndex, bool shouldProduce)
+    {
+        if (!_logs.TryGetValue(logIndex, out var log))
+            throw new KeyNotFoundException($"Log index {logIndex} does not exist.");
+
+        log.ShouldProducePart = shouldProduce;
+    }
+    
+    /// <inheritdoc/>
+    public bool ShouldCreateProducedPart(int logIndex)
+    {
+        if (!_logs.TryGetValue(logIndex, out var log))
+            throw new KeyNotFoundException($"Log index {logIndex} does not exist.");
+
+        return log.ShouldProducePart;
+    }
+    
+    /// <inheritdoc/>
     public bool RemoveLog(int logIndex)
     {
-        var removed = _entriesByLogIndex.Remove(logIndex);
-        _producedPartSerialNumbers.Remove(logIndex);
-        return removed;
+        return _logs.Remove(logIndex);
     }
 
     /// <inheritdoc/>
-    public bool HasLog(int logIndex) => _entriesByLogIndex.ContainsKey(logIndex);
+    public bool HasLog(int logIndex) => _logs.ContainsKey(logIndex);
+    
+    /// <inheritdoc/>
+    public int GetTotalPartsLogged()
+    {
+        return _logs.Values
+            .SelectMany(log => log.Entries.Values)
+            .Count(entry => entry.HasInput);
+    }
 
     /// <inheritdoc/>
     public void Clear()
     {
-        _entriesByLogIndex.Clear();
-        _producedPartSerialNumbers.Clear();
+        _logs.Clear();
     }
 
     /// <inheritdoc/>
     public void SetProducedPartSerialNumber(int logIndex, string? serialNumber)
     {
-        if (!_entriesByLogIndex.ContainsKey(logIndex))
+        if (!_logs.TryGetValue(logIndex, out var log))
             throw new KeyNotFoundException($"Log index {logIndex} does not exist.");
 
-        _producedPartSerialNumbers[logIndex] = serialNumber;
+        log.ProducedPartSerialNumber = serialNumber;
     }
     
     /// <inheritdoc/>
     public PartTraceabilitySnapshot CreateSnapshot(int logIndex)
     {
-        if (!_entriesByLogIndex.TryGetValue(logIndex, out var entries))
+        if (!_logs.TryGetValue(logIndex, out var log))
             throw new InvalidOperationException($"No entries found for logIndex {logIndex}");
 
-        var snapshotEntries = entries.Values
+        var snapshotEntries = log.Entries.Values
             .Select(e => new PartTraceabilitySnapshot.PartEntrySnapshot
             {
                 PartNodeId = e.PartNodeId,
@@ -203,13 +223,65 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             })
             .ToList();
 
-        _producedPartSerialNumbers.TryGetValue(logIndex, out var producedSerial);
-
         return new PartTraceabilitySnapshot
         {
             LogIndex = logIndex,
-            ProducedPartSerialNumber = producedSerial,
+            ProducedPartSerialNumber = log.ProducedPartSerialNumber,
+            ShouldProducePart = log.ShouldProducePart, 
             Entries = snapshotEntries
         };
+    }
+    
+    /// <inheritdoc/>
+    public string Dump(int? logIndexFilter = null, bool onlyWithInput = false)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("===== PartTraceabilityStateService Dump =====");
+
+        if (_logs.Count == 0)
+        {
+            sb.AppendLine("No logs present.");
+            return sb.ToString();
+        }
+
+        foreach (var (logIndex, log) in _logs)
+        {
+            if (logIndexFilter.HasValue && logIndex != logIndexFilter.Value)
+                continue;
+
+            sb.AppendLine($"\nLogIndex: {logIndex}");
+            sb.AppendLine($"  ShouldProducePart: {log.ShouldProducePart}");
+            sb.AppendLine($"  ProducedPartSerialNumber: {log.ProducedPartSerialNumber ?? "[null]"}");
+
+            if (log.Entries.Count == 0)
+            {
+                sb.AppendLine("  No entries.");
+                continue;
+            }
+
+            foreach (var (partNodeId, entry) in log.Entries)
+            {
+                if (onlyWithInput && !entry.HasInput)
+                    continue;
+
+                var marker = entry.HasInput ? "[X]" : "[ ]";
+
+                sb.AppendLine($"  {marker} PartNodeId: {partNodeId}");
+                sb.AppendLine($"    SerialNumber: {entry.SerialNumber ?? "[null]"}");
+                sb.AppendLine($"    TagCode: {entry.TagCode ?? "[null]"}");
+                sb.AppendLine($"    SerializablePartId: {entry.SerializablePartId?.ToString() ?? "[null]"}");
+            }
+        }
+
+        sb.AppendLine("\n===== End Dump =====");
+
+        return sb.ToString();
+    }
+
+    /// <inheritdoc/>
+    public void DumpToConsole(int? logIndexFilter = null, bool onlyWithInput = false)
+    {
+        Console.WriteLine(Dump(logIndexFilter, onlyWithInput));
     }
 }

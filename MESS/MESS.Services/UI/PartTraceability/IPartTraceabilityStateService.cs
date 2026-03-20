@@ -103,6 +103,24 @@ namespace MESS.Services.UI.PartTraceability
         void UpdateSerialNumber(int logIndex, int partNodeId, string? serialNumber);
         
         /// <summary>
+        /// Sets whether the specified log should result in a produced part.
+        /// </summary>
+        /// <param name="logIndex">The log index to update.</param>
+        /// <param name="shouldProduce">
+        /// <c>true</c> if a produced part should be created; otherwise, <c>false</c>.
+        /// </param>
+        void SetShouldProducePart(int logIndex, bool shouldProduce);
+
+        /// <summary>
+        /// Determines whether the specified log should result in a produced part.
+        /// </summary>
+        /// <param name="logIndex">The log index to evaluate.</param>
+        /// <returns>
+        /// <c>true</c> if a produced part should be created; otherwise, <c>false</c>.
+        /// </returns>
+        bool ShouldCreateProducedPart(int logIndex);
+        
+        /// <summary>
         /// Removes all state associated with a specific production log index.
         /// </summary>
         /// <param name="logIndex">The production log index.</param>
@@ -115,6 +133,14 @@ namespace MESS.Services.UI.PartTraceability
         /// Determines whether state exists for the specified production log index.
         /// </summary>
         bool HasLog(int logIndex);
+
+        /// <summary>
+        /// Gets the total number of part entries that have user input across all logs.
+        /// </summary>
+        /// <returns>
+        /// The count of <see cref="PartEntryState"/> instances that contain either a serial number or tag code.
+        /// </returns>
+        int GetTotalPartsLogged();
 
         /// <summary>
         /// Clears all state managed by the service.
@@ -155,5 +181,17 @@ namespace MESS.Services.UI.PartTraceability
         /// Thrown if no part traceability state exists for the specified <paramref name="logIndex"/>.
         /// </exception>
         PartTraceabilitySnapshot CreateSnapshot(int logIndex);
+
+        /// <summary>
+        /// Dumps the current state as a formatted string.
+        /// </summary>
+        /// <param name="logIndexFilter">Optional log index to filter.</param>
+        /// <param name="onlyWithInput">If true, only entries with input are included.</param>
+        string Dump(int? logIndexFilter = null, bool onlyWithInput = false);
+
+        /// <summary>
+        /// Writes the current state to the console.
+        /// </summary>
+        void DumpToConsole(int? logIndexFilter = null, bool onlyWithInput = false);
     }
 }
