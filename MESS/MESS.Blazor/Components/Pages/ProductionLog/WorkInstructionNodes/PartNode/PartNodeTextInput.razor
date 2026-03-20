@@ -59,14 +59,33 @@
     private string? _validationMessage;
     private ValidationMessageType _validationMessageType;
     private CancellationTokenSource? _debounceCts;
+    
+    private int _previousLogIndex = -1;
 
     private enum ValidationMessageType { Success, Error }
 
-    protected override void OnParametersSet()
+    protected override async void OnParametersSet()
     {
+        var logChanged = _previousLogIndex != LogIndex;
+
+        if (logChanged)
+        {
+            _validationMessage = null;
+            _isSearching = false;
+            _debounceCts?.Cancel();
+        }
+
+        _previousLogIndex = LogIndex;
+
         var entry = PartTraceabilityService.AddOrGetEntry(LogIndex, PartNode.Id);
         _serialNumber = entry.SerialNumber;
         _tagCode = entry.TagCode;
+
+        // 👇 Trigger validation if needed
+        if (logChanged && PartNode.InputType == PartInputType.Tag && !string.IsNullOrWhiteSpace(_tagCode))
+        {
+            _ = ValidateTagAsync(_tagCode);
+        }
     }
 
     private async Task OnInputChanged()
@@ -86,7 +105,7 @@
         _isSearching = true;
         StateHasChanged();
 
-        string? updatedValue = null;
+        string? updatedValue;
 
         switch (PartNode.InputType)
         {
@@ -97,11 +116,12 @@
 
             case PartInputType.Tag:
                 updatedValue = string.IsNullOrWhiteSpace(_tagCode) ? null : _tagCode;
-                var resolved = await PartTraceabilityService.UpdateTagCodeAsync(LogIndex, PartNode.Id, updatedValue);
-                _validationMessage = string.IsNullOrWhiteSpace(_tagCode)
-                    ? null
-                    : resolved ? "Tag available" : "No part found";
-                _validationMessageType = resolved ? ValidationMessageType.Success : ValidationMessageType.Error;
+
+                if (updatedValue is not null)
+                    await ValidateTagAsync(updatedValue);
+                else
+                    _validationMessage = null;
+
                 break;
 
             default:
@@ -113,5 +133,25 @@
 
         if (AfterInputChanged.HasDelegate)
             await AfterInputChanged.InvokeAsync((PartNode, updatedValue));
+    }
+    
+    private async Task ValidateTagAsync(string tag)
+    {
+        _isSearching = true;
+        StateHasChanged();
+
+        var currentLogIndex = LogIndex;
+        var currentNodeId = PartNode.Id;
+
+        var resolved = await PartTraceabilityService.UpdateTagCodeAsync(currentLogIndex, currentNodeId, tag);
+        
+        if (currentLogIndex != LogIndex || currentNodeId != PartNode.Id)
+            return;
+
+        _validationMessage = resolved ? "Tag available" : "No part found";
+        _validationMessageType = resolved ? ValidationMessageType.Success : ValidationMessageType.Error;
+
+        _isSearching = false;
+        StateHasChanged();
     }
 }
