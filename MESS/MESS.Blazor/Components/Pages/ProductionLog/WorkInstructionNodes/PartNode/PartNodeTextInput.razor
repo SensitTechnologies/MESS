@@ -2,50 +2,46 @@
 @using MESS.Services.UI.PartTraceability
 @inject IPartTraceabilityStateService PartTraceabilityService
 
-<div class="form-floating flex-grow-1">
-    @switch (PartNode.InputType)
-    {
-        case PartInputType.SerialNumber:
-            <InputText
-                id="serialInput"
-                class="form-control tall-input text-lightweight"
-                placeholder="@PartNode.PartDefinition!.Number"
-                @bind-Value="_serialNumber"
-                @bind-Value:after="OnInputChanged" />
-
-            <label for="serialInput" class="form-label subtle-label">
-                @(PartNode.PartDefinition!.Name)
-            </label>
-            break;
-
-        case PartInputType.Tag:
-            <InputText
-                id="tagInput"
-                class="form-control tall-input text-lightweight"
-                placeholder="Enter tag code"
-                @bind-Value="_tagCode"
-                @bind-Value:after="OnInputChanged" />
-
-            <label for="tagInput" class="form-label subtle-label">
-                Tag Code
-            </label>
-            break;
-
-        default:
-            throw new ArgumentOutOfRangeException();
-    }
-
-    @if (_isSearching)
-    {
-        <div class="form-text text-muted small">Searching...</div>
-    }
-
-    @if (_validationMessage is not null)
-    {
-        <div class="form-text @( _validationMessageType == ValidationMessageType.Success ? "text-success" : "text-danger") small">
-            @_validationMessage
+<div class="card mb-1" style="min-width: 150px;">
+    <!-- Card header -->
+    <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <div class="d-flex flex-column">
+            <span class="fw-semibold" style="font-size: 1rem;">@PartNode.PartDefinition!.Name</span>
+            <small class="text-muted">@PartNode.PartDefinition!.Number</small>
         </div>
-    }
+        <span class="text-muted" style="font-size: 1.2rem;">
+            @if (PartNode.InputType == PartInputType.Tag)
+            {
+                <i class="bi bi-qr-code"></i>
+            }
+            else
+            {
+                <i class="bi bi-upc-scan"></i>
+            }
+        </span>
+    </div>
+
+    <!-- Card body -->
+    <div class="card-body py-2">
+        <InputText
+            id="@($"input-{PartNode.Id}")"
+            class="@GetInputClass()"
+            placeholder="@($"Scan or enter {(PartNode.InputType == PartInputType.Tag ? "tag code" : "serial number")}")"
+            @bind-Value="BoundValue"
+            @bind-Value:after="OnInputChanged" />
+
+        @if (_isSearching)
+        {
+            <div class="form-text text-muted small mt-1">Searching...</div>
+        }
+
+        @if (_validationMessage is not null)
+        {
+            <div class="form-text @( _validationMessageType == ValidationMessageType.Success ? "text-success" : "text-danger") small mt-1">
+                @_validationMessage
+            </div>
+        }
+    </div>
 </div>
 
 @code {
@@ -71,6 +67,7 @@
         if (logChanged)
         {
             _validationMessage = null;
+            _validationMessageType = default;
             _isSearching = false;
             _debounceCts?.Cancel();
         }
@@ -81,7 +78,7 @@
         _serialNumber = entry.SerialNumber;
         _tagCode = entry.TagCode;
 
-        // 👇 Trigger validation if needed
+        // Trigger validation if needed
         if (logChanged && PartNode.InputType == PartInputType.Tag && !string.IsNullOrWhiteSpace(_tagCode))
         {
             _ = ValidateTagAsync(_tagCode);
@@ -112,6 +109,8 @@
             case PartInputType.SerialNumber:
                 updatedValue = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber;
                 PartTraceabilityService.UpdateSerialNumber(LogIndex, PartNode.Id, updatedValue);
+                if (string.IsNullOrWhiteSpace(updatedValue))
+                    _validationMessageType = default;
                 break;
 
             case PartInputType.Tag:
@@ -120,7 +119,10 @@
                 if (updatedValue is not null)
                     await ValidateTagAsync(updatedValue);
                 else
+                {
                     _validationMessage = null;
+                    _validationMessageType = default;
+                }
 
                 break;
 
@@ -153,5 +155,40 @@
 
         _isSearching = false;
         StateHasChanged();
+    }
+    
+    private string? BoundValue
+    {
+        get => PartNode.InputType switch
+        {
+            PartInputType.SerialNumber => _serialNumber,
+            PartInputType.Tag => _tagCode,
+            _ => null
+        };
+        set
+        {
+            switch (PartNode.InputType)
+            {
+                case PartInputType.SerialNumber:
+                    _serialNumber = value;
+                    break;
+                case PartInputType.Tag:
+                    _tagCode = value;
+                    break;
+            }
+        }
+    }
+    
+    private string GetInputClass()
+    {
+        var baseClass = "form-control";
+
+        if (_validationMessageType == ValidationMessageType.Success && !string.IsNullOrWhiteSpace(BoundValue))
+            return $"{baseClass} is-valid";
+
+        if (_validationMessageType == ValidationMessageType.Error && !string.IsNullOrWhiteSpace(BoundValue))
+            return $"{baseClass} is-invalid";
+
+        return baseClass; // empty or log changed → normal look
     }
 }
