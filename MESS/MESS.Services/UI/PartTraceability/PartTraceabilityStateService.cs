@@ -191,6 +191,27 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             .SelectMany(log => log.Entries.Values)
             .Count(entry => entry.HasInput);
     }
+    
+    /// <inheritdoc/>
+    public bool HasUnresolvedTags(int? logIndexFilter = null, bool onlyWithInput = true)
+    {
+        var logs = _logs.Values.AsEnumerable();
+
+        if (logIndexFilter.HasValue)
+        {
+            if (!_logs.TryGetValue(logIndexFilter.Value, out var log))
+                throw new KeyNotFoundException($"Log index {logIndexFilter.Value} does not exist.");
+
+            logs = new[] { log };
+        }
+
+        return logs
+            .SelectMany(log => log.Entries.Values)
+            .Where(entry => !onlyWithInput || entry.HasInput)
+            .Any(entry =>
+                !string.IsNullOrWhiteSpace(entry.TagCode) &&
+                entry.SerializablePartId == null);
+    }
 
     /// <inheritdoc/>
     public void Clear()

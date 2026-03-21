@@ -359,6 +359,14 @@ public partial class Create : ComponentBase, IAsyncDisposable
             return;
         }
         
+        // Stop submission if there are unresolved tags
+        if (PartTraceabilityService.HasUnresolvedTags())
+        {
+            popupRef?.Show("One or more tag codes could not be resolved. Please fix these before submitting.");
+            return;
+        }
+
+        
         var partNodes = ActiveWorkInstruction.Nodes.Where(node => node.NodeType == WorkInstructionNodeType.Part);
 
         var totalPartsNeeded = 0;
