@@ -67,6 +67,7 @@ builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<IApplicationUserFileService, ApplicationUserFileService>();
 builder.Services.AddScoped<IPartDefinitionService, PartDefinitionService>();
 builder.Services.AddScoped<IPartTraceabilityStateService, PartTraceabilityStateService>();
+builder.Services.AddScoped<IPartTraceabilityPersistenceService, PartTraceabilityPersistenceService>();
 builder.Services.AddScoped<ISerializablePartService, SerializablePartService>();
 builder.Services.AddScoped<IProductionLogPartService, ProductionLogPartService>();
 builder.Services.AddScoped<ITagService, TagService>();

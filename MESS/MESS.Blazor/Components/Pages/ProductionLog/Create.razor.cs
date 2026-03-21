@@ -474,13 +474,18 @@ public partial class Create : ComponentBase, IAsyncDisposable
             logIndexToProductionLogId);
 
         // 4. Persist operations
-        foreach (var operation in operations)
+        try
         {
-            await PartTraceabilityPersistenceService.PersistOperationBatchedAsync(operation);
+            foreach (var operation in operations)
+            {
+                await PartTraceabilityPersistenceService.PersistOperationBatchedAsync(operation);
+            }
         }
-
-       
-        
+        catch (Exception)
+        {
+            ToastService.ShowError("Failed to persist part traceability data.");
+            throw;
+        }
         
         // Reset the local storage values
         await LocalCacheManager.ClearProductionLogBatchAsync();
