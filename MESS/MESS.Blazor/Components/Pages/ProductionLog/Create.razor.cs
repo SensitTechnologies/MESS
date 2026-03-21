@@ -457,7 +457,28 @@ public partial class Create : ComponentBase, IAsyncDisposable
             await SessionManager.AddProductionLogAsync(productionLog.Id);
         }
         
-        // Part Traceability Persistence Calls.
+        // --- Part Traceability Persistence ---
+        // 1. Map UI log index → DB ProductionLogId
+        var logIndexToProductionLogId = ProductionLogEventService.CurrentProductionLogs
+            .Select((log, index) => new { index, log.Id })
+            .ToDictionary(x => x.index, x => x.Id);
+
+        // 2. Create snapshots from UI state
+        var snapshots = logIndexToProductionLogId.Keys
+            .Select(logIndex => PartTraceabilityService.CreateSnapshot(logIndex))
+            .ToList();
+
+        // 3. Build operations
+        var operations = PartTraceabilityPersistenceService.BuildOperations(
+            snapshots,
+            logIndexToProductionLogId);
+
+        // 4. Persist operations
+        foreach (var operation in operations)
+        {
+            await PartTraceabilityPersistenceService.PersistOperationBatchedAsync(operation);
+        }
+
        
         
         
