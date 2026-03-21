@@ -162,7 +162,15 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
 
             foreach (var entry in operation.Entries)
             {
-                SerializablePart? part;
+                SerializablePart? part = null;
+
+                //Skip completely empty entries
+                if (string.IsNullOrWhiteSpace(entry.SerialNumber) &&
+                    string.IsNullOrWhiteSpace(entry.TagCode) &&
+                    !entry.SerializablePartId.HasValue)
+                {
+                    continue; // Just move on to the next loop iteration if there is nothing
+                }
 
                 if (entry.SerializablePartId.HasValue)
                 {
@@ -180,26 +188,23 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                     if (!codeToTag.TryGetValue(entry.TagCode!, out var tag))
                         throw new InvalidOperationException($"Tag '{entry.TagCode}' not found.");
 
-                    // Safety checks
                     if (tag.Status == TagStatus.Retired)
-                        throw new InvalidOperationException($"Tag '{entry.TagCode}' is retired and cannot be used.");
+                        throw new InvalidOperationException($"Tag '{entry.TagCode}' is retired.");
 
                     if (tag.Status != TagStatus.Assigned || tag.SerializablePart == null)
-                        throw new InvalidOperationException($"Tag '{entry.TagCode}' is not currently assigned to a part.");
+                        throw new InvalidOperationException($"Tag '{entry.TagCode}' is not assigned.");
 
                     part = tag.SerializablePart;
 
-                    // Validate PartDefinition
                     if (part.PartDefinitionId != nodeToDefId[entry.PartNodeId])
                         throw new InvalidOperationException(
                             $"Resolved part for Tag '{entry.TagCode}' has PartDefinitionId {part.PartDefinitionId} " +
                             $"but PartNode {entry.PartNodeId} expects {nodeToDefId[entry.PartNodeId]}.");
 
-                    // Optional: prevent duplicate usage in same operation
                     if (entryPartMap.Values.Any(p => p.Id == part.Id))
-                        throw new InvalidOperationException($"Tag '{entry.TagCode}' is assigned to a part already used in this operation.");
+                        throw new InvalidOperationException(
+                            $"Tag '{entry.TagCode}' is already used in this operation.");
 
-                    // --- TagHistory creation ---
                     tag.History.Add(new TagHistory
                     {
                         TagId = tag.Id,
@@ -210,7 +215,6 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                 }
                 else if (!string.IsNullOrWhiteSpace(entry.SerialNumber))
                 {
-                    // Always create new part for serial number
                     part = new SerializablePart
                     {
                         SerialNumber = entry.SerialNumber,
@@ -218,12 +222,12 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                     };
                     partsToAdd.Add(part);
                 }
-                else
-                {
-                    throw new InvalidOperationException($"Cannot resolve part for PartNodeId {entry.PartNodeId}");
-                }
 
-                entryPartMap[entry] = part;
+                // Only map if we actually resolved/created something
+                if (part != null)
+                {
+                    entryPartMap[entry] = part;
+                }
             }
 
             db.SerializableParts.AddRange(partsToAdd);
