@@ -11,18 +11,19 @@ public class PartDefinitionResolver : IPartDefinitionResolver
     public async Task<PartDefinition?> ResolveAsync(
         ApplicationContext context,
         string? name,
-        string? number)
+        string? number,
+        bool isSerialNumberUnique = true)
     {
-        // Normalize input
         var normalizedName = name?.Trim();
         if (string.IsNullOrWhiteSpace(normalizedName))
             return null;
 
-        var normalizedNumber = number?.Trim() ?? string.Empty;
+        var normalizedNumber = string.IsNullOrWhiteSpace(number)
+            ? null
+            : number.Trim();
 
-        // Use uppercase for comparison to avoid case conflicts
         var upperName = normalizedName.ToUpperInvariant();
-        var upperNumber = normalizedNumber.ToUpperInvariant();
+        var upperNumber = normalizedNumber?.ToUpperInvariant() ?? "";
 
         var existing = context.PartDefinitions
                            .Local
@@ -35,12 +36,22 @@ public class PartDefinitionResolver : IPartDefinitionResolver
                                (p.Number ?? "").ToUpper() == upperNumber);
 
         if (existing != null)
+        {
+            if (existing.IsSerialNumberUnique != isSerialNumberUnique)
+            {
+                throw new InvalidOperationException(
+                    $"Part '{existing.Name}' already exists with IsSerialNumberUnique = {existing.IsSerialNumberUnique}, " +
+                    $"but attempted to use {isSerialNumberUnique}. This cannot be changed from the Work Instruction editor.");
+            }
+
             return existing;
+        }
 
         var newPart = new PartDefinition
         {
             Name = normalizedName,
-            Number = normalizedNumber
+            Number = normalizedNumber,
+            IsSerialNumberUnique = isSerialNumberUnique
         };
 
         context.PartDefinitions.Add(newPart);
