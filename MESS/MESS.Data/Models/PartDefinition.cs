@@ -21,7 +21,7 @@ public class PartDefinition
     public required string Name { get; set; }
     
     /// <summary>
-    /// Gets or sets a value indicating whether instances of this part definition
+    /// Gets or sets a value indicating whether instances (serializable parts) of this part definition
     /// can be uniquely identified by their serial number.
     /// </summary>
     /// <remarks>
