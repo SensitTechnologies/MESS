@@ -18,7 +18,7 @@ namespace MESS.Services.Files.WorkInstructions;
 /// <inheritdoc />
 public partial class WorkInstructionFileService : IWorkInstructionFileService
 {
-    // The following attributes define the current expected XLSX structure as of 7/1/2025
+    // The following attributes define the current expected XLSX structure as of 3/23/2026
     private const string PRODUCT_NAME_CELL = "B1";
     private const string INSTRUCTION_TITLE_CELL = "B2";
     private const string VERSION_CELL = "B3";
