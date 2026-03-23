@@ -112,6 +112,10 @@ public class ApplicationContext
             .IsUnique()
             .HasFilter("\"Number\" IS NULL OR \"Number\" = ''");
         
+        modelBuilder.Entity<PartDefinition>()
+            .Property(p => p.IsSerialNumberUnique)
+            .HasDefaultValue(true);
+        
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
         
