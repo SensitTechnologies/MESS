@@ -1,4 +1,5 @@
-﻿using MESS.Services.DTOs.ProductionLogs.Cache;
+﻿using MESS.Blazor.Components.Dialogs;
+using MESS.Services.DTOs.ProductionLogs.Cache;
 using MESS.Services.DTOs.ProductionLogs.Form;
 using MESS.Services.DTOs.ProductionLogs.LogSteps.Form;
 using Microsoft.AspNetCore.Components;
@@ -23,6 +24,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
     private const string Title = "Production Log";
     private bool IsLoading { get; set; } = true;
     private ConfirmationModal? popupRef;
+    private MessageModal? errorPopupRef;
     private bool IsWorkflowActive { get; set; }
     private Status WorkInstructionStatus { get; set; } = Status.NotStarted;
     private bool IsSaved { get; set; }
@@ -356,6 +358,15 @@ public partial class Create : ComponentBase, IAsyncDisposable
     {
         if (ActiveWorkInstruction == null)
         {
+            return;
+        }
+        
+        // Stop submission if there are unresolved tags
+        if (PartTraceabilityService.HasUnresolvedTags())
+        {
+            errorPopupRef?.Show(
+                "One or more tag codes could not be resolved. Please fix these before submitting.",
+                "Invalid Tags");
             return;
         }
         

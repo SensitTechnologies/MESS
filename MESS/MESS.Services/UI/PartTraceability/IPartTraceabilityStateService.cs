@@ -141,6 +141,24 @@ namespace MESS.Services.UI.PartTraceability
         /// The count of <see cref="PartEntryState"/> instances that contain either a serial number or tag code.
         /// </returns>
         int GetTotalPartsLogged();
+        
+        /// <summary>
+        /// Determines whether any part entry contains a tag code that could not be resolved
+        /// to a corresponding serializable part.
+        /// </summary>
+        /// <param name="logIndexFilter">
+        /// Optional log index to restrict the check to a specific log.
+        /// If <c>null</c>, all logs are evaluated.
+        /// </param>
+        /// <param name="onlyWithInput">
+        /// If <c>true</c>, only entries that contain user input are considered.
+        /// If <c>false</c>, all entries are evaluated.
+        /// </param>
+        /// <returns>
+        /// <c>true</c> if at least one entry has a non-empty tag code that failed to resolve;
+        /// otherwise, <c>false</c>.
+        /// </returns>
+        bool HasUnresolvedTags(int? logIndexFilter = null, bool onlyWithInput = true);
 
         /// <summary>
         /// Clears all state managed by the service.
