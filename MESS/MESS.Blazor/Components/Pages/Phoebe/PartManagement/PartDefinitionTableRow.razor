@@ -8,6 +8,9 @@
 <MudTd DataLabel="Number">
     <InputText id="number" @bind-Value="PartDefinition.Number" class="form-control" placeholder="Enter part number (optional)" @oninput="OnInputChanged"/>
 </MudTd>
+<MudTd DataLabel="Serial Number Unique">
+    <InputCheckbox @bind-Value="PartDefinition.IsSerialNumberUnique" class="form-check-input" @onchange="OnInputChanged"/>
+</MudTd>
 <MudTd DataLabel="Actions">
     @if (!IsNewPart)
     {
