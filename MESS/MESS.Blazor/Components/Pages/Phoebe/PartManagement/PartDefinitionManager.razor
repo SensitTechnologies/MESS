@@ -140,6 +140,14 @@ else
 
     private async Task HandleSubmitPartAsync(PartDefinition part)
     {
+        // Validate first
+        var validationMessage = ValidatePart(part);
+        if (!string.IsNullOrEmpty(validationMessage))
+        {
+            ToastService.ShowWarning(validationMessage);
+            return;
+        }
+
         try
         {
             PartDefinition? result;
@@ -169,7 +177,6 @@ else
                 ToastService.ShowSuccess($"Updated part '{result.Name}'.");
             }
 
-            // Refresh data after a successful write
             await LoadParts();
             await _table.ReloadServerData();
         }
@@ -226,5 +233,23 @@ else
             ToastService.ShowError(
                 $"Unexpected error deleting part '{part.Name}': {ex.Message}");
         }
+    }
+    
+    private string? ValidatePart(PartDefinition part)
+    {
+        if (string.IsNullOrWhiteSpace(part.Name))
+            return "Name is required.";
+
+        bool duplicateExists = PartDefinitions
+            .Where(p => p.Id != part.Id) // skip the part being edited
+            .Any(p =>
+                p.Name.Equals(part.Name, StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace(p.Number) && string.IsNullOrWhiteSpace(part.Number)
+                 || p.Number == part.Number));
+
+        if (duplicateExists)
+            return "A part with this name (and number) already exists.";
+
+        return null;
     }
 }
