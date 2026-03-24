@@ -18,11 +18,11 @@
                     var logSteps = new List<LogStepFormDTO>();
                     foreach (var log in ProductionLogs)
                     {
-                        var existing = log.LogSteps?.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
+                        var existing = log.LogSteps.FirstOrDefault(ls => ls.WorkInstructionStepId == step.Id);
                         if (existing == null)
                         {
                             existing = new LogStepFormDTO { WorkInstructionStepId = step.Id };
-                            log.LogSteps?.Add(existing);
+                            log.LogSteps.Add(existing);
                         }
                         logSteps.Add(existing);
                     }
@@ -45,12 +45,45 @@
             }
         }
 
-        @if (ActiveWorkInstruction is { PartProducedIsSerialized: true, PartProduced: not null })
+        @if (ActiveWorkInstruction.PartProduced is not null)
         {
-            <div class="card card-body">
+            <div class="card card-body mt-3">
+
+                @* Serial Number Input (only if serialized) *@
+                @if (ActiveWorkInstruction.PartProducedIsSerialized)
+                {
+                    <div class="mb-2">
+                        <div class="form-label">
+                            @(ProductionLogs.Count == 1 ? "Produced Serial Number" : "Produced Serial Numbers")
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 justify-content-around align-content-center mb-3">
+                        @for (var i = 0; i < ProductionLogs.Count; i++)
+                        {
+                            var index = i;
+
+                            <div class="form-floating flex-grow-1" style="min-width: 220px;">
+                                <input
+                                    id=@($"producedSerialNumber-{index}")
+                                    class="form-control tall-input text-lightweight"
+                                    @oninput="@(e => OnProducedSerialInput(index, e.Value?.ToString()))" />
+
+                                @if (ProductionLogs.Count > 1)
+                                {
+                                    <label for=@($"producedSerialNumber-{index}") class="form-label subtle-label">
+                                        #@(index + 1)
+                                    </label>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* Tag Code Input (always shown if a part is produced) *@
                 <div class="mb-2">
                     <div class="form-label">
-                        @(ProductionLogs.Count == 1 ? "Produced Serial Number" : "Produced Serial Numbers")
+                        @(ProductionLogs.Count == 1 ? "Produced Tag Code" : "Produced Tag Codes")
                     </div>
                 </div>
 
@@ -61,13 +94,13 @@
 
                         <div class="form-floating flex-grow-1" style="min-width: 220px;">
                             <input
-                                id=@($"producedSerialNumber-{index}")
+                                id=@($"producedTagCode-{index}")
                                 class="form-control tall-input text-lightweight"
-                                @oninput="(e => OnProducedSerialInput(index, e.Value?.ToString()))" />
+                                @oninput="@(async e => await OnProducedTagInput(index, e.Value?.ToString()))" />
 
                             @if (ProductionLogs.Count > 1)
                             {
-                                <label for=@($"producedSerialNumber-{index}") class="form-label subtle-label">
+                                <label for=@($"producedTagCode-{index}") class="form-label subtle-label">
                                     #@(index + 1)
                                 </label>
                             }
@@ -101,6 +134,7 @@
     /// </summary>
     private List<object> NodeBlocks { get; set; } = [];
 
+    /// <inheritdoc/>
     protected override void OnParametersSet()
     {
         NodeBlocks = GroupNodes(ActiveWorkInstruction.Nodes.OrderBy(n => n.Position).ToList());
@@ -145,5 +179,16 @@
 
         // Update the state service
         PartTraceabilityService.SetProducedPartSerialNumber(logIndex, serialNumber);
+    }
+    
+    private async Task OnProducedTagInput(int logIndex, string? value)
+    {
+        var tagCode = string.IsNullOrWhiteSpace(value) ? null : value;
+
+        // Update the state service asynchronously
+        await PartTraceabilityService.SetProducedPartTagCodeAsync(logIndex, tagCode);
+
+        // Optionally trigger a UI refresh if needed
+        StateHasChanged();
     }
 }
