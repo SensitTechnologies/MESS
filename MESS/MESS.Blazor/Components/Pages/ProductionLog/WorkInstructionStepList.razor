@@ -49,61 +49,66 @@
         {
             <div class="card card-body mt-3">
 
-                @* Serial Number Input (only if serialized) *@
+                @* Serial Number Input (if serialized) *@
                 @if (ActiveWorkInstruction.PartProducedIsSerialized)
                 {
-                    <div class="mb-2">
-                        <div class="form-label">
-                            @(ProductionLogs.Count == 1 ? "Produced Serial Number" : "Produced Serial Numbers")
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-2 justify-content-around align-content-center mb-3">
+                    <div class="mb-3 d-flex flex-wrap gap-2 justify-content-around">
                         @for (var i = 0; i < ProductionLogs.Count; i++)
                         {
                             var index = i;
-
-                            <div class="form-floating flex-grow-1" style="min-width: 220px;">
-                                <input
-                                    id=@($"producedSerialNumber-{index}")
-                                    class="form-control tall-input text-lightweight"
-                                    @oninput="@(e => OnProducedSerialInput(index, e.Value?.ToString()))" />
-
-                                @if (ProductionLogs.Count > 1)
-                                {
-                                    <label for=@($"producedSerialNumber-{index}") class="form-label subtle-label">
-                                        #@(index + 1)
-                                    </label>
-                                }
+                            <div class="card mb-1 flex-grow-1" style="min-width: 150px;">
+                                <div class="card-header d-flex align-items-center justify-content-between py-2">
+                                    <span class="fw-semibold">Produced Serial Number</span>
+                                    @if (ProductionLogs.Count > 1)
+                                    {
+                                        <small class="text-muted">#@(index + 1)</small>
+                                    }
+                                </div>
+                                <div class="card-body py-2">
+                                    <input
+                                        id=@($"producedSerialNumber-{index}")
+                                        class="form-control tall-input text-lightweight"
+                                        placeholder="Enter serial number"
+                                        @oninput="@(e => OnProducedSerialInput(index, e.Value?.ToString()))" />
+                                </div>
                             </div>
                         }
                     </div>
                 }
 
-                @* Tag Code Input (always shown if a part is produced) *@
+                @* Tag Code Input *@
                 <div class="mb-2">
                     <div class="form-label">
                         @(ProductionLogs.Count == 1 ? "Produced Tag Code" : "Produced Tag Codes")
                     </div>
                 </div>
 
-                <div class="d-flex flex-wrap gap-2 justify-content-around align-content-center">
+                <div class="d-flex flex-wrap gap-2 justify-content-around">
                     @for (var i = 0; i < ProductionLogs.Count; i++)
                     {
                         var index = i;
 
-                        <div class="form-floating flex-grow-1" style="min-width: 220px;">
-                            <input
-                                id=@($"producedTagCode-{index}")
-                                class="form-control tall-input text-lightweight"
-                                @oninput="@(async e => await OnProducedTagInput(index, e.Value?.ToString()))" />
+                        <div class="card mb-1 flex-grow-1" style="min-width: 150px;">
+                            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                                <span class="fw-semibold">Tag Code</span>
+                                @if (ProductionLogs.Count > 1)
+                                {
+                                    <small class="text-muted">#@(index + 1)</small>
+                                }
+                            </div>
+                            <div class="card-body py-2">
+                                <input
+                                    id=@($"producedTagCode-{index}")
+                                    class="form-control tall-input text-lightweight"
+                                    placeholder="Scan or enter tag code"
+                                    @oninput="@(async e => await OnProducedTagInput(index, e.Value?.ToString()))" />
 
-                            @if (ProductionLogs.Count > 1)
-                            {
-                                <label for=@($"producedTagCode-{index}") class="form-label subtle-label">
-                                    #@(index + 1)
-                                </label>
-                            }
+                                @* Optional status / validation message *@
+                                @* You can use a small text under the input like in PartNodeTextInput *@
+                                <div class="form-text text-muted small mt-1">
+                                    @(/* Optionally show "Searching..." or validation here */ "")
+                                </div>
+                            </div>
                         </div>
                     }
                 </div>
