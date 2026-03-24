@@ -226,6 +226,22 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
         log.ProducedPartSerialNumber = serialNumber;
     }
     
+    /// <inheritdoc/>
+    public async Task SetProducedPartTagCodeAsync(int logIndex, string? tagCode)
+    {
+        var log = EnsureLogExists(logIndex);
+        log.ProducedPartTagCode = tagCode;
+        log.ProducedPartSerializablePartId = null;
+
+        if (string.IsNullOrWhiteSpace(tagCode))
+            return;
+
+        // Attempt to resolve tag to a serializable part
+        var resolvedId = await _serializablePartService.TryResolveTagAsync(tagCode);
+        if (resolvedId.HasValue)
+            log.ProducedPartSerializablePartId = resolvedId.Value;
+    }
+    
     /// <summary>
     /// Ensures that a <see cref="LogState"/> exists for the given log index.
     /// If it does not exist, it is created.
@@ -267,7 +283,8 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
         {
             LogIndex = logIndex,
             ProducedPartSerialNumber = log.ProducedPartSerialNumber,
-            ShouldProducePart = log.ShouldProducePart, 
+            ProducedPartTagCode = log.ProducedPartTagCode,
+            ShouldProducePart = log.ShouldProducePart,
             Entries = snapshotEntries
         };
     }

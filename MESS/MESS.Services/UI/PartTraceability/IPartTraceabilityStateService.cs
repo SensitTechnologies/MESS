@@ -173,6 +173,14 @@ namespace MESS.Services.UI.PartTraceability
         void SetProducedPartSerialNumber(int logIndex, string? serialNumber);
 
         /// <summary>
+        /// Sets the tag code for the produced part in a specific log.
+        /// Clears any previously resolved serializable part ID for the produced part.
+        /// </summary>
+        /// <param name="logIndex">The UI log index.</param>
+        /// <param name="tagCode">The tag code to assign to the produced part.</param>
+        Task SetProducedPartTagCodeAsync(int logIndex, string? tagCode);
+
+        /// <summary>
         /// Creates an immutable snapshot of the current part traceability state
         /// for a single production log identified by its UI log index.
         /// </summary>
