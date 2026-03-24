@@ -119,7 +119,7 @@ builder.Services.AddAntiforgery();
 // Setup FluentUI
 builder.Services.AddFluentUIComponents();
 
-builder.Services.AddSingleton<DarkModeInstance>();
+builder.Services.AddScoped<DarkModeInstance>();
 
 
 
