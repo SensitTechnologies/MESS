@@ -26,6 +26,18 @@ public class LogState
     public string? ProducedPartSerialNumber { get; set; }
     
     /// <summary>
+    /// Gets or sets a tag code for the produced part for this log. This tag should have an "Available" status and will
+    /// be assigned later during persistence.
+    /// </summary>
+    public string? ProducedPartTagCode { get; set; }
+    
+    /// <summary>
+    /// An optional resolved serializable part ID for the produced part, if it has already been looked up. Most of the
+    /// time it will not be, only during part rework
+    /// </summary>
+    public int? ProducedPartSerializablePartId { get; set; }
+    
+    /// <summary>
     /// Gets or sets a value indicating whether this log is expected to produce a part.
     /// When set to <c>false</c>, the persistence layer should not create a produced part
     /// even if other data (such as serial numbers) is present.
