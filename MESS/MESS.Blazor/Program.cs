@@ -5,6 +5,7 @@ using MESS.Data.Seed;
 using MESS.Services.CRUD.Products;
 using MESS.Services.CRUD.ApplicationUser;
 using MESS.Services.CRUD.PartDefinitions;
+using MESS.Services.CRUD.PartTraceability;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.UI.LocalCacheManager;
 using MESS.Services.UI.DarkMode;
@@ -68,6 +69,7 @@ builder.Services.AddScoped<IApplicationUserFileService, ApplicationUserFileServi
 builder.Services.AddScoped<IPartDefinitionService, PartDefinitionService>();
 builder.Services.AddScoped<IPartTraceabilityStateService, PartTraceabilityStateService>();
 builder.Services.AddScoped<IPartTraceabilityPersistenceService, PartTraceabilityPersistenceService>();
+builder.Services.AddScoped<IPartResolver, PartResolver>();
 builder.Services.AddScoped<ISerializablePartService, SerializablePartService>();
 builder.Services.AddScoped<IProductionLogPartService, ProductionLogPartService>();
 builder.Services.AddScoped<ITagService, TagService>();

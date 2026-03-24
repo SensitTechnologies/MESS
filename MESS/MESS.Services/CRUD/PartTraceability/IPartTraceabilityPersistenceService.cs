@@ -1,8 +1,8 @@
-using MESS.Data.Context;
 using MESS.Data.Models;
 using MESS.Services.DTOs.ProductionLogs.Form;
+using MESS.Services.UI.PartTraceability;
 
-namespace MESS.Services.UI.PartTraceability;
+namespace MESS.Services.CRUD.PartTraceability;
 
 /// <summary>
 /// Coordinates the transformation of UI-level part traceability state into
