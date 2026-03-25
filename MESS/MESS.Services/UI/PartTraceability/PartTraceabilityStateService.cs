@@ -1,5 +1,6 @@
 using System.Text;
 using MESS.Services.CRUD.SerializableParts;
+using MESS.Services.CRUD.Tags;
 
 namespace MESS.Services.UI.PartTraceability;
 
@@ -10,6 +11,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     
     private readonly Dictionary<int, LogState> _logs = new();
 
+    private readonly ITagService _tagService;
     
     /// <summary>
     /// Creates a new instance of <see cref="PartTraceabilityStateService"/>.
@@ -17,9 +19,13 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <param name="serializablePartService">
     /// The service used to resolve tag codes to serializable parts.
     /// </param>
-    public PartTraceabilityStateService(ISerializablePartService serializablePartService)
+    /// <param name="tagService">
+    /// The service used to check if tag codes are available (for produced parts)
+    /// </param>
+    public PartTraceabilityStateService(ISerializablePartService serializablePartService,  ITagService tagService)
     {
         _serializablePartService = serializablePartService;
+        _tagService = tagService;
     }
     
     /// <inheritdoc/>
@@ -193,7 +199,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     }
     
     /// <inheritdoc/>
-    public bool HasUnresolvedTags(int? logIndexFilter = null, bool onlyWithInput = true)
+    public async Task<bool> HasUnresolvedTagsAsync(int? logIndexFilter = null, bool onlyWithInput = true)
     {
         var logs = _logs.Values.AsEnumerable();
 
@@ -205,12 +211,31 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             logs = new[] { log };
         }
 
-        return logs
-            .SelectMany(log => log.Entries.Values)
-            .Where(entry => !onlyWithInput || entry.HasInput)
-            .Any(entry =>
-                !string.IsNullOrWhiteSpace(entry.TagCode) &&
-                entry.SerializablePartId == null);
+        foreach (var log in logs)
+        {
+            // Check entries
+            foreach (var entry in log.Entries.Values)
+            {
+                if (!onlyWithInput || entry.HasInput)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.TagCode) && entry.SerializablePartId == null)
+                        return true;
+                }
+            }
+
+            // Check produced part if applicable
+            if (log.ShouldProducePart)
+            {
+                var tagCode = log.ProducedPartTagCode;
+                if (string.IsNullOrWhiteSpace(tagCode) ||
+                    !await _tagService.IsAvailableAsync(tagCode))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <inheritdoc/>

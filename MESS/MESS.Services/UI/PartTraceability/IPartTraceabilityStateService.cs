@@ -158,7 +158,7 @@ namespace MESS.Services.UI.PartTraceability
         /// <c>true</c> if at least one entry has a non-empty tag code that failed to resolve;
         /// otherwise, <c>false</c>.
         /// </returns>
-        bool HasUnresolvedTags(int? logIndexFilter = null, bool onlyWithInput = true);
+        Task<bool> HasUnresolvedTagsAsync(int? logIndexFilter = null, bool onlyWithInput = true);
 
         /// <summary>
         /// Clears all state managed by the service.

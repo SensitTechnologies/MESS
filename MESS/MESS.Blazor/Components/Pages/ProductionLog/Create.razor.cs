@@ -362,7 +362,7 @@ public partial class Create : ComponentBase, IAsyncDisposable
         }
         
         // Stop submission if there are unresolved tags
-        if (PartTraceabilityService.HasUnresolvedTags())
+        if (await PartTraceabilityService.HasUnresolvedTagsAsync())
         {
             errorPopupRef?.Show(
                 "One or more tag codes could not be resolved. Please fix these before submitting.",
