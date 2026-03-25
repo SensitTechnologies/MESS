@@ -240,100 +240,100 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
     }
     
     private async Task<PartResolutionData> LoadResolutionDataAsync(
-    ApplicationContext db,
-    PartTraceabilityOperation operation,
-    WorkInstruction? workInstruction)
-{
-    // --- PartNodes ---
-    var partNodeIds = operation.Entries.Select(e => e.PartNodeId).Distinct().ToList();
-
-    var partNodes = await db.PartNodes
-        .Where(n => partNodeIds.Contains(n.Id))
-        .Select(n => new { n.Id, n.PartDefinitionId })
-        .ToListAsync();
-
-    var nodeToDefId = partNodes.ToDictionary(n => n.Id, n => n.PartDefinitionId);
-
-    // --- Definitions ---
-    var partDefinitionIds = partNodes
-        .Select(n => n.PartDefinitionId)
-        .Distinct()
-        .ToList();
-
-    if (workInstruction?.PartProducedId != null)
-        partDefinitionIds.Add(workInstruction.PartProducedId.Value);
-
-    partDefinitionIds = partDefinitionIds.Distinct().ToList();
-
-    var definitions = await db.PartDefinitions
-        .Where(pd => partDefinitionIds.Contains(pd.Id))
-        .ToDictionaryAsync(pd => pd.Id);
-
-    // --- Parts by ID ---
-    var idsToLookup = operation.Entries
-        .Where(e => e.SerializablePartId.HasValue)
-        .Select(e => e.SerializablePartId!.Value)
-        .Distinct()
-        .ToList();
-
-    var partsById = await db.SerializableParts
-        .Where(p => idsToLookup.Contains(p.Id))
-        .ToDictionaryAsync(p => p.Id);
-
-    // --- Serial preload ---
-    var serialNumbers = operation.Entries
-        .Where(e => !string.IsNullOrWhiteSpace(e.SerialNumber))
-        .Select(e => e.SerialNumber!)
-        .ToList();
-
-    if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber))
-        serialNumbers.Add(operation.ProducedPartSerialNumber);
-
-    serialNumbers = serialNumbers.Distinct().ToList();
-
-    var uniqueDefIds = definitions.Values
-        .Where(d => d.IsSerialNumberUnique)
-        .Select(d => d.Id)
-        .ToList();
-
-    var partsBySerial = await db.SerializableParts
-        .Where(p => serialNumbers.Contains(p.SerialNumber!) &&
-                    uniqueDefIds.Contains(p.PartDefinitionId))
-        .ToDictionaryAsync(p => (p.SerialNumber!, p.PartDefinitionId));
-
-    // --- Tags ---
-    // Collect tag codes from entries
-    var tagCodesFromEntries = operation.Entries
-        .Where(e => !string.IsNullOrWhiteSpace(e.TagCode))
-        .Select(e => e.TagCode!)
-        .Distinct()
-        .ToList();
-
-    // Include ProducedPartTagCode explicitly
-    var producedPartTagCodes = string.IsNullOrWhiteSpace(operation.ProducedPartTagCode)
-        ? new List<string>()
-        : new List<string> { operation.ProducedPartTagCode! };
-
-    var allRelevantTagCodes = tagCodesFromEntries
-        .Concat(producedPartTagCodes)
-        .Distinct()
-        .ToList();
-
-    // Load all tags that are either referenced or available
-    var tagsByCode = await db.Tags
-        .Include(t => t.SerializablePart)
-        .Where(t => allRelevantTagCodes.Contains(t.Code) || t.Status == TagStatus.Available)
-        .ToDictionaryAsync(t => t.Code);
-
-    return new PartResolutionData
+        ApplicationContext db,
+        PartTraceabilityOperation operation,
+        WorkInstruction? workInstruction)
     {
-        NodeToDefinitionId = nodeToDefId,
-        Definitions = definitions,
-        PartsById = partsById,
-        TagsByCode = tagsByCode,
-        PartsBySerial = partsBySerial
-    };
-}
+        // --- PartNodes ---
+        var partNodeIds = operation.Entries.Select(e => e.PartNodeId).Distinct().ToList();
+
+        var partNodes = await db.PartNodes
+            .Where(n => partNodeIds.Contains(n.Id))
+            .Select(n => new { n.Id, n.PartDefinitionId })
+            .ToListAsync();
+
+        var nodeToDefId = partNodes.ToDictionary(n => n.Id, n => n.PartDefinitionId);
+
+        // --- Definitions ---
+        var partDefinitionIds = partNodes
+            .Select(n => n.PartDefinitionId)
+            .Distinct()
+            .ToList();
+
+        if (workInstruction?.PartProducedId != null)
+            partDefinitionIds.Add(workInstruction.PartProducedId.Value);
+
+        partDefinitionIds = partDefinitionIds.Distinct().ToList();
+
+        var definitions = await db.PartDefinitions
+            .Where(pd => partDefinitionIds.Contains(pd.Id))
+            .ToDictionaryAsync(pd => pd.Id);
+
+        // --- Parts by ID ---
+        var idsToLookup = operation.Entries
+            .Where(e => e.SerializablePartId.HasValue)
+            .Select(e => e.SerializablePartId!.Value)
+            .Distinct()
+            .ToList();
+
+        var partsById = await db.SerializableParts
+            .Where(p => idsToLookup.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
+        // --- Serial preload ---
+        var serialNumbers = operation.Entries
+            .Where(e => !string.IsNullOrWhiteSpace(e.SerialNumber))
+            .Select(e => e.SerialNumber!)
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber))
+            serialNumbers.Add(operation.ProducedPartSerialNumber);
+
+        serialNumbers = serialNumbers.Distinct().ToList();
+
+        var uniqueDefIds = definitions.Values
+            .Where(d => d.IsSerialNumberUnique)
+            .Select(d => d.Id)
+            .ToList();
+
+        var partsBySerial = await db.SerializableParts
+            .Where(p => serialNumbers.Contains(p.SerialNumber!) &&
+                        uniqueDefIds.Contains(p.PartDefinitionId))
+            .ToDictionaryAsync(p => (p.SerialNumber!, p.PartDefinitionId));
+
+        // --- Tags ---
+        // Collect tag codes from entries
+        var tagCodesFromEntries = operation.Entries
+            .Where(e => !string.IsNullOrWhiteSpace(e.TagCode))
+            .Select(e => e.TagCode!)
+            .Distinct()
+            .ToList();
+
+        // Include ProducedPartTagCode explicitly
+        var producedPartTagCodes = string.IsNullOrWhiteSpace(operation.ProducedPartTagCode)
+            ? new List<string>()
+            : new List<string> { operation.ProducedPartTagCode! };
+
+        var allRelevantTagCodes = tagCodesFromEntries
+            .Concat(producedPartTagCodes)
+            .Distinct()
+            .ToList();
+
+        // Load all tags that are either referenced or available
+        var tagsByCode = await db.Tags
+            .Include(t => t.SerializablePart)
+            .Where(t => allRelevantTagCodes.Contains(t.Code) || t.Status == TagStatus.Available)
+            .ToDictionaryAsync(t => t.Code);
+
+        return new PartResolutionData
+        {
+            NodeToDefinitionId = nodeToDefId,
+            Definitions = definitions,
+            PartsById = partsById,
+            TagsByCode = tagsByCode,
+            PartsBySerial = partsBySerial
+        };
+    }
     
     private PartResolutionContext BuildResolutionContext(PartResolutionData data)
     {
