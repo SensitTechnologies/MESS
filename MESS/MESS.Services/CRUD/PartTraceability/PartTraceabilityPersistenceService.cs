@@ -206,6 +206,14 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
 
                 if (existingRel != null)
                 {
+                    // --- Create a "Removed" ProductionLogPart ---
+                    db.ProductionLogParts.Add(new ProductionLogPart
+                    {
+                        ProductionLogId = operation.ProductionLogId,
+                        SerializablePart = part,
+                        OperationType = PartOperationType.Removed
+                    });
+                    
                     db.SerializablePartRelationships.Remove(existingRel);
                 }
 
