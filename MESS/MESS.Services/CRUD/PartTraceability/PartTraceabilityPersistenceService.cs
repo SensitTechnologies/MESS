@@ -190,7 +190,7 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                 var part = _partResolver.Resolve(entry, context);
                 if (part == null) continue;
 
-                // Add ProductionLogPart
+                // Add ProductionLogPart for installation
                 db.ProductionLogParts.Add(new ProductionLogPart
                 {
                     ProductionLogId = operation.ProductionLogId,
@@ -206,24 +206,31 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
 
                 if (existingRel != null)
                 {
-                    // --- Create a "Removed" ProductionLogPart ---
-                    db.ProductionLogParts.Add(new ProductionLogPart
+                    // Only log removal if the parent is actually changing
+                    if (existingRel.ParentPartId != producedPart.Id)
                     {
-                        ProductionLogId = operation.ProductionLogId,
-                        SerializablePart = part,
-                        OperationType = PartOperationType.Removed
-                    });
-                    
-                    db.SerializablePartRelationships.Remove(existingRel);
+                        db.ProductionLogParts.Add(new ProductionLogPart
+                        {
+                            ProductionLogId = operation.ProductionLogId,
+                            SerializablePart = part,
+                            OperationType = PartOperationType.Removed
+                        });
+
+                        db.SerializablePartRelationships.Remove(existingRel);
+                    }
+                    // else: existing parent is the same, no removal needed
                 }
 
-                // Add the new relationship
-                db.SerializablePartRelationships.Add(new SerializablePartRelationship
+                // Add the new relationship only if it's not already the same
+                if (existingRel == null || existingRel.ParentPartId != producedPart.Id)
                 {
-                    ParentPart = producedPart,
-                    ChildPart = part,
-                    LastUpdated = DateTimeOffset.UtcNow
-                });
+                    db.SerializablePartRelationships.Add(new SerializablePartRelationship
+                    {
+                        ParentPart = producedPart,
+                        ChildPart = part,
+                        LastUpdated = DateTimeOffset.UtcNow
+                    });
+                }
             }
 
             DumpSerializableParts(db, "Before Final Save");
