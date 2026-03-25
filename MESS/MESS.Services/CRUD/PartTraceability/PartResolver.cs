@@ -72,22 +72,18 @@ public class PartResolver : IPartResolver
         // --- 3. Resolve by Serial ---
         else if (!string.IsNullOrWhiteSpace(entry.SerialNumber))
         {
-            var key = (entry.SerialNumber!, defId);
+            var normalizedSerial = NormalizeSerial(entry.SerialNumber);
+            var key = (normalizedSerial, defId);
 
             if (definition.IsSerialNumberUnique)
             {
-                if (ctx.PartsBySerial.TryGetValue(key, out part))
-                {
-                    // reuse existing
-                }
-                else
+                if (!ctx.PartsBySerial.TryGetValue(key, out part))
                 {
                     part = new SerializablePart
                     {
-                        SerialNumber = entry.SerialNumber,
+                        SerialNumber = normalizedSerial,
                         PartDefinitionId = defId
                     };
-
                     ctx.PartsToAdd.Add(part);
                     ctx.PartsBySerial[key] = part;
                 }
@@ -96,10 +92,9 @@ public class PartResolver : IPartResolver
             {
                 part = new SerializablePart
                 {
-                    SerialNumber = entry.SerialNumber,
+                    SerialNumber = normalizedSerial,
                     PartDefinitionId = defId
                 };
-
                 ctx.PartsToAdd.Add(part);
             }
         }
@@ -121,38 +116,46 @@ public class PartResolver : IPartResolver
     }
     
     ///<inheritdoc/>
-    public SerializablePart ResolveProducedPart(
-        string serialNumber,
-        int defId,
-        PartResolutionContext ctx)
+    public SerializablePart ResolveProducedPart(string serialNumber, int defId, PartResolutionContext ctx)
     {
+        var normalizedSerial = NormalizeSerial(serialNumber);
         var definition = ctx.Definitions[defId];
-        var key = (serialNumber, defId);
+
+        SerializablePart? existingPart = null;
 
         if (definition.IsSerialNumberUnique)
         {
-            if (ctx.PartsBySerial.TryGetValue(key, out var existing))
-                return existing;
+            var key = (normalizedSerial, defId);
 
-            var part = new SerializablePart
+            // Check if we already have it in memory
+            if (ctx.PartsBySerial.TryGetValue(key, out existingPart))
+                return existingPart;
+
+            // Check if it exists in DB (already loaded into PartsById)
+            existingPart = ctx.PartsById.Values
+                .FirstOrDefault(p => p.PartDefinitionId == defId && p.SerialNumber == normalizedSerial);
+
+            if (existingPart != null)
             {
-                SerialNumber = serialNumber,
-                PartDefinitionId = defId
-            };
-
-            ctx.PartsToAdd.Add(part);
-            ctx.PartsBySerial[key] = part;
-
-            return part;
+                ctx.PartsBySerial[key] = existingPart; // cache it
+                return existingPart;
+            }
         }
 
+        // Always create new part if non-unique or doesn't exist yet
         var newPart = new SerializablePart
         {
-            SerialNumber = serialNumber,
+            SerialNumber = normalizedSerial,
             PartDefinitionId = defId
         };
 
-        ctx.PartsToAdd.Add(newPart);
+        ctx.PartsToAdd.Add(newPart);     // only new parts go here
+        if (definition.IsSerialNumberUnique)
+            ctx.PartsBySerial[(normalizedSerial, defId)] = newPart;
+
         return newPart;
     }
+    
+    private static string NormalizeSerial(string serial) =>
+        serial?.Trim().ToUpperInvariant() ?? throw new ArgumentNullException(nameof(serial));
 }

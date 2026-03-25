@@ -106,19 +106,22 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             if (operation.ShouldProducePart || !string.IsNullOrWhiteSpace(operation.ProducedPartTagCode))
             {
                 // Create or resolve produced part if we have a serial number
-                if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber) &&
-                    workInstruction?.PartProducedId != null)
+                if (operation.ShouldProducePart || !string.IsNullOrWhiteSpace(operation.ProducedPartTagCode))
                 {
-                    producedPart = _partResolver.ResolveProducedPart(
-                        operation.ProducedPartSerialNumber,
-                        workInstruction.PartProducedId.Value,
-                        context);
-                    db.ProductionLogParts.Add(new ProductionLogPart
+                    if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber) && workInstruction?.PartProducedId != null)
                     {
-                        ProductionLogId = operation.ProductionLogId,
-                        SerializablePart = producedPart,
-                        OperationType = PartOperationType.Produced
-                    });
+                        producedPart = _partResolver.ResolveProducedPart(
+                            operation.ProducedPartSerialNumber,
+                            workInstruction.PartProducedId.Value,
+                            context);
+
+                        db.ProductionLogParts.Add(new ProductionLogPart
+                        {
+                            ProductionLogId = operation.ProductionLogId,
+                            SerializablePart = producedPart,
+                            OperationType = PartOperationType.Produced
+                        });
+                    }
                 }
                 else if (workInstruction?.PartProducedId != null)
                 {
@@ -127,7 +130,7 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                     {
                         PartDefinitionId = workInstruction.PartProducedId.Value
                     };
-                    db.SerializableParts.Add(producedPart);
+                    //db.SerializableParts.Add(producedPart);
                 }
             }
 
@@ -137,8 +140,14 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             
             if (producedPart != null)
             {
-                db.SerializableParts.Add(producedPart);
+                DumpSerializableParts(db, "Before Save (Produced Part)");
                 await db.SaveChangesAsync(); // ensures producedPart.Id is generated
+                
+                var key = (producedPart.SerialNumber!, producedPart.PartDefinitionId);
+                
+                // Ensure the resolver data sources are updated
+                context.PartsBySerial[key] = producedPart;
+                context.PartsById[producedPart.Id] = producedPart;
 
                 if (!string.IsNullOrWhiteSpace(operation.ProducedPartTagCode))
                 {
@@ -171,11 +180,17 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                     entryPartMap[entry] = part;
             }
 
-            db.SerializableParts.AddRange(context.PartsToAdd);
+            // Only add brand-new parts to EF for insertion
+            db.SerializableParts.AddRange(context.PartsToAdd.Where(p => p.Id == 0));
+            DumpSerializableParts(db, "After PartsToAdd");
 
             // --- Persist ---
-            foreach (var (entry, part) in entryPartMap)
+            foreach (var entry in operation.Entries)
             {
+                var part = _partResolver.Resolve(entry, context);
+                if (part == null) continue;
+
+                // Add ProductionLogPart
                 db.ProductionLogParts.Add(new ProductionLogPart
                 {
                     ProductionLogId = operation.ProductionLogId,
@@ -183,17 +198,27 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                     OperationType = PartOperationType.Installed
                 });
 
-                if (producedPart != null)
+                if (producedPart == null) continue;
+
+                // Check if an existing relationship exists
+                var existingRel = await db.SerializablePartRelationships
+                    .FirstOrDefaultAsync(r => r.ChildPartId == part.Id);
+
+                if (existingRel != null)
                 {
-                    db.SerializablePartRelationships.Add(new SerializablePartRelationship
-                    {
-                        ParentPart = producedPart,
-                        ChildPart = part,
-                        LastUpdated = DateTimeOffset.UtcNow
-                    });
+                    db.SerializablePartRelationships.Remove(existingRel);
                 }
+
+                // Add the new relationship
+                db.SerializablePartRelationships.Add(new SerializablePartRelationship
+                {
+                    ParentPart = producedPart,
+                    ChildPart = part,
+                    LastUpdated = DateTimeOffset.UtcNow
+                });
             }
 
+            DumpSerializableParts(db, "Before Final Save");
             await db.SaveChangesAsync();
             await tx.CommitAsync();
         });
@@ -307,5 +332,22 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             PartsToAdd = new List<SerializablePart>(),
             UsedPartIds = new HashSet<int>()
         };
+    }
+    
+    private static void DumpSerializableParts(DbContext db, string label)
+    {
+        Console.WriteLine($"\n==== DEBUG: {label} ====");
+
+        var entries = db.ChangeTracker.Entries<SerializablePart>();
+
+        foreach (var e in entries)
+        {
+            var entity = e.Entity;
+
+            Console.WriteLine(
+                $"State={e.State,-10} | Id={entity.Id,-5} | DefId={entity.PartDefinitionId,-5} | Serial={entity.SerialNumber ?? "NULL"}");
+        }
+
+        Console.WriteLine("==== END DEBUG ====\n");
     }
 }

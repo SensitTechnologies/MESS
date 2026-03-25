@@ -1,6 +1,8 @@
 @using MESS.Data.Models
+@using MESS.Services.CRUD.SerializableParts
 @using MESS.Services.UI.PartTraceability
 @inject IPartTraceabilityStateService PartTraceabilityService
+@inject ISerializablePartService SerializablePartService
 
 <div class="card mb-1" style="min-width: 150px;">
     <!-- Card header -->
@@ -37,7 +39,7 @@
 
         @if (_validationMessage is not null)
         {
-            <div class="form-text @( _validationMessageType == ValidationMessageType.Success ? "text-success" : "text-danger") small mt-1">
+            <div class="form-text @GetValidationTextClass() small mt-1">
                 @_validationMessage
             </div>
         }
@@ -58,7 +60,23 @@
     
     private int _previousLogIndex = -1;
 
-    private enum ValidationMessageType { Success, Error }
+    private enum ValidationMessageType
+    {
+        Success,
+        Error,
+        Info
+    }
+    
+    private string GetValidationTextClass()
+    {
+        return _validationMessageType switch
+        {
+            ValidationMessageType.Success => "text-success",
+            ValidationMessageType.Error => "text-danger",
+            ValidationMessageType.Info => "text-info",
+            _ => "text-muted"
+        };
+    }
 
     protected override async void OnParametersSet()
     {
@@ -108,9 +126,17 @@
         {
             case PartInputType.SerialNumber:
                 updatedValue = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber;
+
                 PartTraceabilityService.UpdateSerialNumber(LogIndex, PartNode.Id, updatedValue);
-                if (string.IsNullOrWhiteSpace(updatedValue))
+
+                if (updatedValue is not null)
+                    await ValidateSerialAsync(updatedValue);
+                else
+                {
+                    _validationMessage = null;
                     _validationMessageType = default;
+                }
+
                 break;
 
             case PartInputType.Tag:
@@ -183,12 +209,59 @@
     {
         var baseClass = "form-control";
 
-        if (_validationMessageType == ValidationMessageType.Success && !string.IsNullOrWhiteSpace(BoundValue))
-            return $"{baseClass} is-valid";
+        if (!string.IsNullOrWhiteSpace(BoundValue))
+        {
+            if (_validationMessageType == ValidationMessageType.Success ||
+                _validationMessageType == ValidationMessageType.Info)
+            {
+                return $"{baseClass} is-valid";
+            }
 
-        if (_validationMessageType == ValidationMessageType.Error && !string.IsNullOrWhiteSpace(BoundValue))
-            return $"{baseClass} is-invalid";
+            if (_validationMessageType == ValidationMessageType.Error)
+            {
+                return $"{baseClass} is-invalid";
+            }
+        }
 
-        return baseClass; // empty or log changed → normal look
+        return baseClass;
+    }
+    
+    private async Task ValidateSerialAsync(string serial)
+    {
+        _isSearching = true;
+        StateHasChanged();
+
+        var currentLogIndex = LogIndex;
+        var currentNodeId = PartNode.Id;
+
+        if (PartNode.PartDefinition?.IsSerialNumberUnique == true)
+        {
+            var exists = await SerializablePartService.ExistsAsync(
+                PartNode.PartDefinition.Id,
+                serial);
+
+            if (currentLogIndex != LogIndex || currentNodeId != PartNode.Id)
+                return;
+
+            if (exists)
+            {
+                _validationMessage = "Serial number already exists";
+                _validationMessageType = ValidationMessageType.Info; // 👈 NOT error
+            }
+            else
+            {
+                _validationMessage = "Serial number is new";
+                _validationMessageType = ValidationMessageType.Success;
+            }
+        }
+        else
+        {
+            // No uniqueness requirement → always valid if entered
+            _validationMessage = null;
+            _validationMessageType = ValidationMessageType.Success;
+        }
+
+        _isSearching = false;
+        StateHasChanged();
     }
 }
