@@ -33,7 +33,7 @@ public class ApplicationUser : IdentityUser
     /// <summary>
     /// Gets or sets a value indicating whether the user prefers dark mode.
     /// </summary>
-    public bool IsDarkMode { get; set; }
+    public bool DarkMode { get; set; }
 
     /// <summary>
     /// Gets the full name of the user by combining the first and last names.

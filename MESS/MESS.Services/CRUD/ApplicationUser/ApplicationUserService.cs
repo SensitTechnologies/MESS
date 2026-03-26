@@ -326,7 +326,7 @@ public class ApplicationUserService : IApplicationUserService
         {
             var updated = await _context.Users
                 .Where(u => u.Id == userId)
-                .ExecuteUpdateAsync(s => s.SetProperty(u => u.IsDarkMode, isDarkMode));
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.DarkMode, isDarkMode));
             return updated > 0;
         }
         catch (Exception ex)

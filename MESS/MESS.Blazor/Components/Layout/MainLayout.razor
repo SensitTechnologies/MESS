@@ -119,8 +119,8 @@
                 var user = await ApplicationUserService.GetByUserNameAsync(userName);
                 if (user != null)
                 {
-                    DarkModeInstance.Set(user.IsDarkMode);
-                    await JS.InvokeVoidAsync("setDarkMode", user.IsDarkMode);
+                    DarkModeInstance.Set(user.DarkMode);
+                    await JS.InvokeVoidAsync("setDarkMode", user.DarkMode);
                     StateHasChanged();
                 }
             }
