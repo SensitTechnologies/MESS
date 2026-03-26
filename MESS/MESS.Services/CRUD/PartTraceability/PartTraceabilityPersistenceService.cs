@@ -103,35 +103,38 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             // --- Resolve produced part ---
             SerializablePart? producedPart = null;
 
-            if (operation.ShouldProducePart || !string.IsNullOrWhiteSpace(operation.ProducedPartTagCode))
+            if (operation.ShouldProducePart)
             {
-                // Create or resolve produced part if we have a serial number
-                if (operation.ShouldProducePart || !string.IsNullOrWhiteSpace(operation.ProducedPartTagCode))
-                {
-                    if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber) && workInstruction?.PartProducedId != null)
-                    {
-                        producedPart = _partResolver.ResolveProducedPart(
-                            operation.ProducedPartSerialNumber,
-                            workInstruction.PartProducedId.Value,
-                            context);
+                if (workInstruction?.PartProducedId == null)
+                    throw new InvalidOperationException("WorkInstruction does not define a produced part.");
 
-                        db.ProductionLogParts.Add(new ProductionLogPart
-                        {
-                            ProductionLogId = operation.ProductionLogId,
-                            SerializablePart = producedPart,
-                            OperationType = PartOperationType.Produced
-                        });
-                    }
-                }
-                else if (workInstruction?.PartProducedId != null)
+                var defId = workInstruction.PartProducedId.Value;
+
+                if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber))
                 {
-                    // Minimal produced part for tag-only assignment
+                    // Resolve via resolver (handles uniqueness correctly)
+                    producedPart = _partResolver.ResolveProducedPart(
+                        operation.ProducedPartSerialNumber,
+                        defId,
+                        context);
+                }
+                else
+                {
+                    // No serial → still create the part
                     producedPart = new SerializablePart
                     {
-                        PartDefinitionId = workInstruction.PartProducedId.Value
+                        PartDefinitionId = defId
                     };
-                    //db.SerializableParts.Add(producedPart);
+
+                    context.PartsToAdd.Add(producedPart);
                 }
+
+                db.ProductionLogParts.Add(new ProductionLogPart
+                {
+                    ProductionLogId = operation.ProductionLogId,
+                    SerializablePart = producedPart,
+                    OperationType = PartOperationType.Produced
+                });
             }
 
             // Assign these to the context for the resolver
