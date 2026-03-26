@@ -176,7 +176,7 @@
         if (currentLogIndex != LogIndex || currentNodeId != PartNode.Id)
             return;
 
-        _validationMessage = resolved ? "Tag available" : "No part found";
+        _validationMessage = resolved ? "Part found" : "No part found";
         _validationMessageType = resolved ? ValidationMessageType.Success : ValidationMessageType.Error;
 
         _isSearching = false;
