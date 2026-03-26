@@ -158,8 +158,12 @@ public interface ISerializablePartService
     /// Attempts to resolve a tag code to the associated <see cref="SerializablePart"/> ID.
     /// </summary>
     /// <param name="tagCode">The tag code entered by the user.</param>
+    /// <param name="expectedPartDefinitionId">
+    /// The expected <see cref="PartDefinition"/> ID that the resolved part should match.
+    /// This is used to validate that the tag corresponds to the correct type of part.
+    /// </param>
     /// <returns>
     /// The ID of the associated <see cref="SerializablePart"/> if found; otherwise, <c>null</c>.
     /// </returns>
-    Task<int?> TryResolveTagAsync(string tagCode);
+    Task<int?> TryResolveTagAsync(string tagCode, int expectedPartDefinitionId);
 }

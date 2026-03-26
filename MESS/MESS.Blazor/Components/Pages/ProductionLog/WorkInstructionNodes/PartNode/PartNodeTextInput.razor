@@ -171,7 +171,7 @@
         var currentLogIndex = LogIndex;
         var currentNodeId = PartNode.Id;
 
-        var resolved = await PartTraceabilityService.UpdateTagCodeAsync(currentLogIndex, currentNodeId, tag);
+        var resolved = await PartTraceabilityService.UpdateTagCodeAsync(currentLogIndex, currentNodeId, tag, PartNode.PartDefinitionId);
         
         if (currentLogIndex != LogIndex || currentNodeId != PartNode.Id)
             return;

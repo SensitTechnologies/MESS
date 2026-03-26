@@ -284,7 +284,10 @@
     {
         var tagCode = string.IsNullOrWhiteSpace(value) ? null : value;
 
-        await PartTraceabilityService.SetProducedPartTagCodeAsync(logIndex, tagCode);
+        // Pass in the PartProduced ID
+        var partDefId = ActiveWorkInstruction.PartProduced!.Id;
+        
+        await PartTraceabilityService.SetProducedPartTagCodeAsync(logIndex, tagCode, partDefId);
 
         if (_debounceTokens.TryGetValue(logIndex, out var existingCts))
             existingCts.Cancel();

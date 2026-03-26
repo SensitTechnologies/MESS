@@ -132,28 +132,24 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> UpdateTagCodeAsync(int logIndex, int partNodeId, string? tagCode)
+    public async Task<bool> UpdateTagCodeAsync(int logIndex, int partNodeId, string? tagCode, int partDefinitionId)
     {
         var entry = GetEntry(logIndex, partNodeId);
         entry.TagCode = tagCode;
-        entry.SerializablePartId = null; // clear previous resolved ID
+        entry.SerializablePartId = null;
 
         if (string.IsNullOrWhiteSpace(tagCode))
-        {
-            // No tag entered → nothing to resolve
             return false;
-        }
 
-        // Try to resolve the tag code to a serializable part ID
-        var resolvedId = await _serializablePartService.TryResolveTagAsync(tagCode);
+        var resolvedId = await _serializablePartService.TryResolveTagAsync(tagCode, partDefinitionId);
 
         if (resolvedId.HasValue)
         {
             entry.SerializablePartId = resolvedId.Value;
-            return true; // caller knows we resolved something
+            return true;
         }
 
-        return false; // tag code entered but could not be resolved
+        return false;
     }
 
     /// <inheritdoc/>
@@ -208,7 +204,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             if (!_logs.TryGetValue(logIndexFilter.Value, out var log))
                 throw new KeyNotFoundException($"Log index {logIndexFilter.Value} does not exist.");
 
-            logs = new[] { log };
+            logs = [log];
         }
 
         foreach (var log in logs)
@@ -252,7 +248,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     }
     
     /// <inheritdoc/>
-    public async Task SetProducedPartTagCodeAsync(int logIndex, string? tagCode)
+    public async Task SetProducedPartTagCodeAsync(int logIndex, string? tagCode, int partDefinitionId)
     {
         var log = EnsureLogExists(logIndex);
         log.ProducedPartTagCode = tagCode;
@@ -262,7 +258,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             return;
 
         // Attempt to resolve tag to a serializable part
-        var resolvedId = await _serializablePartService.TryResolveTagAsync(tagCode);
+        var resolvedId = await _serializablePartService.TryResolveTagAsync(tagCode, partDefinitionId);
         if (resolvedId.HasValue)
             log.ProducedPartSerializablePartId = resolvedId.Value;
     }

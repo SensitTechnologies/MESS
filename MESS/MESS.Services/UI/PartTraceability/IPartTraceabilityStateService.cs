@@ -84,6 +84,7 @@ namespace MESS.Services.UI.PartTraceability
         /// <param name="logIndex">The production log index.</param>
         /// <param name="partNodeId">The unique part node identifier within the log.</param>
         /// <param name="tagCode">The tag code entered by the user.</param>
+        /// <param name="partDefinitionId">The part definition ID to use for resolution/validation.</param>
         /// <returns>
         /// <c>true</c> if the tag code was successfully resolved to a serializable part; otherwise, <c>false</c>.
         /// </returns>
@@ -92,7 +93,7 @@ namespace MESS.Services.UI.PartTraceability
         /// sets <see cref="PartEntryState.SerializablePartId"/> if resolution succeeds.
         /// The caller can use the return value to provide UI feedback to the user.
         /// </remarks>
-        Task<bool> UpdateTagCodeAsync(int logIndex, int partNodeId, string? tagCode);
+        Task<bool> UpdateTagCodeAsync(int logIndex, int partNodeId, string? tagCode, int partDefinitionId);
 
         /// <summary>
         /// Updates the serial number for a specific part entry.
@@ -178,7 +179,8 @@ namespace MESS.Services.UI.PartTraceability
         /// </summary>
         /// <param name="logIndex">The UI log index.</param>
         /// <param name="tagCode">The tag code to assign to the produced part.</param>
-        Task SetProducedPartTagCodeAsync(int logIndex, string? tagCode);
+        /// <param name="partDefinitionId">The part definition ID to use for resolving the tag code to a serializable part.</param>
+        Task SetProducedPartTagCodeAsync(int logIndex, string? tagCode, int partDefinitionId);
 
         /// <summary>
         /// Creates an immutable snapshot of the current part traceability state

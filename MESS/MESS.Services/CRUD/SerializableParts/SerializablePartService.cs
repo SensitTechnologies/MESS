@@ -465,7 +465,7 @@ public class SerializablePartService : ISerializablePartService
     }
     
     ///<inheritdoc/>
-    public async Task<int?> TryResolveTagAsync(string tagCode)
+    public async Task<int?> TryResolveTagAsync(string tagCode, int expectedPartDefinitionId)
     {
         if (string.IsNullOrWhiteSpace(tagCode))
         {
@@ -475,7 +475,8 @@ public class SerializablePartService : ISerializablePartService
 
         try
         {
-            // Attempt to retrieve the tag object
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
             var tag = await _tagService.GetByCodeAsync(tagCode);
             if (tag == null)
             {
@@ -488,10 +489,36 @@ public class SerializablePartService : ISerializablePartService
                 Log.Information("Tag {TagCode} exists but has no assigned SerializablePart.", tagCode);
                 return null;
             }
+            
+            var serializablePart = await context.SerializableParts
+                .Where(sp => sp.Id == tag.SerializablePartId)
+                .Select(sp => new { sp.Id, sp.PartDefinitionId })
+                .FirstOrDefaultAsync();
 
-            // Just return the ID, no need to load the full SerializablePart entity
-            Log.Information("Resolved tag {TagCode} to SerializablePart ID {SerializablePartId}.", tagCode, tag.SerializablePartId);
-            return tag.SerializablePartId;
+            if (serializablePart == null)
+            {
+                Log.Warning("SerializablePart {Id} not found.", tag.SerializablePartId);
+                return null;
+            }
+            
+            if (serializablePart.PartDefinitionId != expectedPartDefinitionId)
+            {
+                Log.Information(
+                    "Tag {TagCode} resolved to SerializablePart {Id}, but PartDefinition mismatch. Expected {Expected}, got {Actual}.",
+                    tagCode,
+                    serializablePart.Id,
+                    expectedPartDefinitionId,
+                    serializablePart.PartDefinitionId);
+
+                return null;
+            }
+
+            Log.Information(
+                "Resolved tag {TagCode} to SerializablePart ID {SerializablePartId}.",
+                tagCode,
+                serializablePart.Id);
+
+            return serializablePart.Id;
         }
         catch (Exception ex)
         {
