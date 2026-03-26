@@ -1,6 +1,7 @@
 @page "/parts"
 @layout PhoebeLayout
 @attribute [Authorize(Roles = "Technician, Administrator")]
+@using MESS.Blazor.Components.Dialogs
 @using MESS.Blazor.Components.Layout
 @using MESS.Data.Models
 @using MESS.Services.CRUD.PartDefinitions
@@ -17,11 +18,38 @@
 }
 else
 {
-    <div class="d-flex justify-content-between my-2" style="flex-direction: row">
-        <h3>Part Definitions</h3>
-        <div class="flex-grow-1"/>
-        <input type="text" class="form-control w-auto" placeholder="Search..."
-               @bind="SearchString" @bind:event="oninput"  />
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between my-3 gap-2">
+        <!-- Title -->
+        <div class="d-flex align-items-center gap-2">
+            <h3 class="mb-0">Part Definitions</h3>
+            <ConfirmationModal @ref="_confirmationModal" OnSubmit="OnBatchMergeConfirmed" />
+        </div>
+
+        <!-- Progress bar -->
+        @if (_isMerging)
+        {
+            <div class="flex-grow-1 mx-2">
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width:@_mergeProgress%"
+                         aria-valuenow="@_mergeProgress"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                        @_mergeProgress% complete
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Controls -->
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-primary" @onclick="ConfirmBatchMerge" title="Merge duplicate parts by name">
+                Merge Duplicates
+            </button>
+            <input type="text" class="form-control w-auto" placeholder="Search..."
+                   @bind="SearchString" @bind:event="oninput" />
+        </div>
     </div>
 
     <MudTable @ref="_table"
@@ -82,6 +110,11 @@ else
             _table.ReloadServerData();
         }
     }
+    
+    private ConfirmationModal? _confirmationModal;
+    
+    private bool _isMerging = false;
+    private int _mergeProgress = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -256,5 +289,46 @@ else
             return "A part with this name (and number) already exists.";
 
         return null;
+    }
+    
+    private void ConfirmBatchMerge()
+    {
+        _confirmationModal?.Show(
+            "This will merge all part definitions that share the same name. This operation cannot be undone. " +
+            "Production data can be modified from this operation.",
+            "Confirm Batch Merge");
+    }
+    
+    private async Task OnBatchMergeConfirmed(bool confirmed)
+    {
+        if (!confirmed) return;
+
+        try
+        {
+            _isMerging = true;
+            _mergeProgress = 0;
+
+            var progress = new Progress<int>(percent =>
+            {
+                _mergeProgress = percent;
+                StateHasChanged(); // re-render to update bar
+            });
+
+            int mergedCount = await PartDefinitionService.BatchMergeByNameAsync(progress);
+
+            ToastService.ShowSuccess($"Batch merge completed. {mergedCount} merges performed.");
+
+            await LoadParts();
+            await _table.ReloadServerData();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Batch merge failed: {ex.Message}");
+        }
+        finally
+        {
+            _isMerging = false;
+            _mergeProgress = 0;
+        }
     }
 }
