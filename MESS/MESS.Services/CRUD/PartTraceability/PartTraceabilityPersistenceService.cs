@@ -187,8 +187,8 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             // --- Persist ---
             foreach (var entry in operation.Entries)
             {
-                var part = _partResolver.Resolve(entry, context);
-                if (part == null) continue;
+                if (!entryPartMap.TryGetValue(entry, out var part))
+                    continue;
 
                 // Add ProductionLogPart for installation
                 db.ProductionLogParts.Add(new ProductionLogPart
@@ -201,8 +201,13 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                 if (producedPart == null) continue;
 
                 // Check if an existing relationship exists
-                var existingRel = await db.SerializablePartRelationships
-                    .FirstOrDefaultAsync(r => r.ChildPartId == part.Id);
+                SerializablePartRelationship? existingRel = null;
+
+                if (part.Id != 0)
+                {
+                    existingRel = await db.SerializablePartRelationships
+                        .FirstOrDefaultAsync(r => r.ChildPartId == part.Id);
+                }
 
                 if (existingRel != null)
                 {
