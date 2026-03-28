@@ -220,10 +220,13 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             }
 
             // Check produced part if applicable
+            // Check produced part if applicable
             if (log.ShouldProducePart)
             {
                 var tagCode = log.ProducedPartTagCode;
-                if (string.IsNullOrWhiteSpace(tagCode) ||
+
+                // Only check availability if there is actual input
+                if (!string.IsNullOrWhiteSpace(tagCode) &&
                     !await _tagService.IsAvailableAsync(tagCode))
                 {
                     return true;
