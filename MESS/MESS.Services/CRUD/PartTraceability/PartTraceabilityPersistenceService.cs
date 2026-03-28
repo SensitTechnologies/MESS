@@ -143,7 +143,6 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             
             if (producedPart != null)
             {
-                DumpSerializableParts(db, "Before Save (Produced Part)");
                 await db.SaveChangesAsync(); // ensures producedPart.Id is generated
                 
                 var key = (producedPart.SerialNumber!, producedPart.PartDefinitionId);
@@ -185,7 +184,6 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
 
             // Only add brand-new parts to EF for insertion
             db.SerializableParts.AddRange(context.PartsToAdd.Where(p => p.Id == 0));
-            DumpSerializableParts(db, "After PartsToAdd");
 
             // --- Persist ---
             foreach (var entry in operation.Entries)
@@ -240,8 +238,7 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
                     });
                 }
             }
-
-            DumpSerializableParts(db, "Before Final Save");
+            
             await db.SaveChangesAsync();
             await tx.CommitAsync();
         });
