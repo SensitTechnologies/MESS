@@ -311,6 +311,41 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     }
     
     /// <inheritdoc/>
+    public void LoadSnapshots(IEnumerable<PartTraceabilitySnapshot> snapshots)
+    {
+        if (snapshots == null)
+            throw new ArgumentNullException(nameof(snapshots));
+
+        _logs.Clear();
+
+        foreach (var snapshot in snapshots)
+        {
+            var log = new LogState
+            {
+                LogIndex = snapshot.LogIndex,
+                ShouldProducePart = snapshot.ShouldProducePart,
+                ProducedPartSerialNumber = snapshot.ProducedPartSerialNumber,
+                ProducedPartTagCode = snapshot.ProducedPartTagCode,
+                ProducedPartSerializablePartId = null // will optionally resolve below
+            };
+
+            // Rehydrate entries
+            foreach (var entrySnapshot in snapshot.Entries)
+            {
+                log.Entries[entrySnapshot.PartNodeId] = new PartEntryState
+                {
+                    PartNodeId = entrySnapshot.PartNodeId,
+                    SerialNumber = entrySnapshot.SerialNumber,
+                    TagCode = entrySnapshot.TagCode,
+                    SerializablePartId = entrySnapshot.SerializablePartId
+                };
+            }
+
+            _logs[snapshot.LogIndex] = log;
+        }
+    }
+    
+    /// <inheritdoc/>
     public string Dump(int? logIndexFilter = null, bool onlyWithInput = false)
     {
         var sb = new StringBuilder();

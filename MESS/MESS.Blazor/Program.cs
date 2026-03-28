@@ -70,6 +70,7 @@ builder.Services.AddScoped<IPartDefinitionService, PartDefinitionService>();
 builder.Services.AddScoped<IPartTraceabilityStateService, PartTraceabilityStateService>();
 builder.Services.AddScoped<IPartTraceabilityPersistenceService, PartTraceabilityPersistenceService>();
 builder.Services.AddScoped<IPartResolver, PartResolver>();
+builder.Services.AddScoped<IPartTraceabilityReworkService, PartTraceabilityReworkService>();
 builder.Services.AddScoped<ISerializablePartService, SerializablePartService>();
 builder.Services.AddScoped<IProductionLogPartService, ProductionLogPartService>();
 builder.Services.AddScoped<ITagService, TagService>();

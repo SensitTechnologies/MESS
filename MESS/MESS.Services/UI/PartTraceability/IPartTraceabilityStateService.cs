@@ -209,6 +209,16 @@ namespace MESS.Services.UI.PartTraceability
         /// Thrown if no part traceability state exists for the specified <paramref name="logIndex"/>.
         /// </exception>
         PartTraceabilitySnapshot CreateSnapshot(int logIndex);
+        
+        /// <summary>
+        /// Loads a collection of <see cref="PartTraceabilitySnapshot"/> instances into the state service,
+        /// replacing any existing log state.
+        /// </summary>
+        /// <param name="snapshots">
+        /// The snapshots to load. Each snapshot represents the full state of a log, including its entries
+        /// and produced part data.
+        /// </param>
+        void LoadSnapshots(IEnumerable<PartTraceabilitySnapshot> snapshots);
 
         /// <summary>
         /// Dumps the current state as a formatted string.
