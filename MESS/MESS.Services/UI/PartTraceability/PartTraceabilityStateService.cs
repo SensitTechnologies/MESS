@@ -7,6 +7,9 @@ namespace MESS.Services.UI.PartTraceability;
 /// <inheritdoc/>
 public class PartTraceabilityStateService : IPartTraceabilityStateService 
 {
+    /// <inheritdoc/>
+    public Action? OnStateChanged { get; set; }
+    
     private readonly ISerializablePartService _serializablePartService;
     
     private readonly Dictionary<int, LogState> _logs = new();
@@ -345,6 +348,9 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
 
             _logs[snapshot.LogIndex] = log;
         }
+        
+        // **Notify subscribers that state has changed**
+        OnStateChanged?.Invoke();
     }
     
     /// <inheritdoc/>

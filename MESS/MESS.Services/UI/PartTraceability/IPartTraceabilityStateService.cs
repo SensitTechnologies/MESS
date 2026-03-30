@@ -7,6 +7,12 @@ namespace MESS.Services.UI.PartTraceability
     public interface IPartTraceabilityStateService
     {
         /// <summary>
+        /// Called whenever snapshots are loaded or state changes.
+        /// Components can subscribe to this to trigger a UI refresh.
+        /// </summary>
+        public Action? OnStateChanged { get; set; }
+        
+        /// <summary>
         /// Initializes the state service with the specified production logs and node blocks.
         /// </summary>
         /// <param name="logIndexes">The log indexes for each production log.</param>

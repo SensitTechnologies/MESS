@@ -77,6 +77,26 @@
             _ => "text-muted"
         };
     }
+    
+    private void RefreshUI()
+    {
+        // Update local bound fields
+        var entry = PartTraceabilityService.TryGetEntry(LogIndex, PartNode.Id, out var e) ? e : null;
+
+        if (entry is not null)
+        {
+            _serialNumber = entry.SerialNumber;
+            _tagCode = entry.TagCode;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+    
+    protected override void OnInitialized()
+    {
+        // Subscribe to changes
+        PartTraceabilityService.OnStateChanged += RefreshUI;
+    }
 
     protected override async void OnParametersSet()
     {
@@ -263,5 +283,10 @@
 
         _isSearching = false;
         StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        PartTraceabilityService.OnStateChanged -= RefreshUI;
     }
 }
