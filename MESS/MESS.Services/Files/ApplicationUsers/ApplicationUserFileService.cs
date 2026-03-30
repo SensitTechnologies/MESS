@@ -205,7 +205,6 @@ public class ApplicationUserFileService : IApplicationUserFileService
 
             // Required field checks
             if (string.IsNullOrWhiteSpace(userName)) errors.Add($"Row {rowIndex}: UserName is required.");
-            if (string.IsNullOrWhiteSpace(email)) errors.Add($"Row {rowIndex}: Email is required.");
             if (string.IsNullOrWhiteSpace(firstName)) errors.Add($"Row {rowIndex}: FirstName is required.");
             if (string.IsNullOrWhiteSpace(lastName)) errors.Add($"Row {rowIndex}: LastName is required.");
 

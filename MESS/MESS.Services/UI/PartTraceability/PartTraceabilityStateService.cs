@@ -220,10 +220,13 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             }
 
             // Check produced part if applicable
+            // Check produced part if applicable
             if (log.ShouldProducePart)
             {
                 var tagCode = log.ProducedPartTagCode;
-                if (string.IsNullOrWhiteSpace(tagCode) ||
+
+                // Only check availability if there is actual input
+                if (!string.IsNullOrWhiteSpace(tagCode) &&
                     !await _tagService.IsAvailableAsync(tagCode))
                 {
                     return true;
@@ -287,8 +290,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <inheritdoc/>
     public PartTraceabilitySnapshot CreateSnapshot(int logIndex)
     {
-        if (!_logs.TryGetValue(logIndex, out var log))
-            throw new InvalidOperationException($"No entries found for logIndex {logIndex}");
+        var log = EnsureLogExists(logIndex);
 
         var snapshotEntries = log.Entries.Values
             .Select(e => new PartTraceabilitySnapshot.PartEntrySnapshot

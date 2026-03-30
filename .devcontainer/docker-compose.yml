@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm
+    volumes:
+      - ..:/workspaces:cached
+    command: sleep infinity
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MESSConnection: "Server=db,1433;Database=MESS_Data;User Id=sa;Password=MessDevPassword_123!;TrustServerCertificate=True;"
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "MessDevPassword_123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+volumes:
+  mssql-data:

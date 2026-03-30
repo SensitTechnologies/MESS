@@ -2,6 +2,7 @@
 using Bunit;
 using MESS.Blazor.Components.Pages.ProductionLog;
 using MESS.Services.CRUD.ApplicationUser;
+using MESS.Services.CRUD.PartTraceability;
 using MESS.Services.CRUD.Products;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.CRUD.WorkInstructions;
@@ -10,6 +11,7 @@ using MESS.Services.CRUD.ProductionLogParts;
 using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.UI.SessionManager;
 using MESS.Services.UI.LocalCacheManager;
+using MESS.Services.UI.PartTraceability;
 using MESS.Services.UI.ProductionLogEvent;
 using MESS.Services.UI.QrCodes;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +33,8 @@ public class ProductionLogCreationTests : BunitContext
     private readonly Mock<IWorkInstructionService> _workInstructionServiceMock;
     private readonly Mock<IProductService> _productServiceMock;
     private readonly Mock<IApplicationUserService> _userServiceMock;
+    private readonly Mock<IPartTraceabilityPersistenceService> _partTraceabilityPersistenceServiceMock;
+    private readonly Mock<IPartTraceabilityStateService> _partTraceabilityServiceMock;
     private readonly Mock<IDialogService> _dialogServiceMock;
 
     private readonly Mock<ILocalCacheManager> _localCacheManagerMock;
@@ -61,6 +65,8 @@ public class ProductionLogCreationTests : BunitContext
         _jsModuleMock = new Mock<IJSObjectReference>();
         _toastServiceMock = new Mock<IToastService>();
         _qrCodeServiceMock = new Mock<IQrCodeService>();
+        _partTraceabilityPersistenceServiceMock = new Mock<IPartTraceabilityPersistenceService>();
+        _partTraceabilityServiceMock = new Mock<IPartTraceabilityStateService>();
             
         Services.AddSingleton(_productionLogServiceMock.Object);
         Services.AddSingleton(_workInstructionServiceMock.Object);
@@ -75,6 +81,8 @@ public class ProductionLogCreationTests : BunitContext
         Services.AddSingleton(_jsRuntimeMock.Object);
         Services.AddSingleton(_toastServiceMock.Object);
         Services.AddSingleton(_qrCodeServiceMock.Object);
+        Services.AddSingleton(_partTraceabilityPersistenceServiceMock.Object);
+        Services.AddSingleton(_partTraceabilityServiceMock.Object);
             
         _jsRuntimeMock.Setup(js => js.InvokeAsync<IJSObjectReference>(
             "import", It.IsAny<object[]>())).ReturnsAsync(_jsModuleMock.Object);
