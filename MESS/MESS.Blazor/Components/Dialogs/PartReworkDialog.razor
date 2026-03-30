@@ -1,4 +1,5 @@
 @using MESS.Services.CRUD.PartTraceability
+@using MESS.Services.UI.LocalCacheManager
 @using MESS.Services.UI.PartTraceability
 @using MESS.Services.UI.ProductionLogEvent
 @using Serilog
@@ -6,6 +7,7 @@
 @inject IProductionLogEventService ProductionLogEventService
 @inject IPartTraceabilityReworkService PartTraceabilityReworkService
 @inject IPartTraceabilityStateService PartTraceabilityStateService
+@inject ILocalCacheManager LocalCacheManager
 
 <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
     <div class="modal-dialog modal-lg" role="document">
@@ -53,7 +55,6 @@
 </div>
 
 @code {
-    [Parameter] public int WorkInstructionId { get; set; }
     [Parameter] public int BatchSize { get; set; } = 1;
     [Parameter] public EventCallback OnClose { get; set; }
 
@@ -81,6 +82,11 @@
             if (TagCodes.Count != logs.Count)
                 throw new InvalidOperationException("Number of tag code inputs must match the number of active logs.");
 
+            // Get the work instruction ID from the cache
+            int workInstructionId = await LocalCacheManager.GetActiveWorkInstructionIdAsync();
+            if (workInstructionId < 0)
+                throw new InvalidOperationException("No active work instruction found in cache.");
+
             var snapshots = new List<PartTraceabilitySnapshot>();
 
             for (int i = 0; i < logs.Count; i++)
@@ -93,7 +99,7 @@
 
                 var result = await PartTraceabilityReworkService.BuildSnapshotsFromTagCodesAsync(
                     new List<string> { tagCode },
-                    WorkInstructionId);
+                    workInstructionId); // use cached ID
 
                 snapshots.AddRange(result);
             }

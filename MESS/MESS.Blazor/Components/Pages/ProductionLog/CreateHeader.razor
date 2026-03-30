@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between gap-4 flex-sm-wrap header-container">
     <ProductSelect Products="@Products" OnProductSelected="@OnProductSelected"/>
     <WorkInstructionSelect WorkInstructions="@WorkInstructions" 
-                           OnWorkInstructionSelected="@OnWorkInstructionSelectedHandler" />
+                           OnWorkInstructionSelected="@OnWorkInstructionSelected" />
 
     <div class="d-flex align-items-center">
         <label for="batchSizeInput" class="form-label me-2 mb-0">Batch Size</label>
@@ -48,9 +48,9 @@ else
 <!-- Bootstrap Modal Dialog -->
 @if (ShowReworkDialog)
 {
-    <PartReworkDialog WorkInstructionId="@SelectedWorkInstructionId"
-                      BatchSize="@BatchSize"
-                      OnClose="() => ShowReworkDialog = false" />
+    <PartReworkDialog
+        BatchSize="@BatchSize"
+        OnClose="() => ShowReworkDialog = false" />
 }
 
 @code {
@@ -109,16 +109,9 @@ else
     public EventCallback<int> OnBatchSizeChanged { get; set; }
     
     private bool ShowReworkDialog { get; set; }
-    private int SelectedWorkInstructionId { get; set; }
     
     private void NavigateToLogs()
     {
         NavigationManager.NavigateTo("/production-logs");
-    }
-
-    private void OnWorkInstructionSelectedHandler(int id)
-    {
-        SelectedWorkInstructionId = id;
-        OnWorkInstructionSelected.InvokeAsync(id);
     }
 }
