@@ -164,16 +164,19 @@
     Visible="@_showExportDialog"
     VisibleChanged="@(val => _showExportDialog = val)" />
 
-<ProductAssociationDialog
-    AllProducts="@Products"
-    SelectedProducts="@(ActiveDialog.SelectedProductNames)"
-    SelectedProductsChanged="OnDialogProductsChanged"
-    IsVisible="@ActiveDialog.IsVisible"
-    IsVisibleChanged="@(val => ActiveDialog.IsVisible = val)"
-    HeaderText="@ActiveDialog.HeaderText"
-    ConfirmButtonText="@ActiveDialog.ConfirmButtonText"
-    AllowsRenaming="@(ActiveDialog.Type == DialogType.SaveAs)"
-    OnConfirmed="HandleDialogConfirmed" />
+@if (Products is not null)
+{
+    <ProductAssociationDialog
+        AllProducts="@Products"
+        SelectedProducts="@(ActiveDialog.SelectedProductNames)"
+        SelectedProductsChanged="OnDialogProductsChanged"
+        IsVisible="@ActiveDialog.IsVisible"
+        IsVisibleChanged="@(val => ActiveDialog.IsVisible = val)"
+        HeaderText="@ActiveDialog.HeaderText"
+        ConfirmButtonText="@ActiveDialog.ConfirmButtonText"
+        AllowsRenaming="@(ActiveDialog.Type == DialogType.SaveAs)"
+        OnConfirmed="HandleDialogConfirmed" />
+}
 
 @code {
     private string? ActiveLineOperator { get; set; }
