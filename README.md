@@ -5,7 +5,7 @@
 [![Deploy](https://github.com/VidetteMakes/MESS/actions/workflows/deploy.yml/badge.svg)](https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml)
 [![Deploy API Documentation](https://github.com/VidetteMakes/MESS/actions/workflows/deploy_documentation.yml/badge.svg)](https://github.com/SensitTechnologies/MESS/actions/workflows/deploy_documentation.yml)
 
-**MESS (Manufacturing Execution Software System)** is a fully featured free and open source manufacturing execution system built on .NET, Blazor and Microsoft SQL Server (soon to be PostgreSQL).
+**MESS (Manufacturing Execution Software System)** is a fully featured free and open source manufacturing execution system built on .NET, Blazor and PostgreSQL.
 
 With MESS' web interface you can...
 * Display work instructions
