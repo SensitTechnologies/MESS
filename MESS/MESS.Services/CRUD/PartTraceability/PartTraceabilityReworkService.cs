@@ -1,5 +1,7 @@
 using MESS.Data.Context;
 using MESS.Data.Models;
+using MESS.Services.CRUD.SerializableParts;
+using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.UI.PartTraceability;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -10,6 +12,8 @@ namespace MESS.Services.CRUD.PartTraceability;
 public class PartTraceabilityReworkService : IPartTraceabilityReworkService
 {
     private readonly IDbContextFactory<ApplicationContext> _dbContextFactory;
+    private readonly IWorkInstructionService _workInstructionService;
+    private readonly ISerializablePartService _serializablePartService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PartTraceabilityReworkService"/> class.
@@ -18,10 +22,19 @@ public class PartTraceabilityReworkService : IPartTraceabilityReworkService
     /// A factory used to create <see cref="ApplicationContext"/> instances for database access.
     /// This ensures safe, short-lived DbContext usage within the service.
     /// </param>
+    /// <param name="workInstructionService">
+    /// The service used for loading work instruction data.
+    /// </param>
+    /// <param name="serializablePartService">
+    /// The service used for loading serializable part data.
+    /// </param>
     public PartTraceabilityReworkService(
-        IDbContextFactory<ApplicationContext> dbContextFactory)
+        IDbContextFactory<ApplicationContext> dbContextFactory, IWorkInstructionService workInstructionService,
+        ISerializablePartService serializablePartService)
     {
         _dbContextFactory = dbContextFactory;
+        _workInstructionService = workInstructionService;
+        _serializablePartService = serializablePartService;
     }
 
     ///<inheritdoc/>
@@ -115,7 +128,7 @@ public class PartTraceabilityReworkService : IPartTraceabilityReworkService
             {
                 collectedParts.Add(part);
 
-                if (childrenLookup.TryGetValue(part.Id, out var children) && children is { })
+                if (childrenLookup.TryGetValue(part.Id, out var children))
                 {
                     foreach (var rel in children)
                     {
@@ -168,5 +181,34 @@ public class PartTraceabilityReworkService : IPartTraceabilityReworkService
         Log.Information("Built {SnapshotCount} part traceability snapshots.", snapshots.Count);
 
         return snapshots;
+    }
+    
+    ///<inheritdoc/>
+    public async Task<(bool IsValid, string? ErrorMessage)> ValidateProducedPartAsync(
+        string tagCode,
+        int workInstructionId)
+    {
+        if (string.IsNullOrWhiteSpace(tagCode))
+            return (false, "Tag code cannot be empty.");
+
+        // Lookup serialized part by tag
+        var serializablePart = await _serializablePartService.GetByTagCodeAsync(tagCode);
+        if (serializablePart == null)
+            return (false, $"No part found for tag '{tagCode}'.");
+
+        // Lookup work instruction step(s)
+        var workInstruction = await _workInstructionService.GetByIdAsync(workInstructionId);
+        if (workInstruction == null)
+            return (false, "Work instruction not found.");
+
+        // Compare produced part with expected part definition
+        var expectedPartDef = workInstruction.PartProduced;
+        if (expectedPartDef == null)
+            return (false, "Work instruction does not have a produced part defined.");
+
+        if (serializablePart.PartDefinitionId != expectedPartDef.Id)
+            return (false, $"Tag '{tagCode}' does not match expected part definition.");
+
+        return (true, null); // valid
     }
 }

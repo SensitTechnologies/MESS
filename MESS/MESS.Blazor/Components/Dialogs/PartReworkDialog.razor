@@ -24,12 +24,25 @@
                         {
                             var index = i;
                             var inputId = $"tagCodeInput_{i}";
-                            <div class="form-floating flex-grow-1">
+                            <div class="flex-grow-1">
                                 <InputText id="@inputId"
-                                           class="form-control tall-input text-lightweight"
+                                           class="@GetInputClass(index)"
                                            placeholder="Scan Tag"
-                                           @bind-Value="TagCodes[index]" />
+                                           @bind-Value="TagCodes[index]"
+                                           @bind-Value:after="() => OnTagCodeChanged(index)" 
+                                           @onblur="() => ValidateTagCodeImmediately(index)" />
+
                                 <label for="@inputId" class="form-label subtle-label">#@(i + 1)</label>
+
+                                @if (_isSearching.ContainsKey(index) && _isSearching[index])
+                                {
+                                    <div class="form-text text-muted small mt-1">Searching...</div>
+                                }
+
+                                @if (_validationMessages.TryGetValue(index, out var msg) && !string.IsNullOrEmpty(msg))
+                                {
+                                    <div class="form-text text-danger small mt-1">@msg</div>
+                                }
                             </div>
                         }
                     </div>
@@ -61,6 +74,10 @@
     private bool IsProcessing { get; set; } = false;
     
     private List<string> TagCodes { get; set; } = new();
+    
+    private readonly Dictionary<int, string?> _validationMessages = new();
+    private readonly Dictionary<int, bool> _isSearching = new();
+    private readonly Dictionary<int, CancellationTokenSource> _debounceCts = new();
 
     protected override void OnInitialized()
     {
@@ -83,7 +100,7 @@
                 throw new InvalidOperationException("Number of tag code inputs must match the number of active logs.");
 
             // Get the work instruction ID from the cache
-            int workInstructionId = await LocalCacheManager.GetActiveWorkInstructionIdAsync();
+            var workInstructionId = await LocalCacheManager.GetActiveWorkInstructionIdAsync();
             if (workInstructionId < 0)
                 throw new InvalidOperationException("No active work instruction found in cache.");
 
@@ -92,7 +109,7 @@
             for (int i = 0; i < logs.Count; i++)
             {
                 var log = logs[i];
-                var tagCode = TagCodes[i]?.Trim();
+                var tagCode = TagCodes[i].Trim();
 
                 if (string.IsNullOrEmpty(tagCode))
                     continue;
@@ -119,7 +136,77 @@
 
         await CloseModal();
     }
+    
+    private async Task OnTagCodeChanged(int index)
+    {
+        // Cancel previous debounce
+        if (_debounceCts.TryGetValue(index, out var cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
 
+        var newCts = new CancellationTokenSource();
+        _debounceCts[index] = newCts;
+        var token = newCts.Token;
+
+        try
+        {
+            await Task.Delay(300, token); // debounce
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await ValidateTagCode(index);
+    }
+
+    private async Task ValidateTagCodeImmediately(int index)
+    {
+        // Cancel any pending debounce
+        if (_debounceCts.TryGetValue(index, out var cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+
+        await ValidateTagCode(index);
+    }
+
+    private async Task ValidateTagCode(int index)
+    {
+        var tagCode = TagCodes[index]?.Trim();
+        if (string.IsNullOrEmpty(tagCode))
+        {
+            _validationMessages[index] = null;
+            _isSearching[index] = false;
+            StateHasChanged();
+            return;
+        }
+
+        _isSearching[index] = true;
+        StateHasChanged(); // show spinner immediately
+
+        var workInstructionId = await LocalCacheManager.GetActiveWorkInstructionIdAsync();
+        var (isValid, errorMessage) = await PartTraceabilityReworkService.ValidateProducedPartAsync(tagCode, workInstructionId);
+
+        _validationMessages[index] = errorMessage;
+        _isSearching[index] = false;
+        StateHasChanged();
+    }
+
+    private string GetInputClass(int index)
+    {
+        var baseClass = "form-control tall-input text-lightweight";
+        if (_validationMessages.TryGetValue(index, out var msg))
+        {
+            if (!string.IsNullOrWhiteSpace(msg))
+                return $"{baseClass} is-invalid";
+        }
+        return baseClass;
+    }
+    
     private async Task CloseModal()
     {
         if (OnClose.HasDelegate)

@@ -28,4 +28,27 @@ public interface IPartTraceabilityReworkService
     Task<List<PartTraceabilitySnapshot>> BuildSnapshotsFromTagCodesAsync(
         List<string> tagCodes,
         int workInstructionId);
+    
+    /// <summary>
+    /// Validates that a scanned tag code corresponds to the expected produced part
+    /// for a given work instruction.
+    /// </summary>
+    /// <param name="tagCode">The scanned tag code to validate.</param>
+    /// <param name="workInstructionId">The ID of the work instruction to validate against.</param>
+    /// <returns>
+    /// A tuple containing:
+    /// <c>IsValid</c> – <c>true</c> if the tag code matches the expected produced part; otherwise <c>false</c>.<br/>
+    /// <c>ErrorMessage</c> – a descriptive error message if validation fails, or <c>null</c> if valid.
+    /// </returns>
+    /// <remarks>
+    /// Validation checks include:
+    /// <list type="bullet">
+    ///   <item><description>Tag code is not empty or whitespace.</description></item>
+    ///   <item><description>Serialized part exists for the provided tag code.</description></item>
+    ///   <item><description>Work instruction exists for the provided ID.</description></item>
+    ///   <item><description>Work instruction has a defined produced part.</description></item>
+    ///   <item><description>Serialized part's definition matches the expected produced part of the work instruction.</description></item>
+    /// </list>
+    /// </remarks>
+    Task<(bool IsValid, string? ErrorMessage)> ValidateProducedPartAsync(string tagCode, int workInstructionId);
 }
