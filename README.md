@@ -16,6 +16,6 @@ With MESS' web interface you can...
 * Provide real-time visibility into manufacturing operations
 * Integrate with other systems (such as ERP) with data visualization tools such as PowerBI.
 
-To learn more about MESS in general, visit the [MESS Wiki homepage](https://github.com/VidetteMakes/MESS/wiki).
+To learn more about MESS in general, visit the [MESS Wiki homepage](https://videttemakes.github.io/MESS/Markdowns/introduction.html).
 
-To deploy your own instance of MESS, see the deployment instructions on the MESS Wiki's [Deployment page](https://github.com/VidetteMakes/MESS/wiki/Deployment).
+To deploy your own instance of MESS, see the deployment instructions on the MESS Wiki's [Deployment page](https://videttemakes.github.io/MESS/Markdowns/Deployment.html).

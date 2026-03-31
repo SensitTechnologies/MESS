@@ -7,7 +7,13 @@
 # Introduction
 Welcome to the MESS Wiki! This wiki currently contains documentation for setting up and using MESS, as well as some technical documentation for developers.
 
-### Startup
+If you are a new developer for MESS, please visit the [Local Development Page](https://videttemakes.github.io/MESS/Markdowns/Local-Development.html)
+to learn about how to develop MESS with your favorite IDE.
+
+If you want to deploy your own instance of MESS, please visit either the [Deployment Page](https://videttemakes.github.io/MESS/Markdowns/Deployment.html) 
+or the [Raspberry Pi Deployment Page](https://videttemakes.github.io/MESS/Markdowns/Raspberry-Pi-Deployment.html) for more information.
+
+### General Note on MESS Startup
 
 Note: There are several seeders that will input required entries into the database if the database does **not** contain any entries
 This includes a default **Technician** account that is required to log in to MESS and to start creating WorkInstructions, Users, etc.
