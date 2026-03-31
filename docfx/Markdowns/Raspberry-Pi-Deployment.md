@@ -66,7 +66,7 @@ source ~/.bashrc
 To ensure compatibility with the auto-update script, run this command to the latest version of MESS into your home directory.
 
 ```bash
-git clone https://github.com/SensitTechnologies/MESS.git
+git clone https://github.com/VidetteMakes/MESS.git
 ```
 
 ### 7. Set the Repository Directory as Safe for Git
