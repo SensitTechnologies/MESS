@@ -140,7 +140,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     {
         var wi = await _workInstructionService.GetFormByIdAsync(id);
 
-        Current = wi ?? throw new Exception($"WorkInstruction with ID {id} not found.");
+        // KeyNotFoundException: typed failure for missing entity (avoid generic Exception / clearer catch boundaries).
+        Current = wi ?? throw new KeyNotFoundException($"Work instruction with id {id} was not found.");
         Mode = EditorMode.EditExisting;
         IsDirty = false;
         NotifyChanged();
@@ -171,12 +172,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             .FirstOrDefault(w => w.IsLatest && (w.OriginalId == originalId || w.Id == originalId));
 
         if (templateSummary == null)
-            throw new Exception($"No latest version found for OriginalId {originalId}.");
-        
+            throw new KeyNotFoundException($"No latest work instruction version found for original id {originalId}.");
+
         var templateForm = await _workInstructionService.GetFormByIdAsync(templateSummary.Id);
 
         if (templateForm == null)
-            throw new Exception($"Failed to load WorkInstructionFormDTO for ID {templateSummary.Id}.");
+            throw new InvalidOperationException($"Could not load work instruction data for id {templateSummary.Id}.");
 
         Current = await CloneForNewVersion(templateForm);
         Mode = EditorMode.CreateNewVersion;
@@ -190,7 +191,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         // Load the version to restore by ID
         var oldVersion = await _workInstructionService.GetFormByIdAsync(versionId);
         if (oldVersion == null)
-            throw new Exception($"Version with ID {versionId} not found.");
+            throw new KeyNotFoundException($"Work instruction version {versionId} was not found.");
 
         // Clone it
         var newVersion = await CloneForNewVersion(oldVersion);

@@ -81,9 +81,9 @@ public class WorkInstructionService : IWorkInstructionService
 
             return !hasProductionLogs;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log.Warning("Unable to determine if WorkInstruction: {WorkInstructionTitle} is editable. Exception Type: {ExceptionType}", workInstruction.Title, e.GetType());
+            Log.Warning(ex, "Unable to determine if work instruction {WorkInstructionId} ({Title}) is editable", workInstruction.Id, workInstruction.Title);
             return false;
         }
     }

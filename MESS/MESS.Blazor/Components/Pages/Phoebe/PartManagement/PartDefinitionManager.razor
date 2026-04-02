@@ -5,6 +5,7 @@
 @using MESS.Data.Models
 @using MESS.Services.CRUD.PartDefinitions
 @using Microsoft.AspNetCore.Authorization
+@using Serilog
 @inject IPartDefinitionService PartDefinitionService
 @inject IToastService ToastService
 
@@ -94,7 +95,8 @@ else
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Failed to load parts: {ex.Message}");
+            Log.Error(ex, "Failed to load part definitions");
+            ToastService.ShowError("Part definitions could not be loaded. Please refresh the page.");
             PartDefinitions = new();
         }
 
@@ -175,7 +177,8 @@ else
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Failed to submit part '{part.Name}': {ex.Message}");
+            Log.Error(ex, "Failed to submit part definition {PartId} ({PartName})", part.Id, part.Name);
+            ToastService.ShowError($"Could not save part '{part.Name}'. Please try again.");
         }
     }
 
@@ -222,9 +225,9 @@ else
         }
         catch (Exception ex)
         {
-            // Defensive: this should be rare since DeleteAsync already handles errors
-            ToastService.ShowError(
-                $"Unexpected error deleting part '{part.Name}': {ex.Message}");
+            // Defensive: DeleteAsync usually returns result codes; this catches unexpected failures only.
+            Log.Error(ex, "Unexpected error deleting part {PartId} ({PartName})", part.Id, part.Name);
+            ToastService.ShowError($"Could not delete part '{part.Name}'. Please try again.");
         }
     }
 }
