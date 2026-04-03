@@ -195,8 +195,6 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
         // Clone it
         var newVersion = await CloneForNewVersion(oldVersion);
-        
-        newVersion.Version = oldVersion.Version;
 
         // Assign OriginalId from the old version
         newVersion.OriginalId = oldVersion.OriginalId;
@@ -244,10 +242,11 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     
     private async Task<WorkInstructionFormDTO> CloneForNewVersion(WorkInstructionFormDTO template)
     {
+        // New DB row must use a version string not already taken for this title (IX_WorkInstructions_Title_Version).
         return new WorkInstructionFormDTO
         {
             Title = template.Title,
-            Version = template.Version,
+            Version = IncrementVersion(template.Version),
             OriginalId = template.OriginalId ?? template.Id,
             IsActive = false,
             IsLatest = true,
@@ -367,8 +366,9 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 if (newVersion == null)
                     return false;
 
-                // Update Current with the newly created version's ID and status
+                // Update Current with the newly created version's ID, version label, and status
                 Current.Id = newVersion.Id;
+                Current.Version = newVersion.Version;
                 Current.IsLatest = newVersion.IsLatest;
                 Current.IsActive = newVersion.IsActive;
                 success = true;
