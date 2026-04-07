@@ -5,7 +5,7 @@ name: E2E Test with Test Database
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "development" ]
     paths: # Only runs when a file ending in any of these markers is changed
     - '**.cs'
     - '**.csproj'
@@ -13,7 +13,7 @@ on:
     - '**.razor'
     - '**.js'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "development" ]
     paths:
     - '**.cs'
     - '**.csproj'

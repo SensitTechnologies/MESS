@@ -1,12 +1,12 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - sensit-mess
+name: Build and deploy ASP.Net Core app to Azure Web App - sensit-mess-dev
 
 on:
   push:
     branches:
-      - main
+      - development
   workflow_dispatch:
 
 env:
@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.ref }}
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
@@ -55,7 +57,7 @@ jobs:
           id: deploy-to-webapp
           uses: azure/webapps-deploy@v3
           with:
-            app-name: 'sensit-mess'
+            app-name: 'sensit-mess-dev'
             slot-name: 'Production'
             package: .
-            publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
+            publish-profile: ${{ secrets.AZURE_DEV_PROFILE }}

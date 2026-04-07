@@ -4,7 +4,7 @@ name: Deploy Documentation to Github Sites
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "development" ]
     paths: # Only runs when a file ending in any of these markers is changed
       - '**.md'
       - '**.yml'
@@ -42,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && 'development' || github.ref }}
 
       # setup .Net enviornment
       - name: Set up .NET

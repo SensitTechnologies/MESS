@@ -178,10 +178,10 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'sensit-mess'
+          app-name: 'sensit-mess-dev'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
+          publish-profile: ${{ secrets.AZURE_DEV_PROFILE }}
 
 
   Call-Documentation:
