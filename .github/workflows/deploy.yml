@@ -3,14 +3,7 @@
 name: Deploy
 
 on:
-  # scheduled to execute every Monday - Thursday at 11:59 pm CDT ( translated into UTC )
-  schedule: 
-    # see schedule docs: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule
-    # see cron syntax: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
-    # see CDT to UTC conversion: https://savvytime.com/converter/cdt-to-utc
-    - cron: '59 4 * * 2-5'
-
-  # Can be manually triggered from the github actions page: https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
+  # Manual only (development): https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
   workflow_dispatch:
 
 env:
