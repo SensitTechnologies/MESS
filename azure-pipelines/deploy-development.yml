@@ -1,0 +1,53 @@
+# Azure DevOps — manual deploy equivalent to .github/workflows/deploy.yml (simplified).
+# GitHub-only features (gh run list, cross-workflow artifacts by run id, reusable doc workflow)
+# are replaced by: download latest successful build from your Build pipeline on branch development.
+#
+# Setup:
+# 1. Create pipeline from build-development.yml; finish one successful run.
+# 2. Open that pipeline → URL contains definitionId=NNN — set BuildPipelineId below (or as pipeline variable).
+# 3. Pipeline → Edit → Variables → add secret AZURE_DEV_PROFILE (full publish profile XML for sensit-mess-dev).
+# 4. Grant permission: deploy pipeline → Project Settings → Pipelines → Settings → disable "Limit job authorization"
+#    scope as needed, or allow this pipeline to access the build pipeline (see Microsoft docs on DownloadPipelineArtifact).
+# 5. Create pipeline from this file; trigger: Manual only (trigger none below).
+
+trigger: none
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Set in UI as pipeline variable, or replace the default here after you know the ID.
+  BuildPipelineId: 'REPLACE_WITH_BUILD_PIPELINE_DEFINITION_ID'
+  AppArtifactName: 'net-app'
+
+steps:
+  - task: DownloadPipelineArtifact@2
+    displayName: Download latest app package (development branch)
+    inputs:
+      buildType: 'specific'
+      project: '$(System.TeamProject)'
+      definition: '$(BuildPipelineId)'
+      buildVersionToDownload: 'latestFromBranch'
+      branchName: 'refs/heads/development'
+      artifactName: '$(AppArtifactName)'
+      targetPath: '$(Pipeline.Workspace)/app'
+
+  - task: ArchiveFiles@2
+    displayName: Zip site for deployment
+    inputs:
+      rootFolderOrFile: '$(Pipeline.Workspace)/app'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/site.zip'
+      replaceExistingArchive: true
+
+  # Windows App Service: WebAppKind webApp and Package instead of packageForLinux.
+  - task: AzureRmWebAppDeployment@4
+    displayName: Deploy to Azure App Service (sensit-mess-dev)
+    inputs:
+      ConnectionType: 'PublishProfile'
+      PublishProfile: '$(AZURE_DEV_PROFILE)'
+      WebAppKind: 'webAppLinux'
+      WebAppName: 'sensit-mess-dev'
+      packageForLinux: '$(Build.ArtifactStagingDirectory)/site.zip'
