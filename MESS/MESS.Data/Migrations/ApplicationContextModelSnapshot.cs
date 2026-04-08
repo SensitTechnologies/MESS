@@ -159,6 +159,11 @@ namespace MESS.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("IsSerialNumberUnique")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -357,7 +362,7 @@ namespace MESS.Data.Migrations
 
                     b.HasIndex("ParentPartId");
 
-                    b.ToTable("SerializablePartRelationship");
+                    b.ToTable("SerializablePartRelationships");
                 });
 
             modelBuilder.Entity("MESS.Data.Models.Tag", b =>
