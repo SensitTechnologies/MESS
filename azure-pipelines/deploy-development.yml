@@ -20,7 +20,7 @@ pool:
 
 variables:
   # Set in UI as pipeline variable, or replace the default here after you know the ID.
-  BuildPipelineId: 'REPLACE_WITH_BUILD_PIPELINE_DEFINITION_ID'
+  BuildPipelineId: '160'
   AppArtifactName: 'net-app'
 
 steps:
