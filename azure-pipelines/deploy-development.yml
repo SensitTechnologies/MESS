@@ -5,7 +5,9 @@
 # Setup:
 # 1. Create pipeline from build-development.yml; finish one successful run.
 # 2. Open that pipeline → URL contains definitionId=NNN — set BuildPipelineId below (or as pipeline variable).
-# 3. Pipeline → Edit → Variables → add secret AZURE_DEV_PROFILE (full publish profile XML for sensit-mess-dev).
+# 3. Pipeline → Edit → Variables:
+#    - AZURE_DEV_PROFILE (secret): full publish profile XML from Azure Portal → Get publish profile.
+#    - AZURE_DEV_PROFILE_PASSWORD (secret): the userPWD value from that XML (Zip Deploy or MSDeploy publishProfile).
 # 4. Grant permission: deploy pipeline → Project Settings → Pipelines → Settings → disable "Limit job authorization"
 #    scope as needed, or allow this pipeline to access the build pipeline (see Microsoft docs on DownloadPipelineArtifact).
 # 5. Create pipeline from this file; trigger: Manual only (trigger none below).
@@ -18,7 +20,7 @@ pool:
 
 variables:
   # Set in UI as pipeline variable, or replace the default here after you know the ID.
-  BuildPipelineId: '160'
+  BuildPipelineId: 'REPLACE_WITH_BUILD_PIPELINE_DEFINITION_ID'
   AppArtifactName: 'net-app'
 
 steps:
@@ -42,12 +44,21 @@ steps:
       archiveFile: '$(Build.ArtifactStagingDirectory)/site.zip'
       replaceExistingArchive: true
 
+  # AzureRmWebAppDeployment@4 requires PublishProfilePath (file on agent) + PublishProfilePassword (userPWD from XML).
+  # Input name "PublishProfile" is not valid for this task version — it left credentials unset and triggered the error.
+  - bash: |
+      printf '%s\n' "$AZURE_DEV_PROFILE" > "$(Agent.TempDirectory)/app.PublishSettings"
+    displayName: Write publish profile file
+    env:
+      AZURE_DEV_PROFILE: $(AZURE_DEV_PROFILE)
+
   # Windows App Service: WebAppKind webApp and Package instead of packageForLinux.
   - task: AzureRmWebAppDeployment@4
     displayName: Deploy to Azure App Service (sensit-mess-dev)
     inputs:
       ConnectionType: 'PublishProfile'
-      PublishProfile: '$(AZURE_DEV_PROFILE)'
+      PublishProfilePath: '$(Agent.TempDirectory)/app.PublishSettings'
+      PublishProfilePassword: '$(AZURE_DEV_PROFILE_PASSWORD)'
       WebAppKind: 'webAppLinux'
       WebAppName: 'sensit-mess-dev'
       packageForLinux: '$(Build.ArtifactStagingDirectory)/site.zip'
