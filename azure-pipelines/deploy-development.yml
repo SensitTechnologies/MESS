@@ -11,12 +11,13 @@
 # 4. Grant permission: deploy pipeline → Project Settings → Pipelines → Settings → disable "Limit job authorization"
 #    scope as needed, or allow this pipeline to access the build pipeline (see Microsoft docs on DownloadPipelineArtifact).
 # 5. Create pipeline from this file; trigger: Manual only (trigger none below).
+# 6. Deploy must use a Windows agent: AzureRmWebAppDeployment@4 with PublishProfile uses Web Deploy on the agent (not supported on Linux).
 
 trigger: none
 pr: none
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'windows-latest'
 
 variables:
   # Set in UI as pipeline variable, or replace the default here after you know the ID.
@@ -46,8 +47,9 @@ steps:
 
   # AzureRmWebAppDeployment@4 requires PublishProfilePath (file on agent) + PublishProfilePassword (userPWD from XML).
   # Input name "PublishProfile" is not valid for this task version — it left credentials unset and triggered the error.
-  - bash: |
-      printf '%s\n' "$AZURE_DEV_PROFILE" > "$(Agent.TempDirectory)/app.PublishSettings"
+  - powershell: |
+      $path = "$(Agent.TempDirectory)\app.PublishSettings"
+      [System.IO.File]::WriteAllText($path, $env:AZURE_DEV_PROFILE)
     displayName: Write publish profile file
     env:
       AZURE_DEV_PROFILE: $(AZURE_DEV_PROFILE)
@@ -57,7 +59,7 @@ steps:
     displayName: Deploy to Azure App Service (sensit-mess-dev)
     inputs:
       ConnectionType: 'PublishProfile'
-      PublishProfilePath: '$(Agent.TempDirectory)/app.PublishSettings'
+      PublishProfilePath: '$(Agent.TempDirectory)\app.PublishSettings'
       PublishProfilePassword: '$(AZURE_DEV_PROFILE_PASSWORD)'
       WebAppKind: 'webAppLinux'
       WebAppName: 'sensit-mess-dev'
