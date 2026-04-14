@@ -3,7 +3,14 @@
 name: Deploy
 
 on:
-  # Manual only (development): https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
+  # scheduled to execute every Monday - Thursday at 11:59 pm CDT ( translated into UTC )
+  schedule: 
+    # see schedule docs: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule
+    # see cron syntax: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
+    # see CDT to UTC conversion: https://savvytime.com/converter/cdt-to-utc
+    - cron: '59 4 * * 2-5'
+
+  # Can be manually triggered from the github actions page: https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
   workflow_dispatch:
 
 env:
@@ -171,10 +178,10 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'sensit-mess-dev'
+          app-name: 'sensit-mess'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZURE_DEV_PROFILE }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
 
 
   Call-Documentation:
