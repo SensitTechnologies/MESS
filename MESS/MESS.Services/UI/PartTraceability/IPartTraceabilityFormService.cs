@@ -4,7 +4,7 @@ namespace MESS.Services.UI.PartTraceability
     /// A service used for accessing and mutating the current UI state of part traceability operations for a given batch
     /// of production logs.
     /// </summary>
-    public interface IPartTraceabilityStateService
+    public interface IPartTraceabilityFormService
     {
         /// <summary>
         /// Called whenever snapshots are loaded or state changes.

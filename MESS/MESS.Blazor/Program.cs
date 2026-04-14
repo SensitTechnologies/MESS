@@ -67,7 +67,7 @@ builder.Services.AddScoped<ISessionManager, SessionManager>();
 builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
 builder.Services.AddScoped<IApplicationUserFileService, ApplicationUserFileService>();
 builder.Services.AddScoped<IPartDefinitionService, PartDefinitionService>();
-builder.Services.AddScoped<IPartTraceabilityStateService, PartTraceabilityStateService>();
+builder.Services.AddScoped<IPartTraceabilityFormService, PartTraceabilityFormService>();
 builder.Services.AddScoped<IPartTraceabilityPersistenceService, PartTraceabilityPersistenceService>();
 builder.Services.AddScoped<IPartResolver, PartResolver>();
 builder.Services.AddScoped<IPartTraceabilityReworkService, PartTraceabilityReworkService>();

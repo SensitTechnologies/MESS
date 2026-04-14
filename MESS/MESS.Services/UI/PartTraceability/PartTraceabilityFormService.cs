@@ -5,7 +5,7 @@ using MESS.Services.CRUD.Tags;
 namespace MESS.Services.UI.PartTraceability;
 
 /// <inheritdoc/>
-public class PartTraceabilityStateService : IPartTraceabilityStateService 
+public class PartTraceabilityFormService : IPartTraceabilityFormService 
 {
     /// <inheritdoc/>
     public Action? OnStateChanged { get; set; }
@@ -17,7 +17,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     private readonly ITagService _tagService;
     
     /// <summary>
-    /// Creates a new instance of <see cref="PartTraceabilityStateService"/>.
+    /// Creates a new instance of <see cref="PartTraceabilityFormService"/>.
     /// </summary>
     /// <param name="serializablePartService">
     /// The service used to resolve tag codes to serializable parts.
@@ -25,7 +25,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <param name="tagService">
     /// The service used to check if tag codes are available (for produced parts)
     /// </param>
-    public PartTraceabilityStateService(ISerializablePartService serializablePartService,  ITagService tagService)
+    public PartTraceabilityFormService(ISerializablePartService serializablePartService,  ITagService tagService)
     {
         _serializablePartService = serializablePartService;
         _tagService = tagService;

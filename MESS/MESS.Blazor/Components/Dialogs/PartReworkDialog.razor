@@ -6,7 +6,7 @@
 
 @inject IProductionLogEventService ProductionLogEventService
 @inject IPartTraceabilityReworkService PartTraceabilityReworkService
-@inject IPartTraceabilityStateService PartTraceabilityStateService
+@inject IPartTraceabilityFormService PartTraceabilityFormService
 @inject ILocalCacheManager LocalCacheManager
 
 <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
@@ -121,7 +121,7 @@
                 snapshots.AddRange(result);
             }
 
-            PartTraceabilityStateService.LoadSnapshots(snapshots);
+            PartTraceabilityFormService.LoadSnapshots(snapshots);
         }
         catch (Exception ex)
         {

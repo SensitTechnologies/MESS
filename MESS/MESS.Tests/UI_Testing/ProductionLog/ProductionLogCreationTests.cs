@@ -34,7 +34,7 @@ public class ProductionLogCreationTests : BunitContext
     private readonly Mock<IProductService> _productServiceMock;
     private readonly Mock<IApplicationUserService> _userServiceMock;
     private readonly Mock<IPartTraceabilityPersistenceService> _partTraceabilityPersistenceServiceMock;
-    private readonly Mock<IPartTraceabilityStateService> _partTraceabilityServiceMock;
+    private readonly Mock<IPartTraceabilityFormService> _partTraceabilityServiceMock;
     private readonly Mock<IDialogService> _dialogServiceMock;
 
     private readonly Mock<ILocalCacheManager> _localCacheManagerMock;
@@ -66,7 +66,7 @@ public class ProductionLogCreationTests : BunitContext
         _toastServiceMock = new Mock<IToastService>();
         _qrCodeServiceMock = new Mock<IQrCodeService>();
         _partTraceabilityPersistenceServiceMock = new Mock<IPartTraceabilityPersistenceService>();
-        _partTraceabilityServiceMock = new Mock<IPartTraceabilityStateService>();
+        _partTraceabilityServiceMock = new Mock<IPartTraceabilityFormService>();
             
         Services.AddSingleton(_productionLogServiceMock.Object);
         Services.AddSingleton(_workInstructionServiceMock.Object);
