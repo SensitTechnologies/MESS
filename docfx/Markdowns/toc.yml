@@ -1,5 +1,6 @@
 - name: Introduction
   href: introduction.md
+  
 - name: Getting Started
   href: getting-started.md
 
@@ -8,6 +9,9 @@
 
 - name: Deployment
   href: Deployment.md
+  
+- name: Troubleshooting Missing Database Migrations and Inconsistencies
+  href: troubleshoot-missing-ef-core-migrations.md
 
 - name: Raspberry Pi Deployment
   href: Raspberry-Pi-Deployment.md
