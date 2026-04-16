@@ -7,7 +7,6 @@ using MESS.Services.CRUD.Products;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.CRUD.WorkInstructions;
 using MESS.Services.DTOs.ProductionLogs.Cache;
-using MESS.Services.CRUD.ProductionLogParts;
 using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.UI.SessionManager;
 using MESS.Services.UI.LocalCacheManager;
@@ -37,7 +36,6 @@ public class ProductionLogCreationTests : BunitContext
     private readonly Mock<IDialogService> _dialogServiceMock;
 
     private readonly Mock<ILocalCacheManager> _localCacheManagerMock;
-    private readonly Mock<IProductionLogPartService> _serializationServiceMock;
     private readonly Mock<IProductionLogEventService> _productionLogEventServiceMock;
     private readonly Mock<AuthenticationStateProvider> _authProviderMock;
     private readonly Mock<ISessionManager> _sessionManagerMock;
@@ -55,7 +53,6 @@ public class ProductionLogCreationTests : BunitContext
         _productServiceMock = new Mock<IProductService>();
         _userServiceMock = new Mock<IApplicationUserService>();
         _localCacheManagerMock = new Mock<ILocalCacheManager>();
-        _serializationServiceMock = new Mock<IProductionLogPartService>();
         _productionLogEventServiceMock = new Mock<IProductionLogEventService>();
         _dialogServiceMock = new Mock<IDialogService>();
         _authProviderMock = new Mock<AuthenticationStateProvider>();
@@ -72,7 +69,6 @@ public class ProductionLogCreationTests : BunitContext
         Services.AddSingleton(_productServiceMock.Object);
         Services.AddSingleton(_userServiceMock.Object);
         Services.AddSingleton(_localCacheManagerMock.Object);
-        Services.AddSingleton(_serializationServiceMock.Object);
         Services.AddSingleton(_productionLogEventServiceMock.Object);
         Services.AddSingleton(_dialogServiceMock.Object);
         Services.AddSingleton<AuthenticationStateProvider>(_authProviderMock.Object);

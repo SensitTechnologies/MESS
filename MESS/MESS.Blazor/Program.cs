@@ -9,7 +9,6 @@ using MESS.Services.CRUD.PartTraceability;
 using MESS.Services.CRUD.ProductionLogs;
 using MESS.Services.UI.LocalCacheManager;
 using MESS.Services.UI.DarkMode;
-using MESS.Services.CRUD.ProductionLogParts;
 using MESS.Services.CRUD.SerializableParts;
 using MESS.Services.CRUD.Tags;
 using MESS.Services.UI.SessionManager;
@@ -72,7 +71,6 @@ builder.Services.AddScoped<IPartTraceabilityPersistenceService, PartTraceability
 builder.Services.AddScoped<IPartResolver, PartResolver>();
 builder.Services.AddScoped<IPartTraceabilityReworkService, PartTraceabilityReworkService>();
 builder.Services.AddScoped<ISerializablePartService, SerializablePartService>();
-builder.Services.AddScoped<IProductionLogPartService, ProductionLogPartService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IProductionLogEventService, ProductionLogEventService>();
