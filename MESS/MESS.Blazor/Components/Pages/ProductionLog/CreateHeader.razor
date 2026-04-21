@@ -19,10 +19,12 @@
                @onchange="@(() => OnBatchSizeChanged.InvokeAsync(BatchSize))"
                min="1" />
     </div>
-    
+
+    <!-- Button to open the rework dialog, currently commented out until rework functionality is fully implemented in services.
     <button class="btn btn-primary btn-sm me-4" @onclick="() => ShowReworkDialog = true">
         <i class="bi bi-wrench me-1"></i>Rework Parts
     </button>
+    -->
 </div>
 
 @if (!string.IsNullOrWhiteSpace(ActiveLineOperator))
