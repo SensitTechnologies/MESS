@@ -106,7 +106,7 @@
 
             var snapshots = new List<PartTraceabilitySnapshot>();
 
-            for (int i = 0; i < logs.Count; i++)
+            for (var i = 0; i < logs.Count; i++)
             {
                 var log = logs[i];
                 var tagCode = TagCodes[i].Trim();
@@ -115,7 +115,7 @@
                     continue;
 
                 var result = await PartTraceabilityReworkService.BuildSnapshotsFromTagCodesAsync(
-                    new List<string> { tagCode },
+                    [tagCode],
                     workInstructionId); // use cached ID
 
                 snapshots.AddRange(result);
@@ -139,11 +139,13 @@
     
     private async Task OnTagCodeChanged(int index)
     {
-        // Cancel previous debounce
-        if (_debounceCts.TryGetValue(index, out var cts))
+        if (_debounceCts.TryGetValue(index, out var existingCts))
         {
-            cts.Cancel();
-            cts.Dispose();
+            try
+            {
+                existingCts.Cancel();
+            }
+            catch (ObjectDisposedException) { }
         }
 
         var newCts = new CancellationTokenSource();
@@ -152,23 +154,28 @@
 
         try
         {
-            await Task.Delay(300, token); // debounce
+            await Task.Delay(300, token);
         }
         catch (TaskCanceledException)
         {
             return;
         }
 
-        await ValidateTagCode(index);
+        if (!token.IsCancellationRequested)
+        {
+            await ValidateTagCode(index);
+        }
     }
 
     private async Task ValidateTagCodeImmediately(int index)
     {
-        // Cancel any pending debounce
         if (_debounceCts.TryGetValue(index, out var cts))
         {
-            cts.Cancel();
-            cts.Dispose();
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException) { }
         }
 
         await ValidateTagCode(index);
@@ -211,5 +218,23 @@
     {
         if (OnClose.HasDelegate)
             await OnClose.InvokeAsync();
+    }
+    
+    public void Dispose()
+    {
+        foreach (var cts in _debounceCts.Values)
+        {
+            try
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+            catch
+            {
+                // swallow — safe cleanup
+            }
+        }
+
+        _debounceCts.Clear();
     }
 }
