@@ -5,8 +5,11 @@ using MESS.Services.CRUD.Tags;
 namespace MESS.Services.UI.PartTraceability;
 
 /// <inheritdoc/>
-public class PartTraceabilityStateService : IPartTraceabilityStateService 
+public class PartTraceabilityFormService : IPartTraceabilityFormService 
 {
+    /// <inheritdoc/>
+    public Action? OnStateChanged { get; set; }
+    
     private readonly ISerializablePartService _serializablePartService;
     
     private readonly Dictionary<int, LogState> _logs = new();
@@ -14,7 +17,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     private readonly ITagService _tagService;
     
     /// <summary>
-    /// Creates a new instance of <see cref="PartTraceabilityStateService"/>.
+    /// Creates a new instance of <see cref="PartTraceabilityFormService"/>.
     /// </summary>
     /// <param name="serializablePartService">
     /// The service used to resolve tag codes to serializable parts.
@@ -22,7 +25,7 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
     /// <param name="tagService">
     /// The service used to check if tag codes are available (for produced parts)
     /// </param>
-    public PartTraceabilityStateService(ISerializablePartService serializablePartService,  ITagService tagService)
+    public PartTraceabilityFormService(ISerializablePartService serializablePartService,  ITagService tagService)
     {
         _serializablePartService = serializablePartService;
         _tagService = tagService;
@@ -310,6 +313,44 @@ public class PartTraceabilityStateService : IPartTraceabilityStateService
             ShouldProducePart = log.ShouldProducePart,
             Entries = snapshotEntries
         };
+    }
+    
+    /// <inheritdoc/>
+    public void LoadSnapshots(IEnumerable<PartTraceabilitySnapshot> snapshots)
+    {
+        if (snapshots == null)
+            throw new ArgumentNullException(nameof(snapshots));
+
+        _logs.Clear();
+
+        foreach (var snapshot in snapshots)
+        {
+            var log = new LogState
+            {
+                LogIndex = snapshot.LogIndex,
+                ShouldProducePart = snapshot.ShouldProducePart,
+                ProducedPartSerialNumber = snapshot.ProducedPartSerialNumber,
+                ProducedPartTagCode = snapshot.ProducedPartTagCode,
+                ProducedPartSerializablePartId = null // will optionally resolve below
+            };
+
+            // Rehydrate entries
+            foreach (var entrySnapshot in snapshot.Entries)
+            {
+                log.Entries[entrySnapshot.PartNodeId] = new PartEntryState
+                {
+                    PartNodeId = entrySnapshot.PartNodeId,
+                    SerialNumber = entrySnapshot.SerialNumber,
+                    TagCode = entrySnapshot.TagCode,
+                    SerializablePartId = entrySnapshot.SerializablePartId
+                };
+            }
+
+            _logs[snapshot.LogIndex] = log;
+        }
+        
+        // **Notify subscribers that state has changed**
+        OnStateChanged?.Invoke();
     }
     
     /// <inheritdoc/>
