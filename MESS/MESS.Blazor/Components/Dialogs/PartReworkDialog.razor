@@ -71,7 +71,7 @@
     [Parameter] public int BatchSize { get; set; } = 1;
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private bool IsProcessing { get; set; } = false;
+    private bool IsProcessing { get; set; }
     
     private List<string> TagCodes { get; set; } = new();
     
@@ -108,7 +108,6 @@
 
             for (var i = 0; i < logs.Count; i++)
             {
-                var log = logs[i];
                 var tagCode = TagCodes[i].Trim();
 
                 if (string.IsNullOrEmpty(tagCode))
@@ -143,7 +142,7 @@
         {
             try
             {
-                existingCts.Cancel();
+                await existingCts.CancelAsync();
             }
             catch (ObjectDisposedException) { }
         }
@@ -173,7 +172,7 @@
         {
             try
             {
-                cts.Cancel();
+                await cts.CancelAsync();
             }
             catch (ObjectDisposedException) { }
         }
@@ -183,7 +182,7 @@
 
     private async Task ValidateTagCode(int index)
     {
-        var tagCode = TagCodes[index]?.Trim();
+        var tagCode = TagCodes[index].Trim();
         if (string.IsNullOrEmpty(tagCode))
         {
             _validationMessages[index] = null;
@@ -196,7 +195,7 @@
         StateHasChanged(); // show spinner immediately
 
         var workInstructionId = await LocalCacheManager.GetActiveWorkInstructionIdAsync();
-        var (isValid, errorMessage) = await PartTraceabilityReworkService.ValidateProducedPartAsync(tagCode, workInstructionId);
+        var (_, errorMessage) = await PartTraceabilityReworkService.ValidateProducedPartAsync(tagCode, workInstructionId);
 
         _validationMessages[index] = errorMessage;
         _isSearching[index] = false;
