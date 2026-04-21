@@ -164,6 +164,11 @@ namespace MESS.Data.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<int>("InputType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -660,9 +665,6 @@ namespace MESS.Data.Migrations
             modelBuilder.Entity("MESS.Data.Models.PartNode", b =>
                 {
                     b.HasBaseType("MESS.Data.Models.WorkInstructionNode");
-
-                    b.Property<int>("InputType")
-                        .HasColumnType("integer");
 
                     b.Property<int>("PartDefinitionId")
                         .HasColumnType("integer");
