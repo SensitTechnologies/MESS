@@ -12,7 +12,7 @@
             <small class="text-muted">@PartNode.PartDefinition!.Number</small>
         </div>
         <span class="text-muted" style="font-size: 1.2rem;">
-            @if (PartNode.InputType == PartInputType.Tag)
+            @if (PartNode.PartDefinition!.InputType == PartInputType.Tag)
             {
                 <i class="bi bi-qr-code"></i>
             }
@@ -28,7 +28,7 @@
         <InputText
             id="@($"input-{PartNode.Id}")"
             class="@GetInputClass()"
-            placeholder="@($"Scan or enter {(PartNode.InputType == PartInputType.Tag ? "tag code" : "serial number")}")"
+            placeholder="@($"Scan or enter {(PartNode.PartDefinition!.InputType == PartInputType.Tag ? "tag code" : "serial number")}")"
             @bind-Value="BoundValue"
             @bind-Value:after="OnInputChanged" />
 
@@ -97,7 +97,7 @@
         _tagCode = entry.TagCode;
 
         // Trigger validation if needed
-        if (logChanged && PartNode.InputType == PartInputType.Tag && !string.IsNullOrWhiteSpace(_tagCode))
+        if (logChanged && PartNode.PartDefinition!.InputType == PartInputType.Tag && !string.IsNullOrWhiteSpace(_tagCode))
         {
             _ = ValidateTagAsync(_tagCode);
         }
@@ -122,7 +122,7 @@
 
         string? updatedValue;
 
-        switch (PartNode.InputType)
+        switch (PartNode.PartDefinition!.InputType)
         {
             case PartInputType.SerialNumber:
                 updatedValue = string.IsNullOrWhiteSpace(_serialNumber) ? null : _serialNumber;
@@ -185,7 +185,7 @@
     
     private string? BoundValue
     {
-        get => PartNode.InputType switch
+        get => PartNode.PartDefinition!.InputType switch
         {
             PartInputType.SerialNumber => _serialNumber,
             PartInputType.Tag => _tagCode,
@@ -193,7 +193,7 @@
         };
         set
         {
-            switch (PartNode.InputType)
+            switch (PartNode.PartDefinition!.InputType)
             {
                 case PartInputType.SerialNumber:
                     _serialNumber = value;

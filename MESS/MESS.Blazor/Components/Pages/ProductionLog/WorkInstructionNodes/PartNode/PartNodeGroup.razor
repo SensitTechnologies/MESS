@@ -81,7 +81,7 @@
         var (partNode, updatedValue) = input;
         var entry = PartTraceabilityService.GetEntry(_selectedLogIndex, partNode.Id);
 
-        switch (partNode.InputType)
+        switch (partNode.PartDefinition!.InputType)
         {
             case PartInputType.SerialNumber:
                 entry.SerialNumber = string.IsNullOrWhiteSpace(updatedValue as string) ? null : (string)updatedValue;
