@@ -10,7 +10,7 @@ on:
     # see CDT to UTC conversion: https://savvytime.com/converter/cdt-to-utc
     - cron: '59 4 * * 2-5'
 
-  # Can be manually triggered from the github actions page: https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
+  # Can be manually triggered from the GitHub actions page: https://github.com/SensitTechnologies/MESS/actions/workflows/deploy.yml
   workflow_dispatch:
 
 env:
