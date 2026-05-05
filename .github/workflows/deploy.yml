@@ -109,7 +109,7 @@ jobs:
           app-name: 'sensit-mess'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AFD862453FEA47FF843B6F50347257E2 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
 
       # 8. Update tag
       - name: Update deployed tag
