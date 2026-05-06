@@ -1,11 +1,16 @@
 @using System.Text.RegularExpressions
 @using MESS.Data.Models
 @using MESS.Blazor.Components.Carousel
+@using MESS.Services.CRUD.Defects
+@using MESS.Services.DTOs.Defects
 @using MESS.Services.DTOs.ProductionLogs.LogSteps.Attempts.Form
 @using MESS.Services.DTOs.ProductionLogs.LogSteps.Form
 @using MESS.Services.UI.ProductionLogEvent
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject IDefectCodeService DefectCodeService
 @inject IProductionLogEventService ProductionLogEventService
 @inject IJSRuntime JsRuntime
+@inject IToastService ToastService
 
 <div class="card">
     <div class="card-body">
@@ -36,6 +41,8 @@
                         <RedTagDialog
                             StepName="@Step.Name"
                             @bind-FailureNotes="@_currentAttemptNotes"
+                            DefectLocationName="@_defectNounDisplayName"
+                            DefectAdjectiveName="@_defectAdjectiveDisplayName"
                             AttemptTime="@_pendingFailureAttempt?.SubmitTime"
                             AttemptId="@(_pendingFailureAttempt?.AttemptId)"
                             OnCancel="OnCancelClicked"
@@ -44,23 +51,52 @@
                     
                     @if (ShowOptionalNotesField)
                     {
-                        <div class="d-flex align-items-start mt-3">
-                            <FluentTextArea
-                                @ref="_failureNoteTextArea"
-                                data-testid="optional-notes"
-                                class="flex-grow-1 me-2"
-                                placeholder="Optional: Add a failure note (if needed)"
-                                @bind-Value="_currentAttemptNotes"
-                                @bind-Value:after="@(async () => await HandleNoteChangedAsync())"/>
-
-                            <!-- Red Tag Button next to failure note -->
-                            <button type="button"
-                                    class="btn btn-sm btn-danger px-2 py-1"
-                                    @onclick:stopPropagation="true"
-                                    @onclick="ToggleRedTagDialog"
-                                    style="font-size: 0.75rem; white-space: nowrap;">
-                                Red Tag
-                            </button>
+                        <div class="d-flex align-items-start mt-3 flex-wrap" style="gap: 0.5rem;">
+                            <div class="flex-grow-1" style="min-width: 120px;">
+                                @if (Step.NotesConfiguration == StepNotesConfiguration.Required)
+                                {
+                                    <label class="form-label small mb-1" for="@NotesTextAreaId">Note <span class="text-danger" aria-hidden="true">*</span></label>
+                                }
+                                <textarea id="@NotesTextAreaId"
+                                          data-testid="optional-notes"
+                                          class="form-control form-control-sm step-notes-input"
+                                          rows="1"
+                                          placeholder="@GetNotesPlaceholder()"
+                                          value="@_currentAttemptNotes"
+                                          @oninput="OnNotesInput" />
+                                @if (WorkInstructionId > 0 && _nounOptions.Count > 0)
+                                {
+                                    <div class="row g-2 mt-2">
+                                        <div class="col-12 col-md-6">
+                                            <SearchableDefectSelect Label="Defect location"
+                                                                    Placeholder="Search location…"
+                                                                    InputId="@($"defect-noun-{Step.Id}")"
+                                                                    Items="@_nounOptions"
+                                                                    SelectedId="@_selectedNounId"
+                                                                    SelectedIdChanged="OnDefectNounChanged" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <SearchableDefectSelect Label="Defect"
+                                                                    Placeholder="Search defect…"
+                                                                    InputId="@($"defect-adj-{Step.Id}")"
+                                                                    Items="@_adjectiveOptions"
+                                                                    SelectedId="@_selectedAdjectiveId"
+                                                                    SelectedIdChanged="OnDefectAdjectiveChanged"
+                                                                    Disabled="@(_selectedNounId is null)" />
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            @if (_pendingFailureAttempt is not null)
+                            {
+                                <button type="button"
+                                        class="btn btn-sm btn-danger px-2 py-1 align-self-end"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="ToggleRedTagDialog"
+                                        style="font-size: 0.75rem; white-space: nowrap;">
+                                    Red Tag
+                                </button>
+                            }
                         </div>
                     }
 
@@ -235,6 +271,12 @@
     /// </remarks>
     [Parameter]
     public required List<LogStepFormDTO> LogSteps { get; set; }
+
+    /// <summary>
+    /// Current work instruction (used to load defect nouns allowed for this instruction).
+    /// </summary>
+    [Parameter]
+    public int WorkInstructionId { get; set; }
     
     /// <summary>
     /// Event callback triggered when the step is completed.
@@ -243,7 +285,21 @@
     [Parameter]
     public EventCallback<(List<LogStepFormDTO>, bool?)> OnStepCompleted { get; set; }
 
-    private FluentTextArea? _failureNoteTextArea;
+    private string NotesTextAreaId => $"optional-notes-step-{Step.Id}";
+
+    private int _defectDataWorkInstructionId;
+    private List<DefectCodeOptionDto> _nounOptions = [];
+    private List<DefectCodeOptionDto> _adjectiveOptions = [];
+    private int? _selectedNounId;
+    private int? _selectedAdjectiveId;
+
+    private string _defectNounDisplayName =>
+        _selectedNounId is int nid ? _nounOptions.FirstOrDefault(x => x.Id == nid)?.Name ?? "" : "";
+
+    private string _defectAdjectiveDisplayName =>
+        _selectedAdjectiveId is int aid ? _adjectiveOptions.FirstOrDefault(x => x.Id == aid)?.Name ?? "" : "";
+
+    private int _lastSyncedStepId = int.MinValue;
     
     private string _currentAttemptNotes = "";
     
@@ -331,7 +387,9 @@
             SelectedButton = ""; // Mixed states: nothing selected
         }
 
-        SetOptionalNotes();
+        _lastSyncedStepId = Step.Id;
+        SyncInitialNotesVisibility();
+        UpdateNoteForTargetIndex();
     }
     
     /// <inheritdoc />
@@ -357,8 +415,94 @@
         {
             SelectedButton = ""; // Mixed states: show nothing selected
         }
+
+        if (Step.Id != _lastSyncedStepId)
+        {
+            _lastSyncedStepId = Step.Id;
+            SyncInitialNotesVisibility();
+            UpdateNoteForTargetIndex();
+        }
     }
 
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (WorkInstructionId <= 0 || WorkInstructionId == _defectDataWorkInstructionId)
+            return;
+
+        _defectDataWorkInstructionId = WorkInstructionId;
+        await LoadNounOptionsAsync();
+        if (_selectedNounId is int nounId)
+            await LoadAdjectiveOptionsAsync(nounId);
+        StateHasChanged();
+    }
+
+    private async Task LoadNounOptionsAsync()
+    {
+        if (WorkInstructionId <= 0)
+        {
+            _nounOptions.Clear();
+            return;
+        }
+
+        var list = await DefectCodeService.GetNounsForWorkInstructionAsync(WorkInstructionId);
+        _nounOptions = list.ToList();
+        if (_selectedNounId is int nid && _nounOptions.TrueForAll(x => x.Id != nid))
+        {
+            _selectedNounId = null;
+            _selectedAdjectiveId = null;
+            _adjectiveOptions.Clear();
+        }
+    }
+
+    private async Task LoadAdjectiveOptionsAsync(int nounId)
+    {
+        var list = await DefectCodeService.GetAdjectivesForNounAsync(nounId);
+        _adjectiveOptions = list.ToList();
+        if (_selectedAdjectiveId is int aid && _adjectiveOptions.TrueForAll(x => x.Id != aid))
+            _selectedAdjectiveId = null;
+    }
+
+    private async Task OnDefectNounChanged(int? id)
+    {
+        _selectedNounId = id;
+        _selectedAdjectiveId = null;
+        if (id is int n)
+            await LoadAdjectiveOptionsAsync(n);
+        else
+            _adjectiveOptions.Clear();
+
+        await SyncDefectsToPendingAsync();
+        await ProductionLogEventService.ChangeMadeToProductionLog();
+        ProductionLogEventService.MarkDirty();
+        StateHasChanged();
+    }
+
+    private async Task OnDefectAdjectiveChanged(int? id)
+    {
+        _selectedAdjectiveId = id;
+        await SyncDefectsToPendingAsync();
+        await ProductionLogEventService.ChangeMadeToProductionLog();
+        ProductionLogEventService.MarkDirty();
+    }
+
+    private Task SyncDefectsToPendingAsync()
+    {
+        if (_pendingFailureAttempt is not null)
+        {
+            _pendingFailureAttempt.FailureNounId = _selectedNounId;
+            _pendingFailureAttempt.FailureAdjectiveId = _selectedAdjectiveId;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void ClearDefectSelection()
+    {
+        _selectedNounId = null;
+        _selectedAdjectiveId = null;
+        _adjectiveOptions.Clear();
+    }
 
     private bool _showDetails = false;
 
@@ -385,12 +529,43 @@
 
         if (attempt == null) return;
         _currentAttemptNotes = attempt.FailureNote ?? "";
+        _selectedNounId = attempt.FailureNounId;
+        _selectedAdjectiveId = attempt.FailureAdjectiveId;
         ShowOptionalNotesField = true;
+        if (_selectedNounId is int n)
+            _ = LoadAdjectiveOptionsAsync(n);
+    }
+
+    private void SyncInitialNotesVisibility()
+    {
+        if (Step.NotesConfiguration is StepNotesConfiguration.Required or StepNotesConfiguration.Optional)
+            ShowOptionalNotesField = true;
+        else
+            ShowOptionalNotesField = false;
+
+        SetOptionalNotes();
+    }
+
+    private string GetNotesPlaceholder() => Step.NotesConfiguration == StepNotesConfiguration.Required
+        ? "Note (required)"
+        : "Note (optional)";
+
+    private bool ValidateRequiredNote()
+    {
+        if (Step.NotesConfiguration != StepNotesConfiguration.Required)
+            return true;
+        if (!string.IsNullOrWhiteSpace(_currentAttemptNotes))
+            return true;
+        ToastService.ShowError("Please enter a note for this step.");
+        return false;
     }
     
     private async Task HandleButtonPressAll(bool? result)
     {
         if (result is null)
+            return;
+
+        if (!ValidateRequiredNote())
             return;
 
         var isSuccess = result.Value;
@@ -400,13 +575,21 @@
 
         if (!isSuccess)
         {
-            _currentAttemptNotes = "";
+            var failNote = _currentAttemptNotes ?? "";
+            if (Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
+            {
+                failNote = "";
+                _currentAttemptNotes = "";
+                ClearDefectSelection();
+            }
 
             var failureAttempt = new StepAttemptFormDTO
             {
                 IsSuccess = false,
                 SubmitTime = now,
-                FailureNote = ""
+                FailureNote = failNote,
+                FailureNounId = _selectedNounId,
+                FailureAdjectiveId = _selectedAdjectiveId
             };
 
             AddAttemptToAllSteps(failureAttempt);
@@ -414,7 +597,7 @@
             _pendingFailureAttempt = failureAttempt;
             ShowOptionalNotesField = true;
 
-            await FocusFailureNotesAsync();
+            await FocusNotesTextAreaAsync();
         }
         else
         {
@@ -422,11 +605,15 @@
             {
                 IsSuccess = true,
                 SubmitTime = now,
-                FailureNote = ""
+                FailureNote = _currentAttemptNotes ?? "",
+                FailureNounId = _selectedNounId,
+                FailureAdjectiveId = _selectedAdjectiveId
             });
 
-            ShowOptionalNotesField = false;
+            if (Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
+                ShowOptionalNotesField = false;
             _currentAttemptNotes = "";
+            ClearDefectSelection();
         }
 
         SetSelectedButton(isSuccess ? "Success" : "Failure");
@@ -441,12 +628,9 @@
         step.Attempts.Add(attempt);
     }
 
-    private async Task FocusFailureNotesAsync()
+    private async Task FocusNotesTextAreaAsync()
     {
-        if (_failureNoteTextArea?.Element is null)
-        return;
-
-        await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
+        await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", NotesTextAreaId);
     }
     
     private async Task HandleButtonPressIndexed(bool isSuccess)
@@ -454,17 +638,28 @@
         if (TargetIndex < 0 || TargetIndex >= LogSteps.Count)
             return; // Invalid index
 
-        if (!isSuccess)
+        if (!ValidateRequiredNote())
+            return;
+
+        var noteForAttempt = isSuccess
+            ? (_currentAttemptNotes ?? "")
+            : Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure
+                ? ""
+                : _currentAttemptNotes ?? "";
+
+        if (!isSuccess && Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
         {
-            // Clear failure note for new failure attempt
             _currentAttemptNotes = "";
+            ClearDefectSelection();
         }
 
         var attempt = new StepAttemptFormDTO
         {
             IsSuccess = isSuccess,
             SubmitTime = DateTimeOffset.UtcNow,
-            FailureNote = isSuccess ? "" : _currentAttemptNotes
+            FailureNote = noteForAttempt,
+            FailureNounId = _selectedNounId,
+            FailureAdjectiveId = _selectedAdjectiveId
         };
 
         LogSteps[TargetIndex].Attempts.Add(attempt);
@@ -474,24 +669,28 @@
             _pendingFailureAttempt = attempt;
             ShowOptionalNotesField = true;
 
-            if (_failureNoteTextArea?.Element != null)
-            {
-                await JsRuntime.InvokeVoidAsync("AutoFocus.setFocus", _failureNoteTextArea.Id);
-            }
+            await FocusNotesTextAreaAsync();
+        }
+        else
+        {
+            _pendingFailureAttempt = null;
+            if (Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
+                ShowOptionalNotesField = false;
+            _currentAttemptNotes = "";
+            ClearDefectSelection();
         }
 
         await OnStepCompleted.InvokeAsync(([LogSteps[TargetIndex]], isSuccess));
         await ShowFloatMessage(isSuccess ? "indexed-success" : "indexed-failure");
     }
     
-    private async Task HandleNoteChangedAsync()
+    private async Task OnNotesInput(ChangeEventArgs e)
     {
-        if (_pendingFailureAttempt != null)
-        {
+        _currentAttemptNotes = e.Value?.ToString() ?? "";
+        if (_pendingFailureAttempt is not null)
             _pendingFailureAttempt.FailureNote = _currentAttemptNotes;
-            await ProductionLogEventService.ChangeMadeToProductionLog();
-            ProductionLogEventService.MarkDirty();
-        }
+        await ProductionLogEventService.ChangeMadeToProductionLog();
+        ProductionLogEventService.MarkDirty();
     }
     
     private async Task ShowFloatMessage(string type)
@@ -544,25 +743,36 @@
 
     private void UpdateNoteForTargetIndex()
     {
+        if (Step.NotesConfiguration is StepNotesConfiguration.Required or StepNotesConfiguration.Optional)
+            ShowOptionalNotesField = true;
+
         if (_targetIndex >= 0 && _targetIndex < LogSteps.Count)
         {
             var latest = LogSteps[_targetIndex].LatestAttempt();
 
-            if (latest is { IsSuccess: false, FailureNote: not null })
+            if (latest is { IsSuccess: false })
             {
-                _currentAttemptNotes = latest.FailureNote;
+                _currentAttemptNotes = latest.FailureNote ?? "";
+                _selectedNounId = latest.FailureNounId;
+                _selectedAdjectiveId = latest.FailureAdjectiveId;
                 ShowOptionalNotesField = true;
+                if (_selectedNounId is int n)
+                    _ = LoadAdjectiveOptionsAsync(n);
             }
             else
             {
                 _currentAttemptNotes = "";
-                ShowOptionalNotesField = false;
+                ClearDefectSelection();
+                if (Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
+                    ShowOptionalNotesField = false;
             }
         }
         else
         {
             _currentAttemptNotes = "";
-            ShowOptionalNotesField = false;
+            ClearDefectSelection();
+            if (Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
+                ShowOptionalNotesField = false;
         }
     }
     

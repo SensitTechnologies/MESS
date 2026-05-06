@@ -25,7 +25,9 @@ public static class StepAttemptUpdateRequestMapper
             Id = dto.Id,
             Success = dto.IsSuccess,
             Notes = dto.FailureNote ?? string.Empty,
-            SubmitTime = dto.SubmitTime
+            SubmitTime = dto.SubmitTime,
+            FailureNounId = dto.FailureNounId,
+            FailureAdjectiveId = dto.FailureAdjectiveId
         };
     }
 
@@ -40,6 +42,8 @@ public static class StepAttemptUpdateRequestMapper
         entity.Success = dto.IsSuccess;
         entity.Notes = dto.FailureNote ?? string.Empty;
         entity.SubmitTime = dto.SubmitTime;
+        entity.FailureNounId = dto.FailureNounId;
+        entity.FailureAdjectiveId = dto.FailureAdjectiveId;
     }
 
     /// <summary>

@@ -32,4 +32,10 @@ public class StepAttemptUpdateRequest
     /// including the time zone offset.
     /// </summary>
     public DateTimeOffset SubmitTime { get; set; }
+
+    /// <summary>Optional defect location (failure noun) id.</summary>
+    public int? FailureNounId { get; set; }
+
+    /// <summary>Optional defect description (failure adjective) id.</summary>
+    public int? FailureAdjectiveId { get; set; }
 }

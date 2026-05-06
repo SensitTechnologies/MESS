@@ -1,0 +1,10 @@
+.defect-checkbox-panel__scroll {
+    max-height: 10.5rem;
+    overflow-y: auto;
+}
+
+/* body.dark-mode does not set data-bs-theme=dark, so avoid Bootstrap .text-body (light-theme ink). */
+body.dark-mode .defect-checkbox-panel .defect-checkbox-panel__legend,
+body.dark-mode .defect-checkbox-panel .form-check-label {
+    color: rgba(255, 255, 255, 0.95);
+}

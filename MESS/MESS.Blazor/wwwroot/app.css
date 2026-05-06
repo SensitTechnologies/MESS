@@ -61,6 +61,22 @@ body.dark-mode .form-control::placeholder {
     color: #aaaaaa !important;
 }
 
+/* Work-instruction step notes: single line that grows with content */
+textarea.step-notes-input {
+    min-height: 2.25rem;
+    max-height: 12rem;
+    resize: vertical;
+    overflow-y: auto;
+    line-height: 1.4;
+    field-sizing: content;
+}
+
+@supports not (field-sizing: content) {
+    textarea.step-notes-input {
+        min-height: 2.25rem;
+    }
+}
+
 /* Floating labels */
 .form-floating > .form-control-plaintext::placeholder,
 .form-floating > .form-control::placeholder {
@@ -803,6 +819,49 @@ body.dark-mode .confirmation-toast {
 
 .dark-mode .dropdown-menu-custom .dropdown-item.text-danger {
     color: #dc3545 !important; /* keep red for danger */
+}
+
+/* Defect code edit modal: Bootstrap modal surface stays light while body.dark-mode
+   sets light text globally — restore dark ink + light inputs inside the dialog. */
+body.dark-mode .defect-edit-modal .modal-content {
+    background-color: #f8f9fa;
+    color: #212529;
+    border-color: #dee2e6;
+}
+
+body.dark-mode .defect-edit-modal .modal-header {
+    border-bottom-color: #dee2e6;
+}
+
+body.dark-mode .defect-edit-modal .modal-footer {
+    border-top-color: #dee2e6;
+}
+
+body.dark-mode .defect-edit-modal .modal-title,
+body.dark-mode .defect-edit-modal .form-label,
+body.dark-mode .defect-edit-modal .defect-checkbox-panel .form-check-label,
+body.dark-mode .defect-edit-modal .defect-checkbox-panel legend {
+    color: #212529;
+}
+
+body.dark-mode .defect-edit-modal .form-control {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border-color: #ced4da !important;
+}
+
+body.dark-mode .defect-edit-modal .form-control::placeholder {
+    color: #6c757d !important;
+}
+
+body.dark-mode .defect-edit-modal .btn-close {
+    filter: invert(0);
+    opacity: 0.65;
+}
+
+/* Global dark rule forces .text-muted to white; use grey on light modal surface. */
+body.dark-mode .defect-edit-modal .text-muted {
+    color: #6c757d !important;
 }
 
 /* ==========================================================================

@@ -1,0 +1,67 @@
+@* Bootstrap modal shell for edit noun / edit adjective (keyboard: Escape closes via parent). *@
+@if (Show)
+{
+    <div class="modal fade show d-block defect-edit-modal"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="@_titleId"
+         style="background-color: rgba(0, 0, 0, 0.45);"
+         @onclick="OnBackdropClick">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" @onclick:stopPropagation="true">
+            <div class="modal-content shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title" id="@_titleId">@Title</h5>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Close"
+                            @onclick="CloseAsync"></button>
+                </div>
+                <div class="modal-body">
+                    @ChildContent
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseAsync">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveAsync" disabled="@Disabled">
+                        @if (Disabled)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly string _titleId = $"defect-modal-title-{Guid.NewGuid():N}";
+
+    [Parameter]
+    public bool Show { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Edit";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    private async Task CloseAsync() => await OnClose.InvokeAsync();
+
+    private async Task SaveAsync() => await OnSave.InvokeAsync();
+
+    private async Task OnBackdropClick(MouseEventArgs _)
+    {
+        await CloseAsync();
+    }
+}

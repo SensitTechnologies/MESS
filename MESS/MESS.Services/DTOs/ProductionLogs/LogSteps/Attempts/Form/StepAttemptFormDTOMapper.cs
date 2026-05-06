@@ -26,7 +26,9 @@ public static class StepAttemptFormDTOMapper
             Id = dto.AttemptId ?? 0, // EF treats 0 as new
             Success = dto.IsSuccess,
             Notes = dto.FailureNote ?? string.Empty,
-            SubmitTime = dto.SubmitTime
+            SubmitTime = dto.SubmitTime,
+            FailureNounId = dto.FailureNounId,
+            FailureAdjectiveId = dto.FailureAdjectiveId
         };
     }
 
@@ -46,7 +48,9 @@ public static class StepAttemptFormDTOMapper
             AttemptId = attempt.Id == 0 ? null : attempt.Id,
             IsSuccess = attempt.Success ?? false,
             FailureNote = attempt.Success == false ? attempt.Notes : null,
-            SubmitTime = attempt.SubmitTime
+            SubmitTime = attempt.SubmitTime,
+            FailureNounId = attempt.FailureNounId,
+            FailureAdjectiveId = attempt.FailureAdjectiveId
         };
     }
 

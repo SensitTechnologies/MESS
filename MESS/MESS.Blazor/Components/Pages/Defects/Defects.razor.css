@@ -1,0 +1,29 @@
+/* Page-specific layout tweaks; inherits global Bootstrap / app.css.
+   App uses body.dark-mode without data-bs-theme=dark, so BS CSS vars stay "light"
+   while inactive tabs must stay readable on dark chrome. */
+.defects-page .nav-tabs .nav-link:not(.active) {
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+body.dark-mode .defects-page .nav-tabs .nav-link:not(.active) {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+body.dark-mode .defects-page .nav-tabs .nav-link:not(.active):hover,
+body.dark-mode .defects-page .nav-tabs .nav-link:not(.active):focus {
+    color: #ffffff;
+}
+
+.defects-page .nav-tabs .nav-link.active {
+    color: var(--bs-body-color, #212529);
+    font-weight: 600;
+}
+
+body.dark-mode .defects-page .form-check-label {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.defects-page .defects-tab-card {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}

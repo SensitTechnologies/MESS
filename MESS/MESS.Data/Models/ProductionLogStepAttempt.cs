@@ -35,5 +35,24 @@ public class ProductionLogStepAttempt
     /// Gets or sets the associated production log step
     /// </summary>
     public ProductionLogStep? ProductionLogStep { get; set; }
-    
+
+    /// <summary>
+    /// Optional defect location code (failure noun) selected when recording this attempt.
+    /// </summary>
+    public int? FailureNounId { get; set; }
+
+    /// <summary>
+    /// Optional defect description code (failure adjective) selected when recording this attempt.
+    /// </summary>
+    public int? FailureAdjectiveId { get; set; }
+
+    /// <summary>
+    /// Navigation to the selected failure noun, if any.
+    /// </summary>
+    public FailureNoun? FailureNoun { get; set; }
+
+    /// <summary>
+    /// Navigation to the selected failure adjective, if any.
+    /// </summary>
+    public FailureAdjective? FailureAdjective { get; set; }
 }

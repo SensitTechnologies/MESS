@@ -1,3 +1,4 @@
+using MESS.Data.Models;
 using MESS.Services.DTOs.WorkInstructions.Nodes.Form;
 
 namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
@@ -57,4 +58,9 @@ namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
         /// used to provide extra context to the operator.
         /// </remarks>
         public List<string> SecondaryMedia { get; set; } = [];
+
+        /// <summary>
+        /// When notes are shown in production and whether a note is required (see <see cref="StepNotesConfiguration"/>).
+        /// </summary>
+        public StepNotesConfiguration NotesConfiguration { get; set; } = StepNotesConfiguration.OptionalForFailure;
     }

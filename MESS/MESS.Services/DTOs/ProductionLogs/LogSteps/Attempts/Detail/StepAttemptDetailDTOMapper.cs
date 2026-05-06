@@ -30,7 +30,9 @@ public static class StepAttemptDetailDTOMapper
             StepName = attempt.ProductionLogStep?.WorkInstructionStep?.Name ?? string.Empty,
             SubmitTime = attempt.SubmitTime,
             IsSuccess = attempt.Success ?? false,
-            FailureNote = attempt.Success == false ? attempt.Notes : null
+            FailureNote = attempt.Success == false ? attempt.Notes : null,
+            FailureNounId = attempt.FailureNounId,
+            FailureAdjectiveId = attempt.FailureAdjectiveId
         };
     }
 

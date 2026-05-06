@@ -1,0 +1,52 @@
+@using MESS.Services.DTOs.Defects
+
+@* Scrollable checkbox list for defect noun/adjective associations (shared styling + a11y). *@
+<fieldset class="defect-checkbox-panel border rounded px-2 py-2 mb-0">
+    <legend class="defect-checkbox-panel__legend float-none w-auto fs-6 fw-semibold mb-2 px-1">@Legend</legend>
+    @if (Items.Count == 0)
+    {
+        <p class="text-muted small mb-0 px-1">@EmptyMessage</p>
+    }
+    else
+    {
+        <div class="defect-checkbox-panel__scroll px-1">
+            @foreach (var item in Items)
+            {
+                var id = $"{Prefix}-{item.Id}";
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="@id"
+                           checked="@SelectedIds.Contains(item.Id)"
+                           @onchange="e => OnToggle.InvokeAsync((item.Id, e))" />
+                    <label class="form-check-label" for="@id">@item.Name</label>
+                </div>
+            }
+        </div>
+    }
+</fieldset>
+
+@code {
+    /// <summary>Visible legend / group label (fieldset).</summary>
+    [Parameter]
+    public string Legend { get; set; } = "Options";
+
+    /// <summary>Stable prefix for checkbox ids (unique per page section).</summary>
+    [Parameter]
+    public string Prefix { get; set; } = "cb";
+
+    /// <summary>Message when there are no items.</summary>
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No items yet.";
+
+    [Parameter]
+    public IReadOnlyList<DefectCodeOptionDto> Items { get; set; } = [];
+
+    /// <summary>Currently selected ids (hash set or list from edit DTOs).</summary>
+    [Parameter]
+    public IReadOnlyCollection<int> SelectedIds { get; set; } = [];
+
+    /// <summary>Called with (id, change event) when a checkbox toggles.</summary>
+    [Parameter]
+    public EventCallback<(int Id, ChangeEventArgs Args)> OnToggle { get; set; }
+}

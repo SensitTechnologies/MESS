@@ -34,4 +34,10 @@ public class StepAttemptFormDTO
     /// This value should reflect the local time on the client device when the attempt was recorded.
     /// </summary>
     public DateTimeOffset SubmitTime { get; set; }
+
+    /// <summary>Optional defect location (failure noun) selected for this attempt.</summary>
+    public int? FailureNounId { get; set; }
+
+    /// <summary>Optional defect description (failure adjective) selected for this attempt.</summary>
+    public int? FailureAdjectiveId { get; set; }
 }
