@@ -20,7 +20,8 @@ public static class StepNodeFileDTOMapper
             Body = entity.Body,
             DetailedBody = entity.DetailedBody,
             PrimaryMedia = entity.PrimaryMedia.ToList(),
-            SecondaryMedia = entity.SecondaryMedia.ToList()
+            SecondaryMedia = entity.SecondaryMedia.ToList(),
+            NotesConfiguration = entity.NotesConfiguration
         };
     }
 
@@ -37,7 +38,8 @@ public static class StepNodeFileDTOMapper
             Body = dto.Body,
             DetailedBody = dto.DetailedBody,
             PrimaryMedia = dto.PrimaryMedia.ToList(),
-            SecondaryMedia = dto.SecondaryMedia.ToList()
+            SecondaryMedia = dto.SecondaryMedia.ToList(),
+            NotesConfiguration = dto.NotesConfiguration
         };
     }
     
@@ -65,7 +67,8 @@ public static class StepNodeFileDTOMapper
             Body = entity.Body,
             DetailedBody = entity.DetailedBody,
             PrimaryMedia = entity.PrimaryMedia,
-            SecondaryMedia = entity.SecondaryMedia
+            SecondaryMedia = entity.SecondaryMedia,
+            NotesConfiguration = entity.NotesConfiguration
         };
     }
 }

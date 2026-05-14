@@ -206,7 +206,8 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 Body = stepDto.Body,
                 DetailedBody = stepDto.DetailedBody,
                 PrimaryMedia = stepDto.PrimaryMedia.ToList(),
-                SecondaryMedia = stepDto.SecondaryMedia.ToList()
+                SecondaryMedia = stepDto.SecondaryMedia.ToList(),
+                NotesConfiguration = stepDto.NotesConfiguration
             },
 
             PartNodeFormDTO partDto => await CreatePartNodeAsync(partDto, context),
@@ -220,6 +221,7 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         entity.Name = dto.Name;
         entity.Body = dto.Body;
         entity.DetailedBody = dto.DetailedBody;
+        entity.NotesConfiguration = dto.NotesConfiguration;
 
         entity.PrimaryMedia = dto.PrimaryMedia.ToList();
         entity.SecondaryMedia = dto.SecondaryMedia.ToList();

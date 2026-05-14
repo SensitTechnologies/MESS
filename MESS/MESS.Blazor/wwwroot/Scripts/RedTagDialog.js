@@ -127,12 +127,20 @@
             <span class="field">${map['Step'] || ''}</span>
         `;
 
+        const row3 = document.createElement('div');
+        row3.className = 'row';
+        row3.innerHTML = `
+            <span class="field">${map['Defect location'] || ''}</span>
+            <span class="field">${map['Defect'] || ''}</span>
+        `;
+
         const failureDiv = document.createElement('div');
         failureDiv.className = 'failure-note';
         failureDiv.innerHTML = `<span class="failure-text">${failureText}</span>`;
 
         wrapper.appendChild(row1);
         wrapper.appendChild(row2);
+        wrapper.appendChild(row3);
         wrapper.appendChild(failureDiv);
 
         return wrapper.outerHTML;

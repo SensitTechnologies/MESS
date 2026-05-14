@@ -1,14 +1,18 @@
 @page "/"
+@page "/auth/Login"
 @using MESS.Data.Models
 @using MESS.Services.CRUD.ApplicationUser
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject IApplicationUserService ApplicationUserService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IConfiguration Configuration
 
 <PageTitle>Login</PageTitle>
 
-<div class="d-flex justify-content-center align-items-center">
+<div class="login-page-root">
+    <div class="d-flex justify-content-center align-items-center w-100">
     <div class="card shadow" style="min-width: 350px; max-width: 450px;">
         <div class="card-header bg-black text-white">
             <h3 class="m-0">Login</h3>
@@ -27,10 +31,14 @@
                     </div>
                 </Authorized>
                 <NotAuthorized>
+                    @if (!string.IsNullOrEmpty(_alertMessage))
+                    {
+                        <div class="alert alert-warning small" role="alert">@_alertMessage</div>
+                    }
                     <form method="post" action="/api/auth/login">
                         <AntiforgeryToken />
                         <div class="position-relative" @onfocusout="HideDropdown">
-                            <label for="email" class="form-label">Username:</label>
+                            <label for="email" class="form-label">Username</label>
                             <input type="text"
                                    id="email"
                                    name="email"
@@ -39,7 +47,7 @@
                                    @bind-value:event="oninput"
                                    @onfocus="ShowDropdown"
                                    placeholder="Search or select an operator..."
-                                   autocomplete="off"/>
+                                   autocomplete="username"/>
 
                             @if (IsDropdownVisible)
                             {
@@ -48,39 +56,68 @@
                                      @onmouseleave="OnDropdownMouseLeave"
                                      class="login-dropdown position-absolute w-100 mt-1 shadow border rounded"
                                      style="max-height: 200px; overflow-y: auto; z-index: 1000;">
-                                @if (ApplicationUsers != null)
-                                {
-                                    @foreach (var lineOperator in ApplicationUsers.Where(u =>
-                                        u.UserName != null && (string.IsNullOrEmpty(SearchFilter) ||
-                                                            u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
-                                                            u.UserName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
+                                    @if (ApplicationUsers != null)
                                     {
-                                    <div class="dropdown-item py-2 px-3"
-                                         @onclick="() => SelectOperator(lineOperator)"
-                                         style="cursor: pointer;">
-                                        <div>@lineOperator.FullName</div>
-                                        <small class="text-muted">@lineOperator.UserName</small>
-                                    </div>
-                                }
-                                }
-                            </div>
+                                        @foreach (var lineOperator in ApplicationUsers.Where(u =>
+                                                     u.UserName != null && (string.IsNullOrEmpty(SearchFilter) ||
+                                                                            u.FullName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
+                                                                            u.UserName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase))))
+                                        {
+                                            <div class="dropdown-item py-2 px-3"
+                                                 @onclick="() => SelectOperator(lineOperator)"
+                                                 style="cursor: pointer;">
+                                                <div>@lineOperator.FullName</div>
+                                                <small class="text-muted">@lineOperator.UserName</small>
+                                            </div>
+                                        }
+                                    }
+                                </div>
                             }
                         </div>
-                        <div class="d-grid gap-2 mb-2">
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password"
+                                   id="password"
+                                   name="password"
+                                   class="form-control"
+                                   placeholder="Required if your account has a password"
+                                   autocomplete="current-password"/>
+                            <div class="form-text">
+                                Leave blank for username-only accounts (legacy). Use password if you have set one or were assigned credentials.
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mb-3">
                             <button type="submit" class="btn btn-primary">Login</button>
                         </div>
-                        
-                        <!-- Register Link -->
-                        <div class="text-center mt-2">
-                            <small>
-                                Don't have an account? 
-                                <NavLink href="/Register" class="text-decoration-none text-info">Register here</NavLink>
-                            </small>
-                        </div>
                     </form>
+
+                    @if (_microsoftAuthEnabled)
+                    {
+                        <div class="text-center mb-2">
+                            <span class="text-muted small">or</span>
+                        </div>
+                        <div class="d-grid">
+                            <a class="btn btn-outline-dark" href="/api/auth/microsoft">
+                                Sign in with Microsoft
+                            </a>
+                        </div>
+                        <p class="text-muted small mt-2 mb-0">
+                            Microsoft sign-in links to an existing MESS user by email / username from your directory.
+                        </p>
+                    }
+                    
+                    <div class="text-center mt-3">
+                        <small>
+                            Don't have an account?
+                            <NavLink href="/Register" class="text-decoration-none text-info">Register here</NavLink>
+                        </small>
+                    </div>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
+    </div>
     </div>
 </div>
 
@@ -89,14 +126,45 @@
     private string SearchFilter { get; set; } = "";
     private bool IsDropdownVisible { get; set; }
     private ElementReference _dropdownContainer;
+    private bool _isMouseOverDropdown;
+    private string? _alertMessage;
+    private bool _microsoftAuthEnabled;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         ApplicationUsers = await ApplicationUserService.GetUsersForLoginDropdownAsync();
-    }
 
-    private bool _isMouseOverDropdown;
+        _microsoftAuthEnabled = MicrosoftEntraAuthConfiguration.TryGetMicrosoftEntraCredentials(
+            Configuration,
+            out _,
+            out _,
+            out _);
+
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("registered", out var reg) && reg == "1")
+        {
+            _alertMessage = "Account created. You can sign in below (leave password blank unless you set one).";
+        }
+        else if (query.TryGetValue("failed", out var failed) && failed == "1")
+        {
+            _alertMessage = "Sign-in failed. Check your username and password. For legacy accounts without a password, leave password blank.";
+        }
+        else if (query.TryGetValue("external", out var ext))
+        {
+            _alertMessage = ext.ToString() switch
+            {
+                "disabled" => "Microsoft sign-in is not configured for this environment.",
+                "noinfo" => "Microsoft sign-in did not return login information. Try again.",
+                "noemail" => "Microsoft account did not include an email. Ask an administrator to verify directory claims.",
+                "nouser" => "No MESS user matches your Microsoft identity. Ask an administrator to create your account with the same email.",
+                "locked" => "This account is locked.",
+                "linkfailed" => "Could not link Microsoft sign-in to your account.",
+                _ => null
+            };
+        }
+    }
 
     private void OnDropdownMouseEnter()
     {
@@ -115,16 +183,19 @@
             IsDropdownVisible = false;
         }
     }
+
     private void ShowDropdown()
     {
         IsDropdownVisible = true;
     }
-    
 
     private void SelectOperator(ApplicationUser user)
     {
-        if (user.UserName != null) SearchFilter = user.UserName;
+        if (user.UserName != null)
+        {
+            SearchFilter = user.UserName;
+        }
+
         IsDropdownVisible = false;
     }
-
 }

@@ -20,6 +20,8 @@
                 <div class="tag-item"><span class="label">Work Instruction:</span> <span>@ProductionLogEventService.CurrentWorkInstructionName</span></div>
                 <div class="tag-item"><span class="label">Step:</span> <span> @StepName</span></div>
                 <div class="tag-item"><span class="label">Operator:</span> <span>@OperatorName</span></div>
+                <div class="tag-item"><span class="label">Defect location:</span> <span>@DefectLocationName</span></div>
+                <div class="tag-item"><span class="label">Defect:</span> <span>@DefectAdjectiveName</span></div>
                 <div class="failure-note"><span class="label">Failure Note:</span> <span>@FailureNotes</span></div>
             </div>
         </div>
@@ -49,6 +51,18 @@
     /// </summary>
     [Parameter]
     public string StepName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Selected defect location (failure noun) label for print.
+    /// </summary>
+    [Parameter]
+    public string DefectLocationName { get; set; } = "";
+
+    /// <summary>
+    /// Selected defect description (failure adjective) label for print.
+    /// </summary>
+    [Parameter]
+    public string DefectAdjectiveName { get; set; } = "";
 
     /// <summary>
     /// Notes entered by the operator describing the failure condition.

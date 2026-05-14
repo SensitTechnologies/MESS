@@ -307,6 +307,15 @@ public partial class StepNodeView : IDisposable
         Step.Name = e.Value?.ToString() ?? "";
         await NotifyChangeAsync();
     }
+
+    private async Task OnNotesConfigurationChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v) && Enum.IsDefined(typeof(StepNotesConfiguration), v))
+        {
+            Step.NotesConfiguration = (StepNotesConfiguration)v;
+            await NotifyChangeAsync();
+        }
+    }
     
     private async Task NotifyChangeAsync()
     {

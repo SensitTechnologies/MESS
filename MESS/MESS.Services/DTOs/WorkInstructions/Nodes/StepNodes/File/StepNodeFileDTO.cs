@@ -40,4 +40,9 @@ public class StepNodeFileDTO : WorkInstructionNodeFileDTO
     /// These may represent additional visual aids or supporting content.
     /// </summary>
     public List<string> SecondaryMedia { get; set; } = new();
+
+    /// <summary>
+    /// Per-step notes behavior in production. Omitted in legacy files; defaults to OptionalForFailure.
+    /// </summary>
+    public StepNotesConfiguration NotesConfiguration { get; set; } = StepNotesConfiguration.OptionalForFailure;
 }

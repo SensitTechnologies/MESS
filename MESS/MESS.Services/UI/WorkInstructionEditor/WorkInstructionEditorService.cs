@@ -298,7 +298,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Position = stepNode.Position,
                 DetailedBody = stepNode.DetailedBody,
                 PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? [],
-                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? []
+                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? [],
+                NotesConfiguration = stepNode.NotesConfiguration
             },
             _ => throw new NotSupportedException("Unknown WorkInstructionNode type")
         };

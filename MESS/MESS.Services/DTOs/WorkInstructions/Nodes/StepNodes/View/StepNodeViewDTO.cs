@@ -1,3 +1,4 @@
+using MESS.Data.Models;
 using MESS.Services.DTOs.WorkInstructions.Nodes.View;
 
 namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.View;
@@ -31,4 +32,7 @@ public class StepNodeViewDTO : WorkInstructionNodeViewDTO
     /// Gets or sets the list of secondary media URLs associated with the step.
     /// </summary>
     public List<string> SecondaryMedia { get; set; } = [];
+
+    /// <summary>Per-step production notes behavior.</summary>
+    public StepNotesConfiguration NotesConfiguration { get; set; } = StepNotesConfiguration.OptionalForFailure;
 }

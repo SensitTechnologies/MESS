@@ -78,6 +78,11 @@ public class WorkInstruction : AuditableEntity
     /// Gets or sets the list of products associated with the work instruction.
     /// </summary>
     public List<Product> Products { get; set; } = [];
+
+    /// <summary>
+    /// Failure nouns (defect locations) that operators may select when logging failures for this work instruction.
+    /// </summary>
+    public List<FailureNoun> FailureNouns { get; set; } = [];
 }
 
 /// <summary>
