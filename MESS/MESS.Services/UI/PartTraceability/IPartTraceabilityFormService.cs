@@ -4,8 +4,14 @@ namespace MESS.Services.UI.PartTraceability
     /// A service used for accessing and mutating the current UI state of part traceability operations for a given batch
     /// of production logs.
     /// </summary>
-    public interface IPartTraceabilityStateService
+    public interface IPartTraceabilityFormService
     {
+        /// <summary>
+        /// Called whenever snapshots are loaded or state changes.
+        /// Components can subscribe to this to trigger a UI refresh.
+        /// </summary>
+        public Action? OnStateChanged { get; set; }
+        
         /// <summary>
         /// Initializes the state service with the specified production logs and node blocks.
         /// </summary>
@@ -209,6 +215,16 @@ namespace MESS.Services.UI.PartTraceability
         /// Thrown if no part traceability state exists for the specified <paramref name="logIndex"/>.
         /// </exception>
         PartTraceabilitySnapshot CreateSnapshot(int logIndex);
+        
+        /// <summary>
+        /// Loads a collection of <see cref="PartTraceabilitySnapshot"/> instances into the state service,
+        /// replacing any existing log state.
+        /// </summary>
+        /// <param name="snapshots">
+        /// The snapshots to load. Each snapshot represents the full state of a log, including its entries
+        /// and produced part data.
+        /// </param>
+        void LoadSnapshots(IEnumerable<PartTraceabilitySnapshot> snapshots);
 
         /// <summary>
         /// Dumps the current state as a formatted string.

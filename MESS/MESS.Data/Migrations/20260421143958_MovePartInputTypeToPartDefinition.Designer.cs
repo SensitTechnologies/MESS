@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MESS.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MESS.Data.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20260421143958_MovePartInputTypeToPartDefinition")]
+    partial class MovePartInputTypeToPartDefinition
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,21 +39,6 @@ namespace MESS.Data.Migrations
                     b.HasIndex("NounsId");
 
                     b.ToTable("FailureNounAdjectives", (string)null);
-                });
-
-            modelBuilder.Entity("FailureNounWorkInstruction", b =>
-                {
-                    b.Property<int>("FailureNounsId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("WorkInstructionsId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("FailureNounsId", "WorkInstructionsId");
-
-                    b.HasIndex("WorkInstructionsId");
-
-                    b.ToTable("WorkInstructionFailureNouns", (string)null);
                 });
 
             modelBuilder.Entity("MESS.Data.Models.ApplicationUser", b =>
@@ -317,12 +305,6 @@ namespace MESS.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("FailureAdjectiveId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("FailureNounId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("text");
@@ -337,10 +319,6 @@ namespace MESS.Data.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FailureAdjectiveId");
-
-                    b.HasIndex("FailureNounId");
 
                     b.HasIndex("ProductionLogStepId");
 
@@ -714,11 +692,6 @@ namespace MESS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("NotesConfiguration")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
                     b.PrimitiveCollection<List<string>>("PrimaryMedia")
                         .IsRequired()
                         .HasColumnType("text[]");
@@ -741,21 +714,6 @@ namespace MESS.Data.Migrations
                     b.HasOne("MESS.Data.Models.FailureNoun", null)
                         .WithMany()
                         .HasForeignKey("NounsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("FailureNounWorkInstruction", b =>
-                {
-                    b.HasOne("MESS.Data.Models.FailureNoun", null)
-                        .WithMany()
-                        .HasForeignKey("FailureNounsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MESS.Data.Models.WorkInstruction", null)
-                        .WithMany()
-                        .HasForeignKey("WorkInstructionsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -828,25 +786,11 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.ProductionLogStepAttempt", b =>
                 {
-                    b.HasOne("MESS.Data.Models.FailureAdjective", "FailureAdjective")
-                        .WithMany()
-                        .HasForeignKey("FailureAdjectiveId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("MESS.Data.Models.FailureNoun", "FailureNoun")
-                        .WithMany()
-                        .HasForeignKey("FailureNounId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("MESS.Data.Models.ProductionLogStep", "ProductionLogStep")
                         .WithMany("Attempts")
                         .HasForeignKey("ProductionLogStepId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("FailureAdjective");
-
-                    b.Navigation("FailureNoun");
 
                     b.Navigation("ProductionLogStep");
                 });
@@ -1045,8 +989,6 @@ namespace MESS.Data.Migrations
 
             modelBuilder.Entity("MESS.Data.Models.WorkInstruction", b =>
                 {
-                    b.Navigation("FailureNouns");
-
                     b.Navigation("Nodes");
                 });
 #pragma warning restore 612, 618

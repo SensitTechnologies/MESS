@@ -137,8 +137,6 @@ function applyDarkModeToFluentMenus(isDark) {
     });
 }
 
-// ...rest of your code unchanged...
-
 /**
  * Rich-text body content (e.g. Quill output) may embed inline "color" styles
  * authored while in light mode. Those inline colors defeat CSS inheritance and
