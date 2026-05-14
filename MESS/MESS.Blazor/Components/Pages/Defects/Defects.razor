@@ -89,12 +89,14 @@
                                        @bind="_newNounName" />
                             </div>
                             <div class="col-12 col-lg-8">
-                                <DefectCheckboxPanel Legend="Allowed adjectives"
-                                                     Prefix="new-noun-a"
-                                                     EmptyMessage="Create adjectives first (Adjectives tab)."
-                                                     Items="@AdjectiveSelectOptions"
-                                                     SelectedIds="@_newNounAdjectiveIds"
-                                                     OnToggle="OnNewNounAdjectiveToggle" />
+                                <DefectMultiSelect Label="Allowed adjectives"
+                                                   InputId="defect-new-noun-adj"
+                                                   Placeholder="Select adjectives that apply to this noun…"
+                                                   EmptyMessage="Create adjectives first (Adjectives tab)."
+                                                   Items="@AdjectiveSelectOptions"
+                                                   SelectedIds="@_newNounAdjectiveIds"
+                                                   OnAdd="@(id => { _newNounAdjectiveIds.Add(id); return Task.CompletedTask; })"
+                                                   OnRemove="@(id => { _newNounAdjectiveIds.Remove(id); return Task.CompletedTask; })" />
                             </div>
                             <div class="col-12">
                                 <button type="button"
@@ -110,9 +112,24 @@
                             </div>
                         </div>
 
-                        <h4 class="h6 text-uppercase text-muted fw-semibold mb-3">All nouns</h4>
+                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-2">
+                            <h4 class="h6 text-uppercase text-muted fw-semibold mb-0">All nouns</h4>
+                            <div class="defects-table-search input-group input-group-sm" role="search">
+                                <span class="input-group-text" id="defects-noun-search-label">
+                                    <i class="bi bi-search" aria-hidden="true"></i>
+                                </span>
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search nouns or linked adjectives…"
+                                       aria-label="Search nouns"
+                                       aria-describedby="defects-noun-search-label"
+                                       @bind="_nounSearch"
+                                       @bind:event="oninput" />
+                            </div>
+                        </div>
                         <MudTable T="FailureNounAdminDto"
                                   Items="_nouns"
+                                  Filter="new Func<FailureNounAdminDto, bool>(NounMatchesSearch)"
                                   Dense="true"
                                   Hover="true"
                                   FixedHeader="true"
@@ -120,8 +137,16 @@
                                   Class="border rounded-3 pt-1"
                                   TableClass="table table-striped table-hover align-middle">
                             <HeaderContent>
-                                <MudTh><strong>Name</strong></MudTh>
-                                <MudTh><strong>Adjectives</strong></MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel SortBy="new Func<FailureNounAdminDto, object>(n => n.Name)">
+                                        <strong>Name</strong>
+                                    </MudTableSortLabel>
+                                </MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel SortBy="new Func<FailureNounAdminDto, object>(n => FormatNounRowAdjectives(n))">
+                                        <strong>Adjectives</strong>
+                                    </MudTableSortLabel>
+                                </MudTh>
                                 <MudTh class="text-end"><strong>Actions</strong></MudTh>
                             </HeaderContent>
                             <RowTemplate>
@@ -142,6 +167,9 @@
                                     </button>
                                 </MudTd>
                             </RowTemplate>
+                            <NoRecordsContent>
+                                <p class="text-muted small mb-0 py-3 text-center">No nouns match your search.</p>
+                            </NoRecordsContent>
                             <PagerContent>
                                 <MudTablePager HorizontalAlignment="MudBlazor.HorizontalAlignment.Center"
                                                RowsPerPageString="Rows per page" />
@@ -164,12 +192,14 @@
                                        @bind="_newAdjectiveName" />
                             </div>
                             <div class="col-12 col-lg-8">
-                                <DefectCheckboxPanel Legend="Apply to nouns (optional)"
-                                                     Prefix="new-adj-n"
-                                                     EmptyMessage="Create nouns first (Nouns tab)."
-                                                     Items="@NounSelectOptions"
-                                                     SelectedIds="@_newAdjectiveNounIds"
-                                                     OnToggle="OnNewAdjectiveNounToggle" />
+                                <DefectMultiSelect Label="Apply to nouns (optional)"
+                                                   InputId="defect-new-adj-noun"
+                                                   Placeholder="Select nouns this adjective applies to…"
+                                                   EmptyMessage="Create nouns first (Nouns tab)."
+                                                   Items="@NounSelectOptions"
+                                                   SelectedIds="@_newAdjectiveNounIds"
+                                                   OnAdd="@(id => { _newAdjectiveNounIds.Add(id); return Task.CompletedTask; })"
+                                                   OnRemove="@(id => { _newAdjectiveNounIds.Remove(id); return Task.CompletedTask; })" />
                             </div>
                             <div class="col-12">
                                 <button type="button"
@@ -185,9 +215,24 @@
                             </div>
                         </div>
 
-                        <h4 class="h6 text-uppercase text-muted fw-semibold mb-3">All adjectives</h4>
+                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-2">
+                            <h4 class="h6 text-uppercase text-muted fw-semibold mb-0">All adjectives</h4>
+                            <div class="defects-table-search input-group input-group-sm" role="search">
+                                <span class="input-group-text" id="defects-adj-search-label">
+                                    <i class="bi bi-search" aria-hidden="true"></i>
+                                </span>
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search adjectives or linked nouns…"
+                                       aria-label="Search adjectives"
+                                       aria-describedby="defects-adj-search-label"
+                                       @bind="_adjectiveSearch"
+                                       @bind:event="oninput" />
+                            </div>
+                        </div>
                         <MudTable T="FailureAdjectiveAdminDto"
                                   Items="_adjectives"
+                                  Filter="new Func<FailureAdjectiveAdminDto, bool>(AdjectiveMatchesSearch)"
                                   Dense="true"
                                   Hover="true"
                                   FixedHeader="true"
@@ -195,8 +240,16 @@
                                   Class="border rounded-3 pt-1"
                                   TableClass="table table-striped table-hover align-middle">
                             <HeaderContent>
-                                <MudTh><strong>Name</strong></MudTh>
-                                <MudTh><strong>Nouns</strong></MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel SortBy="new Func<FailureAdjectiveAdminDto, object>(a => a.Name)">
+                                        <strong>Name</strong>
+                                    </MudTableSortLabel>
+                                </MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel SortBy="new Func<FailureAdjectiveAdminDto, object>(a => FormatAdjectiveRowNouns(a))">
+                                        <strong>Nouns</strong>
+                                    </MudTableSortLabel>
+                                </MudTh>
                                 <MudTh class="text-end"><strong>Actions</strong></MudTh>
                             </HeaderContent>
                             <RowTemplate>
@@ -217,6 +270,9 @@
                                     </button>
                                 </MudTd>
                             </RowTemplate>
+                            <NoRecordsContent>
+                                <p class="text-muted small mb-0 py-3 text-center">No adjectives match your search.</p>
+                            </NoRecordsContent>
                             <PagerContent>
                                 <MudTablePager HorizontalAlignment="MudBlazor.HorizontalAlignment.Center"
                                                RowsPerPageString="Rows per page" />
@@ -313,12 +369,14 @@
                    autocomplete="off"
                    @bind="_editNoun.Name" />
         </div>
-        <DefectCheckboxPanel Legend="Allowed adjectives"
-                             Prefix="edit-noun-a"
-                             EmptyMessage="No adjectives defined yet."
-                             Items="@AdjectiveSelectOptions"
-                             SelectedIds="@_editNoun.AdjectiveIds"
-                             OnToggle="OnEditNounAdjectiveToggle" />
+        <DefectMultiSelect Label="Allowed adjectives"
+                           InputId="defect-edit-noun-adj"
+                           Placeholder="Select adjectives…"
+                           EmptyMessage="No adjectives defined yet."
+                           Items="@AdjectiveSelectOptions"
+                           SelectedIds="@_editNoun.AdjectiveIds"
+                           OnAdd="OnEditNounAdjectiveAdd"
+                           OnRemove="OnEditNounAdjectiveRemove" />
     }
 </DefectEditModal>
 
@@ -337,12 +395,14 @@
                    autocomplete="off"
                    @bind="_editAdjective.Name" />
         </div>
-        <DefectCheckboxPanel Legend="Apply to nouns"
-                             Prefix="edit-adj-n"
-                             EmptyMessage="No nouns defined yet."
-                             Items="@NounSelectOptions"
-                             SelectedIds="@_editAdjective.NounIds"
-                             OnToggle="OnEditAdjectiveNounToggle" />
+        <DefectMultiSelect Label="Apply to nouns"
+                           InputId="defect-edit-adj-noun"
+                           Placeholder="Select nouns…"
+                           EmptyMessage="No nouns defined yet."
+                           Items="@NounSelectOptions"
+                           SelectedIds="@_editAdjective.NounIds"
+                           OnAdd="OnEditAdjectiveNounAdd"
+                           OnRemove="OnEditAdjectiveNounRemove" />
     }
 </DefectEditModal>
 
@@ -365,6 +425,9 @@
 
     private FailureNounAdminDto? _editNoun;
     private FailureAdjectiveAdminDto? _editAdjective;
+
+    private string _nounSearch = "";
+    private string _adjectiveSearch = "";
 
     private IReadOnlyList<DefectCodeOptionDto> AdjectiveSelectOptions =>
         _adjectives.Select(a => new DefectCodeOptionDto { Id = a.Id, Name = a.Name }).ToList();
@@ -410,69 +473,70 @@
             _nouns.Where(n => row.NounIds.Contains(n.Id)).OrderBy(n => n.Name).Select(n => n.Name));
     }
 
-    private Task OnNewNounAdjectiveToggle((int Id, ChangeEventArgs Args) arg)
+    private Task OnEditNounAdjectiveAdd(int adjectiveId)
     {
-        ToggleHash(_newNounAdjectiveIds, arg.Id, arg.Args);
+        if (_editNoun is null)
+        {
+            return Task.CompletedTask;
+        }
+        if (!_editNoun.AdjectiveIds.Contains(adjectiveId))
+        {
+            _editNoun.AdjectiveIds.Add(adjectiveId);
+        }
         return Task.CompletedTask;
     }
 
-    private Task OnNewAdjectiveNounToggle((int Id, ChangeEventArgs Args) arg)
+    private Task OnEditNounAdjectiveRemove(int adjectiveId)
     {
-        ToggleHash(_newAdjectiveNounIds, arg.Id, arg.Args);
+        _editNoun?.AdjectiveIds.Remove(adjectiveId);
         return Task.CompletedTask;
     }
 
-    private Task OnEditNounAdjectiveToggle((int Id, ChangeEventArgs Args) arg)
+    private Task OnEditAdjectiveNounAdd(int nounId)
     {
-        ToggleEditNounAdjective(arg.Id, arg.Args);
+        if (_editAdjective is null)
+        {
+            return Task.CompletedTask;
+        }
+        if (!_editAdjective.NounIds.Contains(nounId))
+        {
+            _editAdjective.NounIds.Add(nounId);
+        }
         return Task.CompletedTask;
     }
 
-    private Task OnEditAdjectiveNounToggle((int Id, ChangeEventArgs Args) arg)
+    private Task OnEditAdjectiveNounRemove(int nounId)
     {
-        ToggleEditAdjectiveNoun(arg.Id, arg.Args);
+        _editAdjective?.NounIds.Remove(nounId);
         return Task.CompletedTask;
+    }
+
+    private bool NounMatchesSearch(FailureNounAdminDto n)
+    {
+        if (string.IsNullOrWhiteSpace(_nounSearch))
+        {
+            return true;
+        }
+        var q = _nounSearch.Trim();
+        return n.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || FormatNounRowAdjectives(n).Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool AdjectiveMatchesSearch(FailureAdjectiveAdminDto a)
+    {
+        if (string.IsNullOrWhiteSpace(_adjectiveSearch))
+        {
+            return true;
+        }
+        var q = _adjectiveSearch.Trim();
+        return a.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || FormatAdjectiveRowNouns(a).Contains(q, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task ReloadAsync()
     {
         _nouns = (await DefectCodeService.GetAllNounsAsync()).OrderBy(n => n.Name).ToList();
         _adjectives = (await DefectCodeService.GetAllAdjectivesAsync()).OrderBy(a => a.Name).ToList();
-    }
-
-    private static void ToggleHash(HashSet<int> set, int id, ChangeEventArgs e)
-    {
-        var on = e.Value is bool b && b;
-        if (on)
-            set.Add(id);
-        else
-            set.Remove(id);
-    }
-
-    private void ToggleEditNounAdjective(int adjectiveId, ChangeEventArgs e)
-    {
-        if (_editNoun is null) return;
-        var on = e.Value is bool b && b;
-        if (on)
-        {
-            if (!_editNoun.AdjectiveIds.Contains(adjectiveId))
-                _editNoun.AdjectiveIds.Add(adjectiveId);
-        }
-        else
-            _editNoun.AdjectiveIds.Remove(adjectiveId);
-    }
-
-    private void ToggleEditAdjectiveNoun(int nounId, ChangeEventArgs e)
-    {
-        if (_editAdjective is null) return;
-        var on = e.Value is bool b && b;
-        if (on)
-        {
-            if (!_editAdjective.NounIds.Contains(nounId))
-                _editAdjective.NounIds.Add(nounId);
-        }
-        else
-            _editAdjective.NounIds.Remove(nounId);
     }
 
     private async Task CreateNounAsync()

@@ -27,3 +27,15 @@ body.dark-mode .defects-page .form-check-label {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
 }
+
+.defects-page .defects-table-search {
+    max-width: 24rem;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .defects-page .defects-table-search {
+        width: auto;
+        min-width: 18rem;
+    }
+}

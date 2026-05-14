@@ -1,0 +1,223 @@
+@using MESS.Services.DTOs.Defects
+
+@* Reusable searchable multi-select for defect noun/adjective associations.
+   Selected items render as removable chips; remaining items appear in a
+   filtered listbox below. Works without JS interop and inherits the
+   project's Bootstrap + dark-mode styles. *@
+
+<div class="defect-multi-select"
+     @onmouseenter="MarkHover"
+     @onmouseleave="ClearHover"
+     @onfocusout="OnFocusOut"
+     @onkeydown="OnKeyDown">
+    <label class="form-label small fw-semibold mb-1" for="@InputId">@Label</label>
+
+    <div class="defect-multi-select__control form-control d-flex flex-wrap align-items-center gap-1 p-2"
+         role="combobox"
+         aria-haspopup="listbox"
+         aria-expanded="@_open"
+         aria-controls="@MenuId"
+         @onclick="FocusInput">
+
+        @if (SelectedIds.Count == 0 && string.IsNullOrEmpty(_search))
+        {
+            <span class="defect-multi-select__placeholder text-muted small flex-grow-1 ps-1">
+                @Placeholder
+            </span>
+        }
+        else
+        {
+            @foreach (var id in SelectedIds)
+            {
+                if (_lookup.TryGetValue(id, out var item))
+                {
+                    <span class="defect-multi-select__chip badge rounded-pill d-inline-flex align-items-center gap-1">
+                        <span>@item.Name</span>
+                        <button type="button"
+                                class="defect-multi-select__chip-close"
+                                aria-label="@($"Remove {item.Name}")"
+                                @onclick="@(() => RemoveAsync(id))"
+                                @onclick:stopPropagation>
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        </button>
+                    </span>
+                }
+            }
+        }
+
+        <input id="@InputId"
+               @ref="_inputRef"
+               class="defect-multi-select__search flex-grow-1 border-0 bg-transparent"
+               type="text"
+               role="searchbox"
+               value="@_search"
+               placeholder="@(SelectedIds.Count == 0 ? string.Empty : SearchPlaceholder)"
+               autocomplete="off"
+               @oninput="OnSearchInput"
+               @onfocus="OpenDropdown" />
+
+        <i class="bi bi-chevron-down defect-multi-select__caret" aria-hidden="true"></i>
+    </div>
+
+    @if (_open)
+    {
+        <ul id="@MenuId" class="defect-multi-select__menu list-group shadow" role="listbox" aria-multiselectable="true">
+            @if (Items.Count == 0)
+            {
+                <li class="list-group-item small text-muted">@EmptyMessage</li>
+            }
+            else if (_filtered.Count == 0)
+            {
+                <li class="list-group-item small text-muted">No matches.</li>
+            }
+            else
+            {
+                @foreach (var item in _filtered)
+                {
+                    var isSelected = SelectedIds.Contains(item.Id);
+                    <li class="list-group-item list-group-item-action defect-multi-select__option d-flex align-items-center @(isSelected ? "active" : "")"
+                        role="option"
+                        aria-selected="@isSelected"
+                        @onclick="@(() => ToggleAsync(item.Id))"
+                        @onclick:stopPropagation>
+                        <input class="form-check-input me-2 pe-none"
+                               type="checkbox"
+                               tabindex="-1"
+                               checked="@isSelected"
+                               aria-hidden="true" />
+                        <span>@item.Name</span>
+                    </li>
+                }
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private readonly string _id = Guid.NewGuid().ToString("n");
+    private string _search = "";
+    private bool _open;
+    private bool _hovered;
+    private ElementReference _inputRef;
+    private Dictionary<int, DefectCodeOptionDto> _lookup = new();
+    private List<DefectCodeOptionDto> _filtered = [];
+
+    /// <summary>Visible label rendered above the control.</summary>
+    [Parameter] public string Label { get; set; } = "";
+
+    /// <summary>Placeholder shown when nothing is selected and no text is typed.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Select…";
+
+    /// <summary>Placeholder for the inline search input when chips are visible.</summary>
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search…";
+
+    /// <summary>Message shown when the source list has no items.</summary>
+    [Parameter] public string EmptyMessage { get; set; } = "No options.";
+
+    /// <summary>Stable id for the inline search input (used by the label).</summary>
+    [Parameter] public string InputId { get; set; } = "";
+
+    /// <summary>Source list of options.</summary>
+    [Parameter] public IReadOnlyList<DefectCodeOptionDto> Items { get; set; } = [];
+
+    /// <summary>Currently selected ids (hash set or list — read-only access only).</summary>
+    [Parameter] public IReadOnlyCollection<int> SelectedIds { get; set; } = [];
+
+    /// <summary>Fires with the id when the user adds an option.</summary>
+    [Parameter] public EventCallback<int> OnAdd { get; set; }
+
+    /// <summary>Fires with the id when the user removes an option (chip × or option toggle off).</summary>
+    [Parameter] public EventCallback<int> OnRemove { get; set; }
+
+    private string MenuId => $"dms-menu-{_id}";
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(InputId))
+        {
+            InputId = $"dms-input-{_id}";
+        }
+
+        _lookup = Items.ToDictionary(i => i.Id, i => i);
+        Refilter();
+    }
+
+    private void Refilter()
+    {
+        if (string.IsNullOrEmpty(_search))
+        {
+            _filtered = Items.ToList();
+        }
+        else
+        {
+            _filtered = Items
+                .Where(i => i.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _open = true;
+        Refilter();
+    }
+
+    private void OpenDropdown() => _open = true;
+
+    private async Task FocusInput()
+    {
+        _open = true;
+        try
+        {
+            await _inputRef.FocusAsync();
+        }
+        catch
+        {
+            // Ignore — focus may not be available during prerendering.
+        }
+    }
+
+    private void MarkHover() => _hovered = true;
+    private void ClearHover() => _hovered = false;
+
+    private void OnFocusOut(FocusEventArgs _)
+    {
+        // Stay open while pointer is over the control / dropdown so chip × and
+        // option clicks don't dismiss the menu mid-interaction.
+        if (_hovered) return;
+        _open = false;
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _open = false;
+        }
+    }
+
+    private async Task ToggleAsync(int id)
+    {
+        if (SelectedIds.Contains(id))
+        {
+            await OnRemove.InvokeAsync(id);
+        }
+        else
+        {
+            await OnAdd.InvokeAsync(id);
+        }
+
+        try
+        {
+            await _inputRef.FocusAsync();
+        }
+        catch
+        {
+            // Ignore.
+        }
+    }
+
+    private Task RemoveAsync(int id) => OnRemove.InvokeAsync(id);
+}

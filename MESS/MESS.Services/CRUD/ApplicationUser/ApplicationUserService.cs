@@ -1,7 +1,9 @@
 using System.Transactions;
 using MESS.Data.Context;
+using MESS.Services.Configuration;
 using MESS.Services.Files.ApplicationUsers;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace MESS.Services.CRUD.ApplicationUser;
@@ -16,19 +18,21 @@ public class ApplicationUserService : IApplicationUserService
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IApplicationUserFileService _fileService;
+    private readonly MessAuthOptions _messAuthOptions;
 
-    const string DEFAULT_PASSWORD = "";
     const string DEFAULT_ROLE = "Operator";
 
     /// <inheritdoc cref="IApplicationUserService"/>
     public ApplicationUserService(ApplicationContext context, UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,  RoleManager<IdentityRole> roleManager, IApplicationUserFileService fileService)
+        SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager,
+        IApplicationUserFileService fileService, IOptions<MessAuthOptions> messAuthOptions)
     {
         _context = context;
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
         _fileService = fileService;
+        _messAuthOptions = messAuthOptions.Value;
     }
 
     /// <inheritdoc />
@@ -45,7 +49,7 @@ public class ApplicationUserService : IApplicationUserService
     }
     
     /// <inheritdoc />
-    public async Task<bool> SignInAsync(string username)
+    public async Task<bool> SignInAsync(string username, string? password)
     {
         try
         {
@@ -62,12 +66,37 @@ public class ApplicationUserService : IApplicationUserService
                 return false;
             }
 
+            var hasPassword = await _userManager.HasPasswordAsync(user);
+            var legacyAllowed = _messAuthOptions.AllowLegacyUsernameSignIn && user.AllowLegacyUsernameSignIn;
+
+            if (hasPassword)
+            {
+                if (string.IsNullOrEmpty(password))
+                {
+                    return false;
+                }
+
+                var pwdResult = await _signInManager.PasswordSignInAsync(
+                    user.UserName!, password, isPersistent: false, lockoutOnFailure: true);
+                return pwdResult.Succeeded;
+            }
+
+            if (!legacyAllowed)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                return false;
+            }
+
             await _signInManager.SignInAsync(user, isPersistent: false);
             return true;
         }
         catch (Exception e)
         {
-            Log.Warning("Unable to SignInAsync with UserName: {username} in ApplicationUserService: Exception thrown: {Exception}", username, e.ToString());
+            Log.Warning(e, "Unable to SignInAsync with UserName: {Username} in ApplicationUserService", username);
             return false;
         }
     }
@@ -201,19 +230,21 @@ public class ApplicationUserService : IApplicationUserService
     }
 
     /// <inheritdoc />
-    public async Task<IdentityResult> AddApplicationUser(ApplicationUser applicationUser)
+    public async Task<IdentityResult> AddApplicationUser(ApplicationUser applicationUser, string? password = null)
     {
         try
         {
-            var result = await _userManager.CreateAsync(applicationUser);
-            
+            IdentityResult result = string.IsNullOrWhiteSpace(password)
+                ? await _userManager.CreateAsync(applicationUser)
+                : await _userManager.CreateAsync(applicationUser, password);
+
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(applicationUser, DEFAULT_ROLE);
                 Log.Information("Added ApplicationUser with ID {id}", applicationUser.Id);
                 return IdentityResult.Success;
             }
-            
+
             Log.Warning("Unable to create ApplicationUser with ID {id}", applicationUser.Id);
             return result;
         }

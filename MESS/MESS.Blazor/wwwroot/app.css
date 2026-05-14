@@ -35,6 +35,40 @@ body.dark-mode {
     padding-top: 1.1rem;
 }
 
+/* Auth pages (Login / Register): fill viewport so background is one continuous
+   surface (avoids a short content strip vs body color band in dark mode). */
+main.content:has(.login-page-root) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 50px !important;
+    padding-bottom: 0 !important;
+    background-color: #f8f9fa;
+}
+
+body.dark-mode main.content:has(.login-page-root) {
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+.login-page-root {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: calc(100vh - 50px);
+    min-height: calc(100dvh - 50px);
+    padding: 1rem 1.25rem 2rem;
+}
+
 /* ==========================================================================
    Forms & Inputs
 ========================================================================== */
@@ -330,8 +364,31 @@ body.dark-mode .table td {
     color: #ffffff;
 }
 
-body.dark-mode .table.table-striped tbody tr:nth-child(odd) {
-    background-color: #151515;
+/* Bootstrap striped tables still use light-theme --bs-table-* vars when only
+   body.dark-mode is set (no data-bs-theme=dark). Force dark stripes + readable text. */
+body.dark-mode .table.table-striped {
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: #1f1f1f;
+    --bs-table-hover-bg: rgba(255, 213, 2, 0.08);
+    --bs-table-color: #ffffff;
+    --bs-table-border-color: #444;
+    color: #ffffff;
+}
+
+body.dark-mode .table.table-striped > :not(caption) > * > * {
+    color: #ffffff;
+    border-bottom-color: #444;
+}
+
+body.dark-mode .table.table-hover > tbody > tr:hover > * {
+    --bs-table-accent-bg: rgba(255, 213, 2, 0.12);
+    color: #ffffff;
+}
+
+/* MudBlazor table wrapper often uses a light surface; keep transparent in dark mode. */
+body.dark-mode .mud-table-root,
+body.dark-mode .mud-table-container {
+    background-color: transparent !important;
 }
 
 body.dark-mode .list-group.container {
@@ -823,6 +880,24 @@ body.dark-mode .confirmation-toast {
 
 /* Defect code edit modal: Bootstrap modal surface stays light while body.dark-mode
    sets light text globally — restore dark ink + light inputs inside the dialog. */
+
+/* Give the dialog enough room and let the multi-select dropdown overflow the
+   modal body without clipping. Larger min-height ensures the menu sits inside
+   the dialog instead of being cut off (see screenshot). */
+.defect-edit-modal__dialog {
+    max-width: 32rem;
+}
+
+.defect-edit-modal__content {
+    overflow: visible;
+}
+
+.defect-edit-modal__body {
+    overflow: visible;
+    min-height: 22rem;
+    padding-bottom: 1.5rem;
+}
+
 body.dark-mode .defect-edit-modal .modal-content {
     background-color: #f8f9fa;
     color: #212529;
@@ -840,7 +915,9 @@ body.dark-mode .defect-edit-modal .modal-footer {
 body.dark-mode .defect-edit-modal .modal-title,
 body.dark-mode .defect-edit-modal .form-label,
 body.dark-mode .defect-edit-modal .defect-checkbox-panel .form-check-label,
-body.dark-mode .defect-edit-modal .defect-checkbox-panel legend {
+body.dark-mode .defect-edit-modal .defect-checkbox-panel legend,
+body.dark-mode .defect-edit-modal .defect-multi-select label,
+body.dark-mode .defect-edit-modal .defect-multi-select__option {
     color: #212529;
 }
 
@@ -862,6 +939,55 @@ body.dark-mode .defect-edit-modal .btn-close {
 /* Global dark rule forces .text-muted to white; use grey on light modal surface. */
 body.dark-mode .defect-edit-modal .text-muted {
     color: #6c757d !important;
+}
+
+/* Defect multi-select: dark-theme overrides for dropdown / chips on the page
+   (the edit-modal scope above takes care of the modal surface). */
+body.dark-mode .defects-page .defect-multi-select__control {
+    background-color: #2b2b2b;
+    color: #ffffff;
+    border-color: #555;
+}
+
+body.dark-mode .defects-page .defect-multi-select__placeholder,
+body.dark-mode .defects-page .defect-multi-select__caret {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+body.dark-mode .defects-page .defect-multi-select__search {
+    color: #ffffff;
+}
+
+body.dark-mode .defects-page .defect-multi-select__search::placeholder {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+body.dark-mode .defects-page .defect-multi-select__chip {
+    background-color: rgba(13, 110, 253, 0.25);
+    color: #cfe2ff;
+    border-color: rgba(13, 110, 253, 0.4);
+}
+
+body.dark-mode .defects-page .defect-multi-select__menu {
+    background-color: #1f1f1f;
+    border-color: #444;
+}
+
+body.dark-mode .defects-page .defect-multi-select__option {
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.92);
+    border-color: #2f2f2f;
+}
+
+body.dark-mode .defects-page .defect-multi-select__option:hover,
+body.dark-mode .defects-page .defect-multi-select__option:focus-visible {
+    background-color: rgba(13, 110, 253, 0.18);
+    color: #ffffff;
+}
+
+body.dark-mode .defects-page .defect-multi-select__option.active {
+    background-color: rgba(13, 110, 253, 0.25);
+    color: #ffffff;
 }
 
 /* ==========================================================================

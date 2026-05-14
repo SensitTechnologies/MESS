@@ -22,8 +22,12 @@ using MESS.Services.UI.ProductionLogEvent;
 using MESS.Services.UI.QrCodes;
 using MESS.Services.UI.WorkInstructionEditor;
 using MESS.Services.UI.WorkInstructionImport;
+using MESS.Services.Configuration;
+using MESS.Blazor.Configuration;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
 using MudBlazor.Services;
@@ -84,16 +88,20 @@ builder.Services.AddScoped<RoleInitializer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
 builder.Services.AddMudServices();
+
+builder.Services.Configure<MessAuthOptions>(
+    builder.Configuration.GetSection(MessAuthOptions.SectionName));
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
-    // Password config
-    options.Password.RequiredLength = 1;
-    options.Password.RequiredUniqueChars = 0;
-    options.Password.RequireDigit = false;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireUppercase = false;
+    // Password policy for accounts that opt in to password sign-in
+    options.Password.RequiredLength = 8;
+    options.Password.RequiredUniqueChars = 1;
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
     options.Password.RequireNonAlphanumeric = false;
     
     // Username
@@ -108,6 +116,28 @@ builder.Services.Configure<IdentityOptions>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationContext>()
     .AddDefaultTokenProviders();
+
+if (MicrosoftEntraAuthConfiguration.TryGetMicrosoftEntraCredentials(
+        builder.Configuration,
+        out var tenantId,
+        out var clientId,
+        out var clientSecret))
+{
+    builder.Services.AddAuthentication()
+        .AddOpenIdConnect("Microsoft", options =>
+        {
+            options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
+            options.ClientId = clientId;
+            options.ClientSecret = clientSecret;
+            options.ResponseType = OpenIdConnectResponseType.Code;
+            options.CallbackPath = "/signin-microsoft";
+            options.SaveTokens = true;
+            options.SignInScheme = IdentityConstants.ExternalScheme;
+            options.Scope.Add("openid");
+            options.Scope.Add("profile");
+            options.Scope.Add("email");
+        });
+}
 
 // Roles
 builder.Services.AddAuthorization(options =>
