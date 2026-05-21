@@ -1,0 +1,256 @@
+@page "/profile"
+@attribute [Authorize]
+@using MESS.Data.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IToastService ToastService
+
+<PageTitle>My Profile</PageTitle>
+
+<div class="container py-4" style="max-width: 760px;">
+    <h1 class="mb-4">My Profile</h1>
+
+    @if (_isLoading)
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else if (_user == null)
+    {
+        <div class="alert alert-warning">Unable to load your profile.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                Profile Information
+            </div>
+            <div class="card-body">
+                <EditForm Model="_profileModel" OnValidSubmit="SaveProfileAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="firstName">First Name</label>
+                            <InputText id="firstName" class="form-control" @bind-Value="_profileModel.FirstName" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="lastName">Last Name</label>
+                            <InputText id="lastName" class="form-control" @bind-Value="_profileModel.LastName" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="email">Email Address</label>
+                            <InputText id="email" class="form-control" @bind-Value="_profileModel.Email" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="userName">Username</label>
+                            <InputText id="userName" class="form-control" @bind-Value="_profileModel.UserName" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="phoneNumber">Phone Number</label>
+                            <InputText id="phoneNumber" class="form-control" @bind-Value="_profileModel.PhoneNumber" />
+                        </div>
+                    </div>
+
+                    <ValidationSummary class="text-danger mt-3" />
+
+                    <button type="submit" class="btn btn-primary mt-3" disabled="@_isSavingProfile">
+                        @(_isSavingProfile ? "Saving..." : "Save Profile")
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Password
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    @(_hasPassword
+                        ? "Enter your current password before setting a new password."
+                        : "This account does not have a password yet. Set one below.")
+                </p>
+
+                <EditForm Model="_passwordModel" OnValidSubmit="SavePasswordAsync">
+                    <DataAnnotationsValidator />
+
+                    @if (_hasPassword)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label" for="currentPassword">Current Password</label>
+                            <InputText id="currentPassword" type="password" class="form-control" @bind-Value="_passwordModel.CurrentPassword" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label" for="newPassword">New Password</label>
+                        <InputText id="newPassword" type="password" class="form-control" @bind-Value="_passwordModel.NewPassword" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="confirmPassword">Confirm Password</label>
+                        <InputText id="confirmPassword" type="password" class="form-control" @bind-Value="_passwordModel.ConfirmPassword" />
+                    </div>
+
+                    <ValidationSummary class="text-danger" />
+
+                    <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">
+                        @(_isSavingPassword ? "Saving..." : (_hasPassword ? "Update Password" : "Set Password"))
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ApplicationUser? _user;
+    private readonly ProfileFormModel _profileModel = new();
+    private readonly PasswordFormModel _passwordModel = new();
+    private bool _hasPassword;
+    private bool _isLoading = true;
+    private bool _isSavingProfile;
+    private bool _isSavingPassword;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(authState.User);
+
+        if (_user != null)
+        {
+            _profileModel.FirstName = _user.FirstName;
+            _profileModel.LastName = _user.LastName;
+            _profileModel.Email = _user.Email;
+            _profileModel.UserName = _user.UserName;
+            _profileModel.PhoneNumber = _user.PhoneNumber;
+            _hasPassword = await UserManager.HasPasswordAsync(_user);
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (_user == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_profileModel.UserName) && string.IsNullOrWhiteSpace(_profileModel.Email))
+        {
+            ToastService.ShowError("A profile requires either a username or an email address.");
+            return;
+        }
+
+        _isSavingProfile = true;
+        try
+        {
+            _user.FirstName = _profileModel.FirstName;
+            _user.LastName = _profileModel.LastName;
+            _user.Email = _profileModel.Email;
+            _user.UserName = string.IsNullOrWhiteSpace(_profileModel.UserName)
+                ? _profileModel.Email
+                : _profileModel.UserName;
+            _user.PhoneNumber = _profileModel.PhoneNumber;
+
+            var result = await UserManager.UpdateAsync(_user);
+            if (!result.Succeeded)
+            {
+                ShowIdentityErrors(result);
+                return;
+            }
+
+            ToastService.ShowSuccess("Profile updated successfully.");
+        }
+        finally
+        {
+            _isSavingProfile = false;
+        }
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        if (_user == null)
+            return;
+
+        if (_passwordModel.NewPassword != _passwordModel.ConfirmPassword)
+        {
+            ToastService.ShowError("New password and confirm password must match.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_passwordModel.NewPassword))
+        {
+            ToastService.ShowError("New password is required.");
+            return;
+        }
+
+        _isSavingPassword = true;
+        try
+        {
+            IdentityResult result;
+            if (_hasPassword)
+            {
+                if (string.IsNullOrWhiteSpace(_passwordModel.CurrentPassword))
+                {
+                    ToastService.ShowError("Current password is required.");
+                    return;
+                }
+
+                result = await UserManager.ChangePasswordAsync(
+                    _user,
+                    _passwordModel.CurrentPassword,
+                    _passwordModel.NewPassword);
+            }
+            else
+            {
+                result = await UserManager.AddPasswordAsync(_user, _passwordModel.NewPassword);
+            }
+
+            if (!result.Succeeded)
+            {
+                ShowIdentityErrors(result);
+                return;
+            }
+
+            _passwordModel.CurrentPassword = "";
+            _passwordModel.NewPassword = "";
+            _passwordModel.ConfirmPassword = "";
+            _hasPassword = true;
+
+            ToastService.ShowSuccess("Password saved successfully.");
+        }
+        finally
+        {
+            _isSavingPassword = false;
+        }
+    }
+
+    private void ShowIdentityErrors(IdentityResult result)
+    {
+        foreach (var error in result.Errors)
+        {
+            ToastService.ShowError(error.Description);
+        }
+    }
+
+    private sealed class ProfileFormModel
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+        public string? UserName { get; set; }
+        public string? PhoneNumber { get; set; }
+    }
+
+    private sealed class PasswordFormModel
+    {
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+        public string? ConfirmPassword { get; set; }
+    }
+}

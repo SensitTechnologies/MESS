@@ -26,6 +26,10 @@
             <!-- Available to every user -->
             <AuthorizeView Roles="Operator, Technician, Administrator">
                 <NavLink class="btn btn-sm btn-outline-secondary text-start"
+                         href="/profile" @onclick="OnToggleClicked">
+                    My Profile
+                </NavLink>
+                <NavLink class="btn btn-sm btn-outline-secondary text-start"
                          href="/production-log" @onclick="OnToggleClicked">
                     My Production
                 </NavLink>
