@@ -101,7 +101,12 @@ public class WorkInstructionEditorServiceTests
 
         _mockWorkInstructionService
             .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
+            .Callback<WorkInstructionFormDTO>(dto => dto.Id = 99)
             .ReturnsAsync(true);
+
+        _mockWorkInstructionService
+            .Setup(s => s.GetFormByIdAsync(99))
+            .ReturnsAsync(new WorkInstructionFormDTO { Id = 99, Title = "New WI", Version = "1.0" });
 
         // Act
         var result = await _sut.SaveAsync();
@@ -110,9 +115,53 @@ public class WorkInstructionEditorServiceTests
         Assert.True(result);
         Assert.False(_sut.IsDirty);
         Assert.Equal(EditorMode.EditExisting, _sut.Mode);
+        Assert.Equal(99, _sut.Current!.Id);
 
         _mockWorkInstructionService.Verify(
             s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()),
+            Times.Once);
+        _mockWorkInstructionService.Verify(s => s.GetFormByIdAsync(99), Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveAsync_EditExisting_AfterInitialCreate_ShouldCallUpdate()
+    {
+        _sut.StartNew("New WI");
+        _sut.Current!.Nodes.Add(new StepNodeFormDTO { Name = "Step 1", Body = "Body", Position = 0 });
+
+        _mockWorkInstructionService
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
+            .Callback<WorkInstructionFormDTO>(dto =>
+            {
+                dto.Id = 10;
+                dto.Nodes[0].Id = 100;
+            })
+            .ReturnsAsync(true);
+
+        _mockWorkInstructionService
+            .Setup(s => s.GetFormByIdAsync(10))
+            .ReturnsAsync(new WorkInstructionFormDTO
+            {
+                Id = 10,
+                Title = "New WI",
+                Version = "1.0",
+                Nodes = [new StepNodeFormDTO { Id = 100, Name = "Step 1", Body = "Body", Position = 0 }]
+            });
+
+        _mockWorkInstructionService
+            .Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstructionFormDTO>()))
+            .ReturnsAsync(true);
+
+        Assert.True(await _sut.SaveAsync());
+        Assert.Equal(EditorMode.EditExisting, _sut.Mode);
+
+        _sut.Current!.Nodes.Add(new StepNodeFormDTO { Name = "Step 2", Body = "More", Position = 1 });
+        _sut.MarkDirty();
+
+        Assert.True(await _sut.SaveAsync());
+
+        _mockWorkInstructionService.Verify(
+            s => s.UpdateWorkInstructionAsync(It.Is<WorkInstructionFormDTO>(d => d.Id == 10)),
             Times.Once);
     }
     
@@ -126,7 +175,12 @@ public class WorkInstructionEditorServiceTests
 
         _mockWorkInstructionService
             .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
+            .Callback<WorkInstructionFormDTO>(dto => dto.Id = 50)
             .ReturnsAsync(true);
+
+        _mockWorkInstructionService
+            .Setup(s => s.GetFormByIdAsync(50))
+            .ReturnsAsync(new WorkInstructionFormDTO { Id = 50, Title = "New WI", Version = "1.0" });
 
         List<int>? capturedIds = null;
 

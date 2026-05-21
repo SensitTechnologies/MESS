@@ -45,6 +45,34 @@
             </div>
         </td>
         <td>
+            <div class="d-flex flex-column gap-1" style="min-width: 220px;">
+                <input type="password"
+                       class="form-control form-control-sm"
+                       placeholder="New password"
+                       autocomplete="new-password"
+                       disabled="@UserRoleDTO.IsNew"
+                       @bind="_newPassword"
+                       @bind:event="oninput" />
+                <input type="password"
+                       class="form-control form-control-sm"
+                       placeholder="Confirm password"
+                       autocomplete="new-password"
+                       disabled="@UserRoleDTO.IsNew"
+                       @bind="_confirmPassword"
+                       @bind:event="oninput" />
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        disabled="@UserRoleDTO.IsNew"
+                        @onclick="SetOrResetPasswordAsync">
+                    Set / Reset Password
+                </button>
+                @if (UserRoleDTO.IsNew)
+                {
+                    <small class="text-muted">Save user first.</small>
+                }
+            </div>
+        </td>
+        <td>
             <button type="button"
                     class="btn @(IsLockedOut ? "btn-user" : "btn-warning")"
                     @onclick="ToggleLockoutAsync">
@@ -103,6 +131,8 @@
     private bool IsOperator { get; set; }
     private bool IsTechnician { get; set; }
     private bool IsAdmin { get; set; }
+    private string? _newPassword;
+    private string? _confirmPassword;
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -195,6 +225,58 @@
         {
             Log.Error(ex, "Lockout toggle failed for user {UserId}", User.Id);
             ToastService.ShowError("Could not change lock status. Please try again.");
+        }
+    }
+
+    private async Task SetOrResetPasswordAsync()
+    {
+        if (User == null || UserRoleDTO.IsNew)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newPassword))
+        {
+            ToastService.ShowError("Password is required.");
+            return;
+        }
+
+        if (_newPassword != _confirmPassword)
+        {
+            ToastService.ShowError("Password and confirm password must match.");
+            return;
+        }
+
+        try
+        {
+            IdentityResult result;
+            if (await UserManager.HasPasswordAsync(User))
+            {
+                var token = await UserManager.GeneratePasswordResetTokenAsync(User);
+                result = await UserManager.ResetPasswordAsync(User, token, _newPassword);
+            }
+            else
+            {
+                result = await UserManager.AddPasswordAsync(User, _newPassword);
+            }
+
+            if (result.Succeeded)
+            {
+                _newPassword = "";
+                _confirmPassword = "";
+                ToastService.ShowSuccess($"Password updated for {User.UserName ?? User.Email}.");
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ToastService.ShowError(error.Description);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Password reset failed for user {UserId}", User.Id);
+            ToastService.ShowError("Could not update password. Please try again.");
         }
     }
 

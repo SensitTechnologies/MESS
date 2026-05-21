@@ -353,6 +353,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             case EditorMode.CreateNew:
                 Current.OriginalId = null;
                 success = await _workInstructionService.CreateAsync(Current);
+                if (success && Current.Id is > 0)
+                {
+                    var reloaded = await _workInstructionService.GetFormByIdAsync(Current.Id.Value);
+                    if (reloaded != null)
+                        Current = reloaded;
+                }
                 break;
 
             case EditorMode.EditExisting:

@@ -67,6 +67,27 @@ public static class WorkInstructionFormDTOMapper
             Nodes = dto.Nodes.Select(n => n.ToNewEntity()).ToList()
         };
     }
+
+    /// <summary>
+    /// Copies database identifiers from a persisted <see cref="WorkInstruction"/> onto the in-memory form DTO
+    /// so subsequent updates target the correct rows without a full reload.
+    /// </summary>
+    public static void ApplyPersistedIds(this WorkInstructionFormDTO dto, WorkInstruction entity)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ArgumentNullException.ThrowIfNull(entity);
+
+        dto.Id = entity.Id;
+
+        var entityNodes = entity.Nodes.OrderBy(n => n.Position).ToList();
+        var formNodes = dto.Nodes.OrderBy(n => n.Position).ToList();
+
+        if (entityNodes.Count != formNodes.Count)
+            return;
+
+        for (var i = 0; i < formNodes.Count; i++)
+            formNodes[i].Id = entityNodes[i].Id;
+    }
     
     /// <summary>
     /// Maps a <see cref="WorkInstructionFormDTO"/> to a <see cref="WorkInstructionSummaryDTO"/>.

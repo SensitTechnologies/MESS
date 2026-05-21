@@ -507,6 +507,8 @@ public class WorkInstructionService : IWorkInstructionService
             await context.WorkInstructions.AddAsync(workInstruction);
             await context.SaveChangesAsync();
 
+            dto.ApplyPersistedIds(workInstruction);
+
             ClearWorkInstructionCaches();
 
             Log.Information(
