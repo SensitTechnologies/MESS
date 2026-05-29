@@ -182,3 +182,7 @@
     font-weight: bold;
     margin-right: 4px;
 }
+
+.red-tag-print-source {
+    display: none;
+}

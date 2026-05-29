@@ -1,6 +1,7 @@
 ﻿using MESS.Data.Context;
 using MESS.Services.CRUD.SerializableParts;
 using MESS.Services.DTOs.ProductionLogs.Batch;
+using MESS.Services.DTOs.ProductionLogs.Archive;
 using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.DTOs.ProductionLogs.Detail;
 using MESS.Services.DTOs.ProductionLogs.Form;
@@ -79,6 +80,232 @@ public class ProductionLogService : IProductionLogService
             return [];
         }
     }
+
+    /// <inheritdoc />
+    public async Task<ProductionLogArchivePageDTO> GetArchivePageAsync(ProductionLogArchiveQuery query)
+    {
+        query.Page = Math.Max(1, query.Page);
+        query.PageSize = query.PageSize is 25 or 50 or 100 or 250 ? query.PageSize : 50;
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var archiveQuery = BuildArchiveQuery(context);
+        archiveQuery = ApplyArchiveFilters(archiveQuery, query);
+        archiveQuery = ApplyArchiveSort(archiveQuery, query.SortBy, query.SortDir);
+
+        var total = await archiveQuery.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)query.PageSize));
+        var page = Math.Min(query.Page, totalPages);
+
+        var data = await archiveQuery
+            .Skip((page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        return new ProductionLogArchivePageDTO
+        {
+            Data = data,
+            Total = total,
+            Page = page,
+            PageSize = query.PageSize,
+            TotalPages = totalPages
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<ProductionLogArchiveFilterOptionsDTO> GetArchiveFilterOptionsAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var archiveQuery = BuildArchiveQuery(context);
+
+        return new ProductionLogArchiveFilterOptionsDTO
+        {
+            Statuses = ["All Successes", "Has Failures", "Not Started"],
+            Products = await DistinctArchiveValuesAsync(archiveQuery.Select(x => x.ProductName)),
+            WorkInstructions = await DistinctArchiveValuesAsync(archiveQuery.Select(x => x.WorkInstructionName)),
+            PartProduced = await DistinctArchiveValuesAsync(archiveQuery.Select(x => x.PartProducedName)),
+            CreatedBy = await DistinctArchiveValuesAsync(archiveQuery.Select(x => x.CreatedBy)),
+            ModifiedBy = await DistinctArchiveValuesAsync(archiveQuery.Select(x => x.LastModifiedBy))
+        };
+    }
+
+    private static IQueryable<ProductionLogArchiveRowDTO> BuildArchiveQuery(ApplicationContext context)
+    {
+        return context.ProductionLogs
+            .AsNoTracking()
+            .Select(log => new ProductionLogArchiveRowDTO
+            {
+                ProductionLogId = log.Id,
+                AttemptId = log.LogSteps
+                    .SelectMany(step => step.Attempts)
+                    .OrderByDescending(attempt => attempt.SubmitTime)
+                    .Select(attempt => (int?)attempt.Id)
+                    .FirstOrDefault(),
+                Status = log.LogSteps.SelectMany(step => step.Attempts).Any(attempt => attempt.Success == false)
+                    ? "Has Failures"
+                    : log.LogSteps.SelectMany(step => step.Attempts).Any(attempt => attempt.Success == true)
+                        ? "All Successes"
+                        : "Not Started",
+                ProductName = log.Product != null && log.Product.PartDefinition != null
+                    ? log.Product.PartDefinition.Name
+                    : string.Empty,
+                WorkInstructionName = log.WorkInstruction != null
+                    ? log.WorkInstruction.Title
+                    : string.Empty,
+                PartProducedName = log.WorkInstruction != null && log.WorkInstruction.PartProduced != null
+                    ? log.WorkInstruction.PartProduced.Name
+                    : string.Empty,
+                ProducedPartSerialNumber = context.ProductionLogParts
+                    .Where(part => part.ProductionLogId == log.Id && part.OperationType == PartOperationType.Produced)
+                    .Join(
+                        context.SerializableParts,
+                        part => part.SerializablePartId,
+                        serializablePart => serializablePart.Id,
+                        (_, serializablePart) => serializablePart.SerialNumber ?? string.Empty)
+                    .FirstOrDefault() ?? string.Empty,
+                CreatedOn = log.CreatedOn,
+                CreatedBy = log.CreatedBy,
+                LastModifiedOn = log.LastModifiedOn,
+                LastModifiedBy = log.LastModifiedBy ?? string.Empty
+            });
+    }
+
+    private static IQueryable<ProductionLogArchiveRowDTO> ApplyArchiveFilters(
+        IQueryable<ProductionLogArchiveRowDTO> query,
+        ProductionLogArchiveQuery filters)
+    {
+        if (!string.IsNullOrWhiteSpace(filters.Search))
+        {
+            var search = filters.Search.Trim().ToLower();
+            var hasAttemptSearch = int.TryParse(search, out var attemptId);
+            query = query.Where(row =>
+                row.ProductionLogId.ToString().Contains(search)
+                || row.ProductName.ToLower().Contains(search)
+                || row.WorkInstructionName.ToLower().Contains(search)
+                || row.PartProducedName.ToLower().Contains(search)
+                || row.ProducedPartSerialNumber.ToLower().Contains(search)
+                || row.CreatedBy.ToLower().Contains(search)
+                || row.LastModifiedBy.ToLower().Contains(search)
+                || row.Status.ToLower().Contains(search)
+                || (hasAttemptSearch && row.AttemptId == attemptId));
+        }
+
+        if (filters.FilterAttemptId is int filterAttemptId)
+            query = query.Where(row => row.AttemptId == filterAttemptId);
+
+        if (filters.FilterLogId is int filterLogId)
+            query = query.Where(row => row.ProductionLogId == filterLogId);
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterStatus))
+        {
+            var value = filters.FilterStatus.Trim().ToLower();
+            query = query.Where(row => row.Status.ToLower().Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterProduct))
+        {
+            var value = filters.FilterProduct.Trim().ToLower();
+            query = query.Where(row => row.ProductName.ToLower().Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterWorkInstruction))
+        {
+            var value = filters.FilterWorkInstruction.Trim().ToLower();
+            query = query.Where(row => row.WorkInstructionName.ToLower().Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterPartProduced))
+        {
+            var value = filters.FilterPartProduced.Trim().ToLower();
+            query = query.Where(row => row.PartProducedName.ToLower().Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterProducedPartSerialNumber))
+        {
+            var value = filters.FilterProducedPartSerialNumber.Trim().ToLower();
+            query = query.Where(row => row.ProducedPartSerialNumber.ToLower().Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterCreatedBy))
+        {
+            var value = filters.FilterCreatedBy.Trim().ToLower();
+            query = query.Where(row => row.CreatedBy.ToLower().Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.FilterModifiedBy))
+        {
+            var value = filters.FilterModifiedBy.Trim().ToLower();
+            query = query.Where(row => row.LastModifiedBy.ToLower().Contains(value));
+        }
+
+        if (filters.FilterCreatedOnFrom is DateTimeOffset createdFrom)
+            query = query.Where(row => row.CreatedOn >= createdFrom);
+
+        if (filters.FilterCreatedOnTo is DateTimeOffset createdTo)
+            query = query.Where(row => row.CreatedOn <= createdTo);
+
+        if (filters.FilterModifiedOnFrom is DateTimeOffset modifiedFrom)
+            query = query.Where(row => row.LastModifiedOn >= modifiedFrom);
+
+        if (filters.FilterModifiedOnTo is DateTimeOffset modifiedTo)
+            query = query.Where(row => row.LastModifiedOn <= modifiedTo);
+
+        return query;
+    }
+
+    private static IQueryable<ProductionLogArchiveRowDTO> ApplyArchiveSort(
+        IQueryable<ProductionLogArchiveRowDTO> query,
+        string? sortBy,
+        string? sortDir)
+    {
+        var descending = string.Equals(sortDir, "desc", StringComparison.OrdinalIgnoreCase);
+
+        return (sortBy ?? "createdOn") switch
+        {
+            "logId" => descending
+                ? query.OrderByDescending(row => row.ProductionLogId)
+                : query.OrderBy(row => row.ProductionLogId),
+            "attemptId" => descending
+                ? query.OrderByDescending(row => row.AttemptId)
+                : query.OrderBy(row => row.AttemptId),
+            "status" => descending
+                ? query.OrderByDescending(row => row.Status)
+                : query.OrderBy(row => row.Status),
+            "product" => descending
+                ? query.OrderByDescending(row => row.ProductName)
+                : query.OrderBy(row => row.ProductName),
+            "workInstruction" => descending
+                ? query.OrderByDescending(row => row.WorkInstructionName)
+                : query.OrderBy(row => row.WorkInstructionName),
+            "partProduced" => descending
+                ? query.OrderByDescending(row => row.PartProducedName)
+                : query.OrderBy(row => row.PartProducedName),
+            "producedPartSerialNumber" => descending
+                ? query.OrderByDescending(row => row.ProducedPartSerialNumber)
+                : query.OrderBy(row => row.ProducedPartSerialNumber),
+            "createdBy" => descending
+                ? query.OrderByDescending(row => row.CreatedBy)
+                : query.OrderBy(row => row.CreatedBy),
+            "modifiedOn" => descending
+                ? query.OrderByDescending(row => row.LastModifiedOn)
+                : query.OrderBy(row => row.LastModifiedOn),
+            "modifiedBy" => descending
+                ? query.OrderByDescending(row => row.LastModifiedBy)
+                : query.OrderBy(row => row.LastModifiedBy),
+            _ => descending
+                ? query.OrderByDescending(row => row.CreatedOn)
+                : query.OrderBy(row => row.CreatedOn)
+        };
+    }
+
+    private static async Task<List<string>> DistinctArchiveValuesAsync(IQueryable<string> query)
+    {
+        return await query
+            .Where(value => value != "")
+            .Distinct()
+            .OrderBy(value => value)
+            .ToListAsync();
+    }
     
     /// <inheritdoc />
     public async Task<ProductionLogBatchResult> SaveOrUpdateBatchAsync(
@@ -135,7 +362,7 @@ public class ProductionLogService : IProductionLogService
             var existingLogsDict = existingLogs.ToDictionary(l => l.Id, l => l);
 
 
-            var logsToCreate = new List<ProductionLog>();
+            var logsToCreate = new List<(ProductionLogFormDTO FormDto, ProductionLog Log)>();
 
             foreach (var formDto in productionLogFormDtos)
             {
@@ -148,7 +375,7 @@ public class ProductionLogService : IProductionLogService
                 }
                 else
                 {
-                    logsToCreate.Add(CreateLog(formDto));
+                    logsToCreate.Add((formDto, CreateLog(formDto)));
                     result.CreatedCount++;
                     Log.Debug("Queued new ProductionLog for creation (TempId={TempId})", formDto.Id);
                 }
@@ -157,7 +384,7 @@ public class ProductionLogService : IProductionLogService
             // Bulk insert
             if (logsToCreate.Count > 0)
             {
-                await context.ProductionLogs.AddRangeAsync(logsToCreate);
+                await context.ProductionLogs.AddRangeAsync(logsToCreate.Select(item => item.Log));
                 Log.Information("Queued {CreatedCount} new ProductionLogs for creation", logsToCreate.Count);
             }
             
@@ -165,15 +392,33 @@ public class ProductionLogService : IProductionLogService
             foreach (var existing in existingLogsDict.Values)
                 RemoveEmptySteps(existing, context);
 
-            foreach (var newLog in logsToCreate)
+            foreach (var (_, newLog) in logsToCreate)
                 RemoveEmptySteps(newLog, context);
 
             // EF Core tracks changes to existing logs, so updates are auto-detected
 
             await context.SaveChangesAsync();
 
+            foreach (var formDto in productionLogFormDtos)
+            {
+                ProductionLog? persistedLog = null;
+                if (formDto.Id > 0)
+                {
+                    existingLogsDict.TryGetValue(formDto.Id, out persistedLog);
+                }
+                else
+                {
+                    persistedLog = logsToCreate.FirstOrDefault(item => ReferenceEquals(item.FormDto, formDto)).Log;
+                }
+
+                if (persistedLog != null)
+                {
+                    ApplyPersistedIds(formDto, persistedLog);
+                }
+            }
+
             // Collect IDs of newly created logs
-            result.CreatedIds.AddRange(logsToCreate.Select(l => l.Id));
+            result.CreatedIds.AddRange(logsToCreate.Select(item => item.Log.Id));
 
             Log.Information(
                 "Successfully processed batch: Created={CreatedCount}, Updated={UpdatedCount}, ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}",
@@ -198,6 +443,35 @@ public class ProductionLogService : IProductionLogService
                 "Exception thrown in SaveOrUpdateBatchAsync for ProductId={ProductId}, WorkInstructionId={WorkInstructionId}, OperatorId={OperatorId}, CreatedBy={CreatedBy}",
                 productId, workInstructionId, operatorId, createdBy);
             throw; // rethrow to preserve stack trace
+        }
+    }
+
+    private static void ApplyPersistedIds(ProductionLogFormDTO dto, ProductionLog entity)
+    {
+        dto.Id = entity.Id;
+
+        foreach (var formStep in dto.LogSteps)
+        {
+            var persistedStep = entity.LogSteps
+                .FirstOrDefault(step => step.WorkInstructionStepId == formStep.WorkInstructionStepId);
+
+            if (persistedStep == null)
+                continue;
+
+            formStep.ProductionLogStepId = persistedStep.Id;
+
+            var formAttempts = formStep.Attempts
+                .OrderBy(attempt => attempt.SubmitTime)
+                .ToList();
+
+            var persistedAttempts = persistedStep.Attempts
+                .OrderBy(attempt => attempt.SubmitTime)
+                .ToList();
+
+            for (var i = 0; i < formAttempts.Count && i < persistedAttempts.Count; i++)
+            {
+                formAttempts[i].AttemptId = persistedAttempts[i].Id;
+            }
         }
     }
     

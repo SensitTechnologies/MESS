@@ -780,6 +780,12 @@
 
     private async Task ToggleRedTagDialog()
     {
+        if (_showRedTagDialog)
+        {
+            _showRedTagDialog = false;
+            return;
+        }
+
         // If we don’t already have a pending failure, grab the latest one:
         if (_pendingFailureAttempt is null)
         {
@@ -790,18 +796,24 @@
             // And copy its notes so the textarea shows the correct text:
             _currentAttemptNotes = _pendingFailureAttempt?.FailureNote ?? "";
         }
-        else
+
+        if (_pendingFailureAttempt is null)
         {
-            if (_pendingFailureAttempt.AttemptId <= 0)
-            {
-                var success = await ProductionLogEventService.TryTriggerDbSaveAsync();
-                if (!success)
-                {
-                    // Show error or retry
-                } 
-            } 
+            ToastService.ShowError("No failed attempt is available for this red tag.");
+            return;
         }
-        _showRedTagDialog = !_showRedTagDialog;
+
+        if (!_pendingFailureAttempt.AttemptId.HasValue || _pendingFailureAttempt.AttemptId.Value <= 0)
+        {
+            var success = await ProductionLogEventService.TryTriggerDbSaveAsync();
+            if (!success || !_pendingFailureAttempt.AttemptId.HasValue || _pendingFailureAttempt.AttemptId.Value <= 0)
+            {
+                ToastService.ShowError("Could not save the failure attempt before printing the red tag.");
+                return;
+            }
+        }
+
+        _showRedTagDialog = true;
     }
     
     private void OnCancelClicked()
