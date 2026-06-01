@@ -36,6 +36,12 @@ public class ApplicationUser : IdentityUser
     public bool DarkMode { get; set; }
 
     /// <summary>
+    /// When true and the user has no password, allow username-only sign-in while global legacy mode is enabled.
+    /// Set false to force password or Microsoft login for this account.
+    /// </summary>
+    public bool AllowLegacyUsernameSignIn { get; set; } = true;
+
+    /// <summary>
     /// Gets the full name of the user by combining the first and last names.
     /// </summary>
     public string FullName => $"{FirstName} {LastName}";

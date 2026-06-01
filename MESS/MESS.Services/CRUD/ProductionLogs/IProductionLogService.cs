@@ -1,4 +1,5 @@
 ﻿using MESS.Services.DTOs.ProductionLogs.Batch;
+using MESS.Services.DTOs.ProductionLogs.Archive;
 using MESS.Services.DTOs.ProductionLogs.CreateRequest;
 using MESS.Services.DTOs.ProductionLogs.Detail;
 using MESS.Services.DTOs.ProductionLogs.Form;
@@ -29,6 +30,16 @@ public interface IProductionLogService
     /// If no logs exist, the list will be empty.
     /// </returns>
     Task<List<ProductionLogSummaryDTO>> GetAllSummariesAsync();
+
+    /// <summary>
+    /// Retrieves a server-side paged Log Archives result.
+    /// </summary>
+    Task<ProductionLogArchivePageDTO> GetArchivePageAsync(ProductionLogArchiveQuery query);
+
+    /// <summary>
+    /// Retrieves distinct option values for Log Archives column filters.
+    /// </summary>
+    Task<ProductionLogArchiveFilterOptionsDTO> GetArchiveFilterOptionsAsync();
 
     /// <summary>
     /// Retrieves a single ProductionLog object asynchronously

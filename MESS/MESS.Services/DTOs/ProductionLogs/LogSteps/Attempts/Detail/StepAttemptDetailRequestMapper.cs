@@ -28,7 +28,9 @@ public static class StepAttemptDetailRequestMapper
             Id = dto.AttemptId,
             IsSuccess = dto.IsSuccess,
             FailureNote = dto.FailureNote,
-            SubmitTime = dto.SubmitTime
+            SubmitTime = dto.SubmitTime,
+            FailureNounId = dto.FailureNounId,
+            FailureAdjectiveId = dto.FailureAdjectiveId
         };
     }
 }

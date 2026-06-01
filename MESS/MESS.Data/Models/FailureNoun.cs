@@ -25,4 +25,9 @@ public class FailureNoun
     /// Used for filtering available adjectives when a noun is selected.
     /// </summary>
     public ICollection<FailureAdjective> Adjectives { get; set; } = new List<FailureAdjective>();
+
+    /// <summary>
+    /// Work instructions that expose this noun as a selectable defect location.
+    /// </summary>
+    public ICollection<WorkInstruction> WorkInstructions { get; set; } = new List<WorkInstruction>();
 }

@@ -1,0 +1,109 @@
+@using MESS.Services.DTOs.Defects
+
+<div class="position-relative search-defect-select" @onfocusout="HideDropdown">
+    <label class="form-label small mb-1" for="@InputId">@Label</label>
+    <input type="text"
+           id="@InputId"
+           class="form-control form-control-sm"
+           value="@DisplayText"
+           @oninput="OnInput"
+           @onfocus="ShowDropdown"
+           placeholder="@Placeholder"
+           autocomplete="off"
+           disabled="@Disabled" />
+    @if (IsDropdownVisible && !Disabled && FilteredItems.Count > 0)
+    {
+        <div @ref="_dropdownContainer"
+             @onmouseenter="OnDropdownMouseEnter"
+             @onmouseleave="OnDropdownMouseLeave"
+             class="login-dropdown position-absolute w-100 mt-1 shadow border rounded bg-body"
+             style="max-height: 200px; overflow-y: auto; z-index: 1050;">
+            @foreach (var item in FilteredItems)
+            {
+                <div class="dropdown-item py-2 px-3"
+                     @onclick="() => SelectItem(item)"
+                     style="cursor: pointer;">
+                    @item.Name
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Search or select…";
+
+    [Parameter]
+    public string InputId { get; set; } = Guid.NewGuid().ToString("n");
+
+    [Parameter]
+    public IReadOnlyList<DefectCodeOptionDto> Items { get; set; } = [];
+
+    [Parameter]
+    public int? SelectedId { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> SelectedIdChanged { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private string _searchFilter = "";
+    private bool IsDropdownVisible;
+    private ElementReference _dropdownContainer;
+    private bool _isMouseOverDropdown;
+
+    private string DisplayText =>
+        string.IsNullOrEmpty(_searchFilter) && SelectedId is int id
+            ? Items.FirstOrDefault(i => i.Id == id)?.Name ?? ""
+            : _searchFilter;
+
+    private List<DefectCodeOptionDto> FilteredItems =>
+        Items
+            .Where(i => string.IsNullOrEmpty(_searchFilter) ||
+                        i.Name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (SelectedId is null)
+            _searchFilter = "";
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _searchFilter = e.Value?.ToString() ?? "";
+        IsDropdownVisible = true;
+    }
+
+    private void ShowDropdown()
+    {
+        if (!Disabled)
+            IsDropdownVisible = true;
+    }
+
+    private void HideDropdown(FocusEventArgs e)
+    {
+        if (!_isMouseOverDropdown)
+        {
+            IsDropdownVisible = false;
+            _searchFilter = "";
+        }
+    }
+
+    private void OnDropdownMouseEnter() => _isMouseOverDropdown = true;
+
+    private void OnDropdownMouseLeave() => _isMouseOverDropdown = false;
+
+    private async Task SelectItem(DefectCodeOptionDto item)
+    {
+        _searchFilter = "";
+        IsDropdownVisible = false;
+        await SelectedIdChanged.InvokeAsync(item.Id);
+    }
+}

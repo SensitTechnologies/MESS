@@ -69,6 +69,16 @@ public class ApplicationContext
     public virtual DbSet<SerializablePartRelationship> SerializablePartRelationships { get; set; } = null!;
     
     /// <summary>
+    /// DbSet for failure nouns (defect locations).
+    /// </summary>
+    public virtual DbSet<FailureNoun> FailureNouns { get; set; } = null!;
+
+    /// <summary>
+    /// DbSet for failure adjectives (defect types).
+    /// </summary>
+    public virtual DbSet<FailureAdjective> FailureAdjectives { get; set; } = null!;
+
+    /// <summary>
     /// DbSet for Tags.
     /// </summary>
     public virtual DbSet<Tag> Tags { get; set; } = null!;
@@ -122,6 +132,9 @@ public class ApplicationContext
         
         modelBuilder.Entity<Step>()
             .ToTable("Steps");
+        modelBuilder.Entity<Step>()
+            .Property(s => s.NotesConfiguration)
+            .HasDefaultValue(StepNotesConfiguration.OptionalForFailure);
         
         modelBuilder.Entity<ProductionLog>()
             .HasOne(p => p.WorkInstruction)
@@ -180,10 +193,32 @@ public class ApplicationContext
             entity.HasIndex(r => r.ChildPartId).IsUnique();
         });
         
+        // DbSet is named FailureNouns but PostgreSQL tables are singular (historical migrations).
         modelBuilder.Entity<FailureNoun>()
+            .ToTable("FailureNoun")
             .HasMany(fn => fn.Adjectives)
             .WithMany(fa => fa.Nouns)
             .UsingEntity(j => j.ToTable("FailureNounAdjectives"));
+
+        modelBuilder.Entity<FailureAdjective>()
+            .ToTable("FailureAdjective");
+
+        modelBuilder.Entity<WorkInstruction>()
+            .HasMany(w => w.FailureNouns)
+            .WithMany(n => n.WorkInstructions)
+            .UsingEntity(j => j.ToTable("WorkInstructionFailureNouns"));
+
+        modelBuilder.Entity<ProductionLogStepAttempt>()
+            .HasOne(a => a.FailureNoun)
+            .WithMany()
+            .HasForeignKey(a => a.FailureNounId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ProductionLogStepAttempt>()
+            .HasOne(a => a.FailureAdjective)
+            .WithMany()
+            .HasForeignKey(a => a.FailureAdjectiveId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
     
     /// <inheritdoc />

@@ -2,20 +2,118 @@
 @using MESS.Blazor.Components.Layout
 @using MESS.Blazor.Components.Dialogs
 @using MESS.Services.CRUD.ProductionLogs
-@using MESS.Services.DTOs.ProductionLogs.Summary
+@using MESS.Services.DTOs.ProductionLogs.Archive
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@using SortDirection = MudBlazor.SortDirection
-@using HorizontalAlignment = MudBlazor.HorizontalAlignment
+@using Microsoft.AspNetCore.WebUtilities
 @using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
 @using DialogResult = Microsoft.FluentUI.AspNetCore.Components.DialogResult
 @layout PhoebeLayout
 @inject NavigationManager NavManager
 @inject IProductionLogService ProductionLogService
 @inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+@inject IJSRuntime JS
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageTitle>Log Archives</PageTitle>
+
+<style>
+    .log-archive-table-wrap {
+        position: relative;
+        overflow-x: hidden;
+        min-height: 360px;
+    }
+
+    .log-archive-table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .log-archive-table thead th {
+        vertical-align: middle;
+        white-space: normal;
+        padding: 0.45rem 0.35rem;
+        font-size: 0.88rem;
+        overflow-wrap: anywhere;
+    }
+
+    .log-archive-table tbody td {
+        vertical-align: middle;
+        white-space: normal;
+        padding: 0.45rem 0.35rem;
+        font-size: 0.88rem;
+        overflow-wrap: anywhere;
+    }
+
+    .log-sort-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: inherit;
+        font-weight: 700;
+        padding: 0;
+        line-height: 1.2;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .log-sort-button:hover,
+    .log-sort-button:focus {
+        color: var(--bs-warning);
+        text-decoration: underline;
+    }
+
+    .log-archive-actions {
+        width: 105px;
+        text-align: center;
+    }
+
+    .log-archive-actions .btn {
+        width: 2.1rem;
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+        white-space: nowrap;
+        font-size: 0.82rem;
+    }
+
+    .log-archive-loading {
+        position: absolute;
+        inset: 92px 0 0 0;
+        background: rgba(255, 255, 255, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .dark-mode .log-archive-loading {
+        background: rgba(20, 20, 20, 0.72);
+    }
+
+    .log-filter-cell {
+        min-width: 0;
+    }
+
+    .log-filter-cell .form-control,
+    .log-filter-cell .form-select {
+        min-width: 0;
+        width: 100%;
+        padding-left: 0.3rem;
+        padding-right: 0.3rem;
+        font-size: 0.82rem;
+    }
+
+    .columns-panel {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        width: 260px;
+        z-index: 4;
+    }
+</style>
 
 <ErrorBoundary>
     <ChildContent>
@@ -34,57 +132,179 @@
                 </div>
             </NotAuthorized>
             <Authorized>
-                @if (!IsLoading)
-                {
-                    <div class="d-flex justify-content-between my-2" style="flex-direction: row">
-                        <h3>Log Archive</h3>
-                        <div class="flex-grow-1"/>
-                        <input type="text" class="form-control w-auto" placeholder="Search..."
-                               @bind="SearchString" @bind:event="oninput"  />
+                <div class="d-flex flex-wrap align-items-center gap-2 my-2">
+                    <h3 class="m-0">Log Archive</h3>
+                    <div class="flex-grow-1"></div>
+                    @if (HasActiveFilters)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearAllFiltersAsync" disabled="@IsLoading">
+                            Clear all filters
+                        </button>
+                    }
+                    <input type="text"
+                           class="form-control w-auto"
+                           placeholder="Search..."
+                           value="@SearchString"
+                           @oninput="OnSearchInput"
+                           disabled="@IsLoading" />
+                    <div class="position-relative">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ToggleColumnsPanel" disabled="@IsLoading">
+                            <i class="bi bi-columns-gap me-1"></i> Columns
+                        </button>
+                        @if (_isColumnsPanelOpen)
+                        {
+                            <div class="card shadow columns-panel">
+                                <div class="card-body p-3">
+                                    @foreach (var column in HideableColumns)
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   id="@($"col-{column.Key}")"
+                                                   checked="@IsColumnVisible(column.Key)"
+                                                   @onchange="async e => await SetColumnVisibilityAsync(column.Key, (bool)e.Value!)" />
+                                            <label class="form-check-label" for="@($"col-{column.Key}")">@column.Label</label>
+                                        </div>
+                                    }
+                                    <button type="button" class="btn btn-link btn-sm px-0 mt-2" @onclick="ResetColumnsAsync">
+                                        Reset to default
+                                    </button>
+                                </div>
+                            </div>
+                        }
                     </div>
-                    
-                    <MudTable @ref="_table"
-                              T="ProductionLogSummaryDTO"
-                              ServerData="ServerReload"
-                              Loading="@IsLoading"
-                              Hover="true"
-                              FixedHeader="true"
-                              Class="border rounded-3 pt-1"
-                              TableClass="table table-striped table-hover">
-                  
-                        <HeaderContent>
-                            <MudTh><MudTableSortLabel SortLabel="product_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.ProductName ?? string.Empty)"><strong>Product</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="instruction_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.WorkInstructionName ?? string.Empty)"><strong>Work Instruction</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="worker_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.CreatedBy)"><strong>Created By</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="created_field" InitialDirection="SortDirection.Descending" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.CreatedOn)"><strong>Created On</strong></MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortLabel="modified_field" SortBy="new Func<ProductionLogSummaryDTO, object>(x => x.LastModifiedOn)"><strong>Last Modified On</strong></MudTableSortLabel></MudTh>
-                            <MudTh><strong>Actions</strong></MudTh>
-                        </HeaderContent>
-                        <RowTemplate Context="productionLog">
-                            <MudTd DataLabel="Product">@(productionLog.ProductName ?? NoProduct)</MudTd>
-                            <MudTd DataLabel="Work Instruction">@(productionLog.WorkInstructionName ?? NoWorkInstruction)</MudTd>
-                            <MudTd DataLabel="Created By">@productionLog.CreatedBy</MudTd>
-                            <MudTd DataLabel="Created On">@productionLog.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
-                            <MudTd DataLabel="Last Modified On">@productionLog.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
-                            <MudTd DataLabel="Actions">
-                                <button class="btn btn-sm btn-primary" @onclick="@(() => OpenDialogAsync(productionLog))">
-                                    Show Details
-                                </button>
-                            </MudTd>
-                        </RowTemplate>
-                        <PagerContent>
-                            <MudTablePager InfoFormat="@InfoFormat()" 
-                                           HorizontalAlignment="HorizontalAlignment.Center" 
-                                           RowsPerPageString="Logs per Page"/>
-                        </PagerContent>
-                    </MudTable>
-                }
-                else
-                {
-                    <div class="container">
-                        Loading...
-                    </div>
-                }
+                </div>
+
+                <div class="log-archive-table-wrap border rounded-3" @ref="_tableWrapper">
+                    @if (IsLoading)
+                    {
+                        <div class="log-archive-loading">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status"></div>
+                                <div class="small mt-2">Loading logs...</div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger m-3">
+                            @_errorMessage
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" @onclick="RetryAsync">Retry</button>
+                        </div>
+                    }
+
+                    <table class="table table-striped table-hover mb-0 log-archive-table">
+                        <thead>
+                        <tr>
+                            @if (IsColumnVisible(ColumnLogId)) { <th>@SortButton("Log #", "logId")</th> }
+                            @if (IsColumnVisible(ColumnAttemptId)) { <th>@SortButton("Attempt ID", "attemptId")</th> }
+                            @if (IsColumnVisible(ColumnStatus)) { <th>@SortButton("Status", "status")</th> }
+                            @if (IsColumnVisible(ColumnProduct)) { <th>@SortButton("Product", "product")</th> }
+                            @if (IsColumnVisible(ColumnWorkInstruction)) { <th>@SortButton("Work Instruction", "workInstruction")</th> }
+                            @if (IsColumnVisible(ColumnPartProduced)) { <th>@SortButton("Part Produced", "partProduced")</th> }
+                            @if (IsColumnVisible(ColumnProducedPartSn)) { <th>@SortButton("Produced Part SN", "producedPartSerialNumber")</th> }
+                            @if (IsColumnVisible(ColumnCreatedOn)) { <th>@SortButton("Created On", "createdOn")</th> }
+                            @if (IsColumnVisible(ColumnCreatedBy)) { <th>@SortButton("Created By", "createdBy")</th> }
+                            @if (IsColumnVisible(ColumnModifiedOn)) { <th>@SortButton("Modified On", "modifiedOn")</th> }
+                            @if (IsColumnVisible(ColumnModifiedBy)) { <th>@SortButton("Modified By", "modifiedBy")</th> }
+                            @if (IsColumnVisible(ColumnActions)) { <th class="log-archive-actions">Actions</th> }
+                        </tr>
+                        <tr>
+                            @if (IsColumnVisible(ColumnLogId))
+                            {
+                                <th class="log-filter-cell">
+                                    <input class="form-control form-control-sm" placeholder="Log #" value="@_filters.LogId" @oninput="e => OnFilterInput(nameof(FilterModel.LogId), e.Value?.ToString())" disabled="@IsLoading" />
+                                </th>
+                            }
+                            @if (IsColumnVisible(ColumnAttemptId))
+                            {
+                                <th class="log-filter-cell">
+                                    <input class="form-control form-control-sm" placeholder="Attempt ID" value="@_filters.AttemptId" @oninput="e => OnFilterInput(nameof(FilterModel.AttemptId), e.Value?.ToString())" disabled="@IsLoading" />
+                                </th>
+                            }
+                            @if (IsColumnVisible(ColumnStatus))
+                            {
+                                <th class="log-filter-cell">
+                                    <select class="form-select form-select-sm" value="@_filters.Status" @onchange="e => OnImmediateFilterChanged(nameof(FilterModel.Status), e.Value?.ToString())" disabled="@IsLoading">
+                                        <option value="">All</option>
+                                        @foreach (var value in _filterOptions.Statuses)
+                                        {
+                                            <option value="@value">@value</option>
+                                        }
+                                    </select>
+                                </th>
+                            }
+                            @if (IsColumnVisible(ColumnProduct)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.Product), _filters.Product, _filterOptions.Products)</th> }
+                            @if (IsColumnVisible(ColumnWorkInstruction)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.WorkInstruction), _filters.WorkInstruction, _filterOptions.WorkInstructions)</th> }
+                            @if (IsColumnVisible(ColumnPartProduced)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.PartProduced), _filters.PartProduced, _filterOptions.PartProduced)</th> }
+                            @if (IsColumnVisible(ColumnProducedPartSn)) { <th class="log-filter-cell"><input class="form-control form-control-sm" placeholder="Filter..." value="@_filters.ProducedPartSerialNumber" @oninput="e => OnFilterInput(nameof(FilterModel.ProducedPartSerialNumber), e.Value?.ToString())" disabled="@IsLoading" /></th> }
+                            @if (IsColumnVisible(ColumnCreatedOn)) { <th class="log-filter-cell">@DateFilter(nameof(FilterModel.CreatedOnFrom), nameof(FilterModel.CreatedOnTo), _filters.CreatedOnFrom, _filters.CreatedOnTo)</th> }
+                            @if (IsColumnVisible(ColumnCreatedBy)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.CreatedBy), _filters.CreatedBy, _filterOptions.CreatedBy)</th> }
+                            @if (IsColumnVisible(ColumnModifiedOn)) { <th class="log-filter-cell">@DateFilter(nameof(FilterModel.ModifiedOnFrom), nameof(FilterModel.ModifiedOnTo), _filters.ModifiedOnFrom, _filters.ModifiedOnTo)</th> }
+                            @if (IsColumnVisible(ColumnModifiedBy)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.ModifiedBy), _filters.ModifiedBy, _filterOptions.ModifiedBy)</th> }
+                            @if (IsColumnVisible(ColumnActions)) { <th class="log-archive-actions"></th> }
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @if (_rows.Count == 0 && !IsLoading && string.IsNullOrWhiteSpace(_errorMessage))
+                        {
+                            <tr>
+                                <td colspan="@VisibleColumnCount" class="text-center text-muted py-4">No logs found.</td>
+                            </tr>
+                        }
+                        @foreach (var log in _rows)
+                        {
+                            <tr>
+                                @if (IsColumnVisible(ColumnLogId)) { <td>@log.ProductionLogId</td> }
+                                @if (IsColumnVisible(ColumnAttemptId)) { <td>@(log.AttemptId?.ToString() ?? "-")</td> }
+                                @if (IsColumnVisible(ColumnStatus)) { <td>@log.Status</td> }
+                                @if (IsColumnVisible(ColumnProduct)) { <td>@EmptyFallback(log.ProductName)</td> }
+                                @if (IsColumnVisible(ColumnWorkInstruction)) { <td>@EmptyFallback(log.WorkInstructionName)</td> }
+                                @if (IsColumnVisible(ColumnPartProduced)) { <td>@EmptyFallback(log.PartProducedName)</td> }
+                                @if (IsColumnVisible(ColumnProducedPartSn)) { <td>@EmptyFallback(log.ProducedPartSerialNumber)</td> }
+                                @if (IsColumnVisible(ColumnCreatedOn)) { <td>@FormatDate(log.CreatedOn)</td> }
+                                @if (IsColumnVisible(ColumnCreatedBy)) { <td>@EmptyFallback(log.CreatedBy)</td> }
+                                @if (IsColumnVisible(ColumnModifiedOn)) { <td>@FormatDate(log.LastModifiedOn)</td> }
+                                @if (IsColumnVisible(ColumnModifiedBy)) { <td>@EmptyFallback(log.LastModifiedBy)</td> }
+                                @if (IsColumnVisible(ColumnActions))
+                                {
+                                    <td class="log-archive-actions">
+                                        <button class="btn btn-sm btn-primary px-2"
+                                                title="Show Details"
+                                                aria-label="Show Details"
+                                                @onclick="@(() => OpenDialogAsync(log))"
+                                                disabled="@IsLoading">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 justify-content-center mt-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PreviousPageAsync" disabled="@(IsLoading || _page <= 1)">Previous</button>
+                    <span>Page</span>
+                    <input class="form-control form-control-sm text-center"
+                           style="width: 80px;"
+                           value="@_pageInput"
+                           @onchange="OnPageInputChanged"
+                           @onkeydown="OnPageInputKeyDown"
+                           disabled="@IsLoading" />
+                    <span>of @_totalPages</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="NextPageAsync" disabled="@(IsLoading || _page >= _totalPages)">Next</button>
+                    <span class="text-muted ms-2">@_total.ToString("N0") records</span>
+                    <label class="ms-2">Show:</label>
+                    <select class="form-select form-select-sm w-auto" value="@_pageSize" @onchange="OnPageSizeChanged" disabled="@IsLoading">
+                        @foreach (var size in PageSizes)
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    </select>
+                </div>
             </Authorized>
         </AuthorizeView>
     </ChildContent>
@@ -97,152 +317,347 @@
 
 
 @code {
-    private List<ProductionLogSummaryDTO> ProductionLogs { get; set; } = new();
-    private IEnumerable<ProductionLogSummaryDTO> pagedData = new List<ProductionLogSummaryDTO>();
+    private const string ColumnLogId = "logId";
+    private const string ColumnAttemptId = "attemptId";
+    private const string ColumnStatus = "status";
+    private const string ColumnProduct = "product";
+    private const string ColumnWorkInstruction = "workInstruction";
+    private const string ColumnPartProduced = "partProduced";
+    private const string ColumnProducedPartSn = "producedPartSerialNumber";
+    private const string ColumnCreatedOn = "createdOn";
+    private const string ColumnCreatedBy = "createdBy";
+    private const string ColumnModifiedOn = "modifiedOn";
+    private const string ColumnModifiedBy = "modifiedBy";
+    private const string ColumnActions = "actions";
+    private const string ColumnVisibilityStorageKey = "logArchive.columnVisibility.v2";
+
+    private static readonly int[] PageSizes = [25, 50, 100, 250];
+    private static readonly ColumnDefinition[] HideableColumns =
+    [
+        new(ColumnLogId, "Log #"),
+        new(ColumnAttemptId, "Attempt ID"),
+        new(ColumnStatus, "Status"),
+        new(ColumnProduct, "Product"),
+        new(ColumnWorkInstruction, "Work Instruction"),
+        new(ColumnPartProduced, "Part Produced"),
+        new(ColumnProducedPartSn, "Produced Part SN"),
+        new(ColumnCreatedOn, "Created On"),
+        new(ColumnCreatedBy, "Created By"),
+        new(ColumnModifiedOn, "Modified On"),
+        new(ColumnModifiedBy, "Modified By"),
+        new(ColumnActions, "Actions")
+    ];
+
+    private readonly Dictionary<string, bool> _columnVisibility = HideableColumns.ToDictionary(c => c.Key, _ => true);
+    private readonly FilterModel _filters = new();
+    private ProductionLogArchiveFilterOptionsDTO _filterOptions = new();
+    private List<ProductionLogArchiveRowDTO> _rows = [];
+    private ElementReference _tableWrapper;
+    private CancellationTokenSource? _debounceCts;
+    private bool _isColumnsPanelOpen;
     private bool IsLoading { get; set; } = true;
+    private string? _errorMessage;
+    private string SearchString { get; set; } = "";
+    private int _page = 1;
+    private int _pageSize = 50;
+    private int _total;
+    private int _totalPages = 1;
+    private string _pageInput = "1";
+    private string _sortBy = "createdOn";
+    private string _sortDir = "desc";
 
-    private MudTable<ProductionLogSummaryDTO> _table = new MudTable<ProductionLogSummaryDTO>();
-
-    private int totalItems;
-    
-    private Dictionary<ProductionLogSummaryDTO, int> SearchHits { get; } = [];
-    private int MaxHits => SearchHits.Values.Max();
-    
-    
-    private const string NoProduct = "(No Product)";
-    private const string NoWorkInstruction = "(No Work Instruction)";
-    
-    private string _searchString = "";
-    private string SearchString
-    {
-        get => _searchString;
-        set
-        {
-            _searchString = value;
-            _table.ReloadServerData(); 
-        }
-    }
+    private int VisibleColumnCount => Math.Max(1, _columnVisibility.Count(kvp => kvp.Value));
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(SearchString) || _filters.HasAny;
 
     
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
-        await GrabServerData();
+        ReadUrlState();
+        _filterOptions = await ProductionLogService.GetArchiveFilterOptionsAsync();
+        await LoadPageAsync(updateUrl: false);
     }
 
-    private async Task GrabServerData()
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var saved = await JS.InvokeAsync<string?>("localStorage.getItem", ColumnVisibilityStorageKey);
+        if (!string.IsNullOrWhiteSpace(saved))
+        {
+            foreach (var key in HideableColumns.Select(c => c.Key))
+            {
+                _columnVisibility[key] = !saved.Contains($"\"{key}\":false", StringComparison.OrdinalIgnoreCase);
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPageAsync(bool updateUrl = true)
     {
         IsLoading = true;
-        ProductionLogs = await ProductionLogService.GetAllSummariesAsync() ?? [];
-        foreach (var log in ProductionLogs)
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
         {
-            SearchHits.Add(log, 0);
+            var result = await ProductionLogService.GetArchivePageAsync(BuildQuery());
+            _rows = result.Data;
+            _total = result.Total;
+            _page = result.Page;
+            _pageSize = result.PageSize;
+            _totalPages = result.TotalPages;
+            _pageInput = _page.ToString();
+
+            if (updateUrl)
+                UpdateUrl();
+
+            await JS.InvokeVoidAsync("eval", "document.querySelector('.log-archive-table-wrap')?.scrollTo({ top: 0, left: 0 });");
         }
-        
-        IsLoading = false;
+        catch (Exception ex)
+        {
+            _errorMessage = $"Could not load log archives: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    private async Task<TableData<ProductionLogSummaryDTO>> ServerReload(TableState state, CancellationToken token)
+    private ProductionLogArchiveQuery BuildQuery()
     {
-        IEnumerable<ProductionLogSummaryDTO> data = ProductionLogs;
-        await Task.Delay(20, token);
-
-        foreach (var log in data)
+        return new ProductionLogArchiveQuery
         {
-            SearchHits[log] = FilterHits(log, SearchString);
-        }
-        
-        data = data.Where(log => 
-            (SearchHits[log] >= MaxHits)
-        ).ToArray();
-        totalItems = data.Count();
-        
-        switch (state.SortLabel)
-        {
-            case "product_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.ProductName);
-                break;
-            case "instruction_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.WorkInstructionName);
-                break;
-            case "worker_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.CreatedBy);
-                break;
-            case "created_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"));
-                break;
-            case "modified_field":
-                data = data.OrderByDirection(state.SortDirection, o => o.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"));
-                break;
-        }
-        pagedData = data.Skip(state.Page * state.PageSize).Take(state.PageSize).ToArray();
-        return new TableData<ProductionLogSummaryDTO>() {TotalItems = totalItems, Items = pagedData};
-    }
-    
-    private int FilterHits(ProductionLogSummaryDTO log, string search)
-    {
-        var hits = 0;
-        if (string.IsNullOrWhiteSpace(search))
-            return hits;
-        
-        var searchPhrase = search.Trim();
-        
-        if (SatisfiesFilter(log.ProductName, searchPhrase))
-            hits++;
-        
-        if (SatisfiesFilter(log.WorkInstructionName, searchPhrase))
-            hits++;
-        
-        if (SatisfiesFilter(log.CreatedBy, searchPhrase))
-            hits++;
-
-        if (SatisfiesFilter(log.CreatedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"), searchPhrase))
-            hits++;
-        
-        if (SatisfiesFilter(log.LastModifiedOn.LocalDateTime.ToString("yyyy-MM-dd HH:mm"), searchPhrase))
-            hits++;
-
-        return hits;
-    }
-    
-    private bool SatisfiesFilter(string? columnPhrase, string searchPhrase)
-    {
-        if (!string.IsNullOrWhiteSpace(columnPhrase))
-        {
-            var trimmedColumnPhrase = columnPhrase.Trim();
-            
-            // intended for columns to catch smaller search phrases
-            if (trimmedColumnPhrase.Contains(searchPhrase, StringComparison.OrdinalIgnoreCase))
-                return true;
-    
-            // for multi worded search phrase
-            foreach (var columnPhraseWord in trimmedColumnPhrase.Split(" "))
-            {
-                foreach (var searchPhraseWord in searchPhrase.Split(" "))
-                {
-                    if (!string.IsNullOrWhiteSpace(searchPhraseWord) && 
-                        (searchPhrase.Contains(columnPhraseWord, StringComparison.OrdinalIgnoreCase)
-                        || columnPhrase.Contains(searchPhraseWord, StringComparison.OrdinalIgnoreCase)))
-                    return true;
-                }
-            }
-        }
-
-        return false;
+            Page = _page,
+            PageSize = _pageSize,
+            Search = SearchString,
+            SortBy = _sortBy,
+            SortDir = _sortDir,
+            FilterLogId = int.TryParse(_filters.LogId, out var logId) ? logId : null,
+            FilterAttemptId = int.TryParse(_filters.AttemptId, out var attemptId) ? attemptId : null,
+            FilterStatus = _filters.Status,
+            FilterProduct = _filters.Product,
+            FilterWorkInstruction = _filters.WorkInstruction,
+            FilterPartProduced = _filters.PartProduced,
+            FilterProducedPartSerialNumber = _filters.ProducedPartSerialNumber,
+            FilterCreatedOnFrom = ParseDateStart(_filters.CreatedOnFrom),
+            FilterCreatedOnTo = ParseDateEnd(_filters.CreatedOnTo),
+            FilterCreatedBy = _filters.CreatedBy,
+            FilterModifiedOnFrom = ParseDateStart(_filters.ModifiedOnFrom),
+            FilterModifiedOnTo = ParseDateEnd(_filters.ModifiedOnTo),
+            FilterModifiedBy = _filters.ModifiedBy
+        };
     }
 
-    private string InfoFormat() => $"Page {_table.CurrentPage + 1} of {(_table.GetFilteredItemsCount() / _table.RowsPerPage)+1}";
-    
-    private async Task OpenDialogAsync(ProductionLogSummaryDTO log)
+    private async Task OnSearchInput(ChangeEventArgs e)
     {
-        var detail = await ProductionLogService.GetDetailByIdAsync(log.Id);
+        SearchString = e.Value?.ToString() ?? "";
+        await DebouncedReloadAsync();
+    }
+
+    private async Task OnFilterInput(string field, string? value)
+    {
+        _filters.Set(field, value);
+        await DebouncedReloadAsync();
+    }
+
+    private async Task OnImmediateFilterChanged(string field, string? value)
+    {
+        _filters.Set(field, value);
+        _page = 1;
+        await LoadPageAsync();
+    }
+
+    private async Task DebouncedReloadAsync()
+    {
+        _debounceCts?.Cancel();
+        var cts = _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, cts.Token);
+            _page = 1;
+            await LoadPageAsync();
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private async Task SetSortAsync(string sortKey)
+    {
+        if (_sortBy == sortKey)
+            _sortDir = _sortDir == "asc" ? "desc" : "asc";
+        else
+        {
+            _sortBy = sortKey;
+            _sortDir = "asc";
+        }
+
+        _page = 1;
+        await LoadPageAsync();
+    }
+
+    private RenderFragment SortButton(string label, string sortKey) => builder =>
+    {
+        builder.OpenElement(0, "button");
+        builder.AddAttribute(1, "type", "button");
+        builder.AddAttribute(2, "class", "log-sort-button");
+        builder.AddAttribute(3, "disabled", IsLoading);
+        builder.AddAttribute(4, "onclick", EventCallback.Factory.Create(this, () => SetSortAsync(sortKey)));
+        builder.AddContent(5, label);
+        if (_sortBy == sortKey)
+            builder.AddContent(6, _sortDir == "asc" ? " ▲" : " ▼");
+        builder.CloseElement();
+    };
+
+    private RenderFragment DropdownFilter(string field, string? value, List<string> options) => builder =>
+    {
+        builder.OpenElement(0, "select");
+        builder.AddAttribute(1, "class", "form-select form-select-sm");
+        builder.AddAttribute(2, "value", value ?? "");
+        builder.AddAttribute(3, "disabled", IsLoading);
+        builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => OnImmediateFilterChanged(field, e.Value?.ToString())));
+        builder.OpenElement(5, "option");
+        builder.AddAttribute(6, "value", "");
+        builder.AddContent(7, "All");
+        builder.CloseElement();
+        var sequence = 8;
+        foreach (var option in options)
+        {
+            builder.OpenElement(sequence++, "option");
+            builder.AddAttribute(sequence++, "value", option);
+            builder.AddContent(sequence++, option);
+            builder.CloseElement();
+        }
+        builder.CloseElement();
+    };
+
+    private RenderFragment DateFilter(string fromField, string toField, string? fromValue, string? toValue) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "d-flex flex-column gap-1");
+        builder.OpenElement(2, "input");
+        builder.AddAttribute(3, "type", "date");
+        builder.AddAttribute(4, "class", "form-control form-control-sm");
+        builder.AddAttribute(5, "value", fromValue ?? "");
+        builder.AddAttribute(6, "disabled", IsLoading);
+        builder.AddAttribute(7, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => OnImmediateFilterChanged(fromField, e.Value?.ToString())));
+        builder.CloseElement();
+        builder.OpenElement(8, "input");
+        builder.AddAttribute(9, "type", "date");
+        builder.AddAttribute(10, "class", "form-control form-control-sm");
+        builder.AddAttribute(11, "value", toValue ?? "");
+        builder.AddAttribute(12, "disabled", IsLoading);
+        builder.AddAttribute(13, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => OnImmediateFilterChanged(toField, e.Value?.ToString())));
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private async Task PreviousPageAsync()
+    {
+        if (_page <= 1)
+            return;
+
+        _page--;
+        await LoadPageAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_page >= _totalPages)
+            return;
+
+        _page++;
+        await LoadPageAsync();
+    }
+
+    private async Task OnPageInputChanged(ChangeEventArgs e)
+    {
+        await JumpToPageAsync(e.Value?.ToString());
+    }
+
+    private async Task OnPageInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await JumpToPageAsync(_pageInput);
+    }
+
+    private async Task JumpToPageAsync(string? raw)
+    {
+        if (!int.TryParse(raw, out var page))
+        {
+            _pageInput = _page.ToString();
+            return;
+        }
+
+        _page = Math.Clamp(page, 1, _totalPages);
+        await LoadPageAsync();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var pageSize))
+        {
+            _pageSize = pageSize;
+            _page = 1;
+            await LoadPageAsync();
+        }
+    }
+
+    private async Task ClearAllFiltersAsync()
+    {
+        SearchString = "";
+        _filters.Clear();
+        _page = 1;
+        await LoadPageAsync();
+    }
+
+    private void ToggleColumnsPanel() => _isColumnsPanelOpen = !_isColumnsPanelOpen;
+
+    private bool IsColumnVisible(string key) => !_columnVisibility.TryGetValue(key, out var visible) || visible;
+
+    private async Task SetColumnVisibilityAsync(string key, bool visible)
+    {
+        _columnVisibility[key] = visible;
+        if (!visible)
+            _filters.ClearForColumn(key);
+
+        await SaveColumnVisibilityAsync();
+        _page = 1;
+        await LoadPageAsync();
+    }
+
+    private async Task ResetColumnsAsync()
+    {
+        foreach (var key in HideableColumns.Select(c => c.Key))
+            _columnVisibility[key] = true;
+
+        await SaveColumnVisibilityAsync();
+        await LoadPageAsync();
+    }
+
+    private async Task SaveColumnVisibilityAsync()
+    {
+        var json = "{" + string.Join(",", _columnVisibility.Select(kvp => $"\"{kvp.Key}\":{kvp.Value.ToString().ToLowerInvariant()}")) + "}";
+        await JS.InvokeVoidAsync("localStorage.setItem", ColumnVisibilityStorageKey, json);
+    }
+
+    private async Task RetryAsync() => await LoadPageAsync(updateUrl: false);
+
+    private async Task OpenDialogAsync(ProductionLogArchiveRowDTO log)
+    {
+        var detail = await ProductionLogService.GetDetailByIdAsync(log.ProductionLogId);
         if (detail == null) return;
 
         var data = (detail, false);
 
         await DialogService.ShowDialogAsync<LogOptionsDialog>(data, new DialogParameters()
         {
-            Title = $"Log #{log.Id}",
+            Title = $"Log #{log.ProductionLogId}",
             OnDialogResult = DialogService.CreateDialogCallback(this, HandleDialogAsync),
             Width = "85%",
             PreventScroll = true,
@@ -253,8 +668,155 @@
     {
         if (!result.Cancelled)
         {
-            await GrabServerData();
-            await _table.ReloadServerData();
+            await LoadPageAsync(updateUrl: false);
+        }
+    }
+
+    private void ReadUrlState()
+    {
+        var query = QueryHelpers.ParseQuery(new Uri(NavManager.Uri).Query);
+        _page = ReadInt(query, "page", 1);
+        _pageSize = PageSizes.Contains(ReadInt(query, "pageSize", 50)) ? ReadInt(query, "pageSize", 50) : 50;
+        SearchString = ReadString(query, "search");
+        _sortBy = ReadString(query, "sortBy", "createdOn");
+        _sortDir = ReadString(query, "sortDir", "desc");
+        _filters.AttemptId = ReadString(query, "filterAttemptId");
+        _filters.LogId = ReadString(query, "filterLogId");
+        _filters.Status = ReadString(query, "filterStatus");
+        _filters.Product = ReadString(query, "filterProduct");
+        _filters.WorkInstruction = ReadString(query, "filterWorkInstruction");
+        _filters.PartProduced = ReadString(query, "filterPartProduced");
+        _filters.ProducedPartSerialNumber = ReadString(query, "filterProducedPartSerialNumber");
+        _filters.CreatedOnFrom = ReadString(query, "filterCreatedOnFrom");
+        _filters.CreatedOnTo = ReadString(query, "filterCreatedOnTo");
+        _filters.CreatedBy = ReadString(query, "filterCreatedBy");
+        _filters.ModifiedOnFrom = ReadString(query, "filterModifiedOnFrom");
+        _filters.ModifiedOnTo = ReadString(query, "filterModifiedOnTo");
+        _filters.ModifiedBy = ReadString(query, "filterModifiedBy");
+    }
+
+    private void UpdateUrl()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["page"] = _page.ToString(),
+            ["pageSize"] = _pageSize.ToString(),
+            ["search"] = NullIfEmpty(SearchString),
+            ["sortBy"] = _sortBy,
+            ["sortDir"] = _sortDir,
+            ["filterLogId"] = NullIfEmpty(_filters.LogId),
+            ["filterAttemptId"] = NullIfEmpty(_filters.AttemptId),
+            ["filterStatus"] = NullIfEmpty(_filters.Status),
+            ["filterProduct"] = NullIfEmpty(_filters.Product),
+            ["filterWorkInstruction"] = NullIfEmpty(_filters.WorkInstruction),
+            ["filterPartProduced"] = NullIfEmpty(_filters.PartProduced),
+            ["filterProducedPartSerialNumber"] = NullIfEmpty(_filters.ProducedPartSerialNumber),
+            ["filterCreatedOnFrom"] = NullIfEmpty(_filters.CreatedOnFrom),
+            ["filterCreatedOnTo"] = NullIfEmpty(_filters.CreatedOnTo),
+            ["filterCreatedBy"] = NullIfEmpty(_filters.CreatedBy),
+            ["filterModifiedOnFrom"] = NullIfEmpty(_filters.ModifiedOnFrom),
+            ["filterModifiedOnTo"] = NullIfEmpty(_filters.ModifiedOnTo),
+            ["filterModifiedBy"] = NullIfEmpty(_filters.ModifiedBy)
+        };
+
+        var uri = QueryHelpers.AddQueryString("/log-archive", values.Where(kvp => kvp.Value != null)!);
+        NavManager.NavigateTo(uri, replace: true);
+    }
+
+    private static string FormatDate(DateTimeOffset value) => value.LocalDateTime.ToString("yyyy-MM-dd HH:mm");
+
+    private static string EmptyFallback(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static int ReadInt(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, int fallback)
+        => query.TryGetValue(key, out var value) && int.TryParse(value, out var parsed) ? Math.Max(1, parsed) : fallback;
+
+    private static string ReadString(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, string fallback = "")
+        => query.TryGetValue(key, out var value) ? value.ToString() : fallback;
+
+    private static DateTimeOffset? ParseDateStart(string? value)
+        => DateTime.TryParse(value, out var date) ? new DateTimeOffset(date.Date) : null;
+
+    private static DateTimeOffset? ParseDateEnd(string? value)
+        => DateTime.TryParse(value, out var date) ? new DateTimeOffset(date.Date.AddDays(1).AddTicks(-1)) : null;
+
+    private sealed record ColumnDefinition(string Key, string Label);
+
+    private sealed class FilterModel
+    {
+        public string? LogId { get; set; }
+        public string? AttemptId { get; set; }
+        public string? Status { get; set; }
+        public string? Product { get; set; }
+        public string? WorkInstruction { get; set; }
+        public string? PartProduced { get; set; }
+        public string? ProducedPartSerialNumber { get; set; }
+        public string? CreatedOnFrom { get; set; }
+        public string? CreatedOnTo { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? ModifiedOnFrom { get; set; }
+        public string? ModifiedOnTo { get; set; }
+        public string? ModifiedBy { get; set; }
+
+        public bool HasAny => new[]
+        {
+            LogId, AttemptId, Status, Product, WorkInstruction, PartProduced, ProducedPartSerialNumber,
+            CreatedOnFrom, CreatedOnTo, CreatedBy, ModifiedOnFrom, ModifiedOnTo, ModifiedBy
+        }.Any(value => !string.IsNullOrWhiteSpace(value));
+
+        public void Clear()
+        {
+            LogId = AttemptId = Status = Product = WorkInstruction = PartProduced = ProducedPartSerialNumber = null;
+            CreatedOnFrom = CreatedOnTo = CreatedBy = ModifiedOnFrom = ModifiedOnTo = ModifiedBy = null;
+        }
+
+        public void Set(string field, string? value)
+        {
+            value = string.IsNullOrWhiteSpace(value) ? null : value;
+            GetType().GetProperty(field)?.SetValue(this, value);
+        }
+
+        public void ClearForColumn(string key)
+        {
+            switch (key)
+            {
+                case ColumnLogId:
+                    LogId = null;
+                    break;
+                case ColumnAttemptId:
+                    AttemptId = null;
+                    break;
+                case ColumnStatus:
+                    Status = null;
+                    break;
+                case ColumnProduct:
+                    Product = null;
+                    break;
+                case ColumnWorkInstruction:
+                    WorkInstruction = null;
+                    break;
+                case ColumnPartProduced:
+                    PartProduced = null;
+                    break;
+                case ColumnProducedPartSn:
+                    ProducedPartSerialNumber = null;
+                    break;
+                case ColumnCreatedOn:
+                    CreatedOnFrom = null;
+                    CreatedOnTo = null;
+                    break;
+                case ColumnCreatedBy:
+                    CreatedBy = null;
+                    break;
+                case ColumnModifiedOn:
+                    ModifiedOnFrom = null;
+                    ModifiedOnTo = null;
+                    break;
+                case ColumnModifiedBy:
+                    ModifiedBy = null;
+                    break;
+            }
         }
     }
 }

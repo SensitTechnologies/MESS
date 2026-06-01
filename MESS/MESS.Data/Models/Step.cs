@@ -29,4 +29,9 @@ public class Step : WorkInstructionNode
     /// Gets or sets the list of secondary media associated with the step.
     /// </summary>
     public List<string> SecondaryMedia { get; set; } = [];
+
+    /// <summary>
+    /// How operator notes (production log step attempts) behave for this step in My Production.
+    /// </summary>
+    public StepNotesConfiguration NotesConfiguration { get; set; } = StepNotesConfiguration.OptionalForFailure;
 }

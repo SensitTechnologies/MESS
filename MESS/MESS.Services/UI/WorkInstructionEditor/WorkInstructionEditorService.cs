@@ -298,7 +298,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Position = stepNode.Position,
                 DetailedBody = stepNode.DetailedBody,
                 PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? [],
-                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? []
+                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? [],
+                NotesConfiguration = stepNode.NotesConfiguration
             },
             _ => throw new NotSupportedException("Unknown WorkInstructionNode type")
         };
@@ -352,6 +353,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
             case EditorMode.CreateNew:
                 Current.OriginalId = null;
                 success = await _workInstructionService.CreateAsync(Current);
+                if (success && Current.Id is > 0)
+                {
+                    var reloaded = await _workInstructionService.GetFormByIdAsync(Current.Id.Value);
+                    if (reloaded != null)
+                        Current = reloaded;
+                }
                 break;
 
             case EditorMode.EditExisting:

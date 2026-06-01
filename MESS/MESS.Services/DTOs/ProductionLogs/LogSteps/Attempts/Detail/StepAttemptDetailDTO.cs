@@ -46,4 +46,10 @@ public class StepAttemptDetailDTO
     /// Failure note for unsuccessful attempts. <c>null</c> or empty for successes.
     /// </summary>
     public string? FailureNote { get; set; }
+
+    /// <summary>Optional defect location noun id.</summary>
+    public int? FailureNounId { get; set; }
+
+    /// <summary>Optional defect adjective id.</summary>
+    public int? FailureAdjectiveId { get; set; }
 }

@@ -33,7 +33,9 @@ public static class StepAttemptFormRequestMapper
             Id = dto.AttemptId ?? 0, // 0 = new attempt
             IsSuccess = dto.IsSuccess,
             FailureNote = dto.FailureNote,
-            SubmitTime = dto.SubmitTime
+            SubmitTime = dto.SubmitTime,
+            FailureNounId = dto.FailureNounId,
+            FailureAdjectiveId = dto.FailureAdjectiveId
         };
     }
 }

@@ -14,11 +14,13 @@ public interface IApplicationUserService
     /// </summary>
     public Task SignOutAsync();
     /// <summary>
-    /// Signs in a user by username.
+    /// Signs in a user by username and optional password.
+    /// Password is required when the account has a password; legacy username-only sign-in applies when allowed and no password is set.
     /// </summary>
     /// <param name="username">The username of the user.</param>
+    /// <param name="password">Password, or null/empty for legacy username-only when permitted.</param>
     /// <returns>True if sign-in was successful, otherwise false.</returns>
-    public Task<bool> SignInAsync(string username);
+    public Task<bool> SignInAsync(string username, string? password);
     /// <summary>
     /// Gets a list of users by role.
     /// </summary>
@@ -71,10 +73,11 @@ public interface IApplicationUserService
     public Task<ApplicationUser?> GetByEmailAsync(string email);
     
     ///<summary>
-    /// Creates a ApplicationUser object and saves it to the database
+    /// Creates an application user. Optionally sets an initial password (opt-in).
     ///</summary>
-    ///<returns>ApplicationUser object</returns>
-    public Task<IdentityResult> AddApplicationUser(ApplicationUser ApplicationUser);
+    ///<param name="applicationUser">User record to persist.</param>
+    ///<param name="password">If non-empty, the account requires this password for sign-in.</param>
+    public Task<IdentityResult> AddApplicationUser(ApplicationUser applicationUser, string? password = null);
     
     ///<summary>
     /// Updates a ApplicationUser currently in the database
