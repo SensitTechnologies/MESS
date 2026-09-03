@@ -12,6 +12,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- Pinned to override bunit 2.7.2's transitive AngleSharp 1.4.0 (GHSA-pgww-w46g-26qg, mXSS). -->
+        <!-- Revisit when bunit ships a version that references AngleSharp >= 1.5.0. -->
+        <PackageReference Include="AngleSharp" Version="1.5.0" />
         <PackageReference Include="bunit" Version="2.7.2" />
         <PackageReference Include="coverlet.collector" Version="10.0.0">
           <PrivateAssets>all</PrivateAssets>

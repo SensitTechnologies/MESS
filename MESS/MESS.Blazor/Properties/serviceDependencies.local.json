@@ -6,8 +6,7 @@
       "containerName": "postgresql",
       "containerImage": "postgres",
       "type": "postgresql.container",
-      "connectionId": "ConnectionStrings:DatabaseConnection",
-      "dynamicId": null
+      "connectionId": "ConnectionStrings:DatabaseConnection"
     }
   }
 }

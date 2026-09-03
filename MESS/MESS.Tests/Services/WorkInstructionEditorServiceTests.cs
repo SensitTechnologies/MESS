@@ -100,8 +100,8 @@ public class WorkInstructionEditorServiceTests
         _sut.StartNew("New WI");
 
         _mockWorkInstructionService
-            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
-            .Callback<WorkInstructionFormDTO>(dto => dto.Id = 99)
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>(), It.IsAny<string>()))
+            .Callback<WorkInstructionFormDTO, string>((dto, _) => dto.Id = 99)
             .ReturnsAsync(true);
 
         _mockWorkInstructionService
@@ -109,7 +109,7 @@ public class WorkInstructionEditorServiceTests
             .ReturnsAsync(new WorkInstructionFormDTO { Id = 99, Title = "New WI", Version = "1.0" });
 
         // Act
-        var result = await _sut.SaveAsync();
+        var result = await _sut.SaveAsync("test-user");
 
         // Assert
         Assert.True(result);
@@ -118,7 +118,7 @@ public class WorkInstructionEditorServiceTests
         Assert.Equal(99, _sut.Current!.Id);
 
         _mockWorkInstructionService.Verify(
-            s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()),
+            s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>(), It.IsAny<string>()),
             Times.Once);
         _mockWorkInstructionService.Verify(s => s.GetFormByIdAsync(99), Times.Once);
     }
@@ -130,8 +130,8 @@ public class WorkInstructionEditorServiceTests
         _sut.Current!.Nodes.Add(new StepNodeFormDTO { Name = "Step 1", Body = "Body", Position = 0 });
 
         _mockWorkInstructionService
-            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
-            .Callback<WorkInstructionFormDTO>(dto =>
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>(), It.IsAny<string>()))
+            .Callback<WorkInstructionFormDTO, string>((dto, _) =>
             {
                 dto.Id = 10;
                 dto.Nodes[0].Id = 100;
@@ -149,19 +149,19 @@ public class WorkInstructionEditorServiceTests
             });
 
         _mockWorkInstructionService
-            .Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstructionFormDTO>()))
+            .Setup(s => s.UpdateWorkInstructionAsync(It.IsAny<WorkInstructionFormDTO>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        Assert.True(await _sut.SaveAsync());
+        Assert.True(await _sut.SaveAsync("test-user"));
         Assert.Equal(EditorMode.EditExisting, _sut.Mode);
 
         _sut.Current!.Nodes.Add(new StepNodeFormDTO { Name = "Step 2", Body = "More", Position = 1 });
         _sut.MarkDirty();
 
-        Assert.True(await _sut.SaveAsync());
+        Assert.True(await _sut.SaveAsync("test-user"));
 
         _mockWorkInstructionService.Verify(
-            s => s.UpdateWorkInstructionAsync(It.Is<WorkInstructionFormDTO>(d => d.Id == 10)),
+            s => s.UpdateWorkInstructionAsync(It.Is<WorkInstructionFormDTO>(d => d.Id == 10), It.IsAny<string>()),
             Times.Once);
     }
     
@@ -174,8 +174,8 @@ public class WorkInstructionEditorServiceTests
         _sut.QueueNodeForDeletion(2);
 
         _mockWorkInstructionService
-            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>()))
-            .Callback<WorkInstructionFormDTO>(dto => dto.Id = 50)
+            .Setup(s => s.CreateAsync(It.IsAny<WorkInstructionFormDTO>(), It.IsAny<string>()))
+            .Callback<WorkInstructionFormDTO, string>((dto, _) => dto.Id = 50)
             .ReturnsAsync(true);
 
         _mockWorkInstructionService
@@ -191,7 +191,7 @@ public class WorkInstructionEditorServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await _sut.SaveAsync();
+        var result = await _sut.SaveAsync("test-user");
 
         // Assert
         Assert.True(result);
@@ -244,5 +244,126 @@ public class WorkInstructionEditorServiceTests
 
         Assert.True(_sut.CurrentHasParts());
         Assert.True(_sut.CurrentHasSteps());
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Version-gated Minimal Editing Mode (bug-minimal-editing-version-gate.md)
+    // ------------------------------------------------------------------------------------------
+
+    private void SetupIsEditable(int id, bool isEditable)
+    {
+        _mockWorkInstructionService
+            .Setup(s => s.IsEditable(It.Is<WorkInstruction>(w => w.Id == id)))
+            .ReturnsAsync(isEditable);
+    }
+
+    [Fact]
+    public async Task IsMinimalEditingMode_True_WhenLoadedWithProductionLogs()
+    {
+        var wi = new WorkInstructionFormDTO { Id = 42, Title = "Has logs", Version = "1.0" };
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(42)).ReturnsAsync(wi);
+        SetupIsEditable(42, isEditable: false);
+
+        await _sut.LoadForEditAsync(42);
+
+        Assert.True(_sut.IsMinimalEditingMode);
+    }
+
+    [Fact]
+    public async Task IsMinimalEditingMode_False_WhenLoadedWithoutProductionLogs()
+    {
+        var wi = new WorkInstructionFormDTO { Id = 43, Title = "No logs", Version = "1.0" };
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(43)).ReturnsAsync(wi);
+        SetupIsEditable(43, isEditable: true);
+
+        await _sut.LoadForEditAsync(43);
+
+        Assert.False(_sut.IsMinimalEditingMode);
+    }
+
+    [Fact]
+    public async Task IsMinimalEditingMode_False_AfterVersionMutatedToNewValue()
+    {
+        var wi = new WorkInstructionFormDTO { Id = 44, Title = "Has logs", Version = "1.0" };
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(44)).ReturnsAsync(wi);
+        SetupIsEditable(44, isEditable: false);
+        await _sut.LoadForEditAsync(44);
+        Assert.True(_sut.IsMinimalEditingMode);
+
+        _sut.Current!.Version = "1.1";
+
+        Assert.False(_sut.IsMinimalEditingMode);
+    }
+
+    [Fact]
+    public async Task IsMinimalEditingMode_TrueAgain_WhenVersionRevertedToLoadedValue()
+    {
+        var wi = new WorkInstructionFormDTO { Id = 45, Title = "Has logs", Version = "1.0" };
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(45)).ReturnsAsync(wi);
+        SetupIsEditable(45, isEditable: false);
+        await _sut.LoadForEditAsync(45);
+
+        _sut.Current!.Version = "1.1";
+        Assert.False(_sut.IsMinimalEditingMode);
+
+        _sut.Current!.Version = "1.0";
+        Assert.True(_sut.IsMinimalEditingMode);
+    }
+
+    [Fact]
+    public async Task LoadForNewVersionFromCurrentAsync_PreserveVersionTrue_KeepsExactVersionString()
+    {
+        _sut.StartNew("WI");
+        _sut.Current!.Version = "2.7-custom";
+
+        await _sut.LoadForNewVersionFromCurrentAsync(preserveVersion: true);
+
+        Assert.Equal("2.7-custom", _sut.Current!.Version);
+        Assert.Equal(EditorMode.CreateNewVersion, _sut.Mode);
+    }
+
+    [Fact]
+    public async Task LoadForNewVersionFromCurrentAsync_PreserveVersionFalse_AutoIncrementsVersion()
+    {
+        _sut.StartNew("WI");
+        _sut.Current!.Version = "1.0";
+
+        await _sut.LoadForNewVersionFromCurrentAsync();
+
+        Assert.Equal("1.1", _sut.Current!.Version);
+    }
+
+    [Fact]
+    public async Task LoadForNewVersionFromCurrentAsync_ClearsQueuedNodeDeletions()
+    {
+        _sut.StartNew("WI");
+        _sut.QueueNodeForDeletion(101);
+        _sut.QueueNodeForDeletion(102);
+        Assert.Equal(2, _sut.NodesQueuedForDeletionIds.Count);
+
+        await _sut.LoadForNewVersionFromCurrentAsync(preserveVersion: true);
+
+        Assert.Empty(_sut.NodesQueuedForDeletionIds);
+    }
+
+    [Fact]
+    public async Task IsMinimalEditingMode_False_AfterEveryNonEditLoadPath()
+    {
+        // First put the SUT into a state where IsMinimalEditingMode would be true.
+        var wi = new WorkInstructionFormDTO { Id = 46, Title = "Has logs", Version = "1.0" };
+        _mockWorkInstructionService.Setup(s => s.GetFormByIdAsync(46)).ReturnsAsync(wi);
+        SetupIsEditable(46, isEditable: false);
+        await _sut.LoadForEditAsync(46);
+        Assert.True(_sut.IsMinimalEditingMode);
+
+        // StartNew resets it.
+        _sut.StartNew("Fresh");
+        Assert.False(_sut.IsMinimalEditingMode);
+
+        // Reset also resets it.
+        await _sut.LoadForEditAsync(46);
+        Assert.True(_sut.IsMinimalEditingMode);
+        _sut.Reset();
+        Assert.False(_sut.IsMinimalEditingMode);
     }
 }

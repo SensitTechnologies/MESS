@@ -186,3 +186,46 @@
 .red-tag-print-source {
     display: none;
 }
+
+/* === Linear preview (matches printed tag format) === */
+.red-tag-linear-preview {
+    padding-right: 0.2rem;
+    justify-content: center;
+}
+
+.red-tag-linear-preview .line-header,
+.red-tag-linear-preview .line {
+    margin: 0 0 0.2rem 0;
+    padding: 0;
+    color: black;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+.red-tag-linear-preview .line-header {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.red-tag-linear-preview .line .label {
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+.red-tag-linear-preview .note-line {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.red-tag-linear-preview .note-line .value {
+    white-space: pre-line;
+}

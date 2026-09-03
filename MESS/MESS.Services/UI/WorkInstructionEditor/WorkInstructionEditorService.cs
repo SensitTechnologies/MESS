@@ -50,8 +50,17 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     public bool IsDirty { get; private set; }
     /// <inheritdoc />
     public EditorMode Mode { get; private set; } = EditorMode.None;
+
+    // Live inputs to the computed IsMinimalEditingMode. Set only by LoadForEditAsync; every
+    // other entry point (StartNew, Load*, Reset) clears the flag so the property short-circuits false.
+    private bool _hasAssociatedProductionLogs;
+    private string? _loadedVersion;
+
     /// <inheritdoc />
-    public bool IsMinimalEditingMode { get; private set; }
+    public bool IsMinimalEditingMode =>
+        _hasAssociatedProductionLogs
+        && Mode == EditorMode.EditExisting
+        && string.Equals(Current?.Version?.Trim(), _loadedVersion, StringComparison.Ordinal);
 
     /// <inheritdoc />
     public event Action? OnChanged;
@@ -108,11 +117,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         };
 
         Mode = EditorMode.CreateNew;
-        IsMinimalEditingMode = false;
+        _hasAssociatedProductionLogs = false;
+        _loadedVersion = null;
         IsDirty = true;
         NotifyChanged();
     }
-    
+
     /// <inheritdoc />
     public async Task StartNewFromCurrent(string? title = null, List<string>? products = null)
     {
@@ -134,11 +144,12 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
         Current = newInstruction;
         Mode = EditorMode.CreateNew;
-        IsMinimalEditingMode = false;
+        _hasAssociatedProductionLogs = false;
+        _loadedVersion = null;
         IsDirty = true;
         NotifyChanged();
     }
-    
+
     /// <inheritdoc />
     public async Task LoadForEditAsync(int id)
     {
@@ -149,20 +160,28 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         Mode = EditorMode.EditExisting;
         IsDirty = false;
 
-        // Minimal mode: true when the WI has production logs (structural edits blocked).
-        IsMinimalEditingMode = !await _workInstructionService.IsEditable(Current.ToNewEntity());
+        // Snapshot the two inputs to the computed IsMinimalEditingMode. The property stays live —
+        // any subsequent edit to Current.Version instantly flips the mode without a reload.
+        _hasAssociatedProductionLogs = !await _workInstructionService.IsEditable(Current.ToNewEntity());
+        _loadedVersion = Current.Version?.Trim();
 
         NotifyChanged();
     }
-    
+
     /// <inheritdoc />
-    public async Task LoadForNewVersionFromCurrentAsync()
+    public async Task LoadForNewVersionFromCurrentAsync(bool preserveVersion = false)
     {
         if (Current != null)
         {
-            Current = await CloneForNewVersion(Current);
+            Current = await CloneForNewVersion(Current, preserveVersion);
             Mode = EditorMode.CreateNewVersion;
-            IsMinimalEditingMode = false;
+            _hasAssociatedProductionLogs = false;
+            _loadedVersion = null;
+
+            // FR-8: queued deletions belong to the original (log-associated) row we are about to
+            // leave untouched. They must not be applied to any row on save.
+            _nodesQueuedForDeletionIds.Clear();
+
             IsDirty = true;
             NotifyChanged();
         }
@@ -190,7 +209,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
         Current = await CloneForNewVersion(templateForm);
         Mode = EditorMode.CreateNewVersion;
-        IsMinimalEditingMode = false;
+        _hasAssociatedProductionLogs = false;
+        _loadedVersion = null;
         IsDirty = true;
         NotifyChanged();
     }
@@ -207,7 +227,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
 
         Current = newVersion;
         Mode = EditorMode.CreateNewVersion;
-        IsMinimalEditingMode = false;
+        _hasAssociatedProductionLogs = false;
+        _loadedVersion = null;
         IsDirty = true;
 
         NotifyChanged();
@@ -239,20 +260,23 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         };
 
         Mode = EditorMode.CreateNew;
-        IsMinimalEditingMode = false;
+        _hasAssociatedProductionLogs = false;
+        _loadedVersion = null;
         IsDirty = true;
 
         NotifyChanged();
     }
 
-    
-    private async Task<WorkInstructionFormDTO> CloneForNewVersion(WorkInstructionFormDTO template)
+
+    private async Task<WorkInstructionFormDTO> CloneForNewVersion(WorkInstructionFormDTO template, bool preserveVersion = false)
     {
         // New DB row must use a version string not already taken for this title (IX_WorkInstructions_Title_Version).
+        // preserveVersion: keep whatever the user typed instead of auto-incrementing (used when the version
+        // field itself is the trigger that unlocked Minimal Editing Mode — bumping again would clobber user input).
         return new WorkInstructionFormDTO
         {
             Title = template.Title,
-            Version = IncrementVersion(template.Version),
+            Version = preserveVersion ? template.Version : IncrementVersion(template.Version),
             OriginalId = template.OriginalId ?? template.Id,
             IsActive = false,
             IsLatest = true,
@@ -344,7 +368,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
     }
 
     /// <inheritdoc />
-    public async Task<bool> SaveAsync()
+    public async Task<bool> SaveAsync(string modifiedBy)
     {
         if (Current == null)
             return false;
@@ -358,7 +382,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         {
             case EditorMode.CreateNew:
                 Current.OriginalId = null;
-                success = await _workInstructionService.CreateAsync(Current);
+                success = await _workInstructionService.CreateAsync(Current, modifiedBy);
                 if (success && Current.Id is > 0)
                 {
                     var reloaded = await _workInstructionService.GetFormByIdAsync(Current.Id.Value);
@@ -368,7 +392,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 break;
 
             case EditorMode.EditExisting:
-                success = await _workInstructionService.UpdateWorkInstructionAsync(Current);
+                success = await _workInstructionService.UpdateWorkInstructionAsync(Current, modifiedBy);
                 break;
 
             case EditorMode.CreateNewVersion:
@@ -376,7 +400,7 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                     throw new InvalidOperationException("OriginalId is required for versioning.");
 
                 // Create new version; already handles marking old versions inactive
-                var newVersion = await _workInstructionService.CreateNewVersionAsync(Current);
+                var newVersion = await _workInstructionService.CreateNewVersionAsync(Current, modifiedBy);
                 if (newVersion == null)
                     return false;
 
@@ -431,7 +455,8 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         Current = null;
         IsDirty = false;
         Mode = EditorMode.None;
-        IsMinimalEditingMode = false;
+        _hasAssociatedProductionLogs = false;
+        _loadedVersion = null;
         NotifyChanged();
     }
     

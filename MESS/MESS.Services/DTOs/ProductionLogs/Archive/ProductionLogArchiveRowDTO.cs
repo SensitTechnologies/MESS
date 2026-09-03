@@ -32,6 +32,9 @@ public sealed class ProductionLogArchiveRowDTO
     /// <summary>Serial number of the part produced by this production log.</summary>
     public string ProducedPartSerialNumber { get; set; } = string.Empty;
 
+    /// <summary>Parts installed during this production log, formatted "Name (SerialNumber)".</summary>
+    public List<string> InstalledParts { get; set; } = [];
+
     /// <summary>Date/time the production log was created.</summary>
     public DateTimeOffset CreatedOn { get; set; }
 

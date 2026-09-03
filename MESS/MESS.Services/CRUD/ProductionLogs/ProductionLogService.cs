@@ -168,6 +168,14 @@ public class ProductionLogService : IProductionLogService
                         serializablePart => serializablePart.Id,
                         (_, serializablePart) => serializablePart.SerialNumber ?? string.Empty)
                     .FirstOrDefault() ?? string.Empty,
+                InstalledParts = context.ProductionLogParts
+                    .Where(part => part.ProductionLogId == log.Id && part.OperationType == PartOperationType.Installed)
+                    .Select(part => part.SerializablePart != null && part.SerializablePart.PartDefinition != null
+                        ? (part.SerializablePart.SerialNumber != null
+                            ? part.SerializablePart.PartDefinition.Name + " (" + part.SerializablePart.SerialNumber + ")"
+                            : part.SerializablePart.PartDefinition.Name)
+                        : string.Empty)
+                    .ToList(),
                 CreatedOn = log.CreatedOn,
                 CreatedBy = log.CreatedBy,
                 LastModifiedOn = log.LastModifiedOn,
