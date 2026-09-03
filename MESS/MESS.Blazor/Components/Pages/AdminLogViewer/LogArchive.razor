@@ -256,6 +256,7 @@
                             @if (IsColumnVisible(ColumnWorkInstruction)) { <th>@SortButton("Work Instruction", "workInstruction")</th> }
                             @if (IsColumnVisible(ColumnPartProduced)) { <th>@SortButton("Part Produced", "partProduced")</th> }
                             @if (IsColumnVisible(ColumnProducedPartSn)) { <th>@SortButton("Produced Part SN", "producedPartSerialNumber")</th> }
+                            @if (IsColumnVisible(ColumnPartsInstalled)) { <th>Parts Installed</th> }
                             @if (IsColumnVisible(ColumnCreatedOn)) { <th>@SortButton("Created On", "createdOn")</th> }
                             @if (IsColumnVisible(ColumnCreatedBy)) { <th>@SortButton("Created By", "createdBy")</th> }
                             @if (IsColumnVisible(ColumnModifiedOn)) { <th>@SortButton("Modified On", "modifiedOn")</th> }
@@ -292,6 +293,7 @@
                             @if (IsColumnVisible(ColumnWorkInstruction)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.WorkInstruction), _filters.WorkInstruction, _filterOptions.WorkInstructions)</th> }
                             @if (IsColumnVisible(ColumnPartProduced)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.PartProduced), _filters.PartProduced, _filterOptions.PartProduced)</th> }
                             @if (IsColumnVisible(ColumnProducedPartSn)) { <th class="log-filter-cell"><input class="form-control form-control-sm" placeholder="Filter..." value="@_filters.ProducedPartSerialNumber" @oninput="e => OnFilterInput(nameof(FilterModel.ProducedPartSerialNumber), e.Value?.ToString())" disabled="@IsLoading" /></th> }
+                            @if (IsColumnVisible(ColumnPartsInstalled)) { <th class="log-filter-cell"></th> }
                             @if (IsColumnVisible(ColumnCreatedOn)) { <th class="log-filter-cell">@DateFilter(nameof(FilterModel.CreatedOnFrom), nameof(FilterModel.CreatedOnTo), _filters.CreatedOnFrom, _filters.CreatedOnTo)</th> }
                             @if (IsColumnVisible(ColumnCreatedBy)) { <th class="log-filter-cell">@DropdownFilter(nameof(FilterModel.CreatedBy), _filters.CreatedBy, _filterOptions.CreatedBy)</th> }
                             @if (IsColumnVisible(ColumnModifiedOn)) { <th class="log-filter-cell">@DateFilter(nameof(FilterModel.ModifiedOnFrom), nameof(FilterModel.ModifiedOnTo), _filters.ModifiedOnFrom, _filters.ModifiedOnTo)</th> }
@@ -322,6 +324,7 @@
                                 @if (IsColumnVisible(ColumnWorkInstruction)) { <td>@EmptyFallback(log.WorkInstructionName)</td> }
                                 @if (IsColumnVisible(ColumnPartProduced)) { <td>@EmptyFallback(log.PartProducedName)</td> }
                                 @if (IsColumnVisible(ColumnProducedPartSn)) { <td>@EmptyFallback(log.ProducedPartSerialNumber)</td> }
+                                @if (IsColumnVisible(ColumnPartsInstalled)) { <td>@(log.InstalledParts.Count == 0 ? "-" : string.Join(", ", log.InstalledParts))</td> }
                                 @if (IsColumnVisible(ColumnCreatedOn)) { <td>@FormatDate(log.CreatedOn)</td> }
                                 @if (IsColumnVisible(ColumnCreatedBy)) { <td>@EmptyFallback(log.CreatedBy)</td> }
                                 @if (IsColumnVisible(ColumnModifiedOn)) { <td>@FormatDate(log.LastModifiedOn)</td> }
@@ -401,6 +404,7 @@
     private const string ColumnWorkInstruction = "workInstruction";
     private const string ColumnPartProduced = "partProduced";
     private const string ColumnProducedPartSn = "producedPartSerialNumber";
+    private const string ColumnPartsInstalled = "partsInstalled";
     private const string ColumnCreatedOn = "createdOn";
     private const string ColumnCreatedBy = "createdBy";
     private const string ColumnModifiedOn = "modifiedOn";
@@ -418,6 +422,7 @@
         new(ColumnWorkInstruction, "Work Instruction"),
         new(ColumnPartProduced, "Part Produced"),
         new(ColumnProducedPartSn, "Produced Part SN"),
+        new(ColumnPartsInstalled, "Parts Installed"),
         new(ColumnCreatedOn, "Created On"),
         new(ColumnCreatedBy, "Created By"),
         new(ColumnModifiedOn, "Modified On"),
@@ -539,11 +544,11 @@
             FilterWorkInstruction = _filters.WorkInstruction,
             FilterPartProduced = _filters.PartProduced,
             FilterProducedPartSerialNumber = _filters.ProducedPartSerialNumber,
-            FilterCreatedOnFrom = ParseDateStart(_filters.CreatedOnFrom),
-            FilterCreatedOnTo = ParseDateEnd(_filters.CreatedOnTo),
+            FilterCreatedOnFrom = LogArchiveFilterParser.ParseDateStart(_filters.CreatedOnFrom),
+            FilterCreatedOnTo = LogArchiveFilterParser.ParseDateEnd(_filters.CreatedOnTo),
             FilterCreatedBy = _filters.CreatedBy,
-            FilterModifiedOnFrom = ParseDateStart(_filters.ModifiedOnFrom),
-            FilterModifiedOnTo = ParseDateEnd(_filters.ModifiedOnTo),
+            FilterModifiedOnFrom = LogArchiveFilterParser.ParseDateStart(_filters.ModifiedOnFrom),
+            FilterModifiedOnTo = LogArchiveFilterParser.ParseDateEnd(_filters.ModifiedOnTo),
             FilterModifiedBy = _filters.ModifiedBy
         };
     }
@@ -916,12 +921,6 @@
 
     private static string ReadString(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, string fallback = "")
         => query.TryGetValue(key, out var value) ? value.ToString() : fallback;
-
-    private static DateTimeOffset? ParseDateStart(string? value)
-        => DateTime.TryParse(value, out var date) ? new DateTimeOffset(date.Date, TimeSpan.Zero) : null;
-
-    private static DateTimeOffset? ParseDateEnd(string? value)
-        => DateTime.TryParse(value, out var date) ? new DateTimeOffset(date.Date.AddDays(1).AddTicks(-1), TimeSpan.Zero) : null;
 
     private sealed record ColumnDefinition(string Key, string Label);
 

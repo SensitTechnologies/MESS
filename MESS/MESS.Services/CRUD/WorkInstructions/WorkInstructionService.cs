@@ -122,6 +122,41 @@ public class WorkInstructionService : IWorkInstructionService
     }
 
     /// <inheritdoc />
+    public async Task<string> SuggestUniqueVersionAsync(string title, string? startingVersion = "1.0")
+    {
+        var candidate = string.IsNullOrWhiteSpace(startingVersion) ? "1.0" : startingVersion!;
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Snapshot all versions currently used for this title (case-insensitive), then bump
+            // in memory so we don't round-trip once per candidate.
+            var usedVersions = await context.WorkInstructions
+                .Where(w => w.Title.ToLower() == title.ToLower() && w.Version != null)
+                .Select(w => w.Version!)
+                .ToListAsync();
+
+            var used = new HashSet<string>(usedVersions, StringComparer.OrdinalIgnoreCase);
+
+            // Cap the loop defensively — pathological title with thousands of versions would still exit.
+            for (var i = 0; i < 10_000 && used.Contains(candidate); i++)
+            {
+                candidate = BumpWorkInstructionVersionString(candidate);
+            }
+
+            return candidate;
+        }
+        catch (Exception e)
+        {
+            Log.Warning(
+                "Unable to suggest a unique version for Title: {Title}. Falling back to '{Candidate}'. Exception: {Exception}",
+                title, candidate, e.ToString());
+            return candidate;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<bool> IsUniqueAsync(WorkInstruction wi, CancellationToken ct = default)
     {
         await using var db = await _contextFactory.CreateDbContextAsync(ct);
@@ -432,7 +467,6 @@ public class WorkInstructionService : IWorkInstructionService
             var versionHistory = await context.WorkInstructions
                 .AsNoTracking()
                 .Where(w => w.OriginalId == originalId || w.Id == originalId)
-                .OrderByDescending(w => w.LastModifiedOn)
                 .Select(w => new WorkInstructionVersionDTO
                 {
                     Id = w.Id,
@@ -444,6 +478,15 @@ public class WorkInstructionService : IWorkInstructionService
                     HasProductionLogs = context.ProductionLogs.Any(l => l.WorkInstructionId == w.Id)
                 })
                 .ToListAsync();
+
+            // Sort by numeric version components (newest first). Falls back to LastModifiedOn / Id
+            // when two rows share the same version string (rare — the DB has a unique (Title,Version)
+            // index — but keeps the order stable when it happens).
+            versionHistory = versionHistory
+                .OrderByDescending(v => ParseVersionForSort(v.Version))
+                .ThenByDescending(v => v.LastModifiedOn)
+                .ThenByDescending(v => v.Id)
+                .ToList();
 
             Log.Information(
                 "GetVersionHistoryAsync successfully retrieved {Count} versions for RootInstructionId {RootInstructionId}",
@@ -487,7 +530,7 @@ public class WorkInstructionService : IWorkInstructionService
     }
     
     /// <inheritdoc />
-    public async Task<bool> CreateAsync(WorkInstructionFormDTO dto)
+    public async Task<bool> CreateAsync(WorkInstructionFormDTO dto, string modifiedBy)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var strategy = context.Database.CreateExecutionStrategy();
@@ -500,6 +543,11 @@ public class WorkInstructionService : IWorkInstructionService
             {
                 // Build base entity from mapper
                 var workInstruction = dto.ToNewEntity();
+
+                // Audit stamps — CreatedOn / LastModifiedOn are already defaulted to UtcNow in the entity.
+                var stamp = string.IsNullOrWhiteSpace(modifiedBy) ? "system" : modifiedBy;
+                workInstruction.CreatedBy = stamp;
+                workInstruction.LastModifiedBy = stamp;
 
                 // Validate entity
                 var validator = new WorkInstructionValidator();
@@ -581,10 +629,12 @@ public class WorkInstructionService : IWorkInstructionService
     }
     
     /// <inheritdoc />
-    public async Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto)
+    public async Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto, string modifiedBy)
     {
         if (dto.OriginalId == null)
             throw new InvalidOperationException("OriginalId is required to create a new version.");
+
+        var stamp = string.IsNullOrWhiteSpace(modifiedBy) ? "system" : modifiedBy;
 
         await using var context = await _contextFactory.CreateDbContextAsync();
         var strategy = context.Database.CreateExecutionStrategy();
@@ -624,12 +674,20 @@ public class WorkInstructionService : IWorkInstructionService
             // Force insert (never reuse existing id)
             workInstruction.Id = 0;
 
-            // Unique (Title, Version): prior rows stay in the table (only flags updated), so the new row
-            // must use a version string not present for this title — bump until free even if UI pre-bumped once.
-            var usedVersions = versions
-                .Select(w => w.Version)
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-                .Select(v => v!)
+            // Audit stamps for the new version row.
+            workInstruction.CreatedBy = stamp;
+            workInstruction.LastModifiedBy = stamp;
+
+            // Unique (Title, Version): the DB unique index is scoped to the whole Title, not just
+            // this chain — so query every row sharing the Title (case-insensitive) rather than only
+            // this chain's rows. Otherwise a version already claimed by a sibling chain (e.g. one
+            // created via Save-As with the same title) would slip past this check and hit the DB
+            // unique-index violation on insert.
+            var title = workInstruction.Title;
+            var usedVersions = (await context.WorkInstructions
+                    .Where(w => w.Title.ToLower() == title.ToLower() && w.Version != null)
+                    .Select(w => w.Version!)
+                    .ToListAsync())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var candidate = string.IsNullOrWhiteSpace(workInstruction.Version)
                 ? "1.0"
@@ -870,7 +928,7 @@ public class WorkInstructionService : IWorkInstructionService
     }
     
     /// <inheritdoc />
-    public async Task<bool> UpdateWorkInstructionAsync(WorkInstructionFormDTO dto)
+    public async Task<bool> UpdateWorkInstructionAsync(WorkInstructionFormDTO dto, string modifiedBy)
     {
         Log.Information("Beginning update for WorkInstruction {Id}", dto.Id);
 
@@ -899,7 +957,11 @@ public class WorkInstructionService : IWorkInstructionService
 
                 var minimalMode = !await IsEditable(existing);
                 await _workInstructionUpdater.ApplyAsync(dto, existing, context, minimalMode);
-                
+
+                // Audit stamps for the update.
+                existing.LastModifiedBy = string.IsNullOrWhiteSpace(modifiedBy) ? "system" : modifiedBy;
+                existing.LastModifiedOn = DateTimeOffset.UtcNow;
+
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -1044,6 +1106,29 @@ public class WorkInstructionService : IWorkInstructionService
         }
 
         return version + ".1";
+    }
+
+    /// <summary>
+    /// Parses a version label like "1.10" into a comparable tuple so "1.10" sorts above "1.2".
+    /// Non-numeric or missing components fall back to 0.
+    /// </summary>
+    private static (int Major, int Minor, int Build, int Revision) ParseVersionForSort(string? version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            return (0, 0, 0, 0);
+        }
+
+        var parts = version.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        var nums = new int[4];
+        for (var i = 0; i < Math.Min(parts.Length, 4); i++)
+        {
+            if (!int.TryParse(parts[i].Trim(), out nums[i]))
+            {
+                nums[i] = 0;
+            }
+        }
+        return (nums[0], nums[1], nums[2], nums[3]);
     }
 
     private void ClearWorkInstructionCaches()

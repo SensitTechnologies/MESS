@@ -17,6 +17,7 @@
 @using MESS.Services.DTOs.WorkInstructions.Summary
 @using MESS.Services.UI.WorkInstructionEditor
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using DialogParameters = Microsoft.FluentUI.AspNetCore.Components.DialogParameters
 @inject IJSRuntime JSRuntime
 @inject IWorkInstructionService WorkInstructionService
@@ -24,6 +25,7 @@
 @inject IProductService ProductService
 @inject IToastService ToastService
 @inject Microsoft.FluentUI.AspNetCore.Components.IDialogService DialogService
+@inject AuthenticationStateProvider AuthProvider
 
 @attribute [Authorize(Roles = "Technician, Administrator")]
 
@@ -102,9 +104,7 @@
         @if (WorkInstructionEditorService.IsMinimalEditingMode)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" NoIcon="false" Class="mx-2 mt-2">
-                <strong>Minimal Editing Mode</strong> — This work instruction has associated production logs.
-                Adding, removing, and reordering nodes is disabled.
-                To make structural changes, use <strong>New Version</strong> in the File menu to create an editable copy.
+                This work instruction has associated production logs. Increase version number to enable edits.
             </MudAlert>
         }
 
@@ -228,55 +228,54 @@
 
         try
         {
+            var currentUser = await ResolveCurrentUserAsync();
             bool isEditable = await WorkInstructionService.IsEditable(current.ToNewEntity());
             bool isMinimal = WorkInstructionEditorService.IsMinimalEditingMode;
 
             bool success;
 
-            if (isEditable || isMinimal)
+            if (!isEditable && isMinimal)
             {
-                // Minimal mode: save in place with restricted node sync (handled server-side by the updater).
-                // Full edit mode: normal in-place save.
-                success = await WorkInstructionEditorService.SaveAsync();
+                // FR-5: has production logs and the version has not been changed yet — block entirely.
+                ToastService.ShowError(
+                    "This work instruction has associated production logs. Increase the version number to save your changes.");
+                return;
+            }
+
+            if (isEditable)
+            {
+                // No production logs (or brand-new instruction) — normal in-place create/update.
+                success = await WorkInstructionEditorService.SaveAsync(currentUser);
                 if (success)
-                    ToastService.ShowSuccess(isMinimal
-                        ? "Work Instruction updated (minimal edit — structural changes are preserved)."
-                        : "Work Instruction updated successfully.");
+                    ToastService.ShowSuccess(
+                        WorkInstructionEditorService.Mode == EditorMode.CreateNew
+                            ? "New Work Instruction saved successfully."
+                            : "Work Instruction updated successfully.");
                 else
                     ToastService.ShowError("Unable to save Work Instruction. Please try again.");
             }
             else
             {
-                if (WorkInstructionEditorService.Mode == EditorMode.CreateNew)
+                // FR-6: has production logs and the version has already been changed — commit as a
+                // new version-chain row, keeping the exact version string the user typed.
+                await WorkInstructionEditorService.LoadForNewVersionFromCurrentAsync(preserveVersion: true);
+                success = await WorkInstructionEditorService.SaveAsync(currentUser);
+
+                if (success)
                 {
-                    success = await WorkInstructionEditorService.SaveAsync();
-                    if (success)
-                        ToastService.ShowSuccess("New Work Instruction saved successfully.");
+                    ToastService.ShowSuccess("New version of Work Instruction created successfully.");
+
+                    if (WorkInstructionEditorService.Current?.Id.HasValue == true)
+                        await WorkInstructionEditorService.LoadForEditAsync(WorkInstructionEditorService.Current.Id.Value);
                     else
-                        ToastService.ShowError("Error saving new work instruction.");
+                    {
+                        WorkInstructionEditorService.Reset();
+                        ToastService.ShowWarning("The new version was created but could not be loaded for editing.");
+                    }
                 }
                 else
                 {
-                    // WI has logs and is not in minimal-mode (e.g. a CreateNewVersion load) — create version.
-                    await WorkInstructionEditorService.LoadForNewVersionFromCurrentAsync();
-                    success = await WorkInstructionEditorService.SaveAsync();
-
-                    if (success)
-                    {
-                        ToastService.ShowSuccess("New version of Work Instruction created successfully.");
-
-                        if (WorkInstructionEditorService.Current?.Id.HasValue == true)
-                            await WorkInstructionEditorService.LoadForEditAsync(WorkInstructionEditorService.Current.Id.Value);
-                        else
-                        {
-                            WorkInstructionEditorService.Reset();
-                            ToastService.ShowWarning("The new version was created but could not be loaded for editing.");
-                        }
-                    }
-                    else
-                    {
-                        ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
-                    }
+                    ToastService.ShowError("Unable to save new version. Please ensure Title and Version are unique.");
                 }
             }
 
@@ -419,18 +418,66 @@
     
     private async Task HandleSaveAs((string Title, List<string> Products) workInstructionData)
     {
-        await WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
-        await WorkInstructionEditorService.SaveAsync();
-        AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
-        ToastService.ShowInfo($"Saved new work instruction \"{workInstructionData.Title}\"");
-        if (WorkInstructionEditorService.Current != null)
+        _uniquenessError = null;
+        _importResolutionError = null;
+
+        try
         {
-            SelectedWorkInstructionId = WorkInstructionEditorService.Current.Id;
+            var currentUser = await ResolveCurrentUserAsync();
+            await WorkInstructionEditorService.StartNewFromCurrent(workInstructionData.Title, workInstructionData.Products);
+
+            // Auto-bump the version until (Title, Version) is free — Save As should never
+            // fail on the DB unique index just because the source title is already at 1.0.
+            if (WorkInstructionEditorService.Current is not null)
+            {
+                WorkInstructionEditorService.Current.Version =
+                    await WorkInstructionService.SuggestUniqueVersionAsync(
+                        workInstructionData.Title,
+                        WorkInstructionEditorService.Current.Version);
+            }
+
+            var success = await WorkInstructionEditorService.SaveAsync(currentUser);
+
+            if (!success)
+            {
+                ToastService.ShowError(
+                    $"Unable to save \"{workInstructionData.Title}\". Please try again.");
+                return;
+            }
+
+            AllWorkInstructions = await WorkInstructionService.GetAllLatestSummariesAsync();
+            ToastService.ShowInfo($"Saved new work instruction \"{workInstructionData.Title}\"");
+            if (WorkInstructionEditorService.Current != null)
+            {
+                SelectedWorkInstructionId = WorkInstructionEditorService.Current.Id;
+            }
         }
-        
+        catch (WorkInstructionNotUniqueException ex)
+        {
+            _uniquenessError = ex.Message;
+            ToastService.ShowError(ex.Message);
+        }
+        catch (WorkInstructionImportReferenceException ex)
+        {
+            _importResolutionError = ex.Result;
+            ToastService.ShowError(
+                "Cannot save: this work instruction references parts or products that do not exist.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error during Save As of Work Instruction \"{Title}\"", workInstructionData.Title);
+            ToastService.ShowError("An error occurred while saving. Please try again.");
+        }
+
         StateHasChanged();
     }
     
+    private async Task<string> ResolveCurrentUserAsync()
+    {
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        return auth.User.Identity?.Name ?? "system";
+    }
+
     private async Task HandleEditAssociations((string Title, List<string> Products) workInstructionData)
     {
         if (WorkInstructionEditorService.Current != null)

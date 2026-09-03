@@ -18,29 +18,29 @@
         width: 7.64in; /* 7.8 - 2*0.08 */
         height: 1.99in; /* 2.15 - 2*0.08 */
         font-family: monospace, monospace;
-        font-size: 12pt;
+        font-size: 20pt;
         color: #000;
         background: white;
         box-sizing: border-box;
-        line-height: 1.8;
+        line-height: 1.1;
     }
     .red-tag-print-wrapper {
         display: block;
     }
     .red-tag-print {
         font-family: monospace, monospace;
-        font-size: 12pt;
+        font-size: 20pt;
         color: #000;
         padding: 0;
         margin: 0;
-        line-height: 1.8;
+        line-height: 1.1;
     }
     .red-tag-print .line-header {
         font-weight: bold;
-        margin: 0 0 4pt;
+        margin: 0 0 2pt;
     }
     .red-tag-print .line {
-        margin: 0 0 2pt;
+        margin: 0 0 1pt;
     }
     .red-tag-print .label {
         font-weight: bold;

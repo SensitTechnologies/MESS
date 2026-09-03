@@ -34,6 +34,16 @@ public interface IWorkInstructionService
     public Task<bool> IsUnique(WorkInstruction workInstruction);
 
     /// <summary>
+    /// Returns a version string that, together with the given <paramref name="title"/>, is free
+    /// in the <c>WorkInstructions</c> table. Starts at <paramref name="startingVersion"/> and
+    /// increments a <c>major.minor</c> label until an unused pair is found.
+    /// </summary>
+    /// <param name="title">Title whose used versions to check against (case-insensitive).</param>
+    /// <param name="startingVersion">Preferred starting version; defaults to <c>"1.0"</c>.</param>
+    /// <returns>The first available version string for the given title.</returns>
+    public Task<string> SuggestUniqueVersionAsync(string title, string? startingVersion = "1.0");
+
+    /// <summary>
     /// Async uniqueness check used by validators and save paths.
     /// Returns <c>true</c> when no other record shares the same (Title, Version) pair.
     /// The check is case-insensitive for Title and excludes the record's own ID so saving
@@ -124,6 +134,7 @@ public interface IWorkInstructionService
     /// The <see cref="WorkInstructionFormDTO"/> containing scalar values,
     /// related product IDs, produced part ID, and node definitions.
     /// </param>
+    /// <param name="modifiedBy">Identity of the user creating this work instruction; stamped onto CreatedBy and LastModifiedBy.</param>
     /// <returns>
     /// <c>true</c> if creation was successful; otherwise, <c>false</c>.
     /// </returns>
@@ -132,7 +143,7 @@ public interface IWorkInstructionService
     /// EF Core tracking and to prevent detached entity conflicts. The new work
     /// instruction is created as inactive by default.
     /// </remarks>
-    public Task<bool> CreateAsync(WorkInstructionFormDTO dto);
+    public Task<bool> CreateAsync(WorkInstructionFormDTO dto, string modifiedBy);
 
     /// <summary>
     /// Updates an existing work instruction using the provided form DTO.
@@ -141,6 +152,7 @@ public interface IWorkInstructionService
     /// The <see cref="WorkInstructionFormDTO"/> containing updated scalar values,
     /// associated product IDs, and node definitions.
     /// </param>
+    /// <param name="modifiedBy">Identity of the user performing the update; stamped onto LastModifiedBy and refreshes LastModifiedOn.</param>
     /// <returns>
     /// <c>true</c> if the work instruction was successfully updated; otherwise, <c>false</c>.
     /// </returns>
@@ -150,7 +162,7 @@ public interface IWorkInstructionService
     /// resolved from the database to ensure correct EF Core tracking and to prevent
     /// detached graph conflicts. Cache entries are invalidated after a successful update.
     /// </remarks>
-    public Task<bool> UpdateWorkInstructionAsync(WorkInstructionFormDTO dto);
+    public Task<bool> UpdateWorkInstructionAsync(WorkInstructionFormDTO dto, string modifiedBy);
     
     /// <summary>
     /// Deletes a WorkInstruction from the database.
@@ -197,6 +209,7 @@ public interface IWorkInstructionService
     /// The form DTO containing the updated work instruction data, including
     /// associated product IDs and node definitions.
     /// </param>
+    /// <param name="modifiedBy">Identity of the user creating this new version; stamped onto CreatedBy and LastModifiedBy of the new row.</param>
     /// <returns>
     /// The newly created <see cref="WorkInstruction"/> marked as the latest
     /// and active version in the version chain, or <c>null</c> if the operation fails.
@@ -209,7 +222,7 @@ public interface IWorkInstructionService
     /// <exception cref="InvalidOperationException">
     /// Thrown if <see cref="WorkInstructionFormDTO.OriginalId"/> is not provided.
     /// </exception>
-    public Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto);
+    public Task<WorkInstruction?> CreateNewVersionAsync(WorkInstructionFormDTO dto, string modifiedBy);
     
     /// <summary>
     /// Associates additional work instructions with the specified product,

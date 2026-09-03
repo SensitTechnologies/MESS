@@ -37,9 +37,9 @@ public class ApplicationUser : IdentityUser
 
     /// <summary>
     /// When true and the user has no password, allow username-only sign-in while global legacy mode is enabled.
-    /// Set false to force password or Microsoft login for this account.
+    /// Defaults to false — all users must use a password (or Microsoft login).
     /// </summary>
-    public bool AllowLegacyUsernameSignIn { get; set; } = true;
+    public bool AllowLegacyUsernameSignIn { get; set; }
 
     /// <summary>
     /// Gets the full name of the user by combining the first and last names.

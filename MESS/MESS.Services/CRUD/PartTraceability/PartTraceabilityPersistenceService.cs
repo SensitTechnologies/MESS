@@ -103,12 +103,22 @@ public class PartTraceabilityPersistenceService : IPartTraceabilityPersistenceSe
             // --- Resolve produced part ---
             SerializablePart? producedPart = null;
 
-            if (operation.ShouldProducePart)
-            {
-                if (workInstruction?.PartProducedId == null)
-                    throw new InvalidOperationException("WorkInstruction does not define a produced part.");
+            // If the WI doesn't define a produced part, only throw when the operator actually
+            // supplied a produced-part serial (a real mismatch). Otherwise, silently skip production —
+            // this covers WIs like QC checklists that have PartNodes but produce nothing.
+            var wiDefinesProducedPart = workInstruction?.PartProducedId != null;
+            var shouldProducePart = operation.ShouldProducePart && wiDefinesProducedPart;
 
-                var defId = workInstruction.PartProducedId.Value;
+            if (operation.ShouldProducePart && !wiDefinesProducedPart &&
+                !string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber))
+            {
+                throw new InvalidOperationException(
+                    "A produced-part serial number was provided but this WorkInstruction does not define a produced part.");
+            }
+
+            if (shouldProducePart)
+            {
+                var defId = workInstruction!.PartProducedId!.Value;
 
                 if (!string.IsNullOrWhiteSpace(operation.ProducedPartSerialNumber))
                 {

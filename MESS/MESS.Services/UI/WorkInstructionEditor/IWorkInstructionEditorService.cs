@@ -110,10 +110,15 @@ public interface IWorkInstructionEditorService
     /// for creating a new version. The resulting WorkInstruction is not yet saved
     /// to the database and remains in memory for user editing.
     /// </summary>
+    /// <param name="preserveVersion">
+    /// When <c>true</c>, keeps the current DTO's version string as-is. Used when the user has
+    /// already typed a new version string to escape Minimal Editing Mode and re-incrementing
+    /// would clobber that input. Default <c>false</c> preserves the existing auto-increment behavior.
+    /// </param>
     /// <returns>
     /// A task that completes when the new version template is prepared.
     /// </returns>
-    Task LoadForNewVersionFromCurrentAsync();
+    Task LoadForNewVersionFromCurrentAsync(bool preserveVersion = false);
     
     /// <summary>
     /// Loads the latest version of a WorkInstruction chain to serve as a template
@@ -190,10 +195,11 @@ public interface IWorkInstructionEditorService
     ///   updates other versions to IsLatest = false, and assigns an incremented version.
     /// Clears the dirty flag if save is successful.
     /// </summary>
+    /// <param name="modifiedBy">Identity of the user performing the save; stamped onto CreatedBy/LastModifiedBy.</param>
     /// <returns>
     /// A boolean indicating true if the save operation succeeded; otherwise, false.
     /// </returns>
-    Task<bool> SaveAsync();
+    Task<bool> SaveAsync(string modifiedBy);
 
     /// <summary>
     /// An event raised whenever the editing state changes.
