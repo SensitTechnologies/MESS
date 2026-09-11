@@ -15,9 +15,22 @@ public class DefectCodeService(IDbContextFactory<ApplicationContext> contextFact
         CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.FailureNouns
+
+        // Preferred: nouns explicitly curated for this WI by a technician.
+        var linked = await context.FailureNouns
             .AsNoTracking()
             .Where(n => n.WorkInstructions.Any(w => w.Id == workInstructionId))
+            .OrderBy(n => n.Name)
+            .Select(n => new DefectCodeOptionDto { Id = n.Id, Name = n.Name })
+            .ToListAsync(cancellationToken);
+
+        if (linked.Count > 0)
+            return linked;
+
+        // Fallback: WI has no curated defect codes yet — surface the full catalog so operators
+        // can still record a defect on a red-tagged failure instead of leaving Defect empty.
+        return await context.FailureNouns
+            .AsNoTracking()
             .OrderBy(n => n.Name)
             .Select(n => new DefectCodeOptionDto { Id = n.Id, Name = n.Name })
             .ToListAsync(cancellationToken);

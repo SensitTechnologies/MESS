@@ -10,12 +10,14 @@
     const printStyles = `
     @page {
         size: 7.8in 2.15in;
-        margin: 0.08in;
+        /* Asymmetric margins: left is 0.25in to clear the printer's dead zone on that edge
+           (was clipping the leading letter of every line). Other sides stay tight. */
+        margin: 0.08in 0.08in 0.08in 0.25in;
     }
     html, body {
         margin: 0;
         padding: 0;
-        width: 7.64in; /* 7.8 - 2*0.08 */
+        width: 7.47in; /* 7.8 - 0.08 - 0.25 */
         height: 1.99in; /* 2.15 - 2*0.08 */
         font-family: monospace, monospace;
         font-size: 20pt;
