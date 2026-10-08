@@ -10,7 +10,8 @@
   </PropertyGroup>
 
   <!--
-    Suppress specific advisories that have no upstream fix available.
+    Suppress specific advisories that have no actionable upstream fix available
+    (either no patched release, or the patched release gates behind a paid license).
 
     GHSA-2m69-gcr7-jv3q — SQLitePCLRaw.lib.e_sqlite3 <= 2.1.11 (high severity).
       The advisory notes "No patched version has been released" as of 2026-06-18. The underlying
@@ -19,8 +20,28 @@
       as an optional provider swap and uses in test projects. Production runs on PostgreSQL
       (Npgsql.EntityFrameworkCore.PostgreSQL) — SQLite is not exposed to production traffic.
       Revisit when SQLitePCLRaw publishes a rebuilt package (>= 2.1.12) and remove this entry.
+
+    SixLabors.ImageSharp 3.1.12 CVE cluster — all five fixed in 4.1.2, but 4.x now gates on a
+    paid Six Labors license at build time (`error : No Six Labors license found. Set
+    $(SixLaborsLicenseKey)…`). Upgrading without purchasing a license is not possible.
+    ImageSharp usage in this codebase is narrow: WorkInstructionFileService loads work-instruction
+    media files from the server's own WebRootPath (curated by technicians via the WI editor) and
+    re-encodes them as PNG for an Excel export. Not an attacker-controlled TIFF/BigTIFF input path,
+    so the real-world risk of these CVEs is low here. Revisit if (a) a Six Labors license is
+    purchased, or (b) a 3.x patch release is backported, or (c) the usage is migrated to an
+    alternative library (SkiaSharp, System.Drawing.Common on Windows).
+      GHSA-gwg2-r3hj-4w44 (moderate)
+      GHSA-wmxv-xphr-5c9g (moderate)
+      GHSA-j3p4-wp97-rph4 (high)
+      GHSA-j9gm-c75j-xc9q (high)
+      GHSA-jjfr-hcj7-qf5w (high)
   -->
   <ItemGroup>
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
   </ItemGroup>
 </Project>

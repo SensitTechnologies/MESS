@@ -14,18 +14,16 @@
                 &nbsp;|&nbsp;
                 <span class="value">@OperatorName</span>
                 &nbsp;|&nbsp;
-                <span class="value">@(AttemptTime?.LocalDateTime.ToString("MM/dd/yyyy HH:mm") ?? "N/A")</span>
+                <span class="value">@(AttemptTime?.LocalDateTime.ToString("MM/dd/yyyy") ?? "N/A")</span>
             </p>
             <p class="line">
                 <span class="label">Location:</span>
-                <span class="value">@ProductionLogEventService.CurrentProductName &gt; @ProductionLogEventService.CurrentWorkInstructionName &gt; @StepName</span>
+                <span class="value">@ProductionLogEventService.CurrentProductName &gt; @StepName</span>
             </p>
-            <p class="line">
+            <p class="line defect-note-line">
                 <span class="label">Defect:</span>
-                <span class="value">@DefectLocationName &gt; @DefectAdjectiveName</span>
-            </p>
-            <p class="line note-line">
-                <span class="label">Note:</span>
+                <span class="value">@FormatDefectCode()</span>
+                <span class="label">&nbsp;Note:</span>
                 <span class="value">@FailureNotes</span>
             </p>
         </div>
@@ -39,18 +37,16 @@
             &nbsp;|&nbsp;
             <span class="value">@OperatorName</span>
             &nbsp;|&nbsp;
-            <span class="value">@(AttemptTime?.LocalDateTime.ToString("MM/dd/yyyy HH:mm") ?? "N/A")</span>
+            <span class="value">@(AttemptTime?.LocalDateTime.ToString("MM/dd/yyyy") ?? "N/A")</span>
         </p>
         <p class="line">
             <span class="label">Location:</span>
-            <span class="value">@ProductionLogEventService.CurrentProductName &gt; @ProductionLogEventService.CurrentWorkInstructionName &gt; @StepName</span>
+            <span class="value">@ProductionLogEventService.CurrentProductName &gt; @StepName</span>
         </p>
         <p class="line">
             <span class="label">Defect:</span>
-            <span class="value">@DefectLocationName &gt; @DefectAdjectiveName</span>
-        </p>
-        <p class="line">
-            <span class="label">Note:</span>
+            <span class="value">@FormatDefectCode()</span>
+            <span class="label">&nbsp;Note:</span>
             <span class="value">@FailureNotes</span>
         </p>
     </div>
@@ -82,15 +78,41 @@
 
     /// <summary>
     /// Selected defect location (failure noun) label for print.
+    /// Kept for callers that still pass the human-readable name; the tag now shows the ID instead.
     /// </summary>
     [Parameter]
     public string DefectLocationName { get; set; } = "";
 
     /// <summary>
     /// Selected defect description (failure adjective) label for print.
+    /// Kept for callers that still pass the human-readable name; the tag now shows the ID instead.
     /// </summary>
     [Parameter]
     public string DefectAdjectiveName { get; set; } = "";
+
+    /// <summary>
+    /// ID of the selected defect location (failure noun). Rendered as the first half of the
+    /// hyphenated defect code (e.g. "02-13"). Null when no code was picked.
+    /// </summary>
+    [Parameter]
+    public int? DefectNounId { get; set; }
+
+    /// <summary>
+    /// ID of the selected defect description (failure adjective). Rendered as the second half of
+    /// the hyphenated defect code (e.g. "02-13"). Null when no code was picked.
+    /// </summary>
+    [Parameter]
+    public int? DefectAdjectiveId { get; set; }
+
+    private string FormatDefectCode()
+    {
+        if (DefectNounId is null && DefectAdjectiveId is null)
+            return "—";
+
+        var left = DefectNounId?.ToString("D2") ?? "--";
+        var right = DefectAdjectiveId?.ToString("D2") ?? "--";
+        return $"{left}-{right}";
+    }
 
     /// <summary>
     /// Notes entered by the operator describing the failure condition.
