@@ -218,14 +218,13 @@
     margin-right: 4px;
 }
 
-.red-tag-linear-preview .note-line {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+/* Combined Defect + Note line — plain inline flow so the Defect code and Note label/value
+   render side by side on line 3 and wrap to line 4 when the note is long.
+   `-webkit-line-clamp` on a <p> with multiple inline spans mis-treats each span as its own
+   vertical line, so we use max-height + overflow:hidden instead to cap at ~2 visible lines. */
+.red-tag-linear-preview .defect-note-line {
+    white-space: normal;
+    overflow-wrap: break-word;
     overflow: hidden;
-}
-
-.red-tag-linear-preview .note-line .value {
-    white-space: pre-line;
+    max-height: 2.4em;
 }

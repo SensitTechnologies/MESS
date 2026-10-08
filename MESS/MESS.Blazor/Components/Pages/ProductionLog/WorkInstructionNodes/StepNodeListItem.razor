@@ -43,6 +43,8 @@
                             @bind-FailureNotes="@_currentAttemptNotes"
                             DefectLocationName="@_defectNounDisplayName"
                             DefectAdjectiveName="@_defectAdjectiveDisplayName"
+                            DefectNounId="@_selectedNounId"
+                            DefectAdjectiveId="@_selectedAdjectiveId"
                             AttemptTime="@_pendingFailureAttempt?.SubmitTime"
                             AttemptId="@(_pendingFailureAttempt?.AttemptId)"
                             OnCancel="OnCancelClicked"
