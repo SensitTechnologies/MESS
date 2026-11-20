@@ -18,37 +18,41 @@
             <form @onsubmit="HandleRegistrationAsync">
                 <div class="form-group mb-3">
                     <label class="form-label">Username</label>
-                    <InputText @bind-Value="Username" class="form-control" placeholder="Enter your username..."/>
+                    <InputText @bind-Value="Username" class="form-control" placeholder="Enter your username..." required/>
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label class="form-label">First Name</label>
-                    <InputText @bind-Value="FirstName" class="form-control" placeholder="Enter your first name..."/>
+                    <InputText @bind-Value="FirstName" class="form-control" placeholder="Enter your first name..." required/>
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label class="form-label">Last Name</label>
-                    <InputText @bind-Value="LastName" class="form-control" placeholder="Enter your last name..."/>
+                    <InputText @bind-Value="LastName" class="form-control" placeholder="Enter your last name..." required/>
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label class="form-label">Email (optional)</label>
                     <InputText @bind-Value="Email" class="form-control" placeholder="Enter your email..."/>
                 </div>
 
                 <div class="form-group mb-3">
-                    <label class="form-label">Password (optional)</label>
-                    <input type="password" class="form-control" placeholder="Leave blank for legacy username-only sign-in" @bind="Password" @bind:event="oninput"/>
-                    <div class="form-text">Min 8 characters with upper, lower, and digit if set.</div>
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" placeholder="Enter your password..." @bind="Password" @bind:event="oninput" required/>
+                    <div class="form-text">Min 8 characters with upper, lower, and digit.</div>
                 </div>
 
                 <div class="form-group mb-3">
                     <label class="form-label">Confirm password</label>
-                    <input type="password" class="form-control" placeholder="Repeat password" @bind="ConfirmPassword" @bind:event="oninput"/>
+                    <input type="password" class="form-control" placeholder="Repeat password" @bind="ConfirmPassword" @bind:event="oninput" required/>
                 </div>
 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary">Register</button>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="/auth/Login">Back to login</a>
                 </div>
             </form>
             
@@ -80,9 +84,32 @@
     {
         ErrorMessages.Clear();
 
-        if (!string.IsNullOrWhiteSpace(Password) && Password != ConfirmPassword)
+        if (string.IsNullOrWhiteSpace(Username))
+        {
+            ErrorMessages.Add(new IdentityError { Description = "Username is required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(FirstName))
+        {
+            ErrorMessages.Add(new IdentityError { Description = "First name is required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(LastName))
+        {
+            ErrorMessages.Add(new IdentityError { Description = "Last name is required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessages.Add(new IdentityError { Description = "Password is required." });
+        }
+        else if (Password != ConfirmPassword)
         {
             ErrorMessages.Add(new IdentityError { Description = "Password and confirmation do not match." });
+        }
+
+        if (ErrorMessages.Count > 0)
+        {
             return;
         }
 
@@ -94,8 +121,7 @@
             LastName = LastName
         };
 
-        var passwordToSet = string.IsNullOrWhiteSpace(Password) ? null : Password;
-        var result = await ApplicationUserService.AddApplicationUser(user, passwordToSet);
+        var result = await ApplicationUserService.AddApplicationUser(user, Password);
 
         if (result.Succeeded)
         {

@@ -1,0 +1,492 @@
+@page "/rework"
+@using MESS.Blazor.Components.Layout
+@using MESS.Services.CRUD.Rework
+@using MESS.Services.DTOs.Rework
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@layout PhoebeLayout
+@inject NavigationManager NavManager
+@inject IReworkService ReworkService
+@inject IToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+@attribute [Authorize(Roles = "Technician, Administrator")]
+
+<PageTitle>Rework</PageTitle>
+
+<style>
+    .rework-table-wrap {
+        position: relative;
+        overflow-x: auto;
+        min-height: 360px;
+    }
+
+    .rework-table {
+        width: 100%;
+        table-layout: fixed;
+        min-width: 1100px;
+    }
+
+    .rework-table thead th,
+    .rework-table tbody td {
+        vertical-align: middle;
+        white-space: normal;
+        padding: 0.45rem 0.35rem;
+        font-size: 0.88rem;
+        overflow-wrap: anywhere;
+    }
+
+    .rework-table tbody tr {
+        cursor: pointer;
+    }
+
+    .rework-col-id { width: 90px; }
+    .rework-col-success { width: 105px; }
+    .rework-col-time { width: 140px; }
+    .rework-col-actions { width: 60px; text-align: center; }
+
+    .rework-sort-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-weight: 700;
+        padding: 0;
+        line-height: 1.2;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .rework-sort-button:hover,
+    .rework-sort-button:focus {
+        color: var(--bs-warning);
+        text-decoration: underline;
+    }
+
+    .rework-loading {
+        position: absolute;
+        inset: 92px 0 0 0;
+        background: rgba(255, 255, 255, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .dark-mode .rework-loading {
+        background: rgba(20, 20, 20, 0.72);
+    }
+
+    .rework-filter-cell .form-control,
+    .rework-filter-cell .form-select {
+        min-width: 0;
+        width: 100%;
+        padding-left: 0.3rem;
+        padding-right: 0.3rem;
+        font-size: 0.82rem;
+    }
+</style>
+
+<ErrorBoundary>
+    <ChildContent>
+        <AuthorizeView Roles="Technician, Administrator">
+            <Authorizing>
+                <p>Authorizing...</p>
+            </Authorizing>
+            <NotAuthorized>
+                <div class="col">
+                    <div class="alert alert-danger">
+                        You are not authorized to view this Page.
+                        <button class="btn btn-sm btn-outline-secondary text-start" @onclick="@(() => NavManager.NavigateTo("/"))">
+                            <i class="bi bi-arrow-left"/>To Login
+                        </button>
+                    </div>
+                </div>
+            </NotAuthorized>
+            <Authorized>
+                <div class="d-flex flex-wrap align-items-center gap-2 my-2">
+                    <h3 class="m-0">Rework</h3>
+                    <span class="text-muted small">Look up a Red Tag number in the ID filter, then click a row to correct it.</span>
+                    <div class="flex-grow-1"></div>
+                    @if (_state.Filters.HasAny)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearAllFiltersAsync" disabled="@IsLoading">
+                            Clear all filters
+                        </button>
+                    }
+                </div>
+
+                <div class="rework-table-wrap border rounded-3">
+                    @if (IsLoading)
+                    {
+                        <div class="rework-loading">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status"></div>
+                                <div class="small mt-2">Loading attempts...</div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible m-3">
+                            @_errorMessage
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" @onclick="RetryAsync">Retry</button>
+                            <button type="button" class="btn-close" aria-label="Dismiss" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <table class="table table-striped table-hover mb-0 rework-table">
+                        <thead>
+                        <tr>
+                            <th class="rework-col-id">@SortButton("ID", "id")</th>
+                            <th class="rework-col-success">@SortButton("Success", "success")</th>
+                            <th>@SortButton("Notes", "notes")</th>
+                            <th class="rework-col-time">@SortButton("SubmitTime", "submitTime")</th>
+                            <th>@SortButton("Noun", "noun")</th>
+                            <th>@SortButton("Adjective", "adjective")</th>
+                            <th>@SortButton("Product", "product")</th>
+                            <th>@SortButton("Instruction", "instruction")</th>
+                            <th>@SortButton("Operator", "operator")</th>
+                            <th>@SortButton("Step", "step")</th>
+                            <th class="rework-col-actions"></th>
+                        </tr>
+                        <tr>
+                            <th class="rework-filter-cell">
+                                <input @ref="_idInput"
+                                       class="form-control form-control-sm"
+                                       placeholder="Red Tag #"
+                                       inputmode="numeric"
+                                       autofocus
+                                       aria-label="Filter by ID"
+                                       value="@_state.Filters.Id"
+                                       @oninput="e => OnTextFilterInput(f => f.Id = e.Value?.ToString())"
+                                       @onkeydown="OnIdKeyDown" />
+                            </th>
+                            <th class="rework-filter-cell">
+                                <select class="form-select form-select-sm" aria-label="Filter by success"
+                                        value="@(_state.Filters.Success ?? "")"
+                                        @onchange="e => OnImmediateFilterChanged(f => f.Success = e.Value?.ToString())">
+                                    <option value="">All</option>
+                                    <option value="@ReworkFilterParser.SuccessValue">Success</option>
+                                    <option value="@ReworkFilterParser.FailureValue">Failure</option>
+                                    <option value="@ReworkFilterParser.NotRecordedValue">Not recorded</option>
+                                </select>
+                            </th>
+                            <th class="rework-filter-cell">@TextFilter("Notes", _state.Filters.Notes, (f, v) => f.Notes = v)</th>
+                            <th class="rework-filter-cell">
+                                <div class="d-flex flex-column gap-1">
+                                    <input type="date" class="form-control form-control-sm" aria-label="Submitted from (UTC)" title="From (UTC day)"
+                                           value="@_state.Filters.SubmitFrom"
+                                           @onchange="e => OnImmediateFilterChanged(f => f.SubmitFrom = e.Value?.ToString())" />
+                                    <input type="date" class="form-control form-control-sm" aria-label="Submitted to (UTC)" title="To (UTC day)"
+                                           value="@_state.Filters.SubmitTo"
+                                           @onchange="e => OnImmediateFilterChanged(f => f.SubmitTo = e.Value?.ToString())" />
+                                </div>
+                            </th>
+                            <th class="rework-filter-cell">@TextFilter("Noun", _state.Filters.Noun, (f, v) => f.Noun = v, "rework-nouns")</th>
+                            <th class="rework-filter-cell">@TextFilter("Adjective", _state.Filters.Adjective, (f, v) => f.Adjective = v, "rework-adjectives")</th>
+                            <th class="rework-filter-cell">@TextFilter("Product", _state.Filters.Product, (f, v) => f.Product = v, "rework-products")</th>
+                            <th class="rework-filter-cell">@TextFilter("Instruction", _state.Filters.Instruction, (f, v) => f.Instruction = v)</th>
+                            <th class="rework-filter-cell">@TextFilter("Operator", _state.Filters.Operator, (f, v) => f.Operator = v, "rework-operators")</th>
+                            <th class="rework-filter-cell">@TextFilter("Step", _state.Filters.Step, (f, v) => f.Step = v)</th>
+                            <th class="rework-col-actions"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @if (_rows.Count == 0 && !IsLoading && string.IsNullOrWhiteSpace(_errorMessage))
+                        {
+                            <tr>
+                                <td colspan="11" class="text-center text-muted py-4">
+                                    No attempts match the current filters.
+                                    @if (_state.Filters.HasAny)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-link" @onclick="ClearAllFiltersAsync">Clear all filters</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var row in _rows)
+                        {
+                            <tr class="@(row.Id == _editingAttemptId ? "table-active fw-semibold" : "")"
+                                @onclick="() => OpenEdit(row.Id)">
+                                <td class="rework-col-id">@row.Id</td>
+                                <td class="rework-col-success">@SuccessBadge(row.Success)</td>
+                                <td>@Dash(row.Notes)</td>
+                                <td class="rework-col-time">@FormatDate(row.SubmitTime)</td>
+                                <td>@Dash(row.NounName)</td>
+                                <td>@Dash(row.AdjectiveName)</td>
+                                <td>@Dash(row.ProductName)</td>
+                                <td>@Dash(row.InstructionName)</td>
+                                <td>@Dash(row.OperatorName)</td>
+                                <td>@Dash(row.StepName)</td>
+                                <td class="rework-col-actions">
+                                    <button type="button" class="btn btn-sm btn-primary px-2"
+                                            title="Edit attempt" aria-label="@($"Edit attempt {row.Id}")"
+                                            @onclick="() => OpenEdit(row.Id)" @onclick:stopPropagation="true">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 justify-content-center mt-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PreviousPageAsync" disabled="@(IsLoading || _state.Page <= 1)">Previous</button>
+                    <span>Page @_state.Page of @_totalPages</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="NextPageAsync" disabled="@(IsLoading || _state.Page >= _totalPages)">Next</button>
+                    <span class="text-muted ms-2">@_total.ToString("N0") attempts</span>
+                    <label class="ms-2" for="rework-page-size">Show:</label>
+                    <select id="rework-page-size" class="form-select form-select-sm w-auto" value="@_state.PageSize" @onchange="OnPageSizeChanged" disabled="@IsLoading">
+                        @foreach (var size in ReworkFilterParser.PageSizes)
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    </select>
+                </div>
+
+                <datalist id="rework-nouns">@foreach (var v in _filterOptions.Nouns) { <option value="@v"></option> }</datalist>
+                <datalist id="rework-adjectives">@foreach (var v in _filterOptions.Adjectives) { <option value="@v"></option> }</datalist>
+                <datalist id="rework-products">@foreach (var v in _filterOptions.Products) { <option value="@v"></option> }</datalist>
+                <datalist id="rework-operators">@foreach (var v in _filterOptions.Operators) { <option value="@v"></option> }</datalist>
+
+                <ReworkEditDialog AttemptId="_editingAttemptId"
+                                  ModifiedBy="@_currentUsername"
+                                  OnClose="CloseEdit"
+                                  OnSaved="OnSavedAsync" />
+            </Authorized>
+        </AuthorizeView>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div class="alert alert-danger" role="alert">
+            An error occurred: @ex.Message
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ReworkPageState _state = new();
+    private ReworkFilterOptionsDTO _filterOptions = new();
+    private List<ReworkRowDTO> _rows = [];
+    private int _total;
+    private int _totalPages = 1;
+    private string? _errorMessage;
+    private bool IsLoading { get; set; } = true;
+    private string _currentUsername = string.Empty;
+    private int? _editingAttemptId;
+    private CancellationTokenSource? _debounceCts;
+    private ElementReference _idInput;
+    private bool _focusPending = true;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        _currentUsername = auth.User.Identity?.Name ?? string.Empty;
+        _state = ReworkFilterParser.FromUri(NavManager.Uri);
+
+        try
+        {
+            _filterOptions = await ReworkService.GetFilterOptionsAsync();
+        }
+        catch (Exception)
+        {
+            // Suggestions are a convenience; the table still works without them.
+            _filterOptions = new ReworkFilterOptionsDTO();
+        }
+
+        await LoadPageAsync(updateUrl: false);
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The ID input only exists once AuthorizeView has resolved, which may be after the first render.
+        if (_focusPending && !string.IsNullOrEmpty(_idInput.Id))
+        {
+            _focusPending = false;
+            await _idInput.FocusAsync();
+        }
+    }
+
+    private async Task LoadPageAsync(bool updateUrl = true)
+    {
+        IsLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ReworkService.GetPageAsync(ReworkFilterParser.ToQuery(_state));
+            _rows = result.Data;
+            _total = result.Total;
+            _state.Page = result.Page;
+            _state.PageSize = result.PageSize;
+            _totalPages = result.TotalPages;
+
+            if (updateUrl)
+                NavManager.NavigateTo(ReworkFilterParser.ToUri(_state), replace: true);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Could not load attempts: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task OnTextFilterInput(Action<ReworkFilters> apply)
+    {
+        apply(_state.Filters);
+        _debounceCts?.Cancel();
+        var cts = _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, cts.Token);
+            _state.Page = 1;
+            await LoadPageAsync();
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private async Task OnIdKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter")
+            return;
+
+        _debounceCts?.Cancel();
+        _state.Page = 1;
+        await LoadPageAsync();
+    }
+
+    private async Task OnImmediateFilterChanged(Action<ReworkFilters> apply)
+    {
+        apply(_state.Filters);
+        _debounceCts?.Cancel();
+        _state.Page = 1;
+        await LoadPageAsync();
+    }
+
+    private async Task ClearAllFiltersAsync()
+    {
+        _debounceCts?.Cancel();
+        _state.Filters.Clear();
+        _state.Page = 1;
+        await LoadPageAsync();
+    }
+
+    private async Task SetSortAsync(string sortKey)
+    {
+        if (_state.SortBy == sortKey)
+            _state.SortDir = _state.SortDir == "asc" ? "desc" : "asc";
+        else
+        {
+            _state.SortBy = sortKey;
+            _state.SortDir = "asc";
+        }
+
+        _state.Page = 1;
+        await LoadPageAsync();
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (_state.Page <= 1)
+            return;
+
+        _state.Page--;
+        await LoadPageAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_state.Page >= _totalPages)
+            return;
+
+        _state.Page++;
+        await LoadPageAsync();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var pageSize) && ReworkFilterParser.PageSizes.Contains(pageSize))
+        {
+            _state.PageSize = pageSize;
+            _state.Page = 1;
+            await LoadPageAsync();
+        }
+    }
+
+    private async Task RetryAsync() => await LoadPageAsync(updateUrl: false);
+
+    private void OpenEdit(int attemptId) => _editingAttemptId = attemptId;
+
+    private void CloseEdit() => _editingAttemptId = null;
+
+    private async Task OnSavedAsync(string? message)
+    {
+        var attemptId = _editingAttemptId;
+        _editingAttemptId = null;
+        ToastService.ShowSuccess(string.IsNullOrWhiteSpace(message)
+            ? $"Attempt #{attemptId} updated."
+            : $"Attempt #{attemptId} updated. {message}");
+        await LoadPageAsync(updateUrl: false);
+    }
+
+    private RenderFragment SortButton(string label, string sortKey) => builder =>
+    {
+        builder.OpenElement(0, "button");
+        builder.AddAttribute(1, "type", "button");
+        builder.AddAttribute(2, "class", "rework-sort-button");
+        builder.AddAttribute(3, "disabled", IsLoading);
+        builder.AddAttribute(4, "onclick", EventCallback.Factory.Create(this, () => SetSortAsync(sortKey)));
+        builder.AddContent(5, label);
+        if (_state.SortBy == sortKey)
+            builder.AddContent(6, _state.SortDir == "asc" ? " ▲" : " ▼");
+        builder.CloseElement();
+    };
+
+    private RenderFragment TextFilter(string label, string? value, Action<ReworkFilters, string?> apply, string? datalistId = null) => builder =>
+    {
+        builder.OpenElement(0, "input");
+        builder.AddAttribute(1, "class", "form-control form-control-sm");
+        builder.AddAttribute(2, "placeholder", "Filter...");
+        builder.AddAttribute(3, "aria-label", $"Filter by {label}");
+        builder.AddAttribute(4, "value", value ?? "");
+        if (datalistId != null)
+            builder.AddAttribute(5, "list", datalistId);
+        builder.AddAttribute(6, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this,
+            e => OnTextFilterInput(f => apply(f, e.Value?.ToString()))));
+        builder.CloseElement();
+    };
+
+    private static RenderFragment SuccessBadge(bool? success) => builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", success switch
+        {
+            true => "badge bg-success",
+            false => "badge bg-danger",
+            null => "text-muted"
+        });
+        builder.AddContent(2, success switch
+        {
+            true => "Success",
+            false => "Failure",
+            null => "—"
+        });
+        builder.CloseElement();
+    };
+
+    private static string FormatDate(DateTimeOffset value) => value.LocalDateTime.ToString("yyyy-MM-dd HH:mm");
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

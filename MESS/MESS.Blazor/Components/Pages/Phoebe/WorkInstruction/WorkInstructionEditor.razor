@@ -170,8 +170,6 @@
     private int? SelectedProductId { get; set; }
     private int? SelectedWorkInstructionId { get; set; }
     
-    private IJSObjectReference? _scrollToModule;
-    
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
@@ -185,16 +183,6 @@
         await base.OnInitializedAsync();
     }
     
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _scrollToModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
-                "./Scripts/ScrollTo.js");
-        }
-    }
-
     private void HandleEditorChanged()
     {
         InvokeAsync(StateHasChanged);
@@ -221,7 +209,7 @@
             return;
         }
 
-        await OnListChanged(null);
+        await OnListChanged();
 
         _uniquenessError = null;
         _importResolutionError = null;
@@ -229,7 +217,7 @@
         try
         {
             var currentUser = await ResolveCurrentUserAsync();
-            bool isEditable = await WorkInstructionService.IsEditable(current.ToNewEntity());
+            bool isEditable = await WorkInstructionEditorService.CanSaveInPlaceAsync();
             bool isMinimal = WorkInstructionEditorService.IsMinimalEditingMode;
 
             bool success;
@@ -514,16 +502,13 @@
         return Task.CompletedTask;
     }
 
-    private async Task OnListChanged(WorkInstructionNodeFormDTO? node)
+    // No auto-scroll here: this runs on every edit inside a node (each keystroke / formatting click),
+    // and re-centering the node made the page jump while technicians were typing.
+    private async Task OnListChanged()
     {
         RecalculatePositions();
         WorkInstructionEditorService.MarkDirty();
         await InvokeAsync(StateHasChanged);
-        if (node != null)
-        {
-            await Task.Delay(20);
-            await ScrollToElement(node);
-        }
     }
     
     private const string STEP = "step";
@@ -554,7 +539,7 @@
             WorkInstructionEditorService?.Current?.Nodes.Insert(args.index, newNode);    // new step at index
         }
 
-        await OnListChanged(newNode);
+        await OnListChanged();
     }
 
     private void RecalculatePositions()
@@ -568,15 +553,6 @@
         }
     }
 
-    private async Task ScrollToElement(WorkInstructionNodeFormDTO node)
-    {
-        string elementId = $"node-{node.Position}";
-        if (_scrollToModule != null)
-        {
-            await _scrollToModule.InvokeVoidAsync("scrollTo", elementId);
-        }
-    }
-    
     private async Task OnWorkInstructionSelected(int instructionId)
     {
         SelectedWorkInstructionId = instructionId;

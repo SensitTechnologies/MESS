@@ -1,0 +1,33 @@
+/* body.dark-mode does not set data-bs-theme=dark, so Bootstrap keeps .modal-content white while the
+   page text turns light. Give the dialog explicit colors in both modes so its text stays readable. */
+.rework-edit-modal .modal-content {
+    background-color: #ffffff;
+    color: #212529;
+}
+
+.rework-edit-modal .form-label,
+.rework-edit-modal dt {
+    font-weight: 600;
+}
+
+body.dark-mode .rework-edit-modal .modal-content {
+    background-color: #1e1e1e;
+    color: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .rework-edit-modal .modal-header,
+body.dark-mode .rework-edit-modal .modal-footer {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body.dark-mode .rework-edit-modal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+body.dark-mode .rework-edit-modal .form-check-label,
+body.dark-mode .rework-edit-modal .form-label,
+body.dark-mode .rework-edit-modal dt,
+body.dark-mode .rework-edit-modal dd {
+    color: rgba(255, 255, 255, 0.95);
+}

@@ -1,3 +1,5 @@
+using FluentValidation;
+
 namespace MESS.Data.Models;
 
 /// <summary>
@@ -21,17 +23,32 @@ public class Step : WorkInstructionNode
     public string? DetailedBody { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of primary media associated with the step.
+    /// Gets or sets the list of primary media (image path + optional caption) associated with the step.
     /// </summary>
-    public List<string> PrimaryMedia { get; set; } = [];
+    public List<StepMediaItem> PrimaryMedia { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the list of secondary media associated with the step.
+    /// Gets or sets the list of secondary media (image path + optional caption) associated with the step.
     /// </summary>
-    public List<string> SecondaryMedia { get; set; } = [];
+    public List<StepMediaItem> SecondaryMedia { get; set; } = [];
 
     /// <summary>
     /// How operator notes (production log step attempts) behave for this step in My Production.
     /// </summary>
     public StepNotesConfiguration NotesConfiguration { get; set; } = StepNotesConfiguration.OptionalForFailure;
+}
+
+/// <summary>
+/// Validator for the <see cref="Step"/> class. Validates each attached photo (path and caption).
+/// </summary>
+public class StepValidator : AbstractValidator<Step>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StepValidator"/> class.
+    /// </summary>
+    public StepValidator()
+    {
+        RuleForEach(x => x.PrimaryMedia).SetValidator(new StepMediaItemValidator());
+        RuleForEach(x => x.SecondaryMedia).SetValidator(new StepMediaItemValidator());
+    }
 }

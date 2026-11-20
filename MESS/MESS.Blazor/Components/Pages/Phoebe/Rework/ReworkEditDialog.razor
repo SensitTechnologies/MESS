@@ -1,0 +1,563 @@
+@using MESS.Data.Models
+@using MESS.Services.CRUD.ApplicationUser
+@using MESS.Services.CRUD.Defects
+@using MESS.Services.CRUD.Products
+@using MESS.Services.CRUD.Rework
+@using MESS.Services.CRUD.WorkInstructions
+@using MESS.Services.DTOs.Defects
+@using MESS.Services.DTOs.Products.Detail
+@using MESS.Services.DTOs.Rework
+@using MESS.Services.DTOs.WorkInstructions.Summary
+@inject IReworkService ReworkService
+@inject IProductService ProductService
+@inject IWorkInstructionService WorkInstructionService
+@inject IDefectCodeService DefectCodeService
+@inject IApplicationUserService ApplicationUserService
+
+@* Modal shell follows DefectEditModal: Escape/backdrop close, Cancel + Save footer, spinner while saving. *@
+@if (AttemptId is int attemptId)
+{
+    <div class="modal fade show d-block rework-edit-modal"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="@_titleId"
+         style="background-color: rgba(0, 0, 0, 0.45);"
+         @ref="_modalElement"
+         @onclick="CloseAsync"
+         @onkeydown="OnKeyDown">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title" id="@_titleId">Edit Attempt #@attemptId</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAsync"></button>
+                </div>
+                <div class="modal-body">
+                    @if (_loading)
+                    {
+                        <div class="text-center py-4" role="status">
+                            <div class="spinner-border" aria-hidden="true"></div>
+                            <div class="small mt-2">Loading attempt...</div>
+                        </div>
+                    }
+                    else if (_edit == null)
+                    {
+                        <div class="alert alert-danger mb-0">@(_error ?? $"Attempt #{attemptId} was not found.")</div>
+                    }
+                    else
+                    {
+                        <dl class="row small mb-3">
+                            <dt class="col-sm-3">ID</dt>
+                            <dd class="col-sm-9">@_edit.AttemptId</dd>
+                            <dt class="col-sm-3">Production Log</dt>
+                            <dd class="col-sm-9">#@_edit.ProductionLogId</dd>
+                            <dt class="col-sm-3">SubmitTime</dt>
+                            <dd class="col-sm-9">@_edit.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</dd>
+                            <dt class="col-sm-3">Notes</dt>
+                            <dd class="col-sm-9" style="white-space: pre-wrap;">@(string.IsNullOrWhiteSpace(_edit.Notes) ? "—" : _edit.Notes)</dd>
+                        </dl>
+
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                @SelectField("product", "Product", Str(_values.ProductId), ProductOptions, OnProductChangedAsync, false, true)
+                            </div>
+                            <div class="col-md-6">
+                                @SelectField("instruction", "Instruction", Str(_values.WorkInstructionId), InstructionOptions, OnInstructionChangedAsync, false, true)
+                            </div>
+                            <div class="col-md-6">
+                                @SelectField("step", "Step", Str(_values.WorkInstructionStepId), StepOptions, OnStepChanged, _loadingSteps, true)
+                            </div>
+                            <div class="col-md-6">
+                                @SelectField("operator", "Operator", _values.OperatorId ?? "", OperatorOptions, OnOperatorChanged, false, true)
+                            </div>
+                            <div class="col-md-6">
+                                @SelectField("noun", "Noun", Str(_values.FailureNounId), NounOptions, OnNounChangedAsync, _loadingNouns, false)
+                            </div>
+                            <div class="col-md-6">
+                                @SelectField("adjective", "Adjective", Str(_values.FailureAdjectiveId), AdjectiveOptions, OnAdjectiveChanged, _loadingAdjectives, false)
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1" for="@FieldId("success")">Success</label>
+                                <select id="@FieldId("success")" class="form-select form-select-sm"
+                                        value="@SuccessValue(_values.Success)"
+                                        @onchange="e => _values.Success = ParseSuccess(e.Value?.ToString())">
+                                    <option value="true">Success</option>
+                                    <option value="false">Failure</option>
+                                    <option value="">Not recorded</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        @if (LogChanged)
+                        {
+                            <div class="alert alert-warning small mt-3 mb-0">
+                                @if (_edit.OtherAttemptCount > 0)
+                                {
+                                    <div>This changes Production Log #@_edit.ProductionLogId, which also contains @_edit.OtherAttemptCount other attempt(s) on @_edit.OtherStepCount step(s).</div>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="@FieldId("confirm")"
+                                               checked="@_confirmShared"
+                                               @onchange="e => _confirmShared = (bool)(e.Value ?? false)" />
+                                        <label class="form-check-label" for="@FieldId("confirm")">
+                                            I understand this changes every attempt in Production Log #@_edit.ProductionLogId.
+                                        </label>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>This changes Production Log #@_edit.ProductionLogId. No other attempts are affected.</div>
+                                }
+                                @if (_edit.HasPartTraceability && ProductOrInstructionChanged)
+                                {
+                                    <div class="mt-2">This log has part traceability records, so product and instruction changes will be rejected.</div>
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(_error))
+                        {
+                            <div class="alert alert-danger small mt-3 mb-0" role="alert">@_error</div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseAsync" disabled="@_saving">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveAsync" disabled="@(!CanSave)">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string UnavailableSuffix = " (no longer available)";
+
+    private readonly string _titleId = $"rework-modal-title-{Guid.NewGuid():N}";
+    private readonly HashSet<string> _clearedFields = [];
+
+    private int? _loadedAttemptId;
+    private ReworkEditDTO? _edit;
+    private ReworkEditValues _values = new();
+    private bool _loading;
+    private bool _saving;
+    private bool _confirmShared;
+    private string? _error;
+
+    private List<ProductDetailDTO> _products = [];
+    private List<WorkInstructionSummaryDTO> _instructions = [];
+    private List<ApplicationUser> _operators = [];
+    private IReadOnlyList<ReworkStepOptionDTO> _steps = [];
+    private IReadOnlyList<DefectCodeOptionDto> _nouns = [];
+    private IReadOnlyList<DefectCodeOptionDto> _adjectives = [];
+    private bool _loadingSteps;
+    private bool _loadingNouns;
+    private bool _loadingAdjectives;
+    private int _instructionRequest;
+    private int _nounRequest;
+    private ElementReference _modalElement;
+    private bool _focusPending;
+
+    /// <summary>Attempt to edit; the dialog is shown while this is set.</summary>
+    [Parameter]
+    public int? AttemptId { get; set; }
+
+    /// <summary>User name of the current user, stamped on the production log.</summary>
+    [Parameter]
+    public string ModifiedBy { get; set; } = string.Empty;
+
+    /// <summary>Raised when the user cancels or closes the dialog.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised after a successful save, with an optional note for the user.</summary>
+    [Parameter]
+    public EventCallback<string?> OnSaved { get; set; }
+
+    private bool Dirty => _edit != null && _values != _edit.Values;
+
+    private bool LogChanged => _edit != null && _values.ChangesLogFrom(_edit.Values);
+
+    private bool ProductOrInstructionChanged => _edit != null
+        && (_values.ProductId != _edit.Values.ProductId || _values.WorkInstructionId != _edit.Values.WorkInstructionId);
+
+    private bool RequiredMissing => _values.ProductId <= 0
+        || _values.WorkInstructionId <= 0
+        || _values.WorkInstructionStepId <= 0
+        || string.IsNullOrEmpty(_values.OperatorId);
+
+    private bool CanSave => Dirty
+        && !RequiredMissing
+        && !_saving && !_loading && !_loadingSteps && !_loadingNouns && !_loadingAdjectives
+        && (!LogChanged || _edit!.OtherAttemptCount == 0 || _confirmShared);
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AttemptId == _loadedAttemptId)
+            return;
+
+        _loadedAttemptId = AttemptId;
+        _edit = null;
+        _error = null;
+        _confirmShared = false;
+        _saving = false;
+        _clearedFields.Clear();
+
+        if (AttemptId is int attemptId)
+        {
+            _focusPending = true;
+            await LoadAsync(attemptId);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Focus the modal so Escape works without the user clicking into it first.
+        if (_focusPending && AttemptId != null && !string.IsNullOrEmpty(_modalElement.Id))
+        {
+            _focusPending = false;
+            await _modalElement.FocusAsync();
+        }
+    }
+
+    private async Task LoadAsync(int attemptId)
+    {
+        _loading = true;
+        try
+        {
+            var edit = await ReworkService.GetForEditAsync(attemptId);
+            if (edit == null || _loadedAttemptId != attemptId)
+                return;
+
+            var values = edit.Values with { };
+            var products = (await ProductService.GetAllDetailsAsync()).ToList();
+            var instructions = await WorkInstructionService.GetAllSummariesAsync();
+            var operators = await ApplicationUserService.GetAllAsync();
+            var steps = await ReworkService.GetStepsForInstructionAsync(values.WorkInstructionId);
+            var nouns = await DefectCodeService.GetNounsForWorkInstructionAsync(values.WorkInstructionId);
+            var adjectives = values.FailureNounId is int nounId
+                ? await DefectCodeService.GetAdjectivesForNounAsync(nounId)
+                : [];
+
+            if (_loadedAttemptId != attemptId)
+                return;
+
+            (_edit, _values, _products, _instructions, _operators, _steps, _nouns, _adjectives) =
+                (edit, values, products, instructions, operators, steps, nouns, adjectives);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load attempt #{attemptId}: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // ── Options (the selected value is always present, flagged when no longer offered) ──────────
+
+    private List<Option> ProductOptions => WithSelected(
+        _products.Where(p => p.IsActive).OrderBy(p => p.Name).Select(p => new Option(Str(p.ProductId), p.Name)),
+        Str(_values.ProductId),
+        () => _products.FirstOrDefault(p => p.ProductId == _values.ProductId)?.Name
+              ?? (_values.ProductId == _edit?.Values.ProductId ? _edit?.ProductName : null));
+
+    private List<Option> InstructionOptions => WithSelected(
+        _instructions
+            .Where(InstructionMatchesProduct)
+            .OrderBy(w => w.Title).ThenBy(w => w.Version)
+            .Select(w => new Option(Str(w.Id), InstructionLabel(w))),
+        Str(_values.WorkInstructionId),
+        () => _instructions.FirstOrDefault(w => w.Id == _values.WorkInstructionId) is { } wi
+            ? InstructionLabel(wi)
+            : _values.WorkInstructionId == _edit?.Values.WorkInstructionId ? _edit?.InstructionName : null);
+
+    private List<Option> StepOptions => WithSelected(
+        _steps.Select(s => new Option(Str(s.Id), s.Name)),
+        Str(_values.WorkInstructionStepId),
+        () => _values.WorkInstructionStepId == _edit?.Values.WorkInstructionStepId ? _edit?.StepName : null);
+
+    private List<Option> OperatorOptions => WithSelected(
+        _operators.Where(u => u.IsActive).Select(u => new Option(u.Id, OperatorLabel(u))).OrderBy(o => o.Label),
+        _values.OperatorId ?? "",
+        () => _operators.FirstOrDefault(u => u.Id == _values.OperatorId) is { } user
+            ? OperatorLabel(user)
+            : _values.OperatorId == _edit?.Values.OperatorId ? _edit?.OperatorName : null);
+
+    private List<Option> NounOptions => WithSelected(
+        _nouns.Select(n => new Option(Str(n.Id), n.Name)),
+        Str(_values.FailureNounId),
+        () => _values.FailureNounId == _edit?.Values.FailureNounId ? _edit?.FailureNounName : null);
+
+    private List<Option> AdjectiveOptions => WithSelected(
+        _adjectives.Select(a => new Option(Str(a.Id), a.Name)),
+        Str(_values.FailureAdjectiveId),
+        () => _values.FailureAdjectiveId == _edit?.Values.FailureAdjectiveId ? _edit?.FailureAdjectiveName : null);
+
+    private static List<Option> WithSelected(IEnumerable<Option> available, string selected, Func<string?> selectedLabel)
+    {
+        var options = available.ToList();
+        if (selected != "" && options.All(o => o.Value != selected))
+        {
+            var label = selectedLabel() ?? $"#{selected}";
+            options.Insert(0, new Option(selected, label + UnavailableSuffix, true));
+        }
+
+        return options;
+    }
+
+    private bool InstructionMatchesProduct(WorkInstructionSummaryDTO instruction)
+        => instruction.Products.Any(p => p.ProductId == _values.ProductId);
+
+    // ── Cascading changes: Product → Instruction → Step / Noun → Adjective ───────────────────────
+
+    private async Task OnProductChangedAsync(string? raw)
+    {
+        _values.ProductId = ParseInt(raw) ?? 0;
+        _clearedFields.Remove("product");
+
+        var instruction = _instructions.FirstOrDefault(w => w.Id == _values.WorkInstructionId);
+        if (_values.WorkInstructionId > 0 && (instruction == null || !InstructionMatchesProduct(instruction)))
+        {
+            _values.WorkInstructionId = 0;
+            _clearedFields.Add("instruction");
+            await ReloadForInstructionAsync();
+        }
+    }
+
+    private async Task OnInstructionChangedAsync(string? raw)
+    {
+        _values.WorkInstructionId = ParseInt(raw) ?? 0;
+        _clearedFields.Remove("instruction");
+        await ReloadForInstructionAsync();
+    }
+
+    private async Task ReloadForInstructionAsync()
+    {
+        var request = ++_instructionRequest;
+        var instructionId = _values.WorkInstructionId;
+        _loadingSteps = _loadingNouns = true;
+        StateHasChanged();
+
+        IReadOnlyList<ReworkStepOptionDTO> steps = [];
+        IReadOnlyList<DefectCodeOptionDto> nouns = [];
+        try
+        {
+            if (instructionId > 0)
+            {
+                steps = await ReworkService.GetStepsForInstructionAsync(instructionId);
+                nouns = await DefectCodeService.GetNounsForWorkInstructionAsync(instructionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load steps and nouns: {ex.Message}";
+        }
+
+        if (request != _instructionRequest)
+            return;
+
+        _steps = steps;
+        _nouns = nouns;
+        _loadingSteps = _loadingNouns = false;
+
+        if (_values.WorkInstructionStepId > 0 && _steps.All(s => s.Id != _values.WorkInstructionStepId))
+        {
+            _values.WorkInstructionStepId = 0;
+            _clearedFields.Add("step");
+        }
+
+        if (_values.FailureNounId is int nounId && _nouns.All(n => n.Id != nounId))
+        {
+            _values.FailureNounId = null;
+            _clearedFields.Add("noun");
+            await ReloadForNounAsync();
+        }
+    }
+
+    private void OnStepChanged(string? raw)
+    {
+        _values.WorkInstructionStepId = ParseInt(raw) ?? 0;
+        _clearedFields.Remove("step");
+    }
+
+    private async Task OnNounChangedAsync(string? raw)
+    {
+        _values.FailureNounId = ParseInt(raw);
+        _clearedFields.Remove("noun");
+        await ReloadForNounAsync();
+    }
+
+    private async Task ReloadForNounAsync()
+    {
+        var request = ++_nounRequest;
+        var nounId = _values.FailureNounId;
+        _loadingAdjectives = true;
+        StateHasChanged();
+
+        IReadOnlyList<DefectCodeOptionDto> adjectives = [];
+        try
+        {
+            if (nounId is int id)
+                adjectives = await DefectCodeService.GetAdjectivesForNounAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load adjectives: {ex.Message}";
+        }
+
+        if (request != _nounRequest)
+            return;
+
+        _adjectives = adjectives;
+        _loadingAdjectives = false;
+
+        if (_values.FailureAdjectiveId is int adjectiveId && _adjectives.All(a => a.Id != adjectiveId))
+        {
+            _values.FailureAdjectiveId = null;
+            _clearedFields.Add("adjective");
+        }
+    }
+
+    private void OnAdjectiveChanged(string? raw)
+    {
+        _values.FailureAdjectiveId = ParseInt(raw);
+        _clearedFields.Remove("adjective");
+    }
+
+    private void OnOperatorChanged(string? raw)
+    {
+        _values.OperatorId = string.IsNullOrEmpty(raw) ? null : raw;
+        _clearedFields.Remove("operator");
+    }
+
+    // ── Save / close ─────────────────────────────────────────────────────────────────────────────
+
+    private async Task SaveAsync()
+    {
+        if (!CanSave || _edit == null)
+            return;
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            var result = await ReworkService.UpdateAsync(new ReworkUpdateRequest
+            {
+                AttemptId = _edit.AttemptId,
+                Original = _edit.Values,
+                OriginalLogLastModifiedOn = _edit.LogLastModifiedOn,
+                Updated = _values with { },
+                ConfirmSharedLogChange = _confirmShared
+            }, ModifiedBy);
+
+            if (result.Success)
+            {
+                await OnSaved.InvokeAsync(result.Message);
+                return;
+            }
+
+            _error = result.Message ?? "The change could not be saved.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"The change could not be saved: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task CloseAsync()
+    {
+        if (_saving)
+            return;
+
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await CloseAsync();
+    }
+
+    // ── Rendering helpers ────────────────────────────────────────────────────────────────────────
+
+    private RenderFragment SelectField(string key, string label, string value, List<Option> options,
+        Func<string?, Task> onChange, bool loading, bool required) =>
+        @<div>
+            <label class="form-label small mb-1" for="@FieldId(key)">
+                @label
+                @if (loading)
+                {
+                    <span class="spinner-border spinner-border-sm ms-1" role="status" aria-label="Loading"></span>
+                }
+            </label>
+            <select id="@FieldId(key)"
+                    class="form-select form-select-sm @(_clearedFields.Contains(key) ? "is-invalid" : "")"
+                    value="@value"
+                    disabled="@loading"
+                    @onchange="e => onChange(e.Value?.ToString())">
+                <option value="">@(required ? "— Select —" : "— None —")</option>
+                @foreach (var option in options)
+                {
+                    <option value="@option.Value" class="@(option.Unavailable ? "text-muted" : "")">@option.Label</option>
+                }
+            </select>
+            @if (_clearedFields.Contains(key))
+            {
+                <div class="invalid-feedback">Cleared: the previous value is not valid for the new selection.</div>
+            }
+        </div>;
+
+    private RenderFragment SelectField(string key, string label, string value, List<Option> options,
+        Action<string?> onChange, bool loading, bool required)
+        => SelectField(key, label, value, options, raw =>
+        {
+            onChange(raw);
+            return Task.CompletedTask;
+        }, loading, required);
+
+    private string FieldId(string key) => $"{_titleId}-{key}";
+
+    private static string InstructionLabel(WorkInstructionSummaryDTO instruction)
+        => string.IsNullOrEmpty(instruction.Version) ? instruction.Title : $"{instruction.Title} ({instruction.Version})";
+
+    private static string OperatorLabel(ApplicationUser user)
+    {
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
+        return fullName.Length > 0 ? fullName : user.UserName ?? user.Id;
+    }
+
+    private static string Str(int value) => value > 0 ? value.ToString() : "";
+
+    private static string Str(int? value) => value is int v ? Str(v) : "";
+
+    private static int? ParseInt(string? raw) => int.TryParse(raw, out var value) && value > 0 ? value : null;
+
+    private static string SuccessValue(bool? success) => success switch
+    {
+        true => "true",
+        false => "false",
+        null => ""
+    };
+
+    private static bool? ParseSuccess(string? raw) => raw switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null
+    };
+
+    private sealed record Option(string Value, string Label, bool Unavailable = false);
+}

@@ -129,6 +129,7 @@ public class WorkInstructionImageService : IWorkInstructionImageService
         var allImages = nodes
             .OfType<Step>() // Only steps have images
             .SelectMany(step => step.PrimaryMedia.Concat(step.SecondaryMedia))
+            .Select(media => media.Path)
             .ToList();
 
         if (!allImages.Any())

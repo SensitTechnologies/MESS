@@ -24,14 +24,14 @@ public class StepNodeViewDTO : WorkInstructionNodeViewDTO
     public string? DetailedBody { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of primary media URLs associated with the step.
+    /// Gets or sets the list of primary media (URL + optional caption) associated with the step.
     /// </summary>
-    public List<string> PrimaryMedia { get; set; } = [];
+    public List<StepMediaItem> PrimaryMedia { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the list of secondary media URLs associated with the step.
+    /// Gets or sets the list of secondary media (URL + optional caption) associated with the step.
     /// </summary>
-    public List<string> SecondaryMedia { get; set; } = [];
+    public List<StepMediaItem> SecondaryMedia { get; set; } = [];
 
     /// <summary>Per-step production notes behavior.</summary>
     public StepNotesConfiguration NotesConfiguration { get; set; } = StepNotesConfiguration.OptionalForFailure;

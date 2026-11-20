@@ -202,6 +202,15 @@ public interface IWorkInstructionEditorService
     Task<bool> SaveAsync(string modifiedBy);
 
     /// <summary>
+    /// Whether <see cref="SaveAsync"/> can save the current instruction as-is (create, update, or the
+    /// pending new version) rather than first forking a new version because production logs exist.
+    /// Only an already-saved instruction (<see cref="EditorMode.EditExisting"/>) can have production logs,
+    /// so unsaved instructions (<see cref="EditorMode.CreateNew"/> / <see cref="EditorMode.CreateNewVersion"/>)
+    /// always return <c>true</c>.
+    /// </summary>
+    Task<bool> CanSaveInPlaceAsync();
+
+    /// <summary>
     /// An event raised whenever the editing state changes.
     /// UI components can subscribe to this event to refresh themselves
     /// when the Current model, dirty flag, or mode changes.

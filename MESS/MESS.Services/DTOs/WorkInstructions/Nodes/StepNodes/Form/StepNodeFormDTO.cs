@@ -47,7 +47,7 @@ namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
         /// These are the main media assets (e.g., images)
         /// that appear prominently in the instruction.
         /// </remarks>
-        public List<string> PrimaryMedia { get; set; } = [];
+        public List<StepMediaItem> PrimaryMedia { get; set; } = [];
 
         /// <summary>
         /// Gets or sets the collection of secondary media file paths
@@ -57,7 +57,7 @@ namespace MESS.Services.DTOs.WorkInstructions.Nodes.StepNodes.Form;
         /// These may include reference images, diagrams, or additional media
         /// used to provide extra context to the operator.
         /// </remarks>
-        public List<string> SecondaryMedia { get; set; } = [];
+        public List<StepMediaItem> SecondaryMedia { get; set; } = [];
 
         /// <summary>
         /// When notes are shown in production and whether a note is required (see <see cref="StepNotesConfiguration"/>).

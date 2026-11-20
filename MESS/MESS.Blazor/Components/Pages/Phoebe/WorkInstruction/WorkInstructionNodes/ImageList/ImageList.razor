@@ -1,5 +1,6 @@
 ﻿@using MESS.Blazor.Components.Pages.Phoebe.WorkInstruction.WorkInstructionNodes.SortableList
 @using MESS.Services.Media.WorkInstructions
+@using MESS.Data.Models
 
 @inject IWorkInstructionImageService WorkInstructionImageService
 
@@ -15,21 +16,30 @@
         }
         else
         {
-            <SortableList T="string"
+            @* Drag only from the grip so clicking/selecting text in the caption box never starts a drag. *@
+            <SortableList T="StepMediaItem"
                           Items="@(ActiveImages)"
                           OnUpdate="@SortList"
+                          Handle=".image-drag-handle"
                           Context="image"
             >
 
                 <SortableItemTemplate>
                     <div class="d-flex align-items-start justify-content-between border rounded my-2 shadow-sm">
-                        <div class="d-flex flex-grow-1 align-items-center ">
-                            <i class="bi bi-grip-vertical h3" />
+                        <div class="d-flex flex-grow-1 align-items-center">
+                            <i class="bi bi-grip-vertical h3 image-drag-handle" style="cursor: grab;" />
                             <div class="vr me-1" />
-                            <img class="m-1" src="@image" style="@ImageStyle" />
+                            <img class="m-1" src="@image.Path" style="@ImageStyle" alt="@(image.Caption ?? "Step image")" />
+                            <input type="text"
+                                   class="form-control form-control-sm ms-2 me-1 image-caption-input"
+                                   placeholder="Caption (optional)"
+                                   aria-label="Image caption"
+                                   maxlength="@StepMediaItem.CaptionMaxLength"
+                                   value="@image.Caption"
+                                   @oninput="e => HandleCaptionChanged(image, e.Value?.ToString())" />
                         </div>
 
-                        <button class="btn btn-sm btn-primary m-1" @onclick="() => HandleRemove(image)">
+                        <button class="btn btn-sm btn-primary m-1" title="Remove image" @onclick="() => HandleRemove(image)">
                             <i class="bi bi-trash" />
                         </button>
                     </div>
@@ -57,18 +67,18 @@
 
 @code {
     /// <summary>
-    /// Gets or sets the list of primary media image paths (used when the component is in "Name" view).
+    /// Gets or sets the list of primary media images (path + caption) (used when the component is in "Name" view).
     /// These images are shown and edited when <see cref="ShowBody"/> is <c>false</c>.
     /// </summary>
     [Parameter, EditorRequired]
-    public required List<string> PrimaryMedia { get; set; }
+    public required List<StepMediaItem> PrimaryMedia { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of secondary media image paths (used when the component is in "Body" view).
+    /// Gets or sets the list of secondary media images (path + caption) (used when the component is in "Body" view).
     /// These images are shown and edited when <see cref="ShowBody"/> is <c>true</c>.
     /// </summary>
     [Parameter, EditorRequired]
-    public required List<string> SecondaryMedia { get; set; }
+    public required List<StepMediaItem> SecondaryMedia { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the component is currently in "Body" view mode.
@@ -82,9 +92,9 @@
     /// The updated primary and secondary lists are provided as the callback argument.
     /// </summary>
     [Parameter]
-    public EventCallback<(List<string> Primary, List<string> Secondary)> OnMediaChanged { get; set; }
+    public EventCallback<(List<StepMediaItem> Primary, List<StepMediaItem> Secondary)> OnMediaChanged { get; set; }
 
-    private List<string> ActiveImages =>
+    private List<StepMediaItem> ActiveImages =>
         ShowBody ? SecondaryMedia : PrimaryMedia;
 
 
@@ -119,24 +129,31 @@
         await NotifyChange();
     }
 
-    private async Task HandleRemove(string image)
+    // Stores the raw text (trimming happens on save) so typing a space between words isn't swallowed on re-render.
+    private async Task HandleCaptionChanged(StepMediaItem image, string? value)
+    {
+        image.Caption = string.IsNullOrWhiteSpace(value) ? null : value;
+        await NotifyChange();
+    }
+
+    private async Task HandleRemove(StepMediaItem image)
     {
 
-        List<string> updatedList;
+        List<StepMediaItem> updatedList;
 
         if (ShowBody)
         {
-            updatedList = new List<string>(SecondaryMedia);
+            updatedList = new List<StepMediaItem>(SecondaryMedia);
         }
         else
         {
-            updatedList = new List<string>(PrimaryMedia);
+            updatedList = new List<StepMediaItem>(PrimaryMedia);
         }
 
         var index = updatedList.IndexOf(image);
         if (index == -1) return;
 
-        await WorkInstructionImageService.DeleteImageFile(image);
+        await WorkInstructionImageService.DeleteImageFile(image.Path);
         updatedList.Remove(image);
 
         if (ShowBody)
@@ -157,18 +174,18 @@
         {
             var newPath = await WorkInstructionImageService.SaveImageFileAsync(file);
 
-            List<string> updatedList;
+            List<StepMediaItem> updatedList;
 
             if (ShowBody)
             {
-                updatedList = new List<string>(SecondaryMedia);
+                updatedList = new List<StepMediaItem>(SecondaryMedia);
             }
             else
             {
-                updatedList = new List<string>(PrimaryMedia);
+                updatedList = new List<StepMediaItem>(PrimaryMedia);
             }
 
-            updatedList.Add(newPath);
+            updatedList.Add(new StepMediaItem { Path = newPath });
 
 
             if (ShowBody)
