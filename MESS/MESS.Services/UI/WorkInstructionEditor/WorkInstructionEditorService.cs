@@ -327,30 +327,28 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
                 Body = stepNode.Body,
                 Position = stepNode.Position,
                 DetailedBody = stepNode.DetailedBody,
-                PrimaryMedia = (await CloneImages(stepNode.PrimaryMedia))?.ToList() ?? [],
-                SecondaryMedia = (await CloneImages(stepNode.SecondaryMedia))?.ToList() ?? [],
+                PrimaryMedia = await CloneImages(stepNode.PrimaryMedia),
+                SecondaryMedia = await CloneImages(stepNode.SecondaryMedia),
                 NotesConfiguration = stepNode.NotesConfiguration
             },
             _ => throw new NotSupportedException("Unknown WorkInstructionNode type")
         };
     }
 
-    private async Task<List<string>> CloneImages(List<string> Images)
+    // Duplicates each image file so the new version owns its own copy; the caption is plain data and carries over.
+    private async Task<List<StepMediaItem>> CloneImages(List<StepMediaItem> images)
     {
-
-        if (Images.Count == 0)
+        var clone = new List<StepMediaItem>();
+        foreach (var image in images)
         {
-            return Images;
+            clone.Add(new StepMediaItem
+            {
+                Path = await _workInstructionImageService.SaveImageFileAsync(image.Path),
+                Caption = image.Caption
+            });
         }
 
-        var clone = new List<string>();
-        foreach (var image in Images) 
-        {
-            clone.Add( await _workInstructionImageService.SaveImageFileAsync(image));
-        }
-
-
-        return clone?.ToList() ?? new List<string>();
+        return clone;
     }
 
     private string IncrementVersion(string? version)
@@ -365,6 +363,20 @@ public class WorkInstructionEditorService : IWorkInstructionEditorService
         }
 
         return version + ".1";
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> CanSaveInPlaceAsync()
+    {
+        if (Current == null)
+            return false;
+
+        // An unsaved instruction has no Id, and IsEditable reports false for that — which used to send
+        // brand-new instructions down the new-version path and fail with "OriginalId is required".
+        if (Mode != EditorMode.EditExisting)
+            return true;
+
+        return await _workInstructionService.IsEditable(Current.ToNewEntity());
     }
 
     /// <inheritdoc />

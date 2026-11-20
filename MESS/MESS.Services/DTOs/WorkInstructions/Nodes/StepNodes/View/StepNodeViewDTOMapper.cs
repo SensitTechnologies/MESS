@@ -24,8 +24,8 @@ public static class StepNodeViewDTOMapper
             Name = entity.Name,
             Body = entity.Body,
             DetailedBody = entity.DetailedBody,
-            PrimaryMedia = entity.PrimaryMedia?.ToList() ?? [],
-            SecondaryMedia = entity.SecondaryMedia?.ToList() ?? [],
+            PrimaryMedia = entity.PrimaryMedia.CloneItems(),
+            SecondaryMedia = entity.SecondaryMedia.CloneItems(),
             NotesConfiguration = entity.NotesConfiguration
         };
     }
@@ -47,8 +47,8 @@ public static class StepNodeViewDTOMapper
             Name = viewDTO.Name,
             Body = viewDTO.Body,
             DetailedBody = viewDTO.DetailedBody,
-            PrimaryMedia = viewDTO.PrimaryMedia?.ToList() ?? [],
-            SecondaryMedia = viewDTO.SecondaryMedia?.ToList() ?? [],
+            PrimaryMedia = viewDTO.PrimaryMedia.CloneItems(),
+            SecondaryMedia = viewDTO.SecondaryMedia.CloneItems(),
             NotesConfiguration = viewDTO.NotesConfiguration
         };
     }

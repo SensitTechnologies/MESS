@@ -719,13 +719,13 @@ namespace MESS.Data.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.PrimitiveCollection<List<string>>("PrimaryMedia")
+                    b.Property<string>("PrimaryMedia")
                         .IsRequired()
-                        .HasColumnType("text[]");
+                        .HasColumnType("jsonb");
 
-                    b.PrimitiveCollection<List<string>>("SecondaryMedia")
+                    b.Property<string>("SecondaryMedia")
                         .IsRequired()
-                        .HasColumnType("text[]");
+                        .HasColumnType("jsonb");
 
                     b.ToTable("Steps", (string)null);
                 });

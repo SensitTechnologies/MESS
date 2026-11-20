@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
+using ClosedXML.Excel.Drawings;
 using MESS.Data.Models;
 using MESS.Services.DTOs;
 using MESS.Services.DTOs.WorkInstructions.File;
@@ -34,7 +35,12 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
     private const int STEP_PRIMARY_MEDIA_COLUMN = 4;
     private const int STEP_DETAILED_BODY_COLUMN = 5;
     private const int STEP_SECONDARY_MEDIA_COLUMN = 6;
-    
+    // Caption columns hold one line per image, in the same order as the images in the media cell.
+    // Spreadsheets exported before captions existed simply lack these columns (images import uncaptioned).
+    private const int STEP_PRIMARY_MEDIA_CAPTIONS_COLUMN = 7;
+    private const int STEP_SECONDARY_MEDIA_CAPTIONS_COLUMN = 8;
+    private const int LAST_STEP_COLUMN = STEP_SECONDARY_MEDIA_CAPTIONS_COLUMN;
+
     // Currently, this is set to 1GB
     private const int SPREADSHEET_SIZE_LIMIT = 1024 * 1024 * 1024;
     
@@ -133,9 +139,11 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Cell(currentRow, STEP_PRIMARY_MEDIA_COLUMN).Value = "Primary Media";
             worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN).Value = "Detailed Body";
             worksheet.Cell(currentRow, STEP_SECONDARY_MEDIA_COLUMN).Value = "Secondary Media";
+            worksheet.Cell(currentRow, STEP_PRIMARY_MEDIA_CAPTIONS_COLUMN).Value = "Primary Media Captions";
+            worksheet.Cell(currentRow, STEP_SECONDARY_MEDIA_CAPTIONS_COLUMN).Value = "Secondary Media Captions";
 
             // Make them bold
-            worksheet.Range(currentRow, PART_COLUMN, currentRow, STEP_SECONDARY_MEDIA_COLUMN)
+            worksheet.Range(currentRow, PART_COLUMN, currentRow, LAST_STEP_COLUMN)
                 .Style.Font.Bold = true;
             
             var orderedNodes = workInstructionToExport.Nodes
@@ -196,7 +204,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_BODY_COLUMN), step.Body);
                         ApplyFormattingToCells(worksheet.Cell(currentRow, STEP_DETAILED_BODY_COLUMN), step.DetailedBody);
 
-                        await InsertImagesIntoCell(
+                        var insertedPrimary = await InsertImagesIntoCell(
                             worksheet,
                             currentRow,
                             STEP_PRIMARY_MEDIA_COLUMN,
@@ -205,8 +213,8 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                             cancellationToken,
                             processedNodes,
                             totalNodes);
-                        
-                        await InsertImagesIntoCell(
+
+                        var insertedSecondary = await InsertImagesIntoCell(
                             worksheet,
                             currentRow,
                             STEP_SECONDARY_MEDIA_COLUMN,
@@ -215,6 +223,11 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                             cancellationToken,
                             processedNodes,
                             totalNodes);
+
+                        worksheet.Cell(currentRow, STEP_PRIMARY_MEDIA_CAPTIONS_COLUMN).Value =
+                            FormatCaptionsCell(insertedPrimary);
+                        worksheet.Cell(currentRow, STEP_SECONDARY_MEDIA_CAPTIONS_COLUMN).Value =
+                            FormatCaptionsCell(insertedSecondary);
 
                         currentRow++;
                         index++;
@@ -239,24 +252,26 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             worksheet.Column(STEP_PRIMARY_MEDIA_COLUMN).Width = 40;
             worksheet.Column(STEP_DETAILED_BODY_COLUMN).Width = 40;
             worksheet.Column(STEP_SECONDARY_MEDIA_COLUMN).Width = 40;
-            
+            worksheet.Column(STEP_PRIMARY_MEDIA_CAPTIONS_COLUMN).Width = 30;
+            worksheet.Column(STEP_SECONDARY_MEDIA_CAPTIONS_COLUMN).Width = 30;
+
             // Enable wrapping on data rows starting from STEP_START_ROW downward
-            for (int col = PART_COLUMN; col <= STEP_SECONDARY_MEDIA_COLUMN; col++)
+            for (int col = PART_COLUMN; col <= LAST_STEP_COLUMN; col++)
             {
                 worksheet.Column(col).Style.Alignment.WrapText = true;
             }
-            
+
             // Disable wrapping on header rows (e.g., rows 1 to STEP_START_ROW - 1)
             for (int row = 1; row < STEP_START_ROW; row++)
             {
-                for (int col = PART_COLUMN; col <= STEP_SECONDARY_MEDIA_COLUMN; col++)
+                for (int col = PART_COLUMN; col <= LAST_STEP_COLUMN; col++)
                 {
                     worksheet.Cell(row, col).Style.Alignment.WrapText = false;
                 }
             }
             
             // Determine the data range starting from your header row (STEP_START_ROW)
-            // and covering all columns used (PART_COLUMN to STEP_SECONDARY_MEDIA_COLUMN)
+            // and covering all columns used (PART_COLUMN to LAST_STEP_COLUMN)
             var lastRowUsed = worksheet.LastRowUsed();
             if (lastRowUsed != null)
             {
@@ -265,7 +280,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 // Define the range including headers and data rows
                 var tableRange = worksheet.Range(
                     worksheet.Cell(STEP_START_ROW, PART_COLUMN),
-                    worksheet.Cell(lastRowNumber, STEP_SECONDARY_MEDIA_COLUMN)
+                    worksheet.Cell(lastRowNumber, LAST_STEP_COLUMN)
                 );
 
                 // Create a table on that range
@@ -572,19 +587,21 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
         return (tagName, attributes);
     }
     
-    private async Task InsertImagesIntoCell(
+    /// <returns>The media items whose image was actually embedded (missing files are skipped), in cell order.</returns>
+    private async Task<List<StepMediaItem>> InsertImagesIntoCell(
         IXLWorksheet worksheet,
         int row,
         int column,
-        List<string> mediaPaths,
+        List<StepMediaItem> mediaPaths,
         IProgress<ExportProgress>? progress = null,
         CancellationToken cancellationToken = default,
         int stepIndex = 0,
         int totalSteps = 0)
     {
+        var inserted = new List<StepMediaItem>();
         if (mediaPaths.Count == 0)
-            return;
-        
+            return inserted;
+
         progress?.Report(new ExportProgress
         {
             Percent = 0, // leave percent unchanged in practice
@@ -625,7 +642,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             
             await Task.Yield();
 
-            var normalizedMediaPath = media.Replace('\\', Path.DirectorySeparatorChar);
+            var normalizedMediaPath = media.Path.Replace('\\', Path.DirectorySeparatorChar);
             var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, normalizedMediaPath.TrimStart(Path.DirectorySeparatorChar));
 
             if (!File.Exists(imagePath))
@@ -662,6 +679,7 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             offsetX += scaledWidth + imageSpacingPx;
             lineMaxHeight = Math.Max(lineMaxHeight, targetDisplayHeightPx);
             anyImageInserted = true;
+            inserted.Add(media);
         }
 
         // Adjust row height
@@ -670,6 +688,42 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
             double totalHeightPx = offsetY + lineMaxHeight + cellEdgePaddingPx;
             worksheet.Row(row).Height = totalHeightPx * 0.75; // Excel points ≈ 0.75 px
         }
+
+        return inserted;
+    }
+
+    /// <summary>
+    /// One line per image (blank line for an uncaptioned image); empty when no image has a caption.
+    /// </summary>
+    public static string FormatCaptionsCell(IReadOnlyList<StepMediaItem> media)
+    {
+        if (media.All(m => string.IsNullOrWhiteSpace(m.Caption)))
+            return string.Empty;
+
+        // Captions are single-line in the editor; flatten any stray line breaks so positions stay aligned.
+        return string.Join("\n", media.Select(m =>
+            Regex.Replace(m.Caption ?? string.Empty, @"[\r\n]+", " ").Trim()));
+    }
+
+    /// <summary>
+    /// Inverse of <see cref="FormatCaptionsCell"/>: the caption for each image position, or null when absent.
+    /// </summary>
+    public static List<string?> ParseCaptionsCell(string? cellText)
+    {
+        if (string.IsNullOrEmpty(cellText))
+            return [];
+
+        return cellText
+            .Replace("\r\n", "\n")
+            .Split('\n')
+            .Select(line =>
+            {
+                var caption = StepMediaItem.NormalizeCaption(line);
+                return caption is { Length: > StepMediaItem.CaptionMaxLength }
+                    ? caption[..StepMediaItem.CaptionMaxLength]
+                    : caption;
+            })
+            .ToList();
     }
     
     /// <inheritdoc />
@@ -908,44 +962,49 @@ public partial class WorkInstructionFileService : IWorkInstructionFileService
                 Directory.CreateDirectory(imageDir);
             }
             
-            foreach (var picture in primaryPictures)
+            var primaryCaptions = ParseCaptionsCell(
+                worksheet.Cell(row, STEP_PRIMARY_MEDIA_CAPTIONS_COLUMN).GetString());
+            var secondaryCaptions = ParseCaptionsCell(
+                worksheet.Cell(row, STEP_SECONDARY_MEDIA_CAPTIONS_COLUMN).GetString());
+
+            for (var i = 0; i < primaryPictures.Count; i++)
             {
-                var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
-                
-                var imagePath = Path.Combine(imageDir, fileName);
-                    
-                
-                using (var ms = new MemoryStream())
+                var path = await SaveImportedPictureAsync(primaryPictures[i], imageDir);
+                step.PrimaryMedia.Add(new StepMediaItem
                 {
-                    await picture.ImageStream.CopyToAsync(ms);
-                    var imageBytes = ms.ToArray();
-                    await File.WriteAllBytesAsync(imagePath, imageBytes);
-                }
-                
-                step.PrimaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
+                    Path = path,
+                    Caption = i < primaryCaptions.Count ? primaryCaptions[i] : null
+                });
             }
-            
-            foreach (var picture in secondaryPictures)
+
+            for (var i = 0; i < secondaryPictures.Count; i++)
             {
-                var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
-                
-                var imagePath = Path.Combine(imageDir, fileName);
-                    
-                
-                using (var ms = new MemoryStream())
+                var path = await SaveImportedPictureAsync(secondaryPictures[i], imageDir);
+                step.SecondaryMedia.Add(new StepMediaItem
                 {
-                    await picture.ImageStream.CopyToAsync(ms);
-                    var imageBytes = ms.ToArray();
-                    await File.WriteAllBytesAsync(imagePath, imageBytes);
-                }
-                
-                step.SecondaryMedia.Add(Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName));
+                    Path = path,
+                    Caption = i < secondaryCaptions.Count ? secondaryCaptions[i] : null
+                });
             }
         }
         catch (Exception e)
         {
             Log.Warning("Exception thrown when attempting to process Step media for Workbook: {workbookName}. Exception: {ExceptionMessage}", worksheet.ToString(), e.ToString());
         }
+    }
+
+    private static async Task<string> SaveImportedPictureAsync(IXLPicture picture, string imageDir)
+    {
+        var fileName = $"{Guid.NewGuid()}.{picture.Format.ToString()}";
+        var imagePath = Path.Combine(imageDir, fileName);
+
+        using (var ms = new MemoryStream())
+        {
+            await picture.ImageStream.CopyToAsync(ms);
+            await File.WriteAllBytesAsync(imagePath, ms.ToArray());
+        }
+
+        return Path.Combine(WORK_INSTRUCTION_IMAGES_DIRECTORY, fileName);
     }
     
     /// <summary>

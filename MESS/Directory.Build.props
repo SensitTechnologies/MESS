@@ -21,9 +21,11 @@
       (Npgsql.EntityFrameworkCore.PostgreSQL) — SQLite is not exposed to production traffic.
       Revisit when SQLitePCLRaw publishes a rebuilt package (>= 2.1.12) and remove this entry.
 
-    SixLabors.ImageSharp 3.1.12 CVE cluster — all five fixed in 4.1.2, but 4.x now gates on a
+    SixLabors.ImageSharp 3.1.12 CVE cluster — all fixed in 4.1.2, but 4.x now gates on a
     paid Six Labors license at build time (`error : No Six Labors license found. Set
     $(SixLaborsLicenseKey)…`). Upgrading without purchasing a license is not possible.
+    The 3.2.0 backport (fixes GHSA-v76p-62qx-wwq2) carries the same gate: Release builds fail
+    without a license, so it is not a viable upgrade either.
     ImageSharp usage in this codebase is narrow: WorkInstructionFileService loads work-instruction
     media files from the server's own WebRootPath (curated by technicians via the WI editor) and
     re-encodes them as PNG for an Excel export. Not an attacker-controlled TIFF/BigTIFF input path,
@@ -35,6 +37,7 @@
       GHSA-j3p4-wp97-rph4 (high)
       GHSA-j9gm-c75j-xc9q (high)
       GHSA-jjfr-hcj7-qf5w (high)
+      GHSA-v76p-62qx-wwq2 (high) — tiled fax TIFF decode
   -->
   <ItemGroup>
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
@@ -43,5 +46,6 @@
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-v76p-62qx-wwq2" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,21 @@
+/* Caption bar directly under the visible photo: same width as the photo area, dark text on white. */
+.step-photo-caption {
+    margin-top: 0.5rem;
+    padding: 0.6rem 1rem;
+    background-color: #ffffff;
+    color: #212529;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+/* Stays white in dark mode (per the mockup); just drop the light border and deepen the shadow. */
+body.dark-mode .step-photo-caption {
+    border-color: transparent;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}

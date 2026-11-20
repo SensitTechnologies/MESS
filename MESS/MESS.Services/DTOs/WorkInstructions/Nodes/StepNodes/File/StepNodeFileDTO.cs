@@ -33,13 +33,13 @@ public class StepNodeFileDTO : WorkInstructionNodeFileDTO
     /// Gets or sets the collection of primary media references associated with the step.
     /// These may represent file paths, URLs, or identifiers depending on the export format.
     /// </summary>
-    public List<string> PrimaryMedia { get; set; } = new();
+    public List<StepMediaItem> PrimaryMedia { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the collection of secondary media references associated with the step.
     /// These may represent additional visual aids or supporting content.
     /// </summary>
-    public List<string> SecondaryMedia { get; set; } = new();
+    public List<StepMediaItem> SecondaryMedia { get; set; } = new();
 
     /// <summary>
     /// Per-step notes behavior in production. Omitted in legacy files; defaults to OptionalForFailure.

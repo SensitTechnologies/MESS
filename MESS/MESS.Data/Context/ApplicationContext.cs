@@ -1,7 +1,10 @@
+using System.Text.Json;
 using MESS.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MESS.Data.Context;
 
@@ -140,7 +143,10 @@ public class ApplicationContext
         modelBuilder.Entity<Step>()
             .Property(s => s.NotesConfiguration)
             .HasDefaultValue(StepNotesConfiguration.OptionalForFailure);
-        
+
+        ConfigureStepMedia(modelBuilder.Entity<Step>().Property(s => s.PrimaryMedia));
+        ConfigureStepMedia(modelBuilder.Entity<Step>().Property(s => s.SecondaryMedia));
+
         modelBuilder.Entity<ProductionLog>()
             .HasOne(p => p.WorkInstruction)
             .WithMany()
@@ -233,7 +239,36 @@ public class ApplicationContext
             .HasForeignKey(a => a.FailureAdjectiveId)
             .OnDelete(DeleteBehavior.SetNull);
     }
-    
+
+    // Step media is stored as a jsonb array of { "Path", "Caption" }. The value comparer is required:
+    // without it EF compares the list by reference and misses in-place edits (e.g. changing only a caption).
+    private static void ConfigureStepMedia(PropertyBuilder<List<StepMediaItem>> property)
+    {
+        var comparer = new ValueComparer<List<StepMediaItem>>(
+            (a, b) => StepMediaEquals(a, b),
+            v => StepMediaHash(v),
+            v => v.CloneItems());
+
+        property
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<StepMediaItem>>(v, (JsonSerializerOptions?)null) ?? new List<StepMediaItem>())
+            .IsRequired()
+            .Metadata.SetValueComparer(comparer);
+    }
+
+    private static bool StepMediaEquals(List<StepMediaItem>? a, List<StepMediaItem>? b)
+    {
+        a ??= [];
+        b ??= [];
+        return a.Count == b.Count
+               && a.Zip(b).All(pair => pair.First.Path == pair.Second.Path && pair.First.Caption == pair.Second.Caption);
+    }
+
+    private static int StepMediaHash(List<StepMediaItem> items) =>
+        items.Aggregate(0, (hash, item) => HashCode.Combine(hash, item.Path, item.Caption));
+
     /// <inheritdoc />
     public override int SaveChanges()
     {

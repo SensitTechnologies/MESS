@@ -1,12 +1,6 @@
+@* Captions are rendered once by Carousel below the slides (not as an overlay on each item). *@
 <div class="carousel-item @(IsActive ? "active" : "")">
     <img src="@ImagePath" class="d-block w-100" alt="@AltText" style="@ImageStyle">
-    @if (!string.IsNullOrEmpty(Caption))
-    {
-        <div class="carousel-caption d-none d-md-block">
-            <h5>@Title</h5>
-            <p>@Caption</p>
-        </div>
-    }
 </div>
 
 @code {
@@ -21,18 +15,6 @@
     /// </summary>
     [Parameter]
     public string AltText { get; set; } = "";
-
-    /// <summary>
-    /// Gets or sets the caption text displayed below the image.
-    /// </summary>
-    [Parameter]
-    public string Caption { get; set; } = "";
-
-    /// <summary>
-    /// Gets or sets the title text displayed above the caption.
-    /// </summary>
-    [Parameter]
-    public string Title { get; set; } = "";
 
     /// <summary>
     /// Gets or sets a value indicating whether the carousel item is active.

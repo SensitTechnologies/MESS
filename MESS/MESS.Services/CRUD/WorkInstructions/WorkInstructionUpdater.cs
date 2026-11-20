@@ -112,8 +112,8 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 step.Name = stepDto.Name;
                 step.Body = stepDto.Body;
                 step.DetailedBody = stepDto.DetailedBody;
-                step.PrimaryMedia = stepDto.PrimaryMedia.ToList();
-                step.SecondaryMedia = stepDto.SecondaryMedia.ToList();
+                step.PrimaryMedia = stepDto.PrimaryMedia.ToPersistableItems();
+                step.SecondaryMedia = stepDto.SecondaryMedia.ToPersistableItems();
                 step.NotesConfiguration = stepDto.NotesConfiguration;
             }
             // PartNodes: intentionally no-op — changing part associations while logs exist
@@ -236,8 +236,8 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
                 Name = stepDto.Name,
                 Body = stepDto.Body,
                 DetailedBody = stepDto.DetailedBody,
-                PrimaryMedia = stepDto.PrimaryMedia.ToList(),
-                SecondaryMedia = stepDto.SecondaryMedia.ToList(),
+                PrimaryMedia = stepDto.PrimaryMedia.ToPersistableItems(),
+                SecondaryMedia = stepDto.SecondaryMedia.ToPersistableItems(),
                 NotesConfiguration = stepDto.NotesConfiguration
             },
 
@@ -254,8 +254,8 @@ public class WorkInstructionUpdater : IWorkInstructionUpdater
         entity.DetailedBody = dto.DetailedBody;
         entity.NotesConfiguration = dto.NotesConfiguration;
 
-        entity.PrimaryMedia = dto.PrimaryMedia.ToList();
-        entity.SecondaryMedia = dto.SecondaryMedia.ToList();
+        entity.PrimaryMedia = dto.PrimaryMedia.ToPersistableItems();
+        entity.SecondaryMedia = dto.SecondaryMedia.ToPersistableItems();
     }
     
     private async Task ApplyPartNodeAsync(

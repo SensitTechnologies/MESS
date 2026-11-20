@@ -23,12 +23,10 @@
     <div class="carousel-inner">
         @for (int i = 0; i < Images.Count; i++)
         {
-            <CarouselItem 
-                ImagePath="@Images[i]" 
+            <CarouselItem
+                ImagePath="@Images[i]"
                 IsActive="i == ActiveIndex"
                 AltText="@(GetAltText(i))"
-                Caption="@(i < Captions.Count ? Captions[i] : "")"
-                Title="@(i < Titles.Count ? Titles[i] : "")"
                 ImageStyle="@ImageStyle" />
         }
     </div>
@@ -46,6 +44,12 @@
     }
 </div>
 
+@* Plain block below the photo for the visible slide only; omitted entirely when that slide has no caption. *@
+@if (ActiveCaption is { } caption)
+{
+    <div class="step-photo-caption" aria-live="polite">@caption</div>
+}
+
 @code {
     /// <summary>
     /// Collection of image paths to be displayed in the carousel.
@@ -54,18 +58,11 @@
     public List<string> Images { get; set; } = new();
 
     /// <summary>
-    /// Optional captions to display for each corresponding image in the carousel.
-    /// If fewer captions than images are provided, some images will have no caption.
+    /// Optional captions, index-aligned with <see cref="Images"/>, shown in a block below the visible photo.
+    /// If fewer captions than images are provided (or a caption is blank), that image shows no caption block.
     /// </summary>
     [Parameter]
     public List<string> Captions { get; set; } = new();
-
-    /// <summary>
-    /// Optional titles to display for each corresponding image in the carousel.
-    /// If fewer titles than images are provided, some images will have no title.
-    /// </summary>
-    [Parameter]
-    public List<string> Titles { get; set; } = new();
 
     /// <summary>
     /// Determines whether the carousel should automatically cycle through images.
@@ -158,9 +155,16 @@
         StateHasChanged();
     }
 
+    private string? ActiveCaption =>
+        ActiveIndex < Images.Count && ActiveIndex < Captions.Count && !string.IsNullOrWhiteSpace(Captions[ActiveIndex])
+            ? Captions[ActiveIndex]
+            : null;
+
     private string GetAltText(int index)
     {
-        return index < Captions.Count ? Captions[index] : $"Slide {index + 1}";
+        return index < Captions.Count && !string.IsNullOrWhiteSpace(Captions[index])
+            ? Captions[index]
+            : $"Slide {index + 1}";
     }
 
     /// <summary>

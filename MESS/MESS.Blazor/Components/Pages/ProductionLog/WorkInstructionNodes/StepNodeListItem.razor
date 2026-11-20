@@ -229,27 +229,30 @@
                         if (Step.SecondaryMedia.Count > 0)
                         {
                             <Carousel
-                                Images="@Step.SecondaryMedia"
+                                Images="@MediaPaths(Step.SecondaryMedia)"
+                                Captions="@MediaCaptions(Step.SecondaryMedia)"
                                 AutoPlay="false"
                                 Interval="3000"
-                                ImageStyle="height: 500px; object-fit: contain;" />
+                                ImageStyle="@CarouselImageStyle" />
                         }
                         else if (Step.PrimaryMedia.Count > 0)
                         {
                             <Carousel
-                                Images="@Step.PrimaryMedia"
+                                Images="@MediaPaths(Step.PrimaryMedia)"
+                                Captions="@MediaCaptions(Step.PrimaryMedia)"
                                 AutoPlay="false"
                                 Interval="3000"
-                                ImageStyle="height: 500px; object-fit: contain;" />
+                                ImageStyle="@CarouselImageStyle" />
                         }
                     }
                     else if (Step.PrimaryMedia.Count > 0)
                     {
                         <Carousel
-                            Images="@Step.PrimaryMedia"
+                            Images="@MediaPaths(Step.PrimaryMedia)"
+                            Captions="@MediaCaptions(Step.PrimaryMedia)"
                             AutoPlay="false"
                             Interval="3000"
-                            ImageStyle="height: 500px; object-fit: contain;" />
+                            ImageStyle="@CarouselImageStyle" />
                     }
                 }
             </div>
@@ -316,6 +319,17 @@
     private bool HasDetails =>
         !IsHtmlEmpty(Step.DetailedBody) || (Step.SecondaryMedia?.Count ?? 0) > 0;
     
+    // max-height (not a fixed height) so the image box matches the photo; a fixed 500px box letterboxed
+    // landscape photos and left a gap between the photo and its caption.
+    private const string CarouselImageStyle = "max-height: 500px; height: auto; object-fit: contain;";
+
+    // Carousel takes index-aligned path/caption lists so it stays independent of StepMediaItem.
+    private static List<string> MediaPaths(List<StepMediaItem> media) =>
+        media.Select(m => m.Path).ToList();
+
+    private static List<string> MediaCaptions(List<StepMediaItem> media) =>
+        media.Select(m => m.Caption ?? string.Empty).ToList();
+
     private static bool IsHtmlEmpty(string? html)
     {
         if (string.IsNullOrWhiteSpace(html))
@@ -603,14 +617,20 @@
         }
         else
         {
-            AddAttemptToAllSteps(new StepAttemptFormDTO
+            foreach (var logStep in LogSteps)
             {
-                IsSuccess = true,
-                SubmitTime = now,
-                FailureNote = _currentAttemptNotes ?? "",
-                FailureNounId = _selectedNounId,
-                FailureAdjectiveId = _selectedAdjectiveId
-            });
+                if (TryReuseLatestSuccess(logStep))
+                    continue;
+
+                logStep.Attempts.Add(new StepAttemptFormDTO
+                {
+                    IsSuccess = true,
+                    SubmitTime = now,
+                    FailureNote = _currentAttemptNotes ?? "",
+                    FailureNounId = _selectedNounId,
+                    FailureAdjectiveId = _selectedAdjectiveId
+                });
+            }
 
             if (Step.NotesConfiguration == StepNotesConfiguration.OptionalForFailure)
                 ShowOptionalNotesField = false;
@@ -628,6 +648,20 @@
     {
         foreach (var step in LogSteps)
         step.Attempts.Add(attempt);
+    }
+
+    // Pressing Success (or Pass All) on a unit whose latest attempt already passed must not add another
+    // attempt: repeat presses were stacking redundant Success rows on every log. A note typed for the
+    // repeat press is kept by moving it onto the existing Success attempt.
+    private bool TryReuseLatestSuccess(LogStepFormDTO logStep)
+    {
+        if (logStep.LatestAttempt() is not { IsSuccess: true } latest)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(_currentAttemptNotes))
+            latest.FailureNote = _currentAttemptNotes;
+
+        return true;
     }
 
     private async Task FocusNotesTextAreaAsync()
@@ -664,7 +698,8 @@
             FailureAdjectiveId = _selectedAdjectiveId
         };
 
-        LogSteps[TargetIndex].Attempts.Add(attempt);
+        if (!(isSuccess && TryReuseLatestSuccess(LogSteps[TargetIndex])))
+            LogSteps[TargetIndex].Attempts.Add(attempt);
 
         if (!isSuccess)
         {

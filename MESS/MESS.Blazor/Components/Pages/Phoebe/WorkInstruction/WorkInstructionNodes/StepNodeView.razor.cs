@@ -293,10 +293,10 @@ public partial class StepNodeView : IDisposable
     </span>
     ";
 
-    private async Task HandleImageMediaChanged((List<string> Primary, List<string> Secondary) updated)
+    private async Task HandleImageMediaChanged((List<StepMediaItem> Primary, List<StepMediaItem> Secondary) updated)
     {
-        Step.PrimaryMedia = new List<string>(updated.Primary);
-        Step.SecondaryMedia = new List<string>(updated.Secondary);
+        Step.PrimaryMedia = new List<StepMediaItem>(updated.Primary);
+        Step.SecondaryMedia = new List<StepMediaItem>(updated.Secondary);
 
         await NotifyChangeAsync();
         StateHasChanged();
