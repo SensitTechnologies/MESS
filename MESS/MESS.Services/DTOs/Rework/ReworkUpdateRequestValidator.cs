@@ -33,6 +33,10 @@ public class ReworkUpdateRequestValidator : AbstractValidator<ReworkUpdateReques
             .NotEmpty().WithMessage("Operator is required.")
             .When(x => x.Updated != null);
 
+        RuleFor(x => x.Updated.Success)
+            .Equal(x => x.Original.Success).WithMessage("Success can't be changed in Rework.")
+            .When(x => x.Updated != null && x.Original != null);
+
         RuleFor(x => x.Updated.FailureAdjectiveId)
             .Null().WithMessage("An adjective requires a noun.")
             .When(x => x.Updated is { FailureNounId: null });

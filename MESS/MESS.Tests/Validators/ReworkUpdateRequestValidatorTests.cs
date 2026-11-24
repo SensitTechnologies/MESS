@@ -9,11 +9,14 @@ public class ReworkUpdateRequestValidatorTests
     private static ReworkUpdateRequest ValidRequest() => new()
     {
         AttemptId = 1,
-        Original = new ReworkEditValues { ProductId = 1, WorkInstructionId = 1, WorkInstructionStepId = 1, OperatorId = "op" },
+        Original = new ReworkEditValues
+        {
+            ProductId = 1, WorkInstructionId = 1, WorkInstructionStepId = 1, OperatorId = "op", Success = false
+        },
         Updated = new ReworkEditValues
         {
             ProductId = 1, WorkInstructionId = 1, WorkInstructionStepId = 1, OperatorId = "op",
-            Success = true, FailureNounId = 2, FailureAdjectiveId = 3
+            Success = false, Notes = "Reworked", FailureNounId = 2, FailureAdjectiveId = 3
         }
     };
 
@@ -23,13 +26,15 @@ public class ReworkUpdateRequestValidatorTests
         Assert.True(_validator.Validate(ValidRequest()).IsValid);
     }
 
-    [Fact]
-    public void NullSuccess_IsAllowed()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(null)]
+    public void ChangedSuccess_Fails(bool? success)
     {
         var request = ValidRequest();
-        request.Updated.Success = null;
+        request.Updated.Success = success;
 
-        Assert.True(_validator.Validate(request).IsValid);
+        Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]

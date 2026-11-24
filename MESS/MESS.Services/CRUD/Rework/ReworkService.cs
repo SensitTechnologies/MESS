@@ -108,7 +108,6 @@ public class ReworkService : IReworkService
             AttemptId = attempt.Id,
             ProductionLogId = log.Id,
             SubmitTime = attempt.SubmitTime,
-            Notes = attempt.Notes,
             LogLastModifiedOn = log.LastModifiedOn,
             Values = ToEditValues(attempt, step, log),
             FailureNounName = attempt.FailureNoun?.Name,
@@ -292,16 +291,16 @@ public class ReworkService : IReworkService
                     "The selected adjective is not linked to the selected noun.");
             }
 
-            // Rule 4: operator exists and is active.
-            if (operatorChanged && !await context.Users.AnyAsync(u => u.Id == updated.OperatorId && u.IsActive))
+            // Rule 4: operator exists. IsActive is not checked: nothing in MESS maintains it for users.
+            if (operatorChanged && !await context.Users.AnyAsync(u => u.Id == updated.OperatorId))
             {
                 return ReworkUpdateResult.Fail(ReworkUpdateErrorCode.Validation,
-                    "The selected operator does not exist or is not active.");
+                    "The selected operator no longer exists.");
             }
 
             var changes = DescribeChanges(current, updated);
 
-            attempt.Success = updated.Success;
+            attempt.Notes = updated.Notes;
             attempt.FailureNounId = updated.FailureNounId;
             attempt.FailureAdjectiveId = updated.FailureAdjectiveId;
             log.OperatorId = updated.OperatorId;
@@ -368,6 +367,7 @@ public class ReworkService : IReworkService
         => new()
         {
             Success = attempt.Success,
+            Notes = attempt.Notes,
             FailureNounId = attempt.FailureNounId,
             FailureAdjectiveId = attempt.FailureAdjectiveId,
             ProductId = log.ProductId,
@@ -379,7 +379,8 @@ public class ReworkService : IReworkService
     private static List<string> DescribeChanges(ReworkEditValues before, ReworkEditValues after)
     {
         var changes = new List<string>();
-        Add(nameof(before.Success), before.Success, after.Success);
+        if (before.Notes != after.Notes)
+            changes.Add($"{nameof(before.Notes)}: changed");
         Add(nameof(before.FailureNounId), before.FailureNounId, after.FailureNounId);
         Add(nameof(before.FailureAdjectiveId), before.FailureAdjectiveId, after.FailureAdjectiveId);
         Add(nameof(before.ProductId), before.ProductId, after.ProductId);

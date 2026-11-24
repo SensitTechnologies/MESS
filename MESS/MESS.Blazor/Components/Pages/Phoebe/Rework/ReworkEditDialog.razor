@@ -53,8 +53,6 @@
                             <dd class="col-sm-9">#@_edit.ProductionLogId</dd>
                             <dt class="col-sm-3">SubmitTime</dt>
                             <dd class="col-sm-9">@_edit.SubmitTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</dd>
-                            <dt class="col-sm-3">Notes</dt>
-                            <dd class="col-sm-9" style="white-space: pre-wrap;">@(string.IsNullOrWhiteSpace(_edit.Notes) ? "—" : _edit.Notes)</dd>
                         </dl>
 
                         <div class="row g-2">
@@ -80,11 +78,17 @@
                                 <label class="form-label small mb-1" for="@FieldId("success")">Success</label>
                                 <select id="@FieldId("success")" class="form-select form-select-sm"
                                         value="@SuccessValue(_values.Success)"
-                                        @onchange="e => _values.Success = ParseSuccess(e.Value?.ToString())">
+                                        disabled>
                                     <option value="true">Success</option>
                                     <option value="false">Failure</option>
                                     <option value="">Not recorded</option>
                                 </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-1" for="@FieldId("notes")">Notes</label>
+                                <textarea id="@FieldId("notes")" class="form-control form-control-sm" rows="3"
+                                          value="@_values.Notes"
+                                          @oninput="e => _values.Notes = e.Value?.ToString() ?? string.Empty"></textarea>
                             </div>
                         </div>
 
@@ -286,7 +290,8 @@
         () => _values.WorkInstructionStepId == _edit?.Values.WorkInstructionStepId ? _edit?.StepName : null);
 
     private List<Option> OperatorOptions => WithSelected(
-        _operators.Where(u => u.IsActive).Select(u => new Option(u.Id, OperatorLabel(u))).OrderBy(o => o.Label),
+        // ApplicationUser.IsActive isn't maintained anywhere (every user is false), so don't filter on it.
+        _operators.Select(u => new Option(u.Id, OperatorLabel(u))).OrderBy(o => o.Label),
         _values.OperatorId ?? "",
         () => _operators.FirstOrDefault(u => u.Id == _values.OperatorId) is { } user
             ? OperatorLabel(user)
@@ -550,13 +555,6 @@
         true => "true",
         false => "false",
         null => ""
-    };
-
-    private static bool? ParseSuccess(string? raw) => raw switch
-    {
-        "true" => true,
-        "false" => false,
-        _ => null
     };
 
     private sealed record Option(string Value, string Label, bool Unavailable = false);
