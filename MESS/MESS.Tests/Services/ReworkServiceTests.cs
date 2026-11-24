@@ -245,9 +245,9 @@ public class ReworkServiceTests : IDisposable
     // ── UpdateAsync ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdateAsync_SuccessOnly_ChangesAttemptAndStampsLog()
+    public async Task UpdateAsync_NotesOnly_ChangesAttemptAndStampsLog()
     {
-        var request = await RequestFor(_seed.AttemptFailed, v => v.Success = true);
+        var request = await RequestFor(_seed.AttemptFailed, v => v.Notes = "Housing replaced");
 
         var result = await CreateService().UpdateAsync(request, Technician);
 
@@ -255,10 +255,23 @@ public class ReworkServiceTests : IDisposable
         await using var context = NewContext();
         var attempt = await context.ProductionLogStepAttempts.SingleAsync(a => a.Id == _seed.AttemptFailed, Ct);
         var log = await context.ProductionLogs.SingleAsync(l => l.Id == _seed.LogMulti, Ct);
-        Assert.True(attempt.Success);
+        Assert.Equal("Housing replaced", attempt.Notes);
+        Assert.False(attempt.Success);
         Assert.Equal(_seed.NounOne, attempt.FailureNounId);
         Assert.Equal(Technician, log.LastModifiedBy);
         Assert.Equal("op1", log.OperatorId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SuccessChange_IsRejected()
+    {
+        var request = await RequestFor(_seed.AttemptFailed, v => v.Success = true);
+
+        var result = await CreateService().UpdateAsync(request, Technician);
+
+        Assert.Equal(ReworkUpdateErrorCode.Validation, result.ErrorCode);
+        await using var context = NewContext();
+        Assert.False((await context.ProductionLogStepAttempts.SingleAsync(a => a.Id == _seed.AttemptFailed, Ct)).Success);
     }
 
     [Fact]
@@ -311,13 +324,25 @@ public class ReworkServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_RejectsInactiveOperator()
+    public async Task UpdateAsync_RejectsUnknownOperator()
+    {
+        var request = await RequestFor(_seed.AttemptSingle, v => v.OperatorId = "nobody");
+
+        var result = await CreateService().UpdateAsync(request, Technician);
+
+        Assert.Equal(ReworkUpdateErrorCode.Validation, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AcceptsOperatorWithIsActiveFalse()
     {
         var request = await RequestFor(_seed.AttemptSingle, v => v.OperatorId = "op-old");
 
         var result = await CreateService().UpdateAsync(request, Technician);
 
-        Assert.Equal(ReworkUpdateErrorCode.Validation, result.ErrorCode);
+        Assert.True(result.Success, result.Message);
+        await using var context = NewContext();
+        Assert.Equal("op-old", (await context.ProductionLogs.SingleAsync(l => l.Id == _seed.LogSingle, Ct)).OperatorId);
     }
 
     [Fact]
@@ -464,7 +489,7 @@ public class ReworkServiceTests : IDisposable
     [Fact]
     public async Task UpdateAsync_StaleSnapshot_ReturnsConflictAndChangesNothing()
     {
-        var request = await RequestFor(_seed.AttemptFailed, v => v.Success = true);
+        var request = await RequestFor(_seed.AttemptFailed, v => v.Notes = "Housing replaced");
 
         await using (var context = NewContext())
         {
@@ -477,16 +502,16 @@ public class ReworkServiceTests : IDisposable
 
         Assert.Equal(ReworkUpdateErrorCode.Conflict, result.ErrorCode);
         await using var verify = NewContext();
-        Assert.False((await verify.ProductionLogStepAttempts.SingleAsync(a => a.Id == _seed.AttemptFailed, Ct)).Success);
+        Assert.Equal("Cracked housing", (await verify.ProductionLogStepAttempts.SingleAsync(a => a.Id == _seed.AttemptFailed, Ct)).Notes);
     }
 
     [Fact]
     public async Task UpdateAsync_RejectedEdit_LeavesNoPartialChange()
     {
-        // Success is valid but the step is not: nothing may be written.
+        // The notes are valid but the step is not: nothing may be written.
         var request = await RequestFor(_seed.AttemptFailed, v =>
         {
-            v.Success = true;
+            v.Notes = "Housing replaced";
             v.WorkInstructionStepId = _seed.StepB1;
         });
 
@@ -494,13 +519,13 @@ public class ReworkServiceTests : IDisposable
 
         Assert.False(result.Success);
         await using var context = NewContext();
-        Assert.False((await context.ProductionLogStepAttempts.SingleAsync(a => a.Id == _seed.AttemptFailed, Ct)).Success);
+        Assert.Equal("Cracked housing", (await context.ProductionLogStepAttempts.SingleAsync(a => a.Id == _seed.AttemptFailed, Ct)).Notes);
     }
 
     [Fact]
     public async Task UpdateAsync_OperatorCaller_IsForbidden()
     {
-        var request = await RequestFor(_seed.AttemptFailed, v => v.Success = true);
+        var request = await RequestFor(_seed.AttemptFailed, v => v.Notes = "Housing replaced");
 
         var result = await CreateService().UpdateAsync(request, "op1");
 
@@ -510,7 +535,7 @@ public class ReworkServiceTests : IDisposable
     [Fact]
     public async Task UpdateAsync_UnknownAttempt_ReturnsNotFound()
     {
-        var request = await RequestFor(_seed.AttemptFailed, v => v.Success = true);
+        var request = await RequestFor(_seed.AttemptFailed, v => v.Notes = "Housing replaced");
         request.AttemptId = 999_999;
 
         var result = await CreateService().UpdateAsync(request, Technician);

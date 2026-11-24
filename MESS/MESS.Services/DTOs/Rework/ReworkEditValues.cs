@@ -6,8 +6,11 @@ namespace MESS.Services.DTOs.Rework;
 /// </summary>
 public sealed record ReworkEditValues
 {
-    /// <summary>Attempt outcome; <c>null</c> when not recorded.</summary>
+    /// <summary>Attempt outcome; <c>null</c> when not recorded. Shown but not editable in Rework.</summary>
     public bool? Success { get; set; }
+
+    /// <summary>Attempt notes.</summary>
+    public string Notes { get; set; } = string.Empty;
 
     /// <summary>Failure noun id.</summary>
     public int? FailureNounId { get; set; }

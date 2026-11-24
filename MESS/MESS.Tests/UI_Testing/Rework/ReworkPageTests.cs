@@ -66,8 +66,9 @@ public class ReworkPageTests : BunitContext
         ]);
         _users.Setup(s => s.GetAllAsync()).ReturnsAsync(
         [
-            new ApplicationUser { Id = "op1", FirstName = "Ann", LastName = "Op", IsActive = false },
-            new ApplicationUser { Id = "op2", FirstName = "Bob", LastName = "Op", IsActive = true }
+            // op1 (the log's operator) is deliberately absent, as if the user was deleted.
+            new ApplicationUser { Id = "op2", FirstName = "Bob", LastName = "Op", IsActive = true },
+            new ApplicationUser { Id = "op3", FirstName = "Cy", LastName = "Op", IsActive = false }
         ]);
         _defects.Setup(s => s.GetNounsForWorkInstructionAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync([new DefectCodeOptionDto { Id = 10, Name = "Housing" }]);
@@ -89,10 +90,9 @@ public class ReworkPageTests : BunitContext
         AttemptId = 5,
         ProductionLogId = 9,
         SubmitTime = DateTimeOffset.UtcNow,
-        Notes = "Cracked housing near the clip",
         Values = new ReworkEditValues
         {
-            Success = false, FailureNounId = 10, FailureAdjectiveId = 20, ProductId = 1, WorkInstructionId = 1,
+            Success = false, Notes = "Cracked housing near the clip", FailureNounId = 10, FailureAdjectiveId = 20, ProductId = 1, WorkInstructionId = 1,
             OperatorId = "op1", WorkInstructionStepId = 100
         },
         ProductName = "Prod One",
@@ -179,7 +179,7 @@ public class ReworkPageTests : BunitContext
         cut.Find("tbody tr").Click();
 
         cut.WaitForAssertion(() => Assert.Equal("Edit Attempt #5", cut.Find(".modal-title").TextContent.Trim()));
-        Assert.Contains("Cracked housing near the clip", cut.Find(".modal-body dl").TextContent);
+        Assert.Equal("Cracked housing near the clip", cut.Find("textarea[id$='-notes']").GetAttribute("value"));
         Assert.Contains("#9", cut.Find(".modal-body dl").TextContent);
         Assert.Contains("table-active", cut.Find("tbody tr").ClassName);
     }
@@ -190,13 +190,24 @@ public class ReworkPageTests : BunitContext
     public void Save_DisabledUntilAFieldChanges()
     {
         var cut = RenderDialog();
-        cut.WaitForAssertion(() => cut.Find("select[id$='-success']"));
+        cut.WaitForAssertion(() => cut.Find("textarea[id$='-notes']"));
 
         Assert.True(SaveDisabled(cut));
 
-        cut.Find("select[id$='-success']").Change("true");
+        cut.Find("textarea[id$='-notes']").Input("Housing replaced");
 
         Assert.False(SaveDisabled(cut));
+    }
+
+    [Fact]
+    public void Success_IsShownButNotEditable()
+    {
+        var cut = RenderDialog();
+        cut.WaitForAssertion(() => cut.Find("select[id$='-success']"));
+
+        var success = cut.Find("select[id$='-success']");
+        Assert.True(success.HasAttribute("disabled"));
+        Assert.Equal("false", success.GetAttribute("value"));
     }
 
     [Fact]
@@ -228,6 +239,15 @@ public class ReworkPageTests : BunitContext
     }
 
     [Fact]
+    public void Operators_IncludeUsersWithIsActiveFalse()
+    {
+        var cut = RenderDialog();
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal("Cy Op", cut.Find("select[id$='-operator'] option[value='op3']").TextContent));
+    }
+
+    [Fact]
     public void ChangingInstruction_ReloadsStepsAndNounsAndClearsInvalidSelections()
     {
         var cut = RenderDialog();
@@ -254,9 +274,9 @@ public class ReworkPageTests : BunitContext
             .ReturnsAsync(ReworkUpdateResult.Fail(ReworkUpdateErrorCode.Conflict, "This attempt was changed by someone else."));
         var saved = false;
         var cut = RenderDialog(_ => saved = true);
-        cut.WaitForAssertion(() => cut.Find("select[id$='-success']"));
+        cut.WaitForAssertion(() => cut.Find("textarea[id$='-notes']"));
 
-        cut.Find("select[id$='-success']").Change("true");
+        cut.Find("textarea[id$='-notes']").Input("Housing replaced");
         cut.Find(".modal-footer .btn-primary").Click();
 
         cut.WaitForAssertion(() => Assert.Contains("changed by someone else", cut.Find(".modal-body .alert-danger").TextContent));
@@ -273,15 +293,16 @@ public class ReworkPageTests : BunitContext
             .ReturnsAsync(ReworkUpdateResult.Ok());
         var saved = false;
         var cut = RenderDialog(_ => saved = true);
-        cut.WaitForAssertion(() => cut.Find("select[id$='-success']"));
+        cut.WaitForAssertion(() => cut.Find("textarea[id$='-notes']"));
 
-        cut.Find("select[id$='-success']").Change("true");
+        cut.Find("textarea[id$='-notes']").Input("Housing replaced");
         cut.Find(".modal-footer .btn-primary").Click();
 
         cut.WaitForAssertion(() => Assert.True(saved));
         Assert.NotNull(sent);
-        Assert.False(sent!.Original.Success);
-        Assert.True(sent.Updated.Success);
+        Assert.Equal("Cracked housing near the clip", sent!.Original.Notes);
+        Assert.Equal("Housing replaced", sent.Updated.Notes);
+        Assert.Equal(sent.Original.Success, sent.Updated.Success);
         Assert.Equal(5, sent.AttemptId);
     }
 }

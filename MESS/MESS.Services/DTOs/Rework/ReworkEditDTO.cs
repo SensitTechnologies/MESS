@@ -14,9 +14,6 @@ public sealed class ReworkEditDTO
     /// <summary>Attempt submit time (read-only in the dialog).</summary>
     public DateTimeOffset SubmitTime { get; set; }
 
-    /// <summary>Attempt notes (read-only in the dialog).</summary>
-    public string Notes { get; set; } = string.Empty;
-
     /// <summary>Current values of the editable fields.</summary>
     public ReworkEditValues Values { get; set; } = new();
 
